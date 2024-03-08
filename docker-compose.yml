@@ -1,0 +1,18 @@
+version: "3.3"
+services:
+  nomadcrew_frontend:
+    image: nomadcrew_frontend
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - NODE_ENV=production
+        - GOOGLE_ID=${GOOGLE_ID}
+        - GOOGLE_SECRET=${GOOGLE_SECRET}
+        - SECRET=${SECRET}
+        - MONGO_URL=${MONGO_URL}
+    env_file:
+      - .env
+    ports:
+      - ${PORT}:${PORT}
+    restart: on-failure
