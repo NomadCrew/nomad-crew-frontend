@@ -14,5 +14,5 @@ services:
     env_file:
       - .env
     ports:
-      - ${PORT}:${PORT}
+      - "8080:80"
     restart: on-failure

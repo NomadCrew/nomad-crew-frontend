@@ -1,10 +1,20 @@
+# Stage 1: Build the application
 FROM node:17-alpine AS builder
+
+# Create app directory
 RUN mkdir -p /app
 WORKDIR /app
-COPY package*.json /app
+# Install app dependencies by copying
+# package.json and package-lock.json
+COPY package*.json ./
+
+# Install dependencies
 RUN npm ci
+
+# Bundle app source
 COPY . .
 
+# set arguments and env variables
 ARG GOOGLE_ID
 ARG GOOGLE_SECRET
 ARG SECRET
@@ -15,20 +25,23 @@ ENV GOOGLE_SECRET=${GOOGLE_SECRET}
 ENV SECRET=${SECRET}
 ENV MONGO_URL=${MONGO_URL}
 
-RUN npx prisma generate
 RUN npm run build
 RUN npm prune --production
 
-FROM node:17-alpine
+# Stage 2: Serve the app with Nginx
+FROM nginxinc/nginx-unprivileged:alpine3.18-slim-test
 
-RUN adduser -D nodeuser
-RUN mkdir -p /app
-RUN chown nodeuser:nodeuser /app
-USER nodeuser
 WORKDIR /app
-COPY --from=builder --chown=nodeuser:nodeuser /app/build build/
-COPY --from=builder --chown=nodeuser:nodeuser /app/node_modules node_modules/
 COPY package.json .
 
-EXPOSE 8001
-CMD [ "node", "build" ]
+# Copy the build output to replace the default nginx contents.
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy the custom nginx configuration file
+COPY custom_nginx.conf /etc/nginx/conf.d/default.conf
+
+# Expose port 80 to the Docker host, so we can access it
+# from the outside.
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
