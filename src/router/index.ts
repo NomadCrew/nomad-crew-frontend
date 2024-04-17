@@ -1,12 +1,34 @@
 import { createRouter, createWebHistory } from '@ionic/vue-router';
 import { RouteRecordRaw } from 'vue-router';
 import TabsPage from '../views/TabsPage.vue'
-import { useAuth } from '@/services/authService';
+import { currentUser } from '@/firebase/firebase-service';
+import HomePage from '@/views/HomePage.vue';
+import OnboardingSlides from '@/views/onboardingSlides.vue';
+
+const guard = async (to: any, from: any, next: any) => {
+  const loggedIn = !!currentUser?.value?.uid;
+  if (loggedIn && ["home", "index"].includes(to.name)) {
+    return next({ name: "private-page" });
+  } else if (!loggedIn && ["home", "index"].includes(to.name)) {
+    return next();
+  } else if (!loggedIn) {
+    return next({ name: "home" });
+  } else {
+    return next();
+  }
+};
 
 const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
-    redirect: '/login'
+    redirect: '/home',
+    beforeEnter: guard
+  },
+  {
+    path: '/home',
+    name: 'Home',
+    component: HomePage,
+    beforeEnter: guard
   },
   {
     path: '/login',
@@ -21,6 +43,12 @@ const routes: Array<RouteRecordRaw> = [
   //   component: () => import('@/views/ProtectedView.vue'),
   //   meta: { requiresAuth: true }
   // },  
+  {
+    path: "/private",
+    name: "private-page",
+    component: OnboardingSlides,
+    beforeEnter: guard,
+  },
   {
     path: '/tabs/',
     component: TabsPage,
@@ -57,15 +85,5 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to, from, next) => {
-  const { isAuthenticated } = useAuth();
-  const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
-
-  if (requiresAuth && !isAuthenticated.value) {
-    next('/login');
-  } else {
-    next();
-  }
-});
 
 export default router;

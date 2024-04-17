@@ -50,3 +50,57 @@ Adopt the [GitHub Flow](https://docs.github.com/en/get-started/quickstart/github
 
 ---
 *Note: This document is regularly updated to reflect the progress and changes in the project's development cycle.*
+
+# Color Palette
+
+_Generated using coolors.co*
+
+#### Tailwind
+
+```Tailwind
+
+{ 'orange_(pantone)': { DEFAULT: '#f46315', 100: '#331302', 200: '#652705', 300: '#983a07', 400: '#cb4d0a', 500: '#f46315', 600: '#f68244', 700: '#f8a273', 800: '#fbc1a1', 900: '#fde0d0' }, 'jet': { DEFAULT: '#2a2b2a', 100: '#090909', 200: '#111211', 300: '#1a1a1a', 400: '#222322', 500: '#2a2b2a', 600: '#555755', 700: '#7f817f', 800: '#a9aba9', 900: '#d4d5d4' }, 'mint': { DEFAULT: '#61c9a8', 100: '#0f2c23', 200: '#1e5846', 300: '#2d8469', 400: '#3cb08c', 500: '#61c9a8', 600: '#7fd3b9', 700: '#9fdeca', 800: '#bfe9dc', 900: '#dff4ed' }, 'thistle': { DEFAULT: '#d3c0cd', 100: '#30212b', 200: '#5f4256', 300: '#8f6381', 400: '#b290a7', 500: '#d3c0cd', 600: '#dcccd7', 700: '#e5d9e1', 800: '#ede6eb', 900: '#f6f2f5' }, 'snow': { DEFAULT: '#fffafb', 100: '#650014', 200: '#ca0028', 300: '#ff3059', 400: '#ff95aa', 500: '#fffafb', 600: '#fffbfc', 700: '#fffcfd', 800: '#fffdfd', 900: '#fffefe' } }
+```
+
+#### CSV
+
+```CSV
+
+f46315,2a2b2a,61c9a8,d3c0cd,fffafb
+
+#f46315, #2a2b2a, #61c9a8, #d3c0cd, #fffafb
+```
+
+#### Array
+
+```Array
+
+["f46315","2a2b2a","61c9a8","d3c0cd","fffafb"]
+```
+
+#### Object
+
+```Object
+
+{"Orange (Pantone)":"f46315","Jet":"2a2b2a","Mint":"61c9a8","Thistle":"d3c0cd","Snow":"fffafb"}
+```
+
+#### Extended Array
+
+```Extended Array
+
+[{"name":"Orange (Pantone)","hex":"f46315","rgb":[244,99,21],"cmyk":[0,59,91,4],"hsb":[21,91,96],"hsl":[21,91,52],"lab":[60,53,65]},{"name":"Jet","hex":"2a2b2a","rgb":[42,43,42],"cmyk":[2,0,2,83],"hsb":[120,2,17],"hsl":[120,1,17],"lab":[17,-1,0]},{"name":"Mint","hex":"61c9a8","rgb":[97,201,168],"cmyk":[52,0,16,21],"hsb":[161,52,79],"hsl":[161,49,58],"lab":[74,-38,7]},{"name":"Thistle","hex":"d3c0cd","rgb":[211,192,205],"cmyk":[0,9,3,17],"hsb":[319,9,83],"hsl":[319,18,79],"lab":[80,9,-4]},{"name":"Snow","hex":"fffafb","rgb":[255,250,251],"cmyk":[0,2,2,0],"hsb":[348,2,100],"hsl":[348,100,99],"lab":[99,2,0]}]
+```
+
+#### XML
+
+```XML
+
+<palette>
+  <color name="Orange (Pantone)" hex="f46315" r="244" g="99" b="21" />
+  <color name="Jet" hex="2a2b2a" r="42" g="43" b="42" />
+  <color name="Mint" hex="61c9a8" r="97" g="201" b="168" />
+  <color name="Thistle" hex="d3c0cd" r="211" g="192" b="205" />
+  <color name="Snow" hex="fffafb" r="255" g="250" b="251" />
+</palette>
+```
