@@ -7,14 +7,14 @@ import OnboardingSlides from '@/views/onboardingSlides.vue';
 
 const guard = async (to: any, from: any, next: any) => {
   const loggedIn = !!currentUser?.value?.uid;
-  if (loggedIn && ["home", "index"].includes(to.name)) {
-    return next({ name: "private-page" });
-  } else if (!loggedIn && ["home", "index"].includes(to.name)) {
-    return next();
-  } else if (!loggedIn) {
-    return next({ name: "home" });
+  if (!loggedIn) {
+    if (to.path !== '/login') {
+      next({ path: '/login' });
+    } else {
+      next();
+    }
   } else {
-    return next();
+    next();
   }
 };
 
