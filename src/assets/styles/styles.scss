@@ -1,0 +1,73 @@
+// Define color variables
+$color-orange-pantone: #f46315; // Primary color
+$color-jet: #2a2b2a; // Dark background
+$color-mint: #61c9a8; // Accent color
+$color-thistle: #d3c0cd; // Secondary text
+$color-snow: #fffafb; // Background light
+
+// Base body styles
+body {
+  font-family: 'Comfortaa', Lato, sans-serif;
+  color: $color-jet;
+  background-color: $color-snow;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+// Headings style
+h1, h2, h3, h4, h5, h6 {
+  color: $color-jet;
+  margin: 0;
+  padding: 0.5em 0;
+}
+
+// Link styles
+a {
+  color: $color-orange-pantone;
+  text-decoration: none;
+  
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// Button styles
+.button {
+  background-color: $color-orange-pantone;
+  color: $color-snow;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  text-transform: uppercase;
+  
+  &:hover {
+    background-color: darken($color-orange-pantone, 10%);
+  }
+}
+
+// Container styles
+.container {
+  width: 90%;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+// Utility classes
+.text-center {
+  text-align: center;
+}
+
+.flex {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+// Media queries for responsive adjustments
+@media (max-width: 768px) {
+  .container {
+    width: 100%;
+  }
+}
