@@ -17,78 +17,55 @@
         </ion-item>
         <ion-button type="submit" expand="block">Register</ion-button>
       </form>
-
-      <ion-button @click="signInWithGoogle" expand="block" color="danger">
-        Register with Google
-      </ion-button>
-
-      <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
+      <div class="social-login">
+        <ion-button @click="signInWithGoogle" expand="block" color="danger">
+          Register with Google
+        </ion-button>
+      </div>
     </ion-content>
   </ion-page>
 </template>
 
 <script lang="ts">
-import {
-  IonPage,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
-  IonContent,
-  IonItem,
-  IonLabel,
-  IonInput,
-  IonButton,
-} from "@ionic/vue";
-import { defineComponent, ref } from "vue";
+import { defineComponent, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import {
-  fb_signInWithGoogle,
-  fb_createUserWithEmailAndPassword,
-} from "@/services/firebase/firebase-service";
+import { fb_createUserWithEmailAndPassword, fb_signInWithGoogle } from "@/services/firebase/firebase-service";
 
 export default defineComponent({
-  components: {
-    IonPage,
-    IonHeader,
-    IonToolbar,
-    IonTitle,
-    IonContent,
-    IonItem,
-    IonLabel,
-    IonInput,
-    IonButton,
-  },
+  name: 'RegisterPage',
   setup() {
-    const email = ref("");
-    const password = ref("");
-    const errorMessage = ref("");
+    const email = ref('');
+    const password = ref('');
     const router = useRouter();
 
     const handleRegister = async () => {
       try {
         await fb_createUserWithEmailAndPassword(email.value, password.value);
-        router.push('/private'); // Redirect after successful registration
+        router.push('/home'); // Redirect to home page after successful signup
       } catch (error: any) {
-        errorMessage.value = error.message; 
+        console.error("Error during registration:", error);
       }
     };
 
     const signInWithGoogle = async () => {
       try {
         await fb_signInWithGoogle();
-        router.push('/private'); // Or your protected route
+        router.push('/home'); // Redirect to home page after successful signup
       } catch (error: any) {
-        errorMessage.value = error.message;
+        console.error("Error during Google sign-in:", error);
       }
     };
 
-    return {
-      email,
-      password,
-      handleRegister,
-      signInWithGoogle,
-      errorMessage,
-    };
+    return { email, password, handleRegister, signInWithGoogle };
   },
 });
 </script>
+
+<style scoped>
+.social-login {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+</style>
