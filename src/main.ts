@@ -4,10 +4,7 @@ import router from './router';
 
 import { IonicVue } from '@ionic/vue';
 
-/* Auth0 configuration */
-import { createAuth0 } from '@auth0/auth0-vue';
-import { domain as auth0Domain, clientId, callbackUri } from '../auth.config';
-
+import { onAuthStateChangedListener } from "./services/firebase/firebase-service";
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/vue/css/core.css';
@@ -27,15 +24,14 @@ import '@ionic/vue/css/display.css';
 
 /* Theme variables */
 import './theme/variables.css';
-import { newGetUser } from './firebase/firebase-service';
 
-newGetUser().then(() => {
+onAuthStateChangedListener(() => { // Listener for auth state changes
   const app = createApp(App)
-  .use(IonicVue)
-  .use(router);
+    .use(IonicVue)
+    .use(router);
 
   router.isReady().then(() => {
     app.mount("#app");
   });
-})
+});
   

@@ -1,37 +1,28 @@
 <template>
-    <ion-button @click="onLogout">Log out</ion-button>
-  </template>
-  
-  <script lang="ts">
-  import { defineComponent } from "vue";
-  import { useAuth0 } from "@auth0/auth0-vue";
-  import { Browser } from "@capacitor/browser";
-  import { IonButton } from "@ionic/vue";
-  import { callbackUri } from "../../auth.config";
-  
-  export default defineComponent({
-    components: {
-      IonButton,
-    },
-    setup() {
-      const { logout } = useAuth0();
-  
-      const onLogout = async () => {
-        await logout({
-          logoutParams: {
-            returnTo: callbackUri,
-          },
-          openUrl: (url: string) =>
-            Browser.open({
-              url,
-              windowName: "_self",
-            }),
-        });
-      };
-  
-      return {
-        onLogout,
-      };
-    },
-  });
-  </script>
+  <ion-button @click="onLogout">Log out</ion-button>
+</template>
+
+<script lang="ts">
+import { defineComponent } from "vue";
+import { IonButton } from "@ionic/vue";
+import { fb_signOut } from "@/services/firebase/firebase-service"; 
+
+export default defineComponent({
+  components: {
+    IonButton,
+  },
+  setup() {
+    const onLogout = async () => {
+      try {
+        await fb_signOut(); 
+        // Handle successful logout, e.g., redirect
+      } catch (error) {
+        console.error("Error logging out:", error);
+        // Display an error message to the user
+      }
+    };
+
+    return { onLogout };
+  },
+});
+</script>

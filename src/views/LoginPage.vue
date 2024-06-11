@@ -1,9 +1,4 @@
 <template>
-<ion-toast
-    :is-open="showToast"
-    :message="toastMessage"
-    duration="2000"
-  ></ion-toast>
   <ion-page>
     <ion-header>
       <ion-toolbar>
@@ -22,51 +17,80 @@
         </ion-item>
         <ion-button type="submit" expand="block">Login</ion-button>
       </form>
-      <!-- Display error messages -->
-      <ion-text color="danger" v-if="loginError">{{ loginError }}</ion-text>
+      <p>
+          Don't have an account? 
+          <router-link :to="{ name: 'RegisterPage' }">Register</router-link>
+        </p>
+
+      <ion-button @click="signInWithGoogle" expand="block" color="danger">
+        Login with Google
+      </ion-button>
+
+      <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
     </ion-content>
   </ion-page>
 </template>
 
 <script lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonItem, IonLabel, IonInput, IonButton, IonText, IonToast } from '@ionic/vue';
-import { defineComponent, ref, watch } from 'vue';
-import { useAuth } from '@/services/authService';
+import { 
+  IonPage, 
+  IonHeader, 
+  IonToolbar, 
+  IonTitle, 
+  IonContent, 
+  IonItem, 
+  IonLabel, 
+  IonInput, 
+  IonButton 
+} from '@ionic/vue';
+import { defineComponent, ref } from 'vue';
+import { useRouter } from 'vue-router'; 
+import { fb_signInWithGoogle, fb_signInWithEmailAndPassword } from '@/services/firebase/firebase-service';
 
 export default defineComponent({
   name: 'LoginPage',
   components: {
-    IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonItem, IonLabel, IonInput, IonButton, IonText, IonToast
+    IonPage,
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonContent,
+    IonItem,
+    IonLabel,
+    IonInput,
+    IonButton,
   },
   setup() {
-    const { login, signInWithGoogle, error } = useAuth();
     const email = ref('');
     const password = ref('');
-    const showToast = ref(false);
-    const toastMessage = ref('');
+    const errorMessage = ref('');
+    const router = useRouter();
 
     const handleLogin = async () => {
-    try{
-      await login(email.value, password.value);
-      }
-      catch(err) {
-        toastMessage.value = err.message;
-        showToast.value = true;
+      try {
+        await fb_signInWithEmailAndPassword(email.value, password.value);
+        router.push('/private'); // Or your protected route
+      } catch (error: any) {
+        errorMessage.value = error.message;
       }
     };
 
-    const handleGoogleSignIn = async () => {
-      await signInWithGoogle();
+    const signInWithGoogle = async () => {
+      try {
+        await fb_signInWithGoogle();
+        router.push('/private'); // Or your protected route
+      } catch (error: any) {
+        errorMessage.value = error.message;
+      }
     };
 
-    watch(error, async (newError) => {
-      if (newError) {
-        toastMessage.value = newError;
-        showToast.value = true;
-      }
-    });
-
-    return { email, password, handleLogin, handleGoogleSignIn, showToast, toastMessage };
+    return {
+      email,
+      password,
+      handleLogin,
+      signInWithGoogle,
+      errorMessage,
+    };
   },
 });
 </script>
