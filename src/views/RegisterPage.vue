@@ -17,47 +17,78 @@
         </ion-item>
         <ion-button type="submit" expand="block">Register</ion-button>
       </form>
-      <div class="social-login">
-        <ion-button @click="signInWithGoogle" expand="block" color="danger">
-          Register with Google
-        </ion-button>
-        <!-- <ion-button @click="signInWithFacebook" expand="block" color="primary">
-          Register with Facebook
-        </ion-button> -->
-      </div>
+
+      <ion-button @click="signInWithGoogle" expand="block" color="danger">
+        Register with Google
+      </ion-button>
+
+      <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
     </ion-content>
   </ion-page>
 </template>
 
 <script lang="ts">
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonItem, IonLabel, IonInput, IonButton } from '@ionic/vue';
-import { defineComponent, ref } from 'vue';
-import { useAuth } from '@/services/authService'; // Adjust path as needed
+import {
+  IonPage,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonContent,
+  IonItem,
+  IonLabel,
+  IonInput,
+  IonButton,
+} from "@ionic/vue";
+import { defineComponent, ref } from "vue";
+import { useRouter } from 'vue-router';
+import {
+  fb_signInWithGoogle,
+  fb_createUserWithEmailAndPassword,
+} from "@/services/firebase/firebase-service";
 
 export default defineComponent({
   components: {
-    IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonItem, IonLabel, IonInput, IonButton
+    IonPage,
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonContent,
+    IonItem,
+    IonLabel,
+    IonInput,
+    IonButton,
   },
   setup() {
-    const email = ref('');
-    const password = ref('');
-    const { register, signInWithGoogle } = useAuth();
+    const email = ref("");
+    const password = ref("");
+    const errorMessage = ref("");
+    const router = useRouter();
 
     const handleRegister = async () => {
-      await register(email.value, password.value);
-      // Additional logic like redirecting to another page upon successful registration
+      try {
+        await fb_createUserWithEmailAndPassword(email.value, password.value);
+        router.push('/private'); // Redirect after successful registration
+      } catch (error: any) {
+        errorMessage.value = error.message; 
+      }
     };
 
-    return { email, password, handleRegister, signInWithGoogle };
+    const signInWithGoogle = async () => {
+      try {
+        await fb_signInWithGoogle();
+        router.push('/private'); // Or your protected route
+      } catch (error: any) {
+        errorMessage.value = error.message;
+      }
+    };
+
+    return {
+      email,
+      password,
+      handleRegister,
+      signInWithGoogle,
+      errorMessage,
+    };
   },
 });
 </script>
-
-<style scoped>
-.social-login {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 20px;
-}
-</style>

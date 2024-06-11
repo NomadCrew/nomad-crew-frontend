@@ -25,7 +25,7 @@
     </ion-page>
 </template>
 
-<script>
+<script lang="ts">
 import { IonContent, IonPage, IonButton } from '@ionic/vue';
 import { Swiper, SwiperSlide } from 'swiper/vue';
 import 'swiper/swiper-bundle.css';

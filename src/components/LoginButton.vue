@@ -1,34 +1,27 @@
 <template>
-    <ion-button @click="login">Log in</ion-button>
-  </template>
-  
-  <script lang="ts">
-  import { defineComponent } from "vue";
-  import { IonApp, IonRouterOutlet } from "@ionic/vue";
-  
-  import { useAuth0 } from "@auth0/auth0-vue";
-  import { App as CapApp } from "@capacitor/app";
-  import { IonButton } from "@ionic/vue";
-  import { Browser } from "@capacitor/browser";
-  
-  export default defineComponent({
-    components: {
+  <ion-button @click="login">Log in with Google</ion-button> </template>
+
+<script lang="ts">
+import { defineComponent } from "vue";
+import { IonButton } from "@ionic/vue";
+import { fb_signInWithGoogle } from "@/services/firebase/firebase-service"; 
+
+export default defineComponent({
+  components: {
     IonButton,
-    },
-    setup() {
-      const { loginWithRedirect } = useAuth0();
-  
-      const login = async () => {
-        await loginWithRedirect({
-          openUrl: (url: string) =>
-            Browser.open({
-              url,
-              windowName: "_self",
-            }),
-        });
-      };
-  
-      return { login };
-    },
-  });
-  </script>
+  },
+  setup() {
+    const login = async () => {
+      try {
+        await fb_signInWithGoogle();
+        // Handle successful login, e.g., redirect
+      } catch (error) {
+        console.error("Error logging in with Google:", error);
+        // Display an error message to the user
+      }
+    };
+
+    return { login };
+  },
+});
+</script>

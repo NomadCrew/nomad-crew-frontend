@@ -1,5 +1,5 @@
 # Stage 1: Build the application
-FROM node:17-alpine AS builder
+FROM node:21-alpine AS builder
 
 # Create app directory
 RUN mkdir -p /app
@@ -9,21 +9,21 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Bundle app source
 COPY . .
 
 # set arguments and env variables
-ARG GOOGLE_ID
-ARG GOOGLE_SECRET
-ARG SECRET
-ARG MONGO_URL
+# ARG GOOGLE_ID
+# ARG GOOGLE_SECRET
+# ARG SECRET
+# ARG MONGO_URL
 
-ENV GOOGLE_ID=${GOOGLE_ID}
-ENV GOOGLE_SECRET=${GOOGLE_SECRET}
-ENV SECRET=${SECRET}
-ENV MONGO_URL=${MONGO_URL}
+# ENV GOOGLE_ID=${GOOGLE_ID}
+# ENV GOOGLE_SECRET=${GOOGLE_SECRET}
+# ENV SECRET=${SECRET}
+# ENV MONGO_URL=${MONGO_URL}
 
 RUN npm run build
 RUN npm prune --production
