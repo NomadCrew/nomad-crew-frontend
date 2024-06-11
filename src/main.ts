@@ -3,8 +3,7 @@ import App from './App.vue'
 import router from './router';
 
 import { IonicVue } from '@ionic/vue';
-
-import { onAuthStateChangedListener } from "./services/firebase/firebase-service";
+import { newGetUser } from "./services/firebase/firebase-service";
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/vue/css/core.css';
@@ -25,7 +24,7 @@ import '@ionic/vue/css/display.css';
 /* Theme variables */
 import './theme/variables.css';
 
-onAuthStateChangedListener(() => { // Listener for auth state changes
+newGetUser().then(() => { // Listener for auth state changes
   const app = createApp(App)
     .use(IonicVue)
     .use(router);
@@ -34,4 +33,3 @@ onAuthStateChangedListener(() => { // Listener for auth state changes
     app.mount("#app");
   });
 });
-  

@@ -17,80 +17,48 @@
         </ion-item>
         <ion-button type="submit" expand="block">Login</ion-button>
       </form>
-      <p>
-          Don't have an account? 
-          <router-link :to="{ name: 'RegisterPage' }">Register</router-link>
-        </p>
-
       <ion-button @click="signInWithGoogle" expand="block" color="danger">
-        Login with Google
+        Sign in with Google
       </ion-button>
-
-      <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
+      <ion-text color="danger" v-if="loginError">{{ loginError }}</ion-text>
     </ion-content>
   </ion-page>
 </template>
 
 <script lang="ts">
-import { 
-  IonPage, 
-  IonHeader, 
-  IonToolbar, 
-  IonTitle, 
-  IonContent, 
-  IonItem, 
-  IonLabel, 
-  IonInput, 
-  IonButton 
-} from '@ionic/vue';
 import { defineComponent, ref } from 'vue';
-import { useRouter } from 'vue-router'; 
-import { fb_signInWithGoogle, fb_signInWithEmailAndPassword } from '@/services/firebase/firebase-service';
+import { useRouter } from 'vue-router';
+import { fb_signInWithEmailAndPassword, fb_signInWithGoogle } from "@/services/firebase/firebase-service";
 
 export default defineComponent({
   name: 'LoginPage',
-  components: {
-    IonPage,
-    IonHeader,
-    IonToolbar,
-    IonTitle,
-    IonContent,
-    IonItem,
-    IonLabel,
-    IonInput,
-    IonButton,
-  },
   setup() {
     const email = ref('');
     const password = ref('');
-    const errorMessage = ref('');
+    const loginError = ref('');
     const router = useRouter();
 
     const handleLogin = async () => {
       try {
         await fb_signInWithEmailAndPassword(email.value, password.value);
-        router.push('/private'); // Or your protected route
+        router.push('/home'); // Redirect to home page after successful login
       } catch (error: any) {
-        errorMessage.value = error.message;
+        loginError.value = error.message;
+        console.error("Error logging in with email:", error);
       }
     };
 
     const signInWithGoogle = async () => {
       try {
         await fb_signInWithGoogle();
-        router.push('/private'); // Or your protected route
+        router.push('/home'); // Redirect to home page after successful login
       } catch (error: any) {
-        errorMessage.value = error.message;
+        loginError.value = error.message;
+        console.error("Error logging in with Google:", error);
       }
     };
 
-    return {
-      email,
-      password,
-      handleLogin,
-      signInWithGoogle,
-      errorMessage,
-    };
+    return { email, password, handleLogin, signInWithGoogle, loginError };
   },
 });
 </script>
