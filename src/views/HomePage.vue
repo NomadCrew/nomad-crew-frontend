@@ -1,114 +1,68 @@
 <template>
   <ion-page>
-    <ion-header :translucent="true">
+    <ion-header>
       <ion-toolbar>
-        <ion-title>Nomad Crew</ion-title>
+        <ion-title>Explore Vancouver</ion-title>
+        <ion-buttons slot="end">
+          <ion-avatar>
+            <img src="https://avatar.iran.liara.run/public" alt="User Avatar"/>
+          </ion-avatar>
+        </ion-buttons>
       </ion-toolbar>
     </ion-header>
-
-    <ion-content :fullscreen="true">
-      <div id="container">
-        <ion-button @click="signInWithGoogle">GOOGLE AUTH</ion-button>
-        <div style="margin-top: 12px">
-          <ion-card>
-            <ion-card-content>
-              <ion-item>
-                <ion-label>EMAIL</ion-label>
-                <ion-input v-model="email" type="text" required></ion-input>
-              </ion-item>
-              <ion-item>
-                <ion-label>PASSWORD</ion-label>
-                <ion-input v-model="password" type="password"></ion-input>
-              </ion-item>
-              <ion-button @click="signIn">SIGN IN WITH EMAIL</ion-button>
-            </ion-card-content>
-          </ion-card>
-        </div>
-        <div>
-          {{ errorMessage }} 
-        </div>
+    <ion-content class="ion-padding">
+      <div class="search-container">
+        <ion-searchbar placeholder="Search"></ion-searchbar>
       </div>
     </ion-content>
+    <ion-footer>
+      <ion-tab-bar slot="bottom">
+        <ion-tab-button tab="home" href="/home">
+          <ion-icon name="home-outline"></ion-icon>
+        </ion-tab-button>
+        <ion-tab-button tab="groups" href="/groups">
+          <ion-icon name="people-outline"></ion-icon>
+        </ion-tab-button>
+        <ion-tab-button tab="chat" href="/chat">
+          <ion-icon name="chatbubbles-outline"></ion-icon>
+        </ion-tab-button>
+      </ion-tab-bar>
+    </ion-footer>
   </ion-page>
 </template>
 
-<script lang="ts" setup>
-import { 
-  IonContent,
-  IonHeader,
-  IonPage,
-  IonTitle,
-  IonToolbar,
-  IonButton,
-  IonItem,
-  IonLabel,
-  IonInput,
-  IonCard,
-  IonCardContent,
-} from "@ionic/vue";
-import { onMounted, ref } from "vue";
-import { useRouter } from 'vue-router'; 
-import {
-  fb_signInWithGoogle,
-  fb_signInWithEmailAndPassword,
-  auth
-} from "@/services/firebase/firebase-service";
+<script lang="ts">
+import { defineComponent } from 'vue';
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonAvatar, IonContent, IonFooter, IonTabBar, IonTabButton, IonIcon, IonSearchbar } from '@ionic/vue';
 
-const email = ref("");
-const password = ref("");
-const errorMessage = ref(""); 
-const router = useRouter();
-
-onMounted(() => {
-  // If a user is already logged in, redirect to '/private'
-  if (auth.currentUser) {
-    router.replace('/private'); 
+export default defineComponent({
+  name: 'HomePage',
+  components: {
+    IonPage,
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonButtons,
+    IonAvatar,
+    IonContent,
+    IonFooter,
+    IonTabBar,
+    IonTabButton,
+    IonIcon,
+    IonSearchbar
   }
 });
-
-const signIn = async () => {
-  try {
-    await fb_signInWithEmailAndPassword(email.value, password.value);
-    router.replace('/private'); // Redirect after successful sign-in
-  } catch (error: any) {
-    errorMessage.value = error.message; 
-  }
-};
-
-const signInWithGoogle = async () => {
-  try {
-    await fb_signInWithGoogle();
-    router.replace('/private'); // Redirect after successful sign-in
-  } catch (error: any) {
-    errorMessage.value = error.message;
-  }
-};
-
 </script>
 
 <style scoped>
-#container {
-  text-align: center;
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
+.search-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
 }
 
-#container strong {
-  font-size: 20px;
-  line-height: 26px;
-}
-
-#container p {
-  font-size: 16px;
-  line-height: 22px;
-  color: #8c8c8c;
-  margin: 0;
-}
-
-#container a {
-  text-decoration: none;
+ion-avatar {
+  margin: 0 15px;
 }
 </style>

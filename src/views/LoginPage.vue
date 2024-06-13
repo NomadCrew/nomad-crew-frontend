@@ -41,7 +41,12 @@ export default defineComponent({
     const handleLogin = async () => {
       try {
         await fb_signInWithEmailAndPassword(email.value, password.value);
-        router.push('/home'); // Redirect to home page after successful login
+        const onboardingCompleted = localStorage.getItem('onboardingCompleted') === 'true';
+        if (onboardingCompleted) {
+          router.push('/home');
+        } else {
+          router.push('/onboarding');
+        }
       } catch (error: any) {
         loginError.value = error.message;
         console.error("Error logging in with email:", error);
@@ -51,7 +56,12 @@ export default defineComponent({
     const signInWithGoogle = async () => {
       try {
         await fb_signInWithGoogle();
-        router.push('/home'); // Redirect to home page after successful login
+        const onboardingCompleted = localStorage.getItem('onboardingCompleted') === 'true';
+        if (onboardingCompleted) {
+          router.push('/home');
+        } else {
+          router.push('/onboarding');
+        }
       } catch (error: any) {
         loginError.value = error.message;
         console.error("Error logging in with Google:", error);

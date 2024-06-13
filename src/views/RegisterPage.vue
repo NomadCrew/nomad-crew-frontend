@@ -41,7 +41,8 @@ export default defineComponent({
     const handleRegister = async () => {
       try {
         await fb_createUserWithEmailAndPassword(email.value, password.value);
-        router.push('/home'); // Redirect to home page after successful signup
+        localStorage.setItem('onboardingCompleted', 'false');
+        router.push('/onboarding');
       } catch (error: any) {
         console.error("Error during registration:", error);
       }
@@ -50,7 +51,8 @@ export default defineComponent({
     const signInWithGoogle = async () => {
       try {
         await fb_signInWithGoogle();
-        router.push('/home'); // Redirect to home page after successful signup
+        localStorage.setItem('onboardingCompleted', 'false');
+        router.push('/onboarding');
       } catch (error: any) {
         console.error("Error during Google sign-in:", error);
       }
