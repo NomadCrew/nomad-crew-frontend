@@ -1,58 +1,41 @@
 import { createRouter, createWebHistory } from '@ionic/vue-router';
 import { RouteRecordRaw } from 'vue-router';
-import TabsPage from '../views/TabsPage.vue'
-import { currentUser } from '@/services/firebase/firebase-service';
 import HomePage from '@/views/HomePage.vue';
-import OnboardingSlides from '@/views/onboardingSlides.vue';
-
-// Modify the guard to check for Firebase currentUser
-const guard = async (to: any, from: any, next: any) => {
-  // Assuming currentUser is a ref or computed property
-  const loggedIn = !!currentUser.value;
-
-  if (to.meta?.requiresAuth && !loggedIn) {
-    next('/login');
-  } else if (to.path === '/login' && loggedIn) {
-    next('/home');
-  } else {
-    next();
-  }
-};
+import OnboardingSlides from '@/views/OnboardingSlides.vue';
+import LoginPage from '@/views/LoginPage.vue';
+import RegisterPage from '@/views/RegisterPage.vue';
+import { currentUser } from '@/services/firebase/firebase-service';
 
 const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
-    redirect: '/home' 
+    redirect: '/home'
   },
   {
     path: '/home',
     name: 'Home',
-    component: HomePage
+    component: HomePage,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/onboarding',
+    name: 'Onboarding',
+    component: OnboardingSlides,
+    meta: { requiresAuth: true, requiresOnboarding: true }
   },
   {
     path: '/login',
-    component: () => import('@/views/LoginPage.vue')
+    name: 'Login',
+    component: LoginPage,
+    meta: { requiresUnauth: true }
   },
   {
     path: '/register',
-    component: () => import('@/views/RegisterPage.vue')
+    name: 'Register',
+    component: RegisterPage,
+    meta: { requiresUnauth: true }
   },
-  {
-    path: "/private",
-    name: "private-page",
-    component: OnboardingSlides,
-    meta: { requiresAuth: true }, // Require authentication for this route
-    beforeEnter: guard, // Apply the authentication guard
-  },
-  {
-    path: '/tabs/',
-    component: TabsPage,
-    meta: { requiresAuth: true }, // Require authentication for tab routes
-    children: [
-      // ... (your tab routes remain the same)
-    ]
-  },
-  // ... (other routes)
+  // other routes
 ];
 
 const router = createRouter({
@@ -60,7 +43,22 @@ const router = createRouter({
   routes
 });
 
-// Apply the guard globally
-router.beforeEach(guard);
+router.beforeEach((to, from, next) => {
+  const user = currentUser.value;
+  const onboardingCompleted = localStorage.getItem('onboardingCompleted') === 'true';
+
+  if (to.matched.some(record => record.meta.requiresAuth) && !user) {
+    next({ name: 'Login' });
+  } else if (to.matched.some(record => record.meta.requiresUnauth) && user) {
+    next({ name: 'Home' });
+  } else if (to.matched.some(record => record.meta.requiresOnboarding) && !onboardingCompleted) {
+    next({ name: 'Onboarding' });
+  } else if (to.path === '/register' && user) {
+    next({ name: 'Home' });
+  } else {
+    next();
+  }
+});
 
 export default router;
+
