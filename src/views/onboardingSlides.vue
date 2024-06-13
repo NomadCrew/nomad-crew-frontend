@@ -48,7 +48,7 @@
   
       const completeOnboarding = () => {
         localStorage.setItem('onboardingCompleted', 'true');
-        router.push('/home'); // Navigate to the home screen or dashboard
+        router.push('/home');
       };
   
       return { completeOnboarding };

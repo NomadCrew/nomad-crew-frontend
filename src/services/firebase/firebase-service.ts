@@ -1,11 +1,11 @@
 import { Capacitor } from "@capacitor/core";
 import { initializeApp, getApps } from "firebase/app";
-import { getAuth, indexedDBLocalPersistence, initializeAuth, GoogleAuthProvider, signInWithCredential, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import { getAuth, indexedDBLocalPersistence, initializeAuth, GoogleAuthProvider, signInWithCredential, signInWithEmailAndPassword, createUserWithEmailAndPassword, User } from "firebase/auth";
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication";
 import { ref, computed } from "vue";
 import { firebaseConfig } from "./firebaseConfig";
 
-const USER = ref<any>(null);
+const USER = ref<User | null>(null);
 const APP = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
 const auth = getAuth(APP);

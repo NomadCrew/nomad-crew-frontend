@@ -29,9 +29,22 @@
 import { defineComponent, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { fb_signInWithEmailAndPassword, fb_signInWithGoogle } from "@/services/firebase/firebase-service";
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonItem, IonLabel, IonInput, IonButton, IonText } from '@ionic/vue';
 
 export default defineComponent({
   name: 'LoginPage',
+  components: {
+    IonPage,
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonContent,
+    IonItem,
+    IonLabel,
+    IonInput,
+    IonButton,
+    IonText
+  },
   setup() {
     const email = ref('');
     const password = ref('');
@@ -72,3 +85,16 @@ export default defineComponent({
   },
 });
 </script>
+
+<style scoped>
+.search-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+ion-avatar {
+  margin: 0 15px;
+}
+</style>
