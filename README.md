@@ -110,4 +110,4 @@ npm run typescript
 
 ## License
 
-MIT License - See LICENSE file for details
+Apache License - See LICENSE file for details
