@@ -1,7 +1,0 @@
-{
-  "name": "nomad-crew",
-  "integrations": {
-    "capacitor": {}
-  },
-  "type": "vue-vite"
-}
