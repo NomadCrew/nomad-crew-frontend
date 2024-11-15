@@ -102,6 +102,11 @@ npm run typescript
 4. Push branch (`git push origin feature/new-feature`)
 5. Open pull request
 
+## Contributors
+
+<!-- CONTRIBUTORS-START -->
+<!-- CONTRIBUTORS-END -->
+
 ## Community
 
 - **Issues**: GitHub Issues
