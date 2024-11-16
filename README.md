@@ -104,8 +104,8 @@ npm run typescript
 
 ## Contributors
 
-<!-- CONTRIBUTORS-START -->
-<!-- CONTRIBUTORS-END -->
+<!-- readme: collaborators,contributors -start -->
+<!-- readme: collaborators,contributors -end -->
 
 ## Community
 
