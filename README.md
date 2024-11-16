@@ -108,6 +108,19 @@ npm run typescript
 ## Contributors
 
 <!-- readme: collaborators,contributors -start -->
+<table>
+	<tbody>
+		<tr>
+            <td align="center">
+                <a href="https://github.com/naqeebali-shamsi">
+                    <img src="https://avatars.githubusercontent.com/u/37825325?v=4" width="100;" alt="naqeebali-shamsi"/>
+                    <br />
+                    <sub><b>Naqeebali Shamsi</b></sub>
+                </a>
+            </td>
+		</tr>
+	<tbody>
+</table>
 <!-- readme: collaborators,contributors -end -->
 
 ## Community
