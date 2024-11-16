@@ -1,52 +1,118 @@
-# Nomad Crew - Frontend
+# NomadCrew - Frontend
 
 ## Overview
 
-This repository contains the frontend code for Nomad Crew, an app designed to create disposable groups for trips. The frontend has been transitioned to use Ionic (VueJS) + Capacitor frameworks to facilitate easy testing as a web app and streamline the development process. The app features include live location sharing, messaging, media sharing, and expense splitting, all optimized for a seamless user experience across web and mobile platforms.
+This repository contains the frontend code for NomadCrew, a mobile-first application designed for group travel coordination. Built with React Native and Expo, it provides a seamless experience across iOS and Android platforms.
 
-## Key Features
+## Features
 
-- User Authentication
-- Group Creation and Management
-- Live Location Tracking on Map
-- Real-time Chat Functionality
-- Media Sharing Capabilities
-- Expense Management and Splitting
+- User Authentication & Profile Management
+- Trip Planning & Management
+- Live Location Sharing
+- Expense Tracking & Splitting
+- Real-time Chat & Media Sharing
+- Offline Support
+- Cross-platform Compatibility
 
-## Technology Stack
+## Tech Stack
 
-- **Framework**: Ionic (VueJS)
-- **Runtime**: Capacitor
-- **UI Components**: Ionic UI Components for Vue
-- **State Management**: VueX
-
-## Development Guidelines
-
-- Use VueJS's reactive programming model to build interactive and efficient user interfaces.
-- Implement Ionic UI Components for a native app-like experience, optimizing for both mobile and web platforms.
-- Leverage Capacitor for accessing native device features in a cross-platform manner.
-- Prioritize performance and user experience, aiming for fluid animations and quick load times.
-- Maintain high standards of security and privacy, particularly for sensitive features like live location sharing.
+- **Framework**: React Native
+- **Development Platform**: Expo
+- **Navigation**: Expo Router
+- **State Management**: Zustand
+- **UI Components**: React Native Paper
+- **Maps**: React Native Maps
+- **Testing**: Jest & React Native Testing Library
+- **CI/CD**: GitHub Actions
 
 ## Getting Started
 
-Instructions on setting up the development environment with Ionic (VueJS) and Capacitor, including necessary installations and environment configuration.
+1. **Prerequisites**
+   - Node.js 18+
+   - npm/yarn
+   - Expo CLI
+   - iOS Simulator/Android Emulator
 
-## Contribution Guidelines
+2. **Installation**
+   ```bash
+   # Clone repository
+   git clone https://github.com/NomadCrew/nomad-crew-frontend.git
+   
+   # Install dependencies
+   npm install
+   
+   # Start development server
+   npm start
+   ```
 
-Adopt the [GitHub Flow](https://docs.github.com/en/get-started/quickstart/github-flow). Create feature branches with the naming convention `feature/<feature-name>` and bug fixes as `bugfix/<bug-name>`. Ensure all contributions comply with [OWASP security standards](https://owasp.org/www-project-mobile-app-security/).
+3. **Environment Setup**
+   ```bash
+   # Copy environment template
+   cp .env.example .env
+   
+   # Configure environment variables
+   EXPO_PUBLIC_API_URL=your_api_url
+   EXPO_PUBLIC_MAPS_API_KEY=your_maps_key
+   ```
 
-## Project Roadmap
+## Development Guidelines
 
-- **Phase 1**: Implementation of core functionalities with Ionic and Capacitor.
-- **Phase 2**: Incorporation of advanced features and user feedback.
-- **Phase 3**: Expansion of the app capabilities and integration testing.
-- **Phase 4**: Final optimizations and deployment to web and mobile platforms.
+- Follow React Native best practices
+- Use TypeScript for type safety
+- Implement responsive designs using React Native Paper
+- Write unit tests for components
+- Use Expo's development client for custom native modules
 
-## Contact and Support
+## Project Structure
+```
+nomad-crew-frontend/
+├── app/                     # Expo Router screens
+├── components/              # Reusable components
+├── hooks/                   # Custom React hooks
+├── services/               # API and business logic
+├── store/                  # State management
+├── theme/                  # Styling and theming
+└── utils/                  # Helper functions
+```
 
-- **Maintainers**: [List of Project Maintainers]
-- **Community Support**: [Join our Slack Channel for updates and discussions](https://join.slack.com/t/slack-les9847/shared_invite/zt-2a0dqjzvk-YLC9TQFBExNnPFsH9yAB6g)
+## Testing
 
----
-*Note: This document is regularly updated to reflect the progress and changes in the project's development cycle.*
+```bash
+# Run unit tests
+npm test
+
+# Run e2e tests
+npm run e2e
+
+# Check types
+npm run typescript
+```
+
+## Deployment
+
+- **Development**: Automatic builds via GitHub Actions
+- **Testing**: Preview builds for pull requests
+- **Production**: App store submissions via EAS Build
+
+## Contributing
+
+1. Fork repository
+2. Create feature branch (`git checkout -b feature/new-feature`)
+3. Commit changes (`git commit -m 'Add new feature'`)
+4. Push branch (`git push origin feature/new-feature`)
+5. Open pull request
+
+## Contributors
+
+<!-- CONTRIBUTORS-START -->
+<!-- CONTRIBUTORS-END -->
+
+## Community
+
+- **Issues**: GitHub Issues
+- **Discussions**: GitHub Discussions
+- **Updates**: [Join our Slack](https://join.slack.com/t/slack-les9847/shared_invite/zt-2a0dqjzvk-YLC9TQFBExNnPFsH9yAB6g)
+
+## License
+
+Apache License - See LICENSE file for details

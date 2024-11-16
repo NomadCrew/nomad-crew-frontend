@@ -1,0 +1,20 @@
+name: Update Contributors List
+
+on:
+  schedule:
+    - cron: "0 0 * * *" # Runs daily
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  update-contributors:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Update README with contributors
+      uses: "owenvoke/contributors-readme-action@v2"
+      with:
+        readme-path: "README.md"
+        commit-message: "docs: update contributors"
