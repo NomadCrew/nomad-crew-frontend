@@ -3,10 +3,10 @@
   "compilerOptions": {
     "strict": true,
     "paths": {
-      "@/*": [
-        "./*"
-      ]
-    }
+      "@/*": ["./*"]
+    },
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
   },
   "include": [
     "**/*.ts",

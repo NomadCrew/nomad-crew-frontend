@@ -1,39 +1,54 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
+import { SplashScreen, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import 'react-native-reanimated';
+import { ThemeProvider, useTheme } from '@/src/theme/ThemeProvider';
+import { useAuthStore } from '@/src/store/useAuthStore';
 
-import { useColorScheme } from '@/hooks/useColorScheme';
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
+// Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
 
+function RootLayoutNav() {
+  const { theme, mode } = useTheme();
+  
+  return (
+    <NavigationThemeProvider value={mode === 'dark' ? DarkTheme : DefaultTheme}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      </Stack>
+      <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
+    </NavigationThemeProvider>
+  );
+}
+
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+  const [fontsLoaded, fontError] = useFonts({
+    'Inter': require('../assets/fonts/Inter/Inter-VariableFont_opsz,wght.ttf'),
+    'Inter-Italic': require('../assets/fonts/Inter/Inter-Italic-VariableFont_opsz,wght.ttf'),
+    'SpaceMono': require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
+  const { restoreToken, isInitialized } = useAuthStore();
+
   useEffect(() => {
-    if (loaded) {
+    restoreToken();
+  }, []);
+
+  useEffect(() => {
+    if ((fontsLoaded || fontError) && isInitialized) {
       SplashScreen.hideAsync();
     }
-  }, [loaded]);
+  }, [fontsLoaded, fontError, isInitialized]);
 
-  if (!loaded) {
+  if (!fontsLoaded && !fontError && !isInitialized) {
     return null;
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
+    <ThemeProvider>
+      <RootLayoutNav />
     </ThemeProvider>
   );
 }
