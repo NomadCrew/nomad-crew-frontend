@@ -1,5 +1,5 @@
 import type { PropsWithChildren, ReactElement } from 'react';
-import { StyleSheet, useColorScheme } from 'react-native';
+import { StyleSheet, useColorScheme, FlatList, View } from 'react-native';
 import Animated, {
   interpolate,
   useAnimatedRef,
@@ -17,15 +17,19 @@ type Props = PropsWithChildren<{
   headerBackgroundColor: { dark: string; light: string };
 }>;
 
+// Dummy data for FlatList
+const DUMMY_DATA = [{ key: 'content' }];
+
 export default function ParallaxScrollView({
   children,
   headerImage,
   headerBackgroundColor,
 }: Props) {
   const colorScheme = useColorScheme() ?? 'light';
-  const scrollRef = useAnimatedRef<Animated.ScrollView>();
+  const scrollRef = useAnimatedRef<Animated.FlatList>();
   const scrollOffset = useScrollViewOffset(scrollRef);
   const bottom = useBottomTabOverflow();
+
   const headerAnimatedStyle = useAnimatedStyle(() => {
     return {
       transform: [
@@ -43,23 +47,32 @@ export default function ParallaxScrollView({
     };
   });
 
+  const renderItem = () => (
+    <ThemedView style={styles.content}>
+      {children}
+    </ThemedView>
+  );
+
   return (
     <ThemedView style={styles.container}>
-      <Animated.ScrollView
+      <Animated.FlatList
         ref={scrollRef}
+        data={DUMMY_DATA}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.key}
         scrollEventThrottle={16}
-        scrollIndicatorInsets={{ bottom }}
-        contentContainerStyle={{ paddingBottom: bottom }}>
-        <Animated.View
-          style={[
-            styles.header,
-            { backgroundColor: headerBackgroundColor[colorScheme] },
-            headerAnimatedStyle,
-          ]}>
-          {headerImage}
-        </Animated.View>
-        <ThemedView style={styles.content}>{children}</ThemedView>
-      </Animated.ScrollView>
+        contentContainerStyle={{ paddingBottom: bottom }}
+        ListHeaderComponent={() => (
+          <Animated.View
+            style={[
+              styles.header,
+              { backgroundColor: headerBackgroundColor[colorScheme] },
+              headerAnimatedStyle,
+            ]}>
+            {headerImage}
+          </Animated.View>
+        )}
+      />
     </ThemedView>
   );
 }
