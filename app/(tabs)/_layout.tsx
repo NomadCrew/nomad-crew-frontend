@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { Platform } from 'react-native';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useTheme } from '@/src/theme';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 
 export default function TabLayout() {
@@ -9,15 +9,15 @@ export default function TabLayout() {
 
   return (
     <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: theme.colors.primary,
-        headerShown: false,
-        tabBarStyle: {
-          backgroundColor: theme.colors.background,
-          borderTopColor: theme.colors.border,
-        },
-        tabBarShowLabel: false, // This hides the tab labels
-      }}>
+        screenOptions={{
+          tabBarActiveTintColor: theme.colors.primary.main,
+          headerShown: false,
+          tabBarStyle: {
+            backgroundColor: theme.colors.background.default,
+            borderTopColor: theme.colors.border.default,
+          },
+        }}
+      >
       <Tabs.Screen
         name="index"
         options={{
