@@ -15,7 +15,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     try {
-      await login(email, password);
+      await login({ email, password });
       router.replace('/(tabs)');
     } catch (err) {
       // Error is handled by the store
@@ -31,14 +31,14 @@ export default function LoginScreen() {
         {/* Header Section */}
         <ThemedView style={styles.header}>
           <ThemedText style={[
-            theme.typography.display.medium,
+            { ...theme.typography.display.medium, fontWeight: 'bold' },
             { color: theme.colors.content.primary }
           ]}>
             Welcome Back
           </ThemedText>
           
           <ThemedText style={[
-            theme.typography.body.medium,
+            { ...theme.typography.body.medium, fontWeight: 'normal' },
             { color: theme.colors.content.secondary }
           ]}>
             Sign in to continue your journey
@@ -49,7 +49,7 @@ export default function LoginScreen() {
         {error && (
           <ThemedView style={styles.errorContainer}>
             <ThemedText style={[
-              theme.typography.body.small,
+              { ...theme.typography.body.small, fontWeight: 'normal' },
               { color: theme.colors.status.error.content }
             ]}>
               {error}
@@ -62,7 +62,7 @@ export default function LoginScreen() {
           {/* Email Input */}
           <ThemedView style={styles.inputContainer}>
             <ThemedText style={[
-              theme.typography.input.label,
+              { ...theme.typography.input.label, fontWeight: '400' },
               { color: theme.colors.content.secondary }
             ]}>
               Email
@@ -90,7 +90,7 @@ export default function LoginScreen() {
           {/* Password Input */}
           <ThemedView style={styles.inputContainer}>
             <ThemedText style={[
-              theme.typography.input.label,
+              { ...theme.typography.input.label, fontWeight: '400' },
               { color: theme.colors.content.secondary }
             ]}>
               Password
@@ -118,7 +118,7 @@ export default function LoginScreen() {
           <Link href="/forgot-password" asChild>
             <Pressable style={styles.forgotPasswordContainer}>
               <ThemedText style={[
-                theme.typography.body.small,
+                { ...theme.typography.body.small, fontWeight: '400' },
                 { color: theme.colors.primary.main }
               ]}>
                 Forgot your password?
@@ -138,7 +138,7 @@ export default function LoginScreen() {
             disabled={loading}
           >
             <ThemedText style={[
-              theme.typography.button.medium,
+              { ...theme.typography.button.medium, fontWeight: '500' },
               { color: theme.colors.primary.text }
             ]}>
               {loading ? (
@@ -156,7 +156,7 @@ export default function LoginScreen() {
           <Link href="/register" asChild>
             <Pressable style={styles.signUpContainer}>
               <ThemedText style={[
-                theme.typography.body.medium,
+                { ...theme.typography.body.medium, fontWeight: '400' },
                 { color: theme.colors.content.secondary }
               ]}>
                 Don't have an account?{' '}

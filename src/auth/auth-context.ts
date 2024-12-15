@@ -1,98 +1,177 @@
-import { createContext, useContext, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useReducer } from 'react';
+import { ActivityIndicator } from 'react-native';
+import { router } from 'expo-router';
+import jwtDecode from 'jwt-decode';
 import { secureStorage } from './secure-storage';
 import { api } from '@/src/api/config';
-import { router } from 'expo-router';
+import { ThemedView } from '@/components/ThemedView';
+import type { AxiosError, AxiosRequestConfig } from 'axios';
 
-interface AuthState {
-  status: 'idle' | 'signOut' | 'signIn';
-  isLoading: boolean;
-  user: User | null;
+// Type definitions
+export interface User {
+  id: number;
+  email: string;
+  username: string;
+  firstName?: string;
+  lastName?: string;
+  profilePicture?: string;
 }
 
-interface AuthContextType extends AuthState {
+export interface RegisterData {
+  email: string;
+  password: string;
+  username: string;
+  firstName?: string;
+  lastName?: string;
+}
+
+export interface JWTPayload {
+  sub: string;
+  exp: number;
+  iat: number;
+  email: string;
+}
+
+export interface AuthState {
+  status: 'idle' | 'signIn' | 'signOut';
+  isLoading: boolean;
+  user: User | null;
+  error: string | null;
+}
+
+export type AuthAction =
+  | { type: 'RESTORE_TOKEN'; user: User }
+  | { type: 'SIGN_IN'; user: User }
+  | { type: 'SIGN_OUT' }
+  | { type: 'START_LOADING' }
+  | { type: 'ERROR'; error: string };
+
+export interface AuthContextType extends AuthState {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
 }
 
+// Constants
+const MAX_RETRY_ATTEMPTS = 3;
+const AUTH_CONTEXT_ERROR = 'useAuth must be used within an AuthProvider';
+
+// Create the context with a default value
 const AuthContext = createContext<AuthContextType | null>(null);
 
+// Helper Types
+interface RetryConfig extends AxiosRequestConfig {
+  _retryCount?: number;
+}
+
+// Reducer
+function authReducer(state: AuthState, action: AuthAction): AuthState {
+  switch (action.type) {
+    case 'RESTORE_TOKEN':
+      return {
+        ...state,
+        status: 'signIn',
+        isLoading: false,
+        user: action.user,
+        error: null,
+      };
+    case 'SIGN_IN':
+      return {
+        ...state,
+        status: 'signIn',
+        isLoading: false,
+        user: action.user,
+        error: null,
+      };
+    case 'SIGN_OUT':
+      return {
+        ...state,
+        status: 'signOut',
+        isLoading: false,
+        user: null,
+        error: null,
+      };
+    case 'START_LOADING':
+      return {
+        ...state,
+        isLoading: true,
+        error: null,
+      };
+    case 'ERROR':
+      return {
+        ...state,
+        isLoading: false,
+        error: action.error,
+      };
+  }
+}
+
+// Helper functions
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  return 'An unexpected error occurred';
+}
+
+async function refreshToken(): Promise<void> {
+  try {
+    const { refreshToken } = await secureStorage.getTokens();
+    if (!refreshToken) throw new Error('No refresh token');
+
+    const { data } = await api.post('/auth/refresh', { refreshToken });
+    await secureStorage.setTokens(data.token, data.refreshToken);
+    api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+  } catch (error) {
+    throw new Error('Failed to refresh token');
+  }
+}
+
+const createAuthInterceptor = (signOut: () => Promise<void>) => {
+  return async (error: AxiosError) => {
+    const config = error.config as RetryConfig;
+    
+    if (error.response?.status === 401 && (!config._retryCount || config._retryCount < MAX_RETRY_ATTEMPTS)) {
+      config._retryCount = (config._retryCount || 0) + 1;
+      
+      try {
+        await refreshToken();
+        return api(config);
+      } catch (refreshError) {
+        await signOut();
+        return Promise.reject(refreshError);
+      }
+    }
+    return Promise.reject(error);
+  };
+};
+
+function parseJwt(token: string): JWTPayload {
+  try {
+    const decoded = jwtDecode<JWTPayload>(token);
+    if (!decoded.exp) {
+      throw new Error('Invalid token: missing expiration');
+    }
+    return decoded;
+  } catch (error) {
+    throw new Error('Failed to parse JWT token');
+  }
+}
+
+// Loading Component
+const LoadingScreen = () => (
+  <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+    <ActivityIndicator size="large" />
+  </ThemedView>
+);
+
+// Provider Component
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(authReducer, {
     status: 'idle',
     isLoading: true,
     user: null,
+    error: null,
   });
-
-  useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        const { token, refreshToken } = await secureStorage.getTokens();
-        
-        if (!token || !refreshToken) {
-          throw new Error('No tokens found');
-        }
-
-        // Validate token and get user data
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        const { data: user } = await api.get('/users/me');
-
-        dispatch({ type: 'RESTORE_TOKEN', user });
-      } catch (error) {
-        await secureStorage.clearTokens();
-        dispatch({ type: 'SIGN_OUT' });
-      }
-    };
-
-    initializeAuth();
-  }, []);
-
-  // Set up automatic token refresh
-  useEffect(() => {
-    if (state.status !== 'signIn') return;
-
-    let refreshTimeout: NodeJS.Timeout;
-
-    const setupRefresh = async () => {
-      try {
-        const { token } = await secureStorage.getTokens();
-        if (!token) return;
-
-        // Decode token to get expiration (assumes JWT)
-        const decoded = jwtDecode(token);
-        const expiresIn = decoded.exp! * 1000 - Date.now() - 60000; // Refresh 1 minute before expiry
-
-        refreshTimeout = setTimeout(refreshToken, expiresIn);
-      } catch (error) {
-        console.error('Failed to setup token refresh:', error);
-      }
-    };
-
-    setupRefresh();
-    return () => clearTimeout(refreshTimeout);
-  }, [state.status]);
-
-  // Set up API response interceptor for 401 errors
-  useEffect(() => {
-    const interceptor = api.interceptors.response.use(
-      (response) => response,
-      async (error) => {
-        if (error.response?.status === 401) {
-          try {
-            await refreshToken();
-            // Retry the original request
-            return api(error.config);
-          } catch (refreshError) {
-            // If refresh fails, sign out
-            await signOut();
-          }
-        }
-        return Promise.reject(error);
-      }
-    );
-
-    return () => api.interceptors.response.eject(interceptor);
-  }, []);
 
   const authActions = useMemo(
     () => ({
@@ -111,7 +190,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           throw error;
         }
       },
-
       signOut: async () => {
         try {
           await api.post('/auth/logout');
@@ -124,7 +202,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           router.replace('/login');
         }
       },
-
       register: async (data: RegisterData) => {
         try {
           dispatch({ type: 'START_LOADING' });
@@ -147,6 +224,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  // Set up auth interceptor
+  useEffect(() => {
+    const interceptor = api.interceptors.response.use(
+      response => response,
+      createAuthInterceptor(authActions.signOut)
+    );
+
+    return () => api.interceptors.response.eject(interceptor);
+  }, [authActions.signOut]);
+
+  // Handle token refresh
+  useEffect(() => {
+    if (state.status !== 'signIn') return;
+
+    let refreshTimeout: NodeJS.Timeout;
+
+    const setupRefresh = async () => {
+      try {
+        const { token } = await secureStorage.getTokens();
+        if (!token) return;
+
+        const decoded = parseJwt(token);
+        const now = Date.now();
+        const expiresAt = decoded.exp * 1000;
+        const refreshTime = Math.max(0, expiresAt - now - 60000); // 1 minute before expiry
+
+        refreshTimeout = setTimeout(refreshToken, refreshTime);
+      } catch (error) {
+        console.error('Failed to setup token refresh:', error);
+        authActions.signOut().catch(console.error);
+      }
+    };
+
+    setupRefresh();
+    return () => clearTimeout(refreshTimeout);
+  }, [state.status, authActions.signOut]);
+
   const value = useMemo(
     () => ({
       ...state,
@@ -156,7 +270,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   if (state.isLoading && state.status === 'idle') {
-    return <LoadingScreen />; // Create a loading screen component
+    return <LoadingScreen />;
   }
 
   return (
@@ -166,50 +280,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Hook for using auth context
+// Hook
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error(AUTH_CONTEXT_ERROR);
   }
   return context;
-}
-
-// Auth state reducer
-function authReducer(state: AuthState, action: AuthAction): AuthState {
-  switch (action.type) {
-    case 'RESTORE_TOKEN':
-      return {
-        ...state,
-        status: 'signIn',
-        isLoading: false,
-        user: action.user,
-      };
-    case 'SIGN_IN':
-      return {
-        ...state,
-        status: 'signIn',
-        isLoading: false,
-        user: action.user,
-      };
-    case 'SIGN_OUT':
-      return {
-        ...state,
-        status: 'signOut',
-        isLoading: false,
-        user: null,
-      };
-    case 'START_LOADING':
-      return {
-        ...state,
-        isLoading: true,
-      };
-    case 'ERROR':
-      return {
-        ...state,
-        isLoading: false,
-      };
-    default:
-      return state;
-  }
 }
