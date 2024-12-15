@@ -8,7 +8,20 @@ export default function HomeScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ThemedText style={styles.title}>Welcome to NomadCrew!</ThemedText>
+      <ThemedText 
+        category="display" 
+        variant="large" 
+        style={styles.title}
+      >
+        Welcome to NomadCrew!
+      </ThemedText>
+      <ThemedText 
+        category="body" 
+        variant="large" 
+        style={styles.subtitle}
+      >
+        Your group travel companion
+      </ThemedText>
     </ThemedView>
   );
 }
@@ -21,7 +34,11 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  subtitle: {
+    textAlign: 'center',
+    opacity: 0.8,
   },
 });
