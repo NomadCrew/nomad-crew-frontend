@@ -1,10 +1,9 @@
 import React, { createContext, useContext, useEffect, useMemo, useReducer } from 'react';
-import { ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
-import jwtDecode from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 import { secureStorage } from './secure-storage';
 import { api } from '@/src/api/config';
-import { ThemedView } from '@/components/ThemedView';
+import { LoadingScreen } from '@/components/LoadingScreen';
 import type { AxiosError, AxiosRequestConfig } from 'axios';
 
 // Type definitions
@@ -56,8 +55,8 @@ export interface AuthContextType extends AuthState {
 const MAX_RETRY_ATTEMPTS = 3;
 const AUTH_CONTEXT_ERROR = 'useAuth must be used within an AuthProvider';
 
-// Create the context with a default value
-const AuthContext = createContext<AuthContextType | null>(null);
+// Create the context
+export const AuthContext = createContext<AuthContextType | null>(null);
 
 // Helper Types
 interface RetryConfig extends AxiosRequestConfig {
@@ -126,7 +125,7 @@ async function refreshToken(): Promise<void> {
   }
 }
 
-const createAuthInterceptor = (signOut: () => Promise<void>) => {
+function createAuthInterceptor(signOut: () => Promise<void>) {
   return async (error: AxiosError) => {
     const config = error.config as RetryConfig;
     
@@ -143,7 +142,7 @@ const createAuthInterceptor = (signOut: () => Promise<void>) => {
     }
     return Promise.reject(error);
   };
-};
+}
 
 function parseJwt(token: string): JWTPayload {
   try {
@@ -156,13 +155,6 @@ function parseJwt(token: string): JWTPayload {
     throw new Error('Failed to parse JWT token');
   }
 }
-
-// Loading Component
-const LoadingScreen = () => (
-  <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <ActivityIndicator size="large" />
-  </ThemedView>
-);
 
 // Provider Component
 export function AuthProvider({ children }: { children: React.ReactNode }) {
