@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { View, ActivityIndicator, Pressable } from 'react-native';
-import { useAuthStore } from '../store/useAuthStore';
-import { ThemedText } from './ThemedText';
+import { useAuthStore } from '@/src/store/useAuthStore';
+import { ThemedText } from '@/components/ThemedText';
 
 const MAX_INIT_TIME = 10000; // 10 seconds
 
 export default function AuthErrorBoundary({ children }) {
   const { isInitialized, initialize } = useAuthStore();
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<Error | null>(null);
   const [initTimer, setInitTimer] = useState(null);
 
   useEffect(() => {

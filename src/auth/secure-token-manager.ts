@@ -2,7 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { jwtDecode } from 'jwt-decode';
-import { api } from '../api/config';
+import { api } from '@/src/api/instance';
 
 interface DecodedToken {
   exp: number;
