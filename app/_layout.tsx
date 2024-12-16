@@ -3,8 +3,10 @@ import { useFonts } from 'expo-font';
 import { SplashScreen, Stack, useSegments, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { configureAPI } from '@/src/api/config';
 import { ThemeProvider, useTheme } from '@/src/theme/ThemeProvider';
 import { useAuthStore } from '@/src/store/useAuthStore';
+import AuthErrorBoundary from '@/components/AuthErrorBoundary';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -51,25 +53,29 @@ export default function RootLayout() {
     'SpaceMono': require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
-  const { restoreToken, isInitialized } = useAuthStore();
-
+  // Initialize API configuration
   useEffect(() => {
-    restoreToken();
+    configureAPI();
   }, []);
 
   useEffect(() => {
-    if ((fontsLoaded || fontError) && isInitialized) {
+    if (fontsLoaded || fontError) {
       SplashScreen.hideAsync();
     }
-  }, [fontsLoaded, fontError, isInitialized]);
+  }, [fontsLoaded, fontError]);
 
-  if (!fontsLoaded && !fontError && !isInitialized) {
+  if (!fontsLoaded && !fontError) {
     return null;
   }
 
   return (
     <ThemeProvider>
-      <RootLayoutNav />
+      <AuthErrorBoundary>
+        <Stack>
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        </Stack>
+      </AuthErrorBoundary>
     </ThemeProvider>
   );
 }

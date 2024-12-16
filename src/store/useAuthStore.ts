@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api, setUnauthorizedCallback } from '@/src/api/config';
 import { router } from 'expo-router';
+import { secureTokenManager } from '@/src/auth/secure-token-manager';
 
 export interface User {
   id: number;
@@ -44,7 +45,6 @@ export const useAuthStore = create<AuthState>((set, get) => {
     set({ user: null, token: null });
     router.replace('/login');
   });
-
   return {
     user: null,
     token: null,
@@ -54,23 +54,17 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
     initialize: async () => {
       try {
-        const token = await AsyncStorage.getItem('auth_token');
-        if (token) {
-          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-          // Verify token validity
-          try {
-            const response = await api.get('/v1/users/me');
-            set({ token, user: response.data });
-          } catch (error) {
-            // If token verification fails, clear it
-            await AsyncStorage.removeItem('auth_token');
-            delete api.defaults.headers.common['Authorization'];
-          }
+        set({ loading: true });
+        const token = await secureTokenManager.getToken();
+        
+        if (token && await secureTokenManager.validateToken()) {
+          const response = await api.get('/v1/users/me');
+          set({ user: response.data, token });
         }
       } catch (error) {
-        console.error('Failed to initialize auth store:', error);
+        console.error('Init error:', error);
       } finally {
-        set({ isInitialized: true });
+        set({ loading: false, isInitialized: true });
       }
     },
 
@@ -113,29 +107,26 @@ export const useAuthStore = create<AuthState>((set, get) => {
     login: async (credentials) => {
       try {
         set({ loading: true, error: null });
-        
         const response = await api.post('/v1/login', credentials);
-        const { token, user } = response.data;
-
-        await AsyncStorage.setItem('auth_token', token);
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
+        const { token, refreshToken, user } = response.data;
+  
+        await secureTokenManager.saveTokens(token, refreshToken);
         set({ user, token, loading: false });
-      } catch (error: any) {
+        router.replace('/(tabs)');
+      } catch (error) {
         const message = error.response?.data?.message || 'Login failed';
         set({ error: message, loading: false });
-        throw new Error(message);
+        throw error;
       }
     },
 
     logout: async () => {
       try {
-        await AsyncStorage.removeItem('auth_token');
-        delete api.defaults.headers.common['Authorization'];
-        set({ token: null, user: null });
-        router.replace('/login');
+        await api.post('/v1/logout');
       } catch (error) {
         console.error('Logout error:', error);
+      } finally {
+        await secureTokenManager.clearTokens();
         set({ token: null, user: null });
         router.replace('/login');
       }

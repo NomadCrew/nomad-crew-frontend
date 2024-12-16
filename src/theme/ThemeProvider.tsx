@@ -1,11 +1,10 @@
 import React, { createContext, useContext, useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 import { createSemanticColors } from './foundations/colors';
-
-// Theme interface
-interface Theme {
-  colors: ReturnType<typeof createSemanticColors>;
-}
+import { createSemanticElevation} from './foundations/elevation';
+import { createSemanticSpacing} from './foundations/spacing';
+import { createTypography} from './foundations/typography';
+import type { Theme, ThemeMode } from './types';
 
 // Theme context type
 interface ThemeContextType {
@@ -22,15 +21,17 @@ const ThemeContext = createContext<ThemeContextType | null>(null);
 function createTheme(isDark: boolean): Theme {
   return {
     colors: createSemanticColors(isDark),
+    typography: createTypography('Inter'),
+    spacing: createSemanticSpacing(),
+    elevation: createSemanticElevation(isDark),
+    components: {}, // Empty for now, will be expanded later
   };
 }
 
-// Provider component
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemColorScheme = useColorScheme();
-  const [mode, setMode] = React.useState<'light' | 'dark' | 'system'>('system');
+  const [mode, setMode] = React.useState<ThemeMode>('system');
   
-  // Determine if dark mode based on mode setting
   const isDark = React.useMemo(() => {
     if (mode === 'system') {
       return systemColorScheme === 'dark';
@@ -38,10 +39,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return mode === 'dark';
   }, [mode, systemColorScheme]);
 
-  // Create theme based on dark mode setting
   const theme = React.useMemo(() => createTheme(isDark), [isDark]);
 
-  // Toggle between light and dark
   const toggleColorScheme = React.useCallback(() => {
     setMode(prev => prev === 'dark' ? 'light' : 'dark');
   }, []);
@@ -60,7 +59,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Hook for using theme
 export function useTheme() {
   const context = useContext(ThemeContext);
   if (!context) {
