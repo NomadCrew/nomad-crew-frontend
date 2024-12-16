@@ -1,13 +1,17 @@
 import { Stack } from 'expo-router';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { AuthProvider } from '@/src/auth/auth-context';
+import { ThemeProvider } from '@/src/theme/ThemeProvider';
 
 export default function AuthLayout() {
-  const { theme } = useTheme();
   
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="login" options={{ headerShown: false }} />
-      <Stack.Screen name="register" options={{ headerShown: false }} />
-    </Stack>
+    <AuthProvider>
+      <ThemeProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="login" options={{ headerShown: false }} />
+          <Stack.Screen name="register" options={{ headerShown: false }} />
+        </Stack>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }

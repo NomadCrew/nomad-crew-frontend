@@ -1,39 +1,60 @@
-import { Text, TextProps, StyleSheet } from 'react-native';
+import React from 'react';
+import { Text, TextProps } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
 
-export type ThemedTextProps = TextProps & {
-  type?: 'default' | 'title' | 'defaultSemiBold' | 'subtitle' | 'link';
-};
-
-export function ThemedText({ style, type = 'default', ...rest }: ThemedTextProps) {
-  const { theme } = useTheme();
-  
-  const baseStyle = {
-    color: theme.colors.onBackground,
-    fontFamily: 'Inter',
-    ...styles[type],
-    fontSize: theme.typography.fontSize[type === 'title' ? '3xl' : type === 'subtitle' ? 'xl' : 'base'],
-    lineHeight: theme.typography.lineHeight.normal,
-  };
-
-  return <Text style={[baseStyle, style]} {...rest} />;
+export interface ThemedTextProps extends TextProps {
+  type?: 'default' | 'title' | 'subtitle' | 'link' | 'defaultSemiBold';
 }
 
-const styles = StyleSheet.create({
-  default: {
-    fontWeight: '400',
-  },
-  defaultSemiBold: {
-    fontWeight: '600',
-  },
-  title: {
-    fontWeight: '700',
-  },
-  subtitle: {
-    fontWeight: '600',
-  },
-  link: {
-    color: '#0a7ea4',
-    textDecorationLine: 'underline',
-  },
-});
+export function ThemedText({ style, children, type = 'default', ...rest }: ThemedTextProps) {
+  const { theme } = useTheme();
+
+  const defaultStyle = {
+    color: theme.colors.content.primary,
+    fontFamily: 'Inter',
+  };
+
+  const textStyles = React.useMemo(() => {
+    switch (type) {
+      case 'title':
+        return {
+          ...defaultStyle,
+          fontSize: 24,
+          fontWeight: '600',
+        };
+      case 'subtitle':
+        return {
+          ...defaultStyle,
+          fontSize: 18,
+          opacity: 0.8,
+        };
+      case 'link':
+        return {
+          ...defaultStyle,
+          color: theme.colors.primary.main,
+          textDecorationLine: 'underline',
+        };
+      case 'defaultSemiBold':
+        return {
+          ...defaultStyle,
+          fontWeight: '600',
+        };
+      default:
+        return defaultStyle;
+    }
+  }, [type, theme]);
+
+  return (
+    <Text style={[textStyles, style]} {...rest}>
+      {children}
+    </Text>
+  );
+}
+
+// Examples of usage:
+// <ThemedText category="display" variant="large">Large Display Text</ThemedText>
+// <ThemedText category="body" variant="medium">Medium Body Text</ThemedText>
+// <ThemedText category="heading" variant="h1">Heading 1</ThemedText>
+// <ThemedText variant="caption">Caption Text</ThemedText>
+
+export default React.memo(ThemedText);
