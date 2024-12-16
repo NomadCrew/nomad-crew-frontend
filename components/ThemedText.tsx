@@ -1,63 +1,51 @@
 import React from 'react';
-import { Text, TextProps, StyleSheet } from 'react-native';
+import { Text, TextProps } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import type { Typography } from '@/src/theme/foundations/typography';
-
-type TypographyVariant = 
-  | keyof Typography['display']
-  | keyof Typography['heading']
-  | keyof Typography['body']
-  | keyof Typography['button']
-  | keyof Typography['input']
-  | 'caption'
-  | 'overline';
-
-type TypographyCategory = keyof Typography;
 
 export interface ThemedTextProps extends TextProps {
-  variant?: TypographyVariant;
-  category?: TypographyCategory;
-  color?: string;
+  type?: 'default' | 'title' | 'subtitle' | 'link' | 'defaultSemiBold';
 }
 
-export function ThemedText({ 
-  style, 
-  variant,
-  category = 'body',
-  color,
-  children,
-  ...rest 
-}: ThemedTextProps) {
+export function ThemedText({ style, children, type = 'default', ...rest }: ThemedTextProps) {
   const { theme } = useTheme();
-  
-  const getTypographyStyle = () => {
-    if (!variant) {
-      // Default to body.medium if no variant specified
-      return theme.typography.body.medium;
-    }
 
-    if (category === 'caption' || category === 'overline') {
-      return theme.typography[category];
-    }
-
-    // Handle nested typography styles
-    const categoryStyles = theme.typography[category];
-    if (typeof categoryStyles === 'object' && variant in categoryStyles) {
-      return categoryStyles[variant as keyof typeof categoryStyles];
-    }
-
-    // Fallback to body.medium
-    return theme.typography.body.medium;
+  const defaultStyle = {
+    color: theme.colors.content.primary,
+    fontFamily: 'Inter',
   };
 
-  const textStyle = [
-    getTypographyStyle(),
-    { color: color || theme.colors.content.primary },
-    style,
-  ];
+  const textStyles = React.useMemo(() => {
+    switch (type) {
+      case 'title':
+        return {
+          ...defaultStyle,
+          fontSize: 24,
+          fontWeight: '600',
+        };
+      case 'subtitle':
+        return {
+          ...defaultStyle,
+          fontSize: 18,
+          opacity: 0.8,
+        };
+      case 'link':
+        return {
+          ...defaultStyle,
+          color: theme.colors.primary.main,
+          textDecorationLine: 'underline',
+        };
+      case 'defaultSemiBold':
+        return {
+          ...defaultStyle,
+          fontWeight: '600',
+        };
+      default:
+        return defaultStyle;
+    }
+  }, [type, theme]);
 
   return (
-    <Text style={textStyle} {...rest}>
+    <Text style={[textStyles, style]} {...rest}>
       {children}
     </Text>
   );
