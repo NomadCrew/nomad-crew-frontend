@@ -1,51 +1,70 @@
-import React, { useEffect } from 'react';
-import { Appearance } from 'react-native';
-import { useThemeStore } from './theme-store';
-import { createTheme } from './create-theme';
+import React, { createContext, useContext, useEffect } from 'react';
+import { useColorScheme } from 'react-native';
+import { createSemanticColors } from './foundations/colors';
 
-interface ThemeProviderProps {
-  children: React.ReactNode;
+// Theme interface
+interface Theme {
+  colors: ReturnType<typeof createSemanticColors>;
 }
 
-export function ThemeProvider({ children }: ThemeProviderProps) {
-  const { mode, initialize, setMode } = useThemeStore();
+// Theme context type
+interface ThemeContextType {
+  theme: Theme;
+  mode: 'light' | 'dark' | 'system';
+  setMode: (mode: 'light' | 'dark' | 'system') => void;
+  toggleColorScheme: () => void;
+}
 
-  // Initialize theme on mount
-  useEffect(() => {
-    initialize();
+// Create the theme context
+const ThemeContext = createContext<ThemeContextType | null>(null);
+
+// Create theme based on color scheme
+function createTheme(isDark: boolean): Theme {
+  return {
+    colors: createSemanticColors(isDark),
+  };
+}
+
+// Provider component
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const systemColorScheme = useColorScheme();
+  const [mode, setMode] = React.useState<'light' | 'dark' | 'system'>('system');
+  
+  // Determine if dark mode based on mode setting
+  const isDark = React.useMemo(() => {
+    if (mode === 'system') {
+      return systemColorScheme === 'dark';
+    }
+    return mode === 'dark';
+  }, [mode, systemColorScheme]);
+
+  // Create theme based on dark mode setting
+  const theme = React.useMemo(() => createTheme(isDark), [isDark]);
+
+  // Toggle between light and dark
+  const toggleColorScheme = React.useCallback(() => {
+    setMode(prev => prev === 'dark' ? 'light' : 'dark');
   }, []);
 
-  // Listen for system theme changes
-  useEffect(() => {
-    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
-      if (mode === 'system') {
-        const isDark = colorScheme === 'dark';
-        useThemeStore.setState({ theme: createTheme({ isDark }) });
-      }
-    });
+  const value = React.useMemo(() => ({
+    theme,
+    mode,
+    setMode,
+    toggleColorScheme,
+  }), [theme, mode, toggleColorScheme]);
 
-    return () => subscription.remove();
-  }, [mode]);
-
-  // Wait for initialization
-  if (!useThemeStore.getState().isInitialized) {
-    return null; // Or loading indicator
-  }
-
-  return children;
+  return (
+    <ThemeContext.Provider value={value}>
+      {children}
+    </ThemeContext.Provider>
+  );
 }
 
-// Keep the convenience hooks
+// Hook for using theme
 export function useTheme() {
-  const { theme, mode, setMode, toggleColorScheme } = useThemeStore();
-  return { theme, mode, setMode, toggleColorScheme };
-}
-
-export function useThemeMode() {
-  const { mode, setMode, toggleColorScheme } = useThemeStore();
-  return { mode, setMode, toggleColorScheme };
-}
-
-export function useCurrentTheme() {
-  return useThemeStore(state => state.theme);
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
+  return context;
 }

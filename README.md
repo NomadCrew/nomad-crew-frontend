@@ -34,6 +34,7 @@ This repository contains the frontend code for NomadCrew, a mobile-first applica
    - iOS Simulator/Android Emulator
 
 2. **Installation**
+
    ```bash
    # Clone repository
    git clone https://github.com/NomadCrew/nomad-crew-frontend.git
@@ -46,6 +47,7 @@ This repository contains the frontend code for NomadCrew, a mobile-first applica
    ```
 
 3. **Environment Setup**
+
    ```bash
    # Copy environment template
    cp .env.example .env
@@ -64,6 +66,7 @@ This repository contains the frontend code for NomadCrew, a mobile-first applica
 - Use Expo's development client for custom native modules
 
 ## Project Structure
+
 ```
 nomad-crew-frontend/
 ├── app/                     # Expo Router screens
@@ -104,14 +107,27 @@ npm run typescript
 
 ## Contributors
 
-<!-- CONTRIBUTORS-START -->
-<!-- CONTRIBUTORS-END -->
+<!-- readme: collaborators,contributors -start -->
+<table>
+	<tbody>
+		<tr>
+            <td align="center">
+                <a href="https://github.com/naqeebali-shamsi">
+                    <img src="https://avatars.githubusercontent.com/u/37825325?v=4" width="100;" alt="naqeebali-shamsi"/>
+                    <br />
+                    <sub><b>Naqeebali Shamsi</b></sub>
+                </a>
+            </td>
+		</tr>
+	<tbody>
+</table>
+<!-- readme: collaborators,contributors -end -->
 
 ## Community
 
 - **Issues**: GitHub Issues
 - **Discussions**: GitHub Discussions
-- **Updates**: [Join our Slack](https://join.slack.com/t/slack-les9847/shared_invite/zt-2a0dqjzvk-YLC9TQFBExNnPFsH9yAB6g)
+- **Updates**: [Join our Slack](https://join.slack.com/t/nomad-crewworkspace/shared_invite/zt-2ukcdthl1-V4WIJg~DceqvBl_gL5uOcQ)
 
 ## License
 
