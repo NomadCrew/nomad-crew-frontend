@@ -13,14 +13,15 @@ export default function TabLayout() {
           tabBarActiveTintColor: theme.colors.primary.main,
           headerShown: false,
           tabBarStyle: {
-            backgroundColor: theme.colors.background.default,
-            borderTopColor: theme.colors.border.default,
+            backgroundColor: theme.colors.surface.default,
+            borderTopColor: theme.colors.surface.variant,
           },
         }}
       >
       <Tabs.Screen
         name="index"
         options={{
+          title: 'Home',
           headerShown: false,
           tabBarIcon: ({ color }) => (
             <IconSymbol size={24} name="house.fill" color={color} />
@@ -30,6 +31,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="trips"
         options={{
+          title: 'Trips',
           headerShown: false,
           tabBarIcon: ({ color }) => (
             <IconSymbol size={24} name="backpack.fill" color={color} />
@@ -39,6 +41,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="explore"
         options={{
+          title: 'Explore',
           headerShown: false,
           tabBarIcon: ({ color }) => (
             <IconSymbol size={24} name="paperplane.fill" color={color} />
