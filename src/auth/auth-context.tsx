@@ -2,9 +2,9 @@ import React, { createContext, useContext, useEffect, useMemo, useReducer } from
 import { router } from 'expo-router';
 import { jwtDecode } from 'jwt-decode';
 import { secureStorage } from './secure-storage';
-import { api } from '@/src/api/config';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import type { AxiosError, AxiosRequestConfig } from 'axios';
+import { api } from '@/src/api/api-client';
 
 // Type definitions
 export interface User {
