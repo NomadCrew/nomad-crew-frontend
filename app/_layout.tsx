@@ -3,7 +3,6 @@ import { useFonts } from 'expo-font';
 import { SplashScreen, Stack, useSegments, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { configureAPI } from '@/src/api/config';
 import { ThemeProvider, useTheme } from '@/src/theme/ThemeProvider';
 import { useAuthStore } from '@/src/store/useAuthStore';
 import AuthErrorBoundary from '@/components/AuthErrorBoundary';
@@ -52,11 +51,6 @@ export default function RootLayout() {
     'Inter-Italic': require('../assets/fonts/Inter/Inter-Italic-VariableFont_opsz,wght.ttf'),
     'SpaceMono': require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
-
-  // Initialize API configuration
-  useEffect(() => {
-    configureAPI();
-  }, []);
 
   useEffect(() => {
     if (fontsLoaded || fontError) {

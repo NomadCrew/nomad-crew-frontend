@@ -37,6 +37,12 @@ export interface User {
     user: User | null;
     error: string | null;
   }
+
+  export interface TokenManager {
+    getToken: () => Promise<string | null>;
+    refreshToken: () => Promise<string>;
+    clearTokens: () => Promise<void>;
+  }
   
   export type AuthAction =
     | { type: 'RESTORE_TOKEN'; user: User }

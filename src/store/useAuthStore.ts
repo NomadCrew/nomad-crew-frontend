@@ -1,135 +1,94 @@
 import { create } from 'zustand';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { api, setUnauthorizedCallback } from '@/src/api/config';
+import { api } from '@/src/api/api-client';
 import { router } from 'expo-router';
 import { secureTokenManager } from '@/src/auth/secure-token-manager';
+import { API_PATHS } from '@/src/utils/api-paths';
+import type { RegisterCredentials, LoginCredentials, AuthState } from '@/src/types/auth';
 
-export interface User {
-  id: number;
-  username: string;
-  email: string;
-  firstName?: string;
-  lastName?: string;
-  profilePicture?: string;
-}
+export const useAuthStore = create<AuthState>((set, get) => ({
+  user: null,
+  token: null,
+  loading: false,
+  error: null,
+  isInitialized: false,
 
-interface AuthState {
-  user: User | null;
-  token: string | null;
-  loading: boolean;
-  error: string | null;
-  isInitialized: boolean;
-  register: (credentials: RegisterCredentials) => Promise<void>;
-  login: (credentials: LoginCredentials) => Promise<void>;
-  logout: () => Promise<void>;
-  initialize: () => Promise<void>;
-  restoreToken: () => Promise<void>;
-}
-
-interface RegisterCredentials {
-  username: string;
-  email: string;
-  password: string;
-  firstName?: string;
-  lastName?: string;
-}
-
-interface LoginCredentials {
-  email: string;
-  password: string;
-}
-
-export const useAuthStore = create<AuthState>((set, get) => {
-  // Set up the unauthorized callback
-  setUnauthorizedCallback(() => {
-    set({ user: null, token: null });
-    router.replace('/login');
-  });
-  return {
-    user: null,
-    token: null,
-    loading: false,
-    error: null,
-    isInitialized: false,
-
-    initialize: async () => {
-      try {
-        set({ loading: true });
-        const token = await secureTokenManager.getToken();
-        
-        if (token && await secureTokenManager.validateToken()) {
-          const response = await api.get('/v1/users/me');
-          set({ user: response.data, token });
-        }
-      } catch (error) {
-        console.error('Init error:', error);
-      } finally {
-        set({ loading: false, isInitialized: true });
-      }
-    },
-
-    restoreToken: async () => {
+  initialize: async () => {
+    try {
       set({ loading: true });
-      try {
-        const token = await AsyncStorage.getItem('auth_token');
-        if (token) {
-          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-          const response = await api.get('/v1/users/me');
-          set({ token, user: response.data });
-        }
-      } catch (error) {
-        await AsyncStorage.removeItem('auth_token');
-        delete api.defaults.headers.common['Authorization'];
-        set({ error: 'Failed to restore session' });
-      } finally {
-        set({ loading: false, isInitialized: true });
+      const token = await secureTokenManager.getToken();
+      
+      if (token && await secureTokenManager.validateToken()) {
+        const response = await api.get(API_PATHS.users.me);
+        set({ 
+          user: response.data, 
+          token,
+          isInitialized: true,
+          error: null
+        });
+      } else {
+        set({ isInitialized: true });
       }
-    },
+    } catch (error) {
+      console.error('Init error:', error);
+      set({ 
+        error: 'Failed to initialize session',
+        user: null,
+        token: null,
+        isInitialized: true
+      });
+    } finally {
+      set({ loading: false });
+    }
+  },
 
-    register: async (credentials) => {
-      try {
-        set({ loading: true, error: null });
-        
-        const response = await api.post('/users', credentials);
-        const { token, user } = response.data;
+  register: async (credentials: RegisterCredentials) => {
+    try {
+      set({ loading: true, error: null });
+      
+      const response = await api.post(API_PATHS.users.create, credentials);
+      const { token, refreshToken, user } = response.data;
 
-        await AsyncStorage.setItem('auth_token', token);
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      await secureTokenManager.saveTokens(token, refreshToken);
+      set({ user, token, loading: false });
+      router.replace('/(tabs)');
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Registration failed';
+      set({ error: message, loading: false });
+      throw new Error(message);
+    }
+  },
 
-        set({ user, token, loading: false });
-      } catch (error: any) {
-        const message = error.response?.data?.message || 'Registration failed';
-        set({ error: message, loading: false });
-        throw new Error(message);
-      }
-    },
+  login: async (credentials: LoginCredentials) => {
+    try {
+      set({ loading: true, error: null });
+      const response = await api.post(API_PATHS.auth.login, credentials);
+      const { token, refreshToken, user } = response.data;
 
-    login: async (credentials) => {
-      try {
-        set({ loading: true, error: null });
-        const response = await api.post('/v1/login', credentials);
-        const { token, refreshToken, user } = response.data;
-  
-        await secureTokenManager.saveTokens(token, refreshToken);
-        set({ user, token, loading: false });
-        router.replace('/(tabs)');
-      } catch (error) {
-        const message = error.response?.data?.message || 'Login failed';
-        set({ error: message, loading: false });
-        throw error;
-      }
-    },
+      await secureTokenManager.saveTokens(token, refreshToken);
+      set({ user, token, loading: false });
+      router.replace('/(tabs)');
+    } catch (error) {
+      const message = error.response?.data?.message || 'Login failed';
+      set({ error: message, loading: false });
+      throw error;
+    }
+  },
 
-    logout: async () => {
-      try {
-        await api.post('/v1/logout');
-      } catch (error) {
-        console.error('Logout error:', error);
-      } finally {
-        await secureTokenManager.clearTokens();
-        set({ token: null, user: null });
-        router.replace('/login');
-      }
-    },
-  };
-});
+  logout: async () => {
+    try {
+      set({ loading: true });
+      await api.post(API_PATHS.auth.logout);
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      await secureTokenManager.clearTokens();
+      set({ 
+        token: null, 
+        user: null, 
+        loading: false,
+        error: null 
+      });
+      router.replace('/login');
+    }
+  },
+}));

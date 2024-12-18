@@ -2,13 +2,10 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { jwtDecode } from 'jwt-decode';
-import { api } from '@/src/api/instance';
-
-interface DecodedToken {
-  exp: number;
-  sub: string;
-  jti: string; // Token ID for validation
-}
+import { api } from '@/src/api/api-client';
+import { API_PATHS } from '@/src/utils/api-paths';
+import type { JWTPayload, TokenValidationResult } from '@/src/types/auth';
+import { TokenManager } from './types';
 
 interface StorageKeys {
   readonly AUTH_TOKEN: string;
@@ -16,12 +13,13 @@ interface StorageKeys {
   readonly TOKEN_ID: string;
 }
 
-class SecureTokenManager {
+class SecureTokenManager implements TokenManager {
   private static instance: SecureTokenManager;
   private refreshPromise: Promise<string> | null = null;
   private operationLock = false;
   private retryCount = 0;
   private readonly MAX_RETRIES = 3;
+  private readonly TOKEN_EXPIRY_THRESHOLD = 5 * 60 * 1000; // 5 minutes in milliseconds
   
   private readonly KEYS: StorageKeys = {
     AUTH_TOKEN: 'auth_token',
@@ -81,8 +79,8 @@ class SecureTokenManager {
         const token = await this.storage.getItem(this.KEYS.AUTH_TOKEN);
         if (!token) return null;
 
-        // Validate token format and signature
-        if (!this.isValidTokenFormat(token)) {
+        const validationResult = await this.validateToken(token);
+        if (!validationResult.isValid) {
           await this.clearTokens();
           return null;
         }
@@ -95,22 +93,46 @@ class SecureTokenManager {
     });
   }
 
-  private isValidTokenFormat(token: string): boolean {
+  private async validateToken(token: string): Promise<TokenValidationResult> {
+    try {
+      const decoded = this.decodeToken(token);
+      if (!decoded) {
+        return { isValid: false, error: 'Invalid token format' };
+      }
+
+      if (this.isTokenExpired(decoded)) {
+        return { isValid: false, error: 'Token expired' };
+      }
+
+      return { isValid: true };
+    } catch (error) {
+      return { isValid: false, error: error instanceof Error ? error.message : 'Token validation failed' };
+    }
+  }
+
+  private decodeToken(token: string): JWTPayload | null {
     try {
       const parts = token.split('.');
-      if (parts.length !== 3) return false;
+      if (parts.length !== 3) return null;
       
-      const decoded = jwtDecode<DecodedToken>(token);
-      return !!(decoded.exp && decoded.jti && decoded.sub);
+      const decoded = jwtDecode<JWTPayload>(token);
+      if (!decoded.exp || !decoded.jti || !decoded.sub) {
+        return null;
+      }
+
+      return decoded;
     } catch {
-      return false;
+      return null;
     }
   }
 
   async saveTokens(accessToken: string, refreshToken: string): Promise<void> {
     return this.executeWithLock(async () => {
       try {
-        const decoded = jwtDecode<DecodedToken>(accessToken);
+        const decoded = this.decodeToken(accessToken);
+        if (!decoded) {
+          throw new Error('Invalid access token format');
+        }
         
         await Promise.all([
           this.storage.setItem(this.KEYS.AUTH_TOKEN, accessToken),
@@ -152,14 +174,10 @@ class SecureTokenManager {
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
   }
 
-  isTokenExpired(token: string): boolean {
-    try {
-      const decoded = jwtDecode<DecodedToken>(token);
-      // Check if token expires in less than 5 minutes
-      return Date.now() >= (decoded.exp * 1000) - (5 * 60 * 1000);
-    } catch {
-      return true;
-    }
+  private isTokenExpired(decodedToken: JWTPayload): boolean {
+    const now = Date.now();
+    const expiryTime = decodedToken.exp * 1000;
+    return now >= expiryTime - this.TOKEN_EXPIRY_THRESHOLD;
   }
 
   async refreshToken(): Promise<string> {
@@ -168,7 +186,6 @@ class SecureTokenManager {
       throw new Error('Max refresh attempts exceeded');
     }
 
-    // Ensure only one refresh request at a time
     if (this.refreshPromise) {
       return this.refreshPromise;
     }
@@ -182,9 +199,9 @@ class SecureTokenManager {
           throw new Error('No refresh token available');
         }
 
-        const response = await api.post('/auth/refresh', { 
+        const response = await api.post(API_PATHS.auth.refresh, { 
           refreshToken,
-          tokenId // Send token ID for server-side validation
+          tokenId
         });
 
         const { accessToken: newAccessToken, refreshToken: newRefreshToken } = response.data;
@@ -193,7 +210,7 @@ class SecureTokenManager {
         
         return newAccessToken;
       } catch (error) {
-        if (error.response?.status === 401) {
+        if (axios.isAxiosError(error) && error.response?.status === 401) {
           await this.clearTokens();
           throw new Error('Refresh token expired');
         }
@@ -207,17 +224,18 @@ class SecureTokenManager {
   }
 
   // Validate token with server
-  async validateToken(): Promise<boolean> {
+  async validateTokenWithServer(): Promise<boolean> {
     try {
       const token = await this.getToken();
       if (!token) return false;
 
-      await api.post('/auth/validate', {
-        tokenId: await this.storage.getItem(this.KEYS.TOKEN_ID)
-      });
-      
+      const tokenId = await this.storage.getItem(this.KEYS.TOKEN_ID);
+      if (!tokenId) return false;
+
+      await api.post(API_PATHS.auth.validate, { tokenId });
       return true;
     } catch {
+      await this.clearTokens();
       return false;
     }
   }
