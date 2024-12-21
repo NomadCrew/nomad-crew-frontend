@@ -3,6 +3,7 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 
 export function LoadingScreen() {
   const { theme } = useTheme();
+  console.log('Rendering LoadingScreen'); // Debug log
 
   return (
     <View 

@@ -5,7 +5,9 @@ import { secureTokenManager } from '@/src/auth/secure-token-manager';
 import { API_PATHS } from '@/src/utils/api-paths';
 import type { RegisterCredentials, LoginCredentials, AuthState } from '@/src/types/auth';
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set, get) => {
+  console.log('Starting auth initialization'); // Debug log
+  return {
   user: null,
   token: null,
   loading: false,
@@ -13,31 +15,64 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isInitialized: false,
 
   initialize: async () => {
+    console.log('[AuthStore] Starting initialization');
+    
+    // Prevent multiple initialization attempts
+    if (get().loading) {
+      console.log('[AuthStore] Already loading, skipping');
+      return;
+    }
+  
+    set({ loading: true });
+    
     try {
-      set({ loading: true });
+      console.log('[AuthStore] Checking for token');
       const token = await secureTokenManager.getToken();
-      
-      if (token && await secureTokenManager.validateToken()) {
-        const response = await api.get(API_PATHS.users.me);
+      console.log('[AuthStore] Token exists:', !!token);
+  
+      if (!token) {
+        console.log('[AuthStore] No token found, completing initialization');
         set({ 
-          user: response.data, 
+          isInitialized: true, 
+          loading: false,
+          token: null,
+          user: null
+        });
+        return;
+      }
+  
+      try {
+        console.log('[AuthStore] Validating token and fetching user data');
+        const response = await api.get(API_PATHS.users.me);
+        console.log('[AuthStore] Successfully fetched user data');
+        
+        set({
+          user: response.data,
           token,
           isInitialized: true,
+          loading: false,
           error: null
         });
-      } else {
-        set({ isInitialized: true });
+      } catch (apiError) {
+        console.log('[AuthStore] API error:', apiError);
+        await secureTokenManager.clearTokens();
+        set({
+          user: null,
+          token: null,
+          isInitialized: true,
+          loading: false,
+          error: null
+        });
       }
     } catch (error) {
-      console.error('Init error:', error);
-      set({ 
+      console.error('[AuthStore] Initialization error:', error);
+      set({
         error: 'Failed to initialize session',
         user: null,
         token: null,
-        isInitialized: true
+        isInitialized: true,
+        loading: false
       });
-    } finally {
-      set({ loading: false });
     }
   },
 
@@ -60,19 +95,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   login: async (credentials: LoginCredentials) => {
     try {
-      set({ loading: true, error: null });
-      const response = await api.post(API_PATHS.auth.login, credentials);
-      const { token, refreshToken, user } = response.data;
+        set({ loading: true, error: null });
+        const response = await api.post(API_PATHS.auth.login, credentials);
+        const { token, refreshToken, user } = response.data;
 
-      await secureTokenManager.saveTokens(token, refreshToken);
-      set({ user, token, loading: false });
-      router.replace('/(tabs)');
-    } catch (error) {
-      const message = error.response?.data?.message || 'Login failed';
-      set({ error: message, loading: false });
-      throw error;
+        await secureTokenManager.saveTokens(token, refreshToken);
+        set({ user, token, loading: false });
+        router.replace('/(tabs)');
+    } catch (error: unknown) {
+        // Narrowing error type
+        const message = 
+            error instanceof Error
+                ? error.message
+                : error && typeof error === 'object' && 'response' in error
+                    ? (error as any).response?.data?.message || 'Login failed'
+                    : 'Login failed';
+
+        set({ error: message, loading: false });
+        throw error; // Optional, depends on how you're handling errors globally
     }
-  },
+},
 
   logout: async () => {
     try {
@@ -91,4 +133,5 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       router.replace('/login');
     }
   },
-}));
+};
+});

@@ -1,4 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
+import axios from 'axios';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { jwtDecode } from 'jwt-decode';
@@ -128,25 +129,27 @@ class SecureTokenManager implements TokenManager {
 
   async saveTokens(accessToken: string, refreshToken: string): Promise<void> {
     return this.executeWithLock(async () => {
-      try {
-        const decoded = this.decodeToken(accessToken);
-        if (!decoded) {
-          throw new Error('Invalid access token format');
-        }
-        
-        await Promise.all([
-          this.storage.setItem(this.KEYS.AUTH_TOKEN, accessToken),
-          this.storage.setItem(this.KEYS.REFRESH_TOKEN, refreshToken),
-          this.storage.setItem(this.KEYS.TOKEN_ID, decoded.jti)
-        ]);
+        try {
+            const decoded = this.decodeToken(accessToken);
+            if (!decoded) {
+                throw new Error('Invalid access token format');
+            }
+            console.log('Token:', accessToken, 'Type:', typeof accessToken);
+            console.log('Refresh Token:', refreshToken, 'Type:', typeof refreshToken);
+            await Promise.all([
+                this.storage.setItem(this.KEYS.AUTH_TOKEN, accessToken),
+                this.storage.setItem(this.KEYS.REFRESH_TOKEN, refreshToken),
+                this.storage.setItem(this.KEYS.TOKEN_ID, String(decoded.jti))
+            ]);
 
-        this.setupAuthHeader(accessToken);
-      } catch (error) {
-        console.error('Error saving tokens:', error);
-        throw new Error('Failed to save authentication tokens');
-      }
+            this.setupAuthHeader(accessToken);
+        } catch (error) {
+            console.error('Error saving tokens:', error);
+            throw new Error('Failed to save authentication tokens');
+        }
     });
-  }
+}
+
 
   async clearTokens(): Promise<void> {
     return this.executeWithLock(async () => {
