@@ -1,4 +1,3 @@
-// src/utils/api-paths.ts
 import { API_CONFIG } from '@/src/api/env';
 
 export const createApiPath = (path: string) => {
@@ -10,19 +9,19 @@ export const createApiPath = (path: string) => {
 // Define all API endpoints
 export const API_PATHS = {
   auth: {
-    login: createApiPath('auth/login'),
-    logout: createApiPath('auth/logout'),
-    refresh: createApiPath('auth/refresh'),
-    validate: createApiPath('auth/validate'),
+    login: '/login', // Maps to /login (unversioned)
+    logout: createApiPath('auth/logout'), // No backend implementation yet
+    refresh: createApiPath('auth/refresh'), // No backend implementation yet
+    validate: createApiPath('auth/validate'), // No backend implementation yet
   },
   users: {
-    create: createApiPath('users'),
-    me: createApiPath('users/me'),
-    byId: (id: number) => createApiPath(`users/${id}`),
+    create: createApiPath('users'), // Maps to /users (unversioned)
+    me: createApiPath('users/me'), // No backend implementation yet
+    byId: (id: number) => createApiPath(`users/${id}`), // Maps to /v1/users/:id
   },
   trips: {
-    list: createApiPath('trips/list'),
-    create: createApiPath('trips'),
-    byId: (id: number) => createApiPath(`trips/${id}`),
+    list: createApiPath('trips/list'), // Maps to /v1/trips/list
+    create: createApiPath('trips'), // Maps to /v1/trips (POST)
+    byId: (id: number) => createApiPath(`trips/${id}`), // Maps to /v1/trips/:id
   },
 } as const;

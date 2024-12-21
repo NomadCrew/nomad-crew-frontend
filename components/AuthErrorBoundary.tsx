@@ -6,19 +6,26 @@ import { ThemedText } from '@/components/ThemedText';
 const MAX_INIT_TIME = 10000; // 10 seconds
 
 export default function AuthErrorBoundary({ children }) {
-  const { isInitialized, initialize } = useAuthStore();
+  const { isInitialized, initialize, loading } = useAuthStore();
   const [error, setError] = useState<Error | null>(null);
-  const [initTimer, setInitTimer] = useState(null);
+  const [initTimer, setInitTimer] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    startInitialization();
-    return () => clearTimeout(initTimer);
-  }, []);
+    console.log('[AuthErrorBoundary] Starting initialization check');
+    if (!isInitialized && !loading) {
+      startInitialization();
+    }
+    return () => {
+      if (initTimer) clearTimeout(initTimer);
+    };
+  }, [isInitialized, loading]);
 
   const startInitialization = async () => {
+    console.log('[AuthErrorBoundary] Starting initialization');
     setError(null);
     const timer = setTimeout(() => {
       if (!isInitialized) {
+        console.log('[AuthErrorBoundary] Initialization timed out');
         setError(new Error('Initialization timed out'));
       }
     }, MAX_INIT_TIME);
@@ -27,7 +34,9 @@ export default function AuthErrorBoundary({ children }) {
 
     try {
       await initialize();
+      console.log('[AuthErrorBoundary] Initialization complete');
     } catch (err) {
+      console.error('[AuthErrorBoundary] Initialization failed:', err);
       setError(err);
     } finally {
       clearTimeout(timer);
@@ -55,7 +64,7 @@ export default function AuthErrorBoundary({ children }) {
     );
   }
 
-  if (!isInitialized) {
+  if (!isInitialized || loading) {
     return (
       <View className="flex-1 justify-center items-center">
         <ActivityIndicator size="large" color="#F46315" />

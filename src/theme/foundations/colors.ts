@@ -103,6 +103,26 @@ export const colorTokens = {
       default: isDark ? colorTokens.gray[900] : colorTokens.gray[50],
       variant: isDark ? colorTokens.gray[800] : '#FFFFFF',
     },
+    status: {
+      error: {
+        surface: isDark ? colorTokens.red[900] : colorTokens.red[50],
+        content: isDark ? colorTokens.red[200] : colorTokens.red[700],
+        border: isDark ? colorTokens.red[800] : colorTokens.red[300],
+      },
+      success: {
+        surface: isDark ? colorTokens.green[900] : colorTokens.green[50],
+        content: isDark ? colorTokens.green[200] : colorTokens.green[700],
+        border: isDark ? colorTokens.green[800] : colorTokens.green[300],
+      },
+    },
+    border: {
+      default: isDark ? colorTokens.gray[700] : colorTokens.gray[200],
+      strong: isDark ? colorTokens.gray[600] : colorTokens.gray[300],
+    },
+    background: {
+      default: isDark ? colorTokens.gray[900] : colorTokens.gray[50],
+      surface: isDark ? colorTokens.gray[800] : '#FFFFFF',
+    },
   });
   
   // Add color value type
