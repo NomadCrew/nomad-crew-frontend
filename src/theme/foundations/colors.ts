@@ -85,71 +85,48 @@ export const colorTokens = {
       pressed: isDark ? colorTokens.orange[200] : colorTokens.orange[700],
       disabled: isDark ? colorTokens.orange[800] : colorTokens.orange[200],
       text: isDark ? colorTokens.orange[50] : colorTokens.orange[900],
+      onPrimary: '#FFFFFF', // Add this for text on primary surfaces
     },
   
-    // Backgrounds
-    background: {
-      default: isDark ? colorTokens.gray[900] : colorTokens.gray[50],
-      surface: isDark ? colorTokens.gray[800] : '#FFFFFF',
-      surfaceVariant: isDark ? colorTokens.gray[700] : colorTokens.gray[100],
-      elevated: isDark ? colorTokens.gray[700] : '#FFFFFF',
-    },
-  
-    // Content/Text
+    // Content
     content: {
       primary: isDark ? '#FFFFFF' : colorTokens.gray[900],
       secondary: isDark ? colorTokens.gray[300] : colorTokens.gray[600],
       tertiary: isDark ? colorTokens.gray[400] : colorTokens.gray[500],
       disabled: isDark ? colorTokens.gray[600] : colorTokens.gray[400],
-      inverse: isDark ? colorTokens.gray[900] : '#FFFFFF',
+      onSurface: isDark ? '#FFFFFF' : colorTokens.gray[900],
+      onSurfaceVariant: isDark ? colorTokens.gray[300] : colorTokens.gray[600],
     },
   
-    // Semantic states
+    // Surface colors
+    surface: {
+      default: isDark ? colorTokens.gray[900] : colorTokens.gray[50],
+      variant: isDark ? colorTokens.gray[800] : '#FFFFFF',
+    },
     status: {
-      success: {
-        main: colorTokens.green[500],
-        surface: isDark ? colorTokens.green[900] : colorTokens.green[50],
-        content: isDark ? colorTokens.green[300] : colorTokens.green[700],
-        hover: isDark ? colorTokens.green[400] : colorTokens.green[600],
-        pressed: isDark ? colorTokens.green[300] : colorTokens.green[700],
-      },
-      warning: {
-        main: colorTokens.yellow[500],
-        surface: isDark ? colorTokens.yellow[900] : colorTokens.yellow[50],
-        content: isDark ? colorTokens.yellow[300] : colorTokens.yellow[700],
-        hover: isDark ? colorTokens.yellow[400] : colorTokens.yellow[600],
-        pressed: isDark ? colorTokens.yellow[300] : colorTokens.yellow[700],
-      },
       error: {
-        main: colorTokens.red[500],
         surface: isDark ? colorTokens.red[900] : colorTokens.red[50],
-        content: isDark ? colorTokens.red[300] : colorTokens.red[700],
-        hover: isDark ? colorTokens.red[400] : colorTokens.red[600],
-        pressed: isDark ? colorTokens.red[300] : colorTokens.red[700],
+        content: isDark ? colorTokens.red[200] : colorTokens.red[700],
+        border: isDark ? colorTokens.red[800] : colorTokens.red[300],
       },
-      info: {
-        main: colorTokens.blue[500],
-        surface: isDark ? colorTokens.blue[900] : colorTokens.blue[50],
-        content: isDark ? colorTokens.blue[300] : colorTokens.blue[700],
-        hover: isDark ? colorTokens.blue[400] : colorTokens.blue[600],
-        pressed: isDark ? colorTokens.blue[300] : colorTokens.blue[700],
+      success: {
+        surface: isDark ? colorTokens.green[900] : colorTokens.green[50],
+        content: isDark ? colorTokens.green[200] : colorTokens.green[700],
+        border: isDark ? colorTokens.green[800] : colorTokens.green[300],
       },
     },
-  
-    // Border colors
     border: {
       default: isDark ? colorTokens.gray[700] : colorTokens.gray[200],
       strong: isDark ? colorTokens.gray[600] : colorTokens.gray[300],
-      focus: isDark ? colorTokens.orange[400] : colorTokens.orange[500],
     },
-  
-    // Overlay colors for modals, loading states, etc.
-    overlay: {
-      background: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
-      hover: isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.6)',
+    background: {
+      default: isDark ? colorTokens.gray[900] : colorTokens.gray[50],
+      surface: isDark ? colorTokens.gray[800] : '#FFFFFF',
     },
   });
   
-  // Type exports
-  export type ColorTokens = typeof colorTokens;
+  // Add color value type
+  export type ColorValue = string;
+  
+  // Update semantic colors type
   export type SemanticColors = ReturnType<typeof createSemanticColors>;

@@ -16,24 +16,24 @@ export const scale = {
 // Font weights - platform specific for better rendering
 export const weights = {
   normal: Platform.select({
-    ios: '400',
-    android: '400',
-    default: '400',
+    ios: '400' as const,
+    android: '400' as const,
+    default: '400' as const,
   }),
   medium: Platform.select({
-    ios: '500',
-    android: '500',
-    default: '500',
+    ios: '500' as const,
+    android: '500' as const,
+    default: '500' as const,
   }),
   semibold: Platform.select({
-    ios: '600',
-    android: '600',
-    default: '600',
+    ios: '600' as const,
+    android: '600' as const,
+    default: '600' as const,
   }),
   bold: Platform.select({
-    ios: '700',
-    android: '700',
-    default: '700',
+    ios: '700' as const,
+    android: '700' as const,
+    default: '700' as const,
   }),
 } as const;
 

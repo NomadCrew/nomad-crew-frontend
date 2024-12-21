@@ -1,17 +1,54 @@
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { SplashScreen, Stack } from 'expo-router';
+import { SplashScreen, Stack, useSegments, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { ThemeProvider, useTheme } from '@/src/theme/ThemeProvider';
 import { useAuthStore } from '@/src/store/useAuthStore';
+import AuthErrorBoundary from '@/components/AuthErrorBoundary';
+import { InitialLoadingScreen } from '@/components/InitialLoadingScreen';
 
-// Keep the splash screen visible while we fetch resources
-SplashScreen.preventAutoHideAsync();
+function useProtectedRoute() {
+  const segments = useSegments();
+  const router = useRouter();
+  const { token, isInitialized, loading } = useAuthStore();
+
+  useEffect(() => {
+    console.log('[Route] Auth state:', { 
+      isInitialized, 
+      hasToken: !!token,
+      loading,
+      currentSegment: segments[0]
+    });
+
+    if (!isInitialized) {
+      console.log('[Route] Waiting for initialization');
+      return;
+    }
+
+    const inAuthGroup = segments[0] === '(auth)';
+    console.log('[Route] Navigation check:', { hasToken: !!token, inAuthGroup });
+
+    if (!token && !inAuthGroup) {
+      console.log('[Route] Redirecting to login');
+      router.replace('/login');
+    } else if (token && inAuthGroup) {
+      console.log('[Route] Redirecting to tabs');
+      router.replace('/(tabs)');
+    }
+  }, [token, segments, isInitialized, loading]);
+
+  return !isInitialized;
+}
 
 function RootLayoutNav() {
-  const { theme, mode } = useTheme();
-  
+  const isLoading = useProtectedRoute();
+  const { mode } = useTheme();
+
+  if (isLoading) {
+    return <InitialLoadingScreen />;
+  }
+
   return (
     <NavigationThemeProvider value={mode === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack screenOptions={{ headerShown: false }}>
@@ -24,31 +61,45 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
+  console.log('RootLayout rendering');
+  const { initialize } = useAuthStore();
+  
   const [fontsLoaded, fontError] = useFonts({
     'Inter': require('../assets/fonts/Inter/Inter-VariableFont_opsz,wght.ttf'),
     'Inter-Italic': require('../assets/fonts/Inter/Inter-Italic-VariableFont_opsz,wght.ttf'),
     'SpaceMono': require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
-  const { restoreToken, isInitialized } = useAuthStore();
-
+  // Combined initialization effect
   useEffect(() => {
-    restoreToken();
-  }, []);
+    const initApp = async () => {
+      try {
+        console.log('Starting auth initialization');
+        await initialize();
+        
+        if (fontsLoaded || fontError) {
+          console.log('Hiding splash screen');
+          await SplashScreen.hideAsync();
+        }
+      } catch (error) {
+        console.error('Failed to initialize:', error);
+      }
+    };
 
-  useEffect(() => {
-    if ((fontsLoaded || fontError) && isInitialized) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded, fontError, isInitialized]);
+    initApp();
+  }, [initialize, fontsLoaded, fontError]);
 
-  if (!fontsLoaded && !fontError && !isInitialized) {
+  if (!fontsLoaded && !fontError) {
+    console.log('Fonts not loaded yet');
     return null;
   }
 
+  console.log('Rendering app with providers');
   return (
     <ThemeProvider>
-      <RootLayoutNav />
+      <AuthErrorBoundary>
+        <RootLayoutNav />
+      </AuthErrorBoundary>
     </ThemeProvider>
   );
 }

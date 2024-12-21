@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { api } from '@/src/api/config';
+import { api } from '@/src/api/api-client';
 
 export interface Trip {
   id: number;

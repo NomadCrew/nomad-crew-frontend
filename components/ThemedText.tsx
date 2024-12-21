@@ -1,60 +1,98 @@
 import React from 'react';
 import { Text, TextProps } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
+import { Typography } from '@/src/theme/foundations/typography';
+import { SemanticColors } from '@/src/theme/foundations/colors';
+
+// Helper type to create dot notation paths for nested objects
+type DotNotation<T, P extends string = ''> = T extends object
+  ? {
+      [K in keyof T]: DotNotation<
+        T[K],
+        P extends '' ? `${string & K}` : `${P}.${string & K}`
+      >;
+    }[keyof T]
+  : P;
+
+// Type for typography variants using dot notation
+type TypographyVariant = DotNotation<Typography>;
+
+// Type for color variants using dot notation
+type ColorVariant = DotNotation<SemanticColors>;
 
 export interface ThemedTextProps extends TextProps {
-  type?: 'default' | 'title' | 'subtitle' | 'link' | 'defaultSemiBold';
+  variant?: TypographyVariant;
+  color?: ColorVariant;
+  isHeading?: boolean;
+  accessibilityRole?: 'header' | 'text' | 'link' | 'button';
+  minTouchSize?: number;
 }
 
-export function ThemedText({ style, children, type = 'default', ...rest }: ThemedTextProps) {
+export function ThemedText({ 
+  style, 
+  children, 
+  variant = 'body.medium', 
+  color = 'content.primary',
+  isHeading = false,
+  accessibilityRole,
+  minTouchSize,
+  ...rest 
+}: ThemedTextProps) {
   const { theme } = useTheme();
 
-  const defaultStyle = {
-    color: theme.colors.content.primary,
-    fontFamily: 'Inter',
+  const getTypographyStyle = () => {
+    try {
+      const [category, size] = variant.split('.');
+      const categoryKey = category as keyof typeof theme.typography;
+      const categoryStyles = theme.typography[categoryKey];
+      
+      // Type guard to ensure we have an object with the right properties
+      if (categoryStyles && 
+          typeof categoryStyles === 'object' && 
+          size in categoryStyles) {
+        return categoryStyles[size as keyof typeof categoryStyles];
+      }
+    } catch (error) {
+      console.warn(`Invalid typography variant: ${variant}`);
+    }
+    
+    // Fallback to body.medium if variant is invalid
+    return theme.typography.body.medium;
   };
 
-  const textStyles = React.useMemo(() => {
-    switch (type) {
-      case 'title':
-        return {
-          ...defaultStyle,
-          fontSize: 24,
-          fontWeight: '600',
-        };
-      case 'subtitle':
-        return {
-          ...defaultStyle,
-          fontSize: 18,
-          opacity: 0.8,
-        };
-      case 'link':
-        return {
-          ...defaultStyle,
-          color: theme.colors.primary.main,
-          textDecorationLine: 'underline',
-        };
-      case 'defaultSemiBold':
-        return {
-          ...defaultStyle,
-          fontWeight: '600',
-        };
-      default:
-        return defaultStyle;
+  const getTextColor = () => {
+    try {
+      const [category, shade] = color.split('.');
+      const categoryKey = category as keyof typeof theme.colors;
+      const colorCategory = theme.colors[categoryKey];
+      
+      // Type guard to ensure we have an object with the right properties
+      if (colorCategory && 
+          typeof colorCategory === 'object' && 
+          shade in colorCategory) {
+        return colorCategory[shade as keyof typeof colorCategory];
+      }
+    } catch (error) {
+      console.warn(`Invalid color variant: ${color}`);
     }
-  }, [type, theme]);
+
+    return theme.colors.content.primary;
+  };
 
   return (
-    <Text style={[textStyles, style]} {...rest}>
+    <Text 
+      style={[
+        getTypographyStyle(),
+        { color: getTextColor() },
+        minTouchSize && { minHeight: minTouchSize, minWidth: minTouchSize },
+        style
+      ]} 
+      accessibilityRole={accessibilityRole || (isHeading ? 'header' : 'text')}
+      {...rest}
+    >
       {children}
     </Text>
   );
 }
-
-// Examples of usage:
-// <ThemedText category="display" variant="large">Large Display Text</ThemedText>
-// <ThemedText category="body" variant="medium">Medium Body Text</ThemedText>
-// <ThemedText category="heading" variant="h1">Heading 1</ThemedText>
-// <ThemedText variant="caption">Caption Text</ThemedText>
 
 export default React.memo(ThemedText);
