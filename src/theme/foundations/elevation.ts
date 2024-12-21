@@ -1,5 +1,4 @@
 import { Platform } from 'react-native';
-import type { ColorTokens } from './colors';
 
 // Helper to generate elevation styles for both platforms
 const createElevation = (

@@ -1,7 +1,8 @@
-import type { SemanticColors } from './foundations/colors';
-import type { Typography } from './foundations/typography';
-import type { SemanticSpacing } from './foundations/spacing';
-import type { SemanticElevation } from './foundations/elevation';
+import { ColorValue, TextStyle, ViewStyle } from 'react-native';
+import { SemanticColors } from './foundations/colors';
+import { SemanticSpacing } from './foundations/spacing';
+import { Typography } from './foundations/typography';
+import { SemanticElevation } from './foundations/elevation';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -9,7 +10,14 @@ export interface ThemeOptions {
   isDark?: boolean;
   fontFamily?: string;
   spacing?: Partial<SemanticSpacing>;
-  colors?: Partial<SemanticColors>;
+  borderRadius?: {
+    none?: number;
+    sm?: number;
+    md?: number;
+    lg?: number;
+    xl?: number;
+    full?: number;
+  };
 }
 
 export interface Theme {
@@ -17,17 +25,20 @@ export interface Theme {
   typography: Typography;
   spacing: SemanticSpacing;
   elevation: SemanticElevation;
-  
-  // Component-specific theme overrides
-  components: {
-    [key: string]: unknown; // Will be properly typed when we add component themes
-  };
+  components: ComponentStyles;
 }
 
-// Theme tokens are the raw values used to build the theme
-export interface ThemeTokens {
-  colors: SemanticColors;
-  typography: Typography;
-  spacing: SemanticSpacing;
-  elevation: SemanticElevation;
+export interface ComponentStyles {
+  Button?: {
+    base?: ViewStyle;
+    variants?: Record<string, ViewStyle>;
+    sizes?: Record<string, ViewStyle & Partial<TextStyle>>;
+  };
+  // Add other component styles as needed
 }
+
+// Helper type for getting nested theme values
+export type ThemeNestedValue<T> = T | Record<string, T>;
+
+// Helper type for color values that can be either direct or semantic
+export type ThemeColorValue = ColorValue | keyof SemanticColors;

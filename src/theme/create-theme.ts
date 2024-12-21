@@ -1,68 +1,77 @@
-export function createTheme(options: ThemeOptions = {}) {
-    const {
-      isDark = false,
-      fontFamily = 'Inter',
-      spacing: customSpacing,
-      borderRadius: customBorderRadius,
-    } = options;
-  
-    const semanticColors = createSemanticColors(isDark);
-    const typography = createTypography(fontFamily);
-  
-    return {
-      colors: semanticColors,
-      typography,
-      spacing: {
-        ...spacing,
-        ...customSpacing,
-      },
-      borderRadius: {
-        ...borderRadius,
-        ...customBorderRadius,
-      },
-      // Add component styles
-      components: {
-        Button: {
-          base: {
-            height: 48,
-            borderRadius: 8,
-            paddingHorizontal: 16,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
+import { ThemeOptions, Theme } from './types';
+import { createSemanticColors } from './foundations/colors';
+import { createTypography } from './foundations/typography';
+import { createSemanticSpacing } from './foundations/spacing';
+import { createSemanticElevation } from './foundations/elevation';
+
+const defaultBorderRadius = {
+  none: 0,
+  sm: 4,
+  md: 8,
+  lg: 12,
+  xl: 16,
+  full: 9999,
+};
+
+export function createTheme(options: ThemeOptions = {}): Theme {
+  const {
+    isDark = false,
+    fontFamily = 'Inter',
+    spacing: customSpacing,
+    borderRadius: customBorderRadius,
+  } = options;
+
+  const semanticColors = createSemanticColors(isDark);
+  const typography = createTypography(fontFamily);
+  const spacing = createSemanticSpacing();
+  const elevation = createSemanticElevation(isDark);
+
+  return {
+    colors: semanticColors,
+    typography,
+    spacing: {
+      ...spacing,
+      ...customSpacing,
+    },
+    elevation,
+    components: {
+      Button: {
+        base: {
+          height: 48,
+          borderRadius: defaultBorderRadius.md,
+          paddingHorizontal: spacing.components.button.paddingHorizontal,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        variants: {
+          primary: {
+            backgroundColor: semanticColors.primary.main,
           },
-          variants: {
-            primary: {
-              backgroundColor: semanticColors.primary.main,
-              color: '#FFFFFF',
-            },
-            secondary: {
-              backgroundColor: semanticColors.background.surfaceVariant,
-              color: semanticColors.content.primary,
-            },
-            // Add other variants...
-          },
-          sizes: {
-            sm: {
-              height: 32,
-              paddingHorizontal: 12,
-              ...typography.styles.button,
-              fontSize: 14,
-            },
-            md: {
-              height: 40,
-              paddingHorizontal: 16,
-              ...typography.styles.button,
-            },
-            lg: {
-              height: 48,
-              paddingHorizontal: 20,
-              ...typography.styles.button,
-              fontSize: 18,
-            },
+          secondary: {
+            backgroundColor: semanticColors.background.surfaceVariant,
           },
         },
-        // Add other component styles...
+        sizes: {
+          sm: {
+            height: 32,
+            paddingHorizontal: spacing.components.button.paddingHorizontal,
+            ...typography.button,
+            fontSize: 14,
+          },
+          md: {
+            height: 40,
+            paddingHorizontal: spacing.components.button.paddingHorizontal,
+            ...typography.button,
+          },
+          lg: {
+            height: 48,
+            paddingHorizontal: spacing.components.button.paddingHorizontal,
+            ...typography.button,
+            fontSize: 18,
+          },
+        },
       },
-    };
-  }
+    },
+  };
+}

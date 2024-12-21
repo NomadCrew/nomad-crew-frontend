@@ -3,6 +3,7 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 
 export function LoadingScreen() {
   const { theme } = useTheme();
+  console.log('Rendering LoadingScreen'); // Debug log
 
   return (
     <View 
@@ -10,7 +11,7 @@ export function LoadingScreen() {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: theme.colors.background.default,
+        backgroundColor: theme.colors.surface.default,
       }}
     >
       <ActivityIndicator 

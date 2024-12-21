@@ -1,43 +1,13 @@
 import { create } from 'zustand';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { api } from '@/src/api/config';
+import { api } from '@/src/api/api-client';
+import { router } from 'expo-router';
+import { secureTokenManager } from '@/src/auth/secure-token-manager';
+import { API_PATHS } from '@/src/utils/api-paths';
+import type { RegisterCredentials, LoginCredentials, AuthState } from '@/src/types/auth';
 
-export interface User {
-  id: number;
-  username: string;
-  email: string;
-  firstName?: string;
-  lastName?: string;
-  profilePicture?: string;
-}
-
-interface AuthState {
-  user: User | null;
-  token: string | null;
-  loading: boolean;
-  error: string | null;
-  isInitialized: boolean;
-  register: (credentials: RegisterCredentials) => Promise<void>;
-  login: (credentials: LoginCredentials) => Promise<void>;
-  logout: () => Promise<void>;
-  initialize: () => Promise<void>;
-  restoreToken: () => Promise<void>;
-}
-
-interface RegisterCredentials {
-  username: string;
-  email: string;
-  password: string;
-  firstName?: string;
-  lastName?: string;
-}
-
-interface LoginCredentials {
-  email: string;
-  password: string;
-}
-
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => {
+  console.log('Starting auth initialization'); // Debug log
+  return {
   user: null,
   token: null,
   loading: false,
@@ -45,58 +15,77 @@ export const useAuthStore = create<AuthState>((set) => ({
   isInitialized: false,
 
   initialize: async () => {
-    try {
-      const token = await AsyncStorage.getItem('auth_token');
-      if (token) {
-        // Set the token in axios defaults
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        // TODO: Fetch user profile here
-        set({ token });
-      }
-    } catch (error) {
-      console.error('Failed to initialize auth store:', error);
+    console.log('[AuthStore] Starting initialization');
+    
+    // Prevent multiple initialization attempts
+    if (get().loading) {
+      console.log('[AuthStore] Already loading, skipping');
+      return;
     }
-  },
-
-  restoreToken: async () => {
+  
     set({ loading: true });
+    
     try {
-      const token = await AsyncStorage.getItem('auth_token');
-      if (token) {
-        // Optionally verify token validity here
-        // You could make a request to /verify-token endpoint if you have one
-        set({ token });
-
-        // Set the token in API headers
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
-        // Optionally fetch user data
-        const response = await api.get('/users/me');
-        set({ user: response.data });
+      console.log('[AuthStore] Checking for token');
+      const token = await secureTokenManager.getToken();
+      console.log('[AuthStore] Token exists:', !!token);
+  
+      if (!token) {
+        console.log('[AuthStore] No token found, completing initialization');
+        set({ 
+          isInitialized: true, 
+          loading: false,
+          token: null,
+          user: null
+        });
+        return;
+      }
+  
+      try {
+        console.log('[AuthStore] Validating token and fetching user data');
+        const response = await api.get(API_PATHS.users.me);
+        console.log('[AuthStore] Successfully fetched user data');
+        
+        set({
+          user: response.data,
+          token,
+          isInitialized: true,
+          loading: false,
+          error: null
+        });
+      } catch (apiError) {
+        console.log('[AuthStore] API error:', apiError);
+        await secureTokenManager.clearTokens();
+        set({
+          user: null,
+          token: null,
+          isInitialized: true,
+          loading: false,
+          error: null
+        });
       }
     } catch (error) {
-      // If there's an error (invalid token, network error, etc.), clean up
-      await AsyncStorage.removeItem('auth_token');
-      set({ error: 'Failed to restore session' });
-      delete api.defaults.headers.common['Authorization'];
-    } finally {
-      set({ loading: false, isInitialized: true });
+      console.error('[AuthStore] Initialization error:', error);
+      set({
+        error: 'Failed to initialize session',
+        user: null,
+        token: null,
+        isInitialized: true,
+        loading: false
+      });
     }
   },
 
-  register: async (credentials) => {
+  register: async (credentials: RegisterCredentials) => {
     try {
       set({ loading: true, error: null });
       
-      // Register user
-      const response = await api.post('/users', credentials);
-      const { token, user } = response.data;
+      const response = await api.post(API_PATHS.users.create, credentials);
+      const { token, refreshToken, user } = response.data;
 
-      // Store token
-      await AsyncStorage.setItem('auth_token', token);
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
+      await secureTokenManager.saveTokens(token, refreshToken);
       set({ user, token, loading: false });
+      router.replace('/(tabs)');
     } catch (error: any) {
       const message = error.response?.data?.message || 'Registration failed';
       set({ error: message, loading: false });
@@ -104,32 +93,45 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  login: async (credentials) => {
+  login: async (credentials: LoginCredentials) => {
     try {
-      set({ loading: true, error: null });
-      
-      const response = await api.post('/v1/login', credentials);
-      const { token, user } = response.data;
+        set({ loading: true, error: null });
+        const response = await api.post(API_PATHS.auth.login, credentials);
+        const { token, refreshToken, user } = response.data;
 
-      await AsyncStorage.setItem('auth_token', token);
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        await secureTokenManager.saveTokens(token, refreshToken);
+        set({ user, token, loading: false });
+        router.replace('/(tabs)');
+    } catch (error: unknown) {
+        // Narrowing error type
+        const message = 
+            error instanceof Error
+                ? error.message
+                : error && typeof error === 'object' && 'response' in error
+                    ? (error as any).response?.data?.message || 'Login failed'
+                    : 'Login failed';
 
-      set({ user, token, loading: false });
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Login failed';
-      set({ error: message, loading: false });
-      throw new Error(message);
+        set({ error: message, loading: false });
+        throw error; // Optional, depends on how you're handling errors globally
     }
-  },
+},
 
   logout: async () => {
-     try {
-      await AsyncStorage.removeItem('auth_token');
-      set({ token: null, user: null });
-    } catch (error: any) {
+    try {
+      set({ loading: true });
+      await api.post(API_PATHS.auth.logout);
+    } catch (error) {
       console.error('Logout error:', error);
-      // Still clear the state even if storage removal fails
-      set({ token: null, user: null });
+    } finally {
+      await secureTokenManager.clearTokens();
+      set({ 
+        token: null, 
+        user: null, 
+        loading: false,
+        error: null 
+      });
+      router.replace('/login');
     }
   },
-}));
+};
+});
