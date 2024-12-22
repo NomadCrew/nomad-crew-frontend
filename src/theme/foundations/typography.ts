@@ -58,7 +58,7 @@ export const letterSpacing = {
 } as const;
 
 // Create typography styles based on font family
-export const createTypography = (baseFontFamily = 'Inter') => ({
+export const createTypography = (baseFontFamily = 'Manrope') => ({
   // Display text styles
   display: {
     large: {

@@ -1,12 +1,10 @@
 import { useState } from 'react';
-import { 
-  StyleSheet, 
-  TextInput, 
-  Pressable, 
-  KeyboardAvoidingView, 
+import {
+  StyleSheet,
+  TextInput,
+  Pressable,
+  KeyboardAvoidingView,
   Platform,
-  ViewStyle,
-  TextStyle,
 } from 'react-native';
 import { Link } from 'expo-router';
 import { Loader2 } from 'lucide-react';
@@ -17,7 +15,6 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { getInputStyles, getButtonStyles } from '@/src/theme/styles';
 
 const getFriendlyErrorMessage = (error: string) => {
-  // Map technical errors to user-friendly messages
   const errorMap: Record<string, string> = {
     'auth/invalid-email': 'Please check your email and try again',
     'auth/wrong-password': 'Unable to sign in. Please check your details and try again',
@@ -25,26 +22,25 @@ const getFriendlyErrorMessage = (error: string) => {
     'auth/too-many-requests': 'Too many attempts. Please try again later',
     'network-error': 'Connection issues. Please check your internet and try again',
   };
-  
-  // Default to a generic message if error not mapped
   return errorMap[error] || 'Something went wrong. Please try again';
 };
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [focusedInput, setFocusedInput] = useState<'email' | 'password' | null>(null);
+  const [focusedInput, setFocusedInput] = useState<'email' | 'password' | null>(
+    null
+  );
   const { login, loading, error } = useAuthStore();
   const { theme } = useTheme();
 
-  const inputStyles = getInputStyles(theme);
-  const buttonStyles = getButtonStyles(theme, loading);
+  const inputStyles = getInputStyles(theme); // Shared input styles
+  const buttonStyles = getButtonStyles(theme, loading); // Shared button styles
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
       return;
     }
-    
     try {
       await login({ email, password });
     } catch (err) {
@@ -53,44 +49,33 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+      style={styles(theme).container}
     >
-      <ThemedView style={styles.content}>
+      <ThemedView style={styles(theme).content}>
         {/* Header Section */}
-        <ThemedView style={styles.header}>
-          <ThemedText 
-            variant="heading.h1"
-            style={styles.title}
-          >
-            Welcome Back
-          </ThemedText>
-          
-          <ThemedText 
-            variant="body.medium"
-            style={styles.subtitle}
-          >
+        <ThemedView style={styles(theme).header}>
+          <ThemedText style={styles(theme).title}>Welcome Back</ThemedText>
+          <ThemedText style={styles(theme).subtitle}>
             Sign in to continue your journey
           </ThemedText>
         </ThemedView>
 
         {/* Error Message */}
         {error && (
-          <ThemedView style={styles.errorContainer}>
-            <ThemedText style={styles.errorText}>
+          <ThemedView style={styles(theme).errorContainer}>
+            <ThemedText style={styles(theme).errorText}>
               {getFriendlyErrorMessage(error)}
             </ThemedText>
           </ThemedView>
         )}
 
         {/* Form Section */}
-        <ThemedView style={styles.form}>
+        <ThemedView style={styles(theme).form}>
           {/* Email Input */}
-          <ThemedView style={styles.inputWrapper}>
-            <ThemedText variant="input.label">
-              Email
-            </ThemedText>
+          <ThemedView style={styles(theme).inputWrapper}>
+            <ThemedText>Email</ThemedText>
             <TextInput
               style={[
                 inputStyles.states[focusedInput === 'email' ? 'focus' : 'idle'],
@@ -109,10 +94,8 @@ export default function LoginScreen() {
           </ThemedView>
 
           {/* Password Input */}
-          <ThemedView style={styles.inputWrapper}>
-            <ThemedText variant="input.label">
-              Password
-            </ThemedText>
+          <ThemedView style={styles(theme).inputWrapper}>
+            <ThemedText>Password</ThemedText>
             <TextInput
               style={[
                 inputStyles.states[focusedInput === 'password' ? 'focus' : 'idle'],
@@ -131,11 +114,8 @@ export default function LoginScreen() {
 
           {/* Forgot Password Link */}
           <Link href="/(auth)/forgot-password" asChild>
-            <Pressable style={styles.forgotPasswordContainer}>
-              <ThemedText 
-                variant="body.small"
-                style={styles.linkText}
-              >
+            <Pressable style={styles(theme).forgotPasswordContainer}>
+              <ThemedText style={styles(theme).linkText}>
                 Forgot your password?
               </ThemedText>
             </Pressable>
@@ -145,41 +125,28 @@ export default function LoginScreen() {
           <Pressable
             style={[
               buttonStyles.container,
-              styles.loginButton,
-              (!email.trim() || !password.trim()) && styles.buttonDisabled
+              styles(theme).loginButton,
+              (!email.trim() || !password.trim()) && styles(theme).buttonDisabled,
             ]}
             onPress={handleLogin}
             disabled={loading || !email.trim() || !password.trim()}
           >
             {loading ? (
               <ThemedView style={buttonStyles.loadingContainer}>
-                <Loader2 
-                  size={20} 
-                  color={theme.colors.primary.text} 
-                  className="animate-spin"
-                />
-                <ThemedText style={buttonStyles.text}>
-                  Signing in...
-                </ThemedText>
+                <Loader2 size={20} color={theme.colors.primary.onPrimary} />
+                <ThemedText style={buttonStyles.text}>Signing in...</ThemedText>
               </ThemedView>
             ) : (
-              <ThemedText style={buttonStyles.text}>
-                Sign In
-              </ThemedText>
+              <ThemedText style={buttonStyles.text}>Sign In</ThemedText>
             )}
           </Pressable>
 
           {/* Sign Up Link */}
           <Link href="/(auth)/register" asChild>
-            <Pressable style={styles.signUpContainer}>
-              <ThemedText variant="body.medium">
+            <Pressable style={styles(theme).signUpContainer}>
+              <ThemedText>
                 Don't have an account?{' '}
-                <ThemedText 
-                  variant="body.medium" 
-                  style={styles.linkText}
-                >
-                  Sign up
-                </ThemedText>
+                <ThemedText style={styles(theme).linkText}>Sign up</ThemedText>
               </ThemedText>
             </Pressable>
           </Link>
@@ -189,61 +156,68 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
-    justifyContent: 'center',
-    maxWidth: 450,
-    alignSelf: 'center',
-    width: '100%',
-  },
-  header: {
-    marginBottom: 40,
-    gap: 8,
-  },
-  title: {
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  subtitle: {
-    textAlign: 'center',
-    opacity: 0.8,
-  },
-  form: {
-    gap: 24,
-  },
-  inputWrapper: {
-    gap: 8,
-  },
-  forgotPasswordContainer: {
-    alignItems: 'flex-end',
-  },
-  signUpContainer: {
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  linkText: {
-    color: 'orange.500',
-    fontWeight: '500',
-  },
-  loginButton: {
-    marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  errorContainer: {
-    backgroundColor: 'red.50',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 24,
-  },
-  errorText: {
-    color: 'red.700',
-    textAlign: 'center',
-  },
-});
+const styles = (theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background.default,
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: theme.spacing.layout.screen.padding,
+      justifyContent: 'center',
+      maxWidth: 450,
+      alignSelf: 'center',
+      width: '100%',
+    },
+    header: {
+      marginBottom: theme.spacing.layout.section.gap,
+      gap: theme.spacing.stack.sm,
+    },
+    title: {
+      ...theme.typography.heading.h1,
+      textAlign: 'center',
+      color: theme.colors.content.primary,
+      marginBottom: theme.spacing.inset.sm,
+    },
+    subtitle: {
+      ...theme.typography.body.medium,
+      textAlign: 'center',
+      color: theme.colors.content.secondary,
+    },
+    form: {
+      gap: theme.spacing.stack.md,
+    },
+    inputWrapper: {
+      gap: theme.spacing.inline.sm,
+    },
+    forgotPasswordContainer: {
+      alignItems: 'flex-end',
+    },
+    signUpContainer: {
+      alignItems: 'center',
+      paddingVertical: theme.spacing.inset.sm,
+    },
+    linkText: {
+      ...theme.typography.button.medium,
+      color: theme.colors.primary.main,
+      fontWeight: theme.typography.button.medium.fontWeight,
+    },
+    loginButton: {
+      marginTop: theme.spacing.inset.sm,
+    },
+    buttonDisabled: {
+      opacity: 0.5,
+    },
+    errorContainer: {
+      backgroundColor: theme.colors.status.error.surface,
+      padding: theme.spacing.inset.md,
+      borderRadius: theme.spacing.inset.sm,
+      marginBottom: theme.spacing.inset.md,
+    },
+    errorText: {
+      ...theme.typography.body.small,
+      color: theme.colors.status.error.content,
+      textAlign: 'center',
+    },
+  });
