@@ -68,6 +68,7 @@ export default function RootLayout() {
     'Inter': require('../assets/fonts/Inter/Inter-VariableFont_opsz,wght.ttf'),
     'Inter-Italic': require('../assets/fonts/Inter/Inter-Italic-VariableFont_opsz,wght.ttf'),
     'SpaceMono': require('../assets/fonts/SpaceMono-Regular.ttf'),
+    'Manrope': require('../assets/fonts/Manrope/Manrope-VariableFont_wght.ttf'),
   });
 
   // Combined initialization effect
