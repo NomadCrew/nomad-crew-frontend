@@ -16,34 +16,32 @@ export default function TabLayout() {
           backgroundColor: theme.colors.surface.default,
           borderTopColor: theme.colors.surface.variant,
         },
+        // Hide the tab bar for the index route
+        tabBarButton: route.name === 'index' ? () => null : undefined,
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
 
           switch (route.name) {
-            case 'index':
-              iconName = focused ? 'home' : 'home-outline';
-              break;
             case 'trips':
               iconName = focused ? 'briefcase' : 'briefcase-outline';
               break;
             case 'explore':
               iconName = focused ? 'compass' : 'compass-outline';
               break;
-            default:
-              iconName = 'ellipse';
+            case 'profile':
+              iconName = focused ? 'person' : 'person-outline';
               break;
+            default:
+              return null; // Don't render an icon for unknown routes
           }
 
           return <Ionicons name={iconName} size={size || 24} color={color} />;
         },
       })}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-        }}
-      />
+      {/* Add this line to hide the index screen from tab bar */}
+      <Tabs.Screen name="index" options={{ href: null }} />
+      
       <Tabs.Screen
         name="trips"
         options={{
@@ -54,6 +52,12 @@ export default function TabLayout() {
         name="explore"
         options={{
           title: 'Explore',
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
         }}
       />
     </Tabs>
