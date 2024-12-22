@@ -13,6 +13,7 @@ import { useAuthStore } from '@/src/store/useAuthStore';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useTheme } from '@/src/theme/ThemeProvider';
+import { getInputStyles } from '@/src/theme/styles'; // Import shared input styles
 
 export default function RegisterScreen() {
   const [formData, setFormData] = useState({
@@ -25,6 +26,9 @@ export default function RegisterScreen() {
   const [focusedInput, setFocusedInput] = useState<string | null>(null); // Track focused input
   const { register, loading, error } = useAuthStore();
   const { theme } = useTheme();
+
+  // Use shared input styles
+  const inputStyles = getInputStyles(theme);
 
   const handleRegister = async () => {
     try {
@@ -51,13 +55,11 @@ export default function RegisterScreen() {
           {/* Username Input */}
           <TextInput
             style={[
-              styles(theme).input,
-              focusedInput === 'username'
-                ? styles(theme).inputFocused
-                : styles(theme).inputIdle,
+              inputStyles.states[focusedInput === 'username' ? 'focus' : 'idle'],
+              inputStyles.text,
             ]}
             placeholder="Username"
-            placeholderTextColor={theme.colors.content.secondary}
+            placeholderTextColor={theme.colors.content.tertiary}
             value={formData.username}
             onChangeText={(text) =>
               setFormData((prev) => ({ ...prev, username: text }))
@@ -69,13 +71,11 @@ export default function RegisterScreen() {
           {/* Email Input */}
           <TextInput
             style={[
-              styles(theme).input,
-              focusedInput === 'email'
-                ? styles(theme).inputFocused
-                : styles(theme).inputIdle,
+              inputStyles.states[focusedInput === 'email' ? 'focus' : 'idle'],
+              inputStyles.text,
             ]}
             placeholder="Email"
-            placeholderTextColor={theme.colors.content.secondary}
+            placeholderTextColor={theme.colors.content.tertiary}
             value={formData.email}
             onChangeText={(text) =>
               setFormData((prev) => ({ ...prev, email: text }))
@@ -89,13 +89,11 @@ export default function RegisterScreen() {
           {/* Password Input */}
           <TextInput
             style={[
-              styles(theme).input,
-              focusedInput === 'password'
-                ? styles(theme).inputFocused
-                : styles(theme).inputIdle,
+              inputStyles.states[focusedInput === 'password' ? 'focus' : 'idle'],
+              inputStyles.text,
             ]}
             placeholder="Password"
-            placeholderTextColor={theme.colors.content.secondary}
+            placeholderTextColor={theme.colors.content.tertiary}
             value={formData.password}
             onChangeText={(text) =>
               setFormData((prev) => ({ ...prev, password: text }))
@@ -108,13 +106,11 @@ export default function RegisterScreen() {
           {/* First Name Input */}
           <TextInput
             style={[
-              styles(theme).input,
-              focusedInput === 'firstName'
-                ? styles(theme).inputFocused
-                : styles(theme).inputIdle,
+              inputStyles.states[focusedInput === 'firstName' ? 'focus' : 'idle'],
+              inputStyles.text,
             ]}
             placeholder="First Name (Optional)"
-            placeholderTextColor={theme.colors.content.secondary}
+            placeholderTextColor={theme.colors.content.tertiary}
             value={formData.firstName}
             onChangeText={(text) =>
               setFormData((prev) => ({ ...prev, firstName: text }))
@@ -126,13 +122,11 @@ export default function RegisterScreen() {
           {/* Last Name Input */}
           <TextInput
             style={[
-              styles(theme).input,
-              focusedInput === 'lastName'
-                ? styles(theme).inputFocused
-                : styles(theme).inputIdle,
+              inputStyles.states[focusedInput === 'lastName' ? 'focus' : 'idle'],
+              inputStyles.text,
             ]}
             placeholder="Last Name (Optional)"
-            placeholderTextColor={theme.colors.content.secondary}
+            placeholderTextColor={theme.colors.content.tertiary}
             value={formData.lastName}
             onChangeText={(text) =>
               setFormData((prev) => ({ ...prev, lastName: text }))
@@ -193,30 +187,16 @@ const styles = (theme) =>
       marginBottom: theme.spacing.layout.section.gap,
       color: theme.colors.content.primary,
     },
-    input: {
-      height: 48,
-      borderWidth: 1,
-      borderRadius: theme.spacing.inset.md,
-      paddingHorizontal: theme.spacing.inset.md,
-      marginBottom: theme.spacing.stack.md,
-      fontSize: theme.typography.body.medium.fontSize,
-    },
-    inputFocused: {
-      borderColor: theme.colors.primary.main,
-    },
-    inputIdle: {
-      borderColor: theme.colors.border.default,
-    },
     button: {
-      height: 48,
-      borderRadius: theme.spacing.inset.md,
+      height: 56,
+      borderRadius: 12,
       alignItems: 'center',
       justifyContent: 'center',
       marginTop: theme.spacing.stack.sm,
     },
     buttonText: {
       ...theme.typography.button.medium,
-      color: theme.colors.primary.onPrimary,
+      color: theme.colors.primary.text,
     },
     linkContainer: {
       alignItems: 'center',
