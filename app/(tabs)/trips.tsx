@@ -74,8 +74,22 @@ export default function TripsScreen() {
       {/* Tabs Section */}
       <View style={styles(theme).tabs}>
         {['Active', 'Recent', 'Cancelled'].map((tab) => (
-          <TouchableOpacity key={tab} style={styles(theme).tabButton}>
-            <Text style={styles(theme).tabText}>{tab}</Text>
+          <TouchableOpacity
+            key={tab}
+            onPress={() => setActiveTab(tab)} // Update active tab state
+            style={[
+              styles(theme).tabButton,
+              activeTab === tab && styles(theme).activeTabButton, // Apply active button style
+            ]}
+          >
+            <Text
+              style={[
+                styles(theme).tabText,
+                activeTab === tab && styles(theme).activeTabText, // Apply active text style
+              ]}
+            >
+              {tab}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -121,9 +135,11 @@ const styles = (theme) =>
     searchInput: {
       flex: 1,
       paddingHorizontal: theme.spacing.inset.sm,
+      paddingVertical: 4, // Add padding to ensure the text is not clipped
+      height: 36, // Ensure the height matches the container
       ...theme.typography.body.medium,
       color: theme.colors.content.primary,
-    },
+    },    
     tabs: {
       flexDirection: 'row',
       justifyContent: 'space-around',
@@ -134,14 +150,14 @@ const styles = (theme) =>
     tabButton: { paddingVertical: theme.spacing.inline.sm },
     activeTabButton: {
       borderBottomWidth: 2,
-      borderBottomColor: '#FF5722', // Orange for active tab
+      borderBottomColor: theme.colors.primary.main, // Orange for active tab
     },
     tabText: {
       ...theme.typography.button.medium,
       color: theme.colors.content.secondary,
     },
     activeTabText: {
-      color: '#FF5722', // Use orange for active text
+      color: theme.colors.primary.main, // Use orange for active text
       fontWeight: theme.typography.button.medium.fontWeight,
     },
     content: {
@@ -157,7 +173,7 @@ const styles = (theme) =>
       position: 'absolute',
       bottom: theme.spacing.layout.section.padding,
       right: theme.spacing.layout.section.padding,
-      backgroundColor: '#FF5722',
+      backgroundColor: theme.colors.primary.main,
       width: 56,
       height: 56,
       borderRadius: 28,
