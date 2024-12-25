@@ -1,51 +1,63 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/src/theme';
-import { IconSymbol } from '@/components/ui/IconSymbol';
 
 export default function TabLayout() {
   const { theme } = useTheme();
 
   return (
     <Tabs
-        screenOptions={{
-          tabBarActiveTintColor: theme.colors.primary.main,
-          headerShown: false,
-          tabBarStyle: {
-            backgroundColor: theme.colors.surface.default,
-            borderTopColor: theme.colors.surface.variant,
-          },
-        }}
-      >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          headerShown: false,
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={24} name="house.fill" color={color} />
-          ),
-        }}
-      />
+      screenOptions={({ route }) => ({
+        tabBarActiveTintColor: theme.colors.primary.main,
+        tabBarInactiveTintColor: theme.colors.content.secondary,
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: theme.colors.surface.default,
+          borderTopColor: theme.colors.surface.variant,
+        },
+        // Hide the tab bar for the index route
+        tabBarButton: route.name === 'index' ? () => null : undefined,
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+
+          switch (route.name) {
+            case 'trips':
+              iconName = focused ? 'briefcase' : 'briefcase-outline';
+              break;
+            case 'explore':
+              iconName = focused ? 'compass' : 'compass-outline';
+              break;
+            case 'profile':
+              iconName = focused ? 'person' : 'person-outline';
+              break;
+            default:
+              return null; // Don't render an icon for unknown routes
+          }
+
+          return <Ionicons name={iconName} size={size || 24} color={color} />;
+        },
+      })}
+    >
+      {/* Add this line to hide the index screen from tab bar */}
+      <Tabs.Screen name="index" options={{ href: null }} />
+      
       <Tabs.Screen
         name="trips"
         options={{
           title: 'Trips',
-          headerShown: false,
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={24} name="backpack.fill" color={color} />
-          ),
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
           title: 'Explore',
-          headerShown: false,
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={24} name="paperplane.fill" color={color} />
-          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
         }}
       />
     </Tabs>
