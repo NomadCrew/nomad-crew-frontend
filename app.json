@@ -5,28 +5,61 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "nomadcrew",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
-    },
-    "splash": {
-      "image": "./assets/images/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nomadcrew.app",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "associatedDomains": [
+        "applinks:nomadcrew.uk"
+      ]
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.anonymous.nomadcrewfrontend"
+      "package": "com.nomadcrew.app",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "nomadcrew",
+              "host": "login",
+              "pathPrefix": "/"
+            },
+            {
+              "scheme": "https",
+              "host": "nomadcrew.uk",
+              "pathPrefix": "/auth/callback"
+            },
+            {
+              "scheme": "exp+nomad-crew-frontend",
+              "host": "*"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "config": {
+        "supabase": {
+          "url": "https://efmqiltdajvqenndmylz.supabase.co"
+        }
+      }
     },
     "plugins": [
       "expo-router",
@@ -45,10 +78,32 @@
             "./assets/fonts/SpaceMono-Regular.ttf"
           ]
         }
+      ],
+      [
+        "@react-native-google-signin/google-signin"
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#000000"
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "50d59d51-34e0-49ab-a7ee-6989ed09f8ef"
+      }
+    },
+    "owner": "nomad-crew",
+    "updates": {
+      "url": "https://u.expo.dev/50d59d51-34e0-49ab-a7ee-6989ed09f8ef"
     }
   }
 }
