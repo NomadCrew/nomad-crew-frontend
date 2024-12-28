@@ -13,6 +13,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { getInputStyles, getButtonStyles } from '@/src/theme/styles';
+import AuthButton from '@/components/ui/google-auth/Auth';
 
 const getFriendlyErrorMessage = (error: string) => {
   const errorMap: Record<string, string> = {
@@ -140,6 +141,9 @@ export default function LoginScreen() {
               <ThemedText style={buttonStyles.text}>Sign In</ThemedText>
             )}
           </Pressable>
+          <ThemedView  style={styles(theme).googleButtonContainer}>
+            <AuthButton />
+          </ThemedView>
 
           {/* Sign Up Link */}
           <Link href="/(auth)/register" asChild>
@@ -219,5 +223,9 @@ const styles = (theme) =>
       ...theme.typography.body.small,
       color: theme.colors.status.error.content,
       textAlign: 'center',
+    },
+    googleButtonContainer: {
+      marginVertical: theme.spacing.inset.md,
+      alignItems: 'center',
     },
   });
