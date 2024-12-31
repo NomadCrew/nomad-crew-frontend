@@ -115,12 +115,10 @@ class SecureTokenManager implements TokenManager {
     try {
       const parts = token.split('.');
       if (parts.length !== 3) return null;
-      
       const decoded = jwtDecode<JWTPayload>(token);
-      if (!decoded.exp || !decoded.jti || !decoded.sub) {
+      if (!decoded.exp || !decoded.sub) {
         return null;
       }
-
       return decoded;
     } catch {
       return null;
@@ -129,24 +127,26 @@ class SecureTokenManager implements TokenManager {
 
   async saveTokens(accessToken: string, refreshToken: string): Promise<void> {
     return this.executeWithLock(async () => {
-        try {
-            const decoded = this.decodeToken(accessToken);
-            if (!decoded) {
-                throw new Error('Invalid access token format');
-            }
-            console.log('Token:', accessToken, 'Type:', typeof accessToken);
-            console.log('Refresh Token:', refreshToken, 'Type:', typeof refreshToken);
-            await Promise.all([
-                this.storage.setItem(this.KEYS.AUTH_TOKEN, accessToken),
-                this.storage.setItem(this.KEYS.REFRESH_TOKEN, refreshToken),
-                this.storage.setItem(this.KEYS.TOKEN_ID, String(decoded.jti))
-            ]);
-
-            this.setupAuthHeader(accessToken);
-        } catch (error) {
-            console.error('Error saving tokens:', error);
-            throw new Error('Failed to save authentication tokens');
+      try {
+        console.log('[TokenManager] Attempting to save tokens');
+        const decoded = this.decodeToken(accessToken);
+        if (!decoded) {
+          console.error('[TokenManager] Invalid token format:', { tokenLength: accessToken?.length });
+          throw new Error('Invalid access token format');
         }
+  
+        await Promise.all([
+          this.storage.setItem(this.KEYS.AUTH_TOKEN, accessToken),
+          this.storage.setItem(this.KEYS.REFRESH_TOKEN, refreshToken),
+          decoded.jti ? this.storage.setItem(this.KEYS.TOKEN_ID, decoded.jti) : Promise.resolve()
+        ]);
+  
+        this.setupAuthHeader(accessToken);
+        console.log('[TokenManager] Tokens saved successfully');
+      } catch (error) {
+        console.error('[TokenManager] Error saving tokens:', error);
+        throw error;
+      }
     });
 }
 

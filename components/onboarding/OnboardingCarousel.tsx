@@ -19,7 +19,6 @@ export function OnboardingCarousel({ slides, onComplete }: Props) {
       setCurrentIndex((prev) => prev + 1);
       flatListRef.current?.scrollToIndex({ index: currentIndex + 1, animated: true });
     } else if (onComplete) {
-      console.log('Onboarding complete, triggering onComplete');
       onComplete();
     }
   }, [currentIndex, slides.length, onComplete]);
