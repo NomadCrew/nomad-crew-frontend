@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface OnboardingContextProps {
   isFirstTime: boolean;
+  setFirstTimeDone: () => Promise<void>;
 }
 
 const OnboardingContext = createContext<OnboardingContextProps | null>(null);
@@ -21,8 +22,13 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
     checkFirstLaunch();
   }, []);
 
+  const setFirstTimeDone = async () => {
+    setIsFirstTime(false);
+    await AsyncStorage.setItem('isFirstLaunch', 'false');
+  };
+
   return (
-    <OnboardingContext.Provider value={{ isFirstTime }}>
+    <OnboardingContext.Provider value={{ isFirstTime, setFirstTimeDone }}>
       {children}
     </OnboardingContext.Provider>
   );

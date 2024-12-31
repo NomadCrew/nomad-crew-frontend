@@ -32,7 +32,7 @@ export default function LoginScreen() {
   const [focusedInput, setFocusedInput] = useState<'email' | 'password' | null>(
     null
   );
-  const { login, loading, error } = useAuthStore();
+  const { login, loading, error, loginWithGoogle } = useAuthStore();
   const { theme } = useTheme();
 
   const inputStyles = getInputStyles(theme); // Shared input styles

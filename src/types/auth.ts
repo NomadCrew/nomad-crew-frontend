@@ -34,6 +34,8 @@ export interface User {
     logout: () => Promise<void>;
     initialize: () => Promise<void>;
     setFirstTimeDone: () => Promise<void>;
+    loginWithGoogle: () => Promise<void>;
+    handleGoogleSignInSuccess: (response: GoogleSignInResponse) => Promise<void>;
   }
   
   export interface AuthTokens {
@@ -46,7 +48,7 @@ export interface User {
     exp: number;
     iat: number;
     email: string;
-    jti: string;
+    jti?: string;
   }
   
   export type TokenType = 'access' | 'refresh';
@@ -54,4 +56,21 @@ export interface User {
   export interface TokenValidationResult {
     isValid: boolean;
     error?: string;
+  }
+
+  export interface GoogleSignInResponse {
+    data: {
+      idToken: string;
+      scopes: string[];
+      serverAuthCode: string;
+      user: {
+        email: string;
+        familyName: string;
+        givenName: string;
+        id: string;
+        name: string;
+        photo?: string;
+      };
+    };
+    type: 'success' | 'cancel';
   }

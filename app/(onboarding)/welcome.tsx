@@ -10,6 +10,7 @@ export default function WelcomeScreen() {
 
   const handleComplete = async () => {
     try {
+      console.log("Onboarding completed");
       await setFirstTimeDone();
       router.replace('/(auth)/login');
     } catch (error) {
