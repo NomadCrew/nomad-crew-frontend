@@ -28,10 +28,12 @@ export interface User {
     loading: boolean;
     error: string | null;
     isInitialized: boolean;
+    isFirstTime: boolean;
     register: (credentials: RegisterCredentials) => Promise<void>;
     login: (credentials: LoginCredentials) => Promise<void>;
     logout: () => Promise<void>;
     initialize: () => Promise<void>;
+    setFirstTimeDone: () => Promise<void>;
   }
   
   export interface AuthTokens {
