@@ -7,7 +7,6 @@ import type { AuthState, LoginCredentials, RegisterCredentials, User } from '@/s
 export const useAuthStore = create<AuthState>((set, get) => {
   // Set up auth state listener
   supabase.auth.onAuthStateChange(async (event, session) => {
-    console.log('[AuthStore] Auth state changed:', event);
     if (event === 'SIGNED_IN' && session?.user) {
       try {
         // Convert Supabase user to your User type
@@ -19,32 +18,23 @@ export const useAuthStore = create<AuthState>((set, get) => {
           lastName: session.user.user_metadata.lastName,
           profilePicture: session.user.user_metadata.avatar_url,
         };
-
+  
         // Store tokens securely
         if (session.access_token && session.refresh_token) {
           await secureTokenManager.saveTokens(session.access_token, session.refresh_token);
         }
-
+  
         set({ 
           user,
           token: session.access_token || null,
           error: null,
           loading: false
         });
-        router.replace('/(tabs)');
+        // Remove the router.replace call
       } catch (error) {
         console.error('[AuthStore] Error processing sign in:', error);
         set({ error: 'Failed to process sign in', loading: false });
       }
-    } else if (event === 'SIGNED_OUT') {
-      await secureTokenManager.clearTokens();
-      set({ 
-        user: null,
-        token: null,
-        error: null,
-        loading: false
-      });
-      router.replace('/login');
     }
   });
 
