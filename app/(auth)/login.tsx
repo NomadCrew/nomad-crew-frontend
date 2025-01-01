@@ -1,231 +1,133 @@
-import { useState } from 'react';
-import {
-  StyleSheet,
-  TextInput,
-  Pressable,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
-import { Link } from 'expo-router';
-import { Loader2 } from 'lucide-react';
-import { useAuthStore } from '@/src/store/useAuthStore';
+import { StyleSheet } from 'react-native';
+import { router } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { getInputStyles, getButtonStyles } from '@/src/theme/styles';
-import AuthButton from '@/components/ui/google-auth/Auth';
-
-const getFriendlyErrorMessage = (error: string) => {
-  const errorMap: Record<string, string> = {
-    'auth/invalid-email': 'Please check your email and try again',
-    'auth/wrong-password': 'Unable to sign in. Please check your details and try again',
-    'auth/user-not-found': 'Unable to sign in. Please check your details and try again',
-    'auth/too-many-requests': 'Too many attempts. Please try again later',
-    'network-error': 'Connection issues. Please check your internet and try again',
-  };
-  return errorMap[error] || 'Something went wrong. Please try again';
-};
+import { AuthOptionButton } from '@/components/ui/auth/AuthOptionButton';
+import { useAuthStore } from '@/src/store/useAuthStore';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { useCallback } from 'react';
+import type { GoogleSignInResponse } from '@/src/types/auth';
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [focusedInput, setFocusedInput] = useState<'email' | 'password' | null>(
-    null
-  );
-  const { login, loading, error, loginWithGoogle } = useAuthStore();
   const { theme } = useTheme();
+  const { handleGoogleSignInSuccess } = useAuthStore();
 
-  const inputStyles = getInputStyles(theme); // Shared input styles
-  const buttonStyles = getButtonStyles(theme, loading); // Shared button styles
+  const handleEmailSignIn = useCallback(() => {
+    router.push('/(auth)/email');
+  }, []);
 
-  const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      return;
-    }
+  const handleGooglePress = useCallback(async () => {
     try {
-      await login({ email, password });
-    } catch (err) {
-      // Error is handled by the store
+      await GoogleSignin.hasPlayServices();
+      const signInResult = await GoogleSignin.signIn();
+      console.log('Google Sign-In Result:', signInResult);
+  
+      if (signInResult && signInResult.data) {
+        const { data } = signInResult;
+        const response: GoogleSignInResponse = {
+          data: {
+            idToken: data.idToken || '',
+            scopes: data.scopes || [],
+            serverAuthCode: data.serverAuthCode || '',
+            user: {
+              email: data.user.email,
+              familyName: data.user.familyName || '',
+              givenName: data.user.givenName || '',
+              id: data.user.id,
+              name: data.user.name || '',
+              photo: data.user.photo || undefined
+            }
+          },
+          type: 'success'
+        };
+  
+        await handleGoogleSignInSuccess(response);
+      } else {
+        throw new Error('Incomplete Google sign-in result');
+      }
+    } catch (error) {
+      console.error('Google Sign-In Error:', error);
+      const cancelResponse: GoogleSignInResponse = {
+        data: {
+          idToken: '',
+          scopes: [],
+          serverAuthCode: '',
+          user: {
+            email: '',
+            familyName: '',
+            givenName: '',
+            id: '',
+            name: '',
+          }
+        },
+        type: 'cancel'
+      };
+      await handleGoogleSignInSuccess(cancelResponse);
     }
-  };
+  }, [handleGoogleSignInSuccess]);
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles(theme).container}
-    >
-      <ThemedView style={styles(theme).content}>
-        {/* Header Section */}
-        <ThemedView style={styles(theme).header}>
-          <ThemedText style={styles(theme).title}>Welcome Back</ThemedText>
-          <ThemedText style={styles(theme).subtitle}>
-            Sign in to continue your journey
-          </ThemedText>
-        </ThemedView>
-
-        {/* Error Message */}
-        {error && (
-          <ThemedView style={styles(theme).errorContainer}>
-            <ThemedText style={styles(theme).errorText}>
-              {getFriendlyErrorMessage(error)}
-            </ThemedText>
-          </ThemedView>
-        )}
-
-        {/* Form Section */}
-        <ThemedView style={styles(theme).form}>
-          {/* Email Input */}
-          <ThemedView style={styles(theme).inputWrapper}>
-            <ThemedText>Email</ThemedText>
-            <TextInput
-              style={[
-                inputStyles.states[focusedInput === 'email' ? 'focus' : 'idle'],
-                inputStyles.text,
-              ]}
-              placeholder="Enter your email"
-              placeholderTextColor={theme.colors.content.tertiary}
-              value={email}
-              onChangeText={setEmail}
-              onFocus={() => setFocusedInput('email')}
-              onBlur={() => setFocusedInput(null)}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoComplete="email"
-            />
-          </ThemedView>
-
-          {/* Password Input */}
-          <ThemedView style={styles(theme).inputWrapper}>
-            <ThemedText>Password</ThemedText>
-            <TextInput
-              style={[
-                inputStyles.states[focusedInput === 'password' ? 'focus' : 'idle'],
-                inputStyles.text,
-              ]}
-              placeholder="Enter your password"
-              placeholderTextColor={theme.colors.content.tertiary}
-              value={password}
-              onChangeText={setPassword}
-              onFocus={() => setFocusedInput('password')}
-              onBlur={() => setFocusedInput(null)}
-              secureTextEntry
-              autoComplete="password"
-            />
-          </ThemedView>
-
-          {/* Forgot Password Link */}
-          <Link href="/(auth)/forgot-password" asChild>
-            <Pressable style={styles(theme).forgotPasswordContainer}>
-              <ThemedText style={styles(theme).linkText}>
-                Forgot your password?
-              </ThemedText>
-            </Pressable>
-          </Link>
-
-          {/* Login Button */}
-          <Pressable
-            style={[
-              buttonStyles.container,
-              styles(theme).loginButton,
-              (!email.trim() || !password.trim()) && styles(theme).buttonDisabled,
-            ]}
-            onPress={handleLogin}
-            disabled={loading || !email.trim() || !password.trim()}
-          >
-            {loading ? (
-              <ThemedView style={buttonStyles.loadingContainer}>
-                <Loader2 size={20} color={theme.colors.primary.onPrimary} />
-                <ThemedText style={buttonStyles.text}>Signing in...</ThemedText>
-              </ThemedView>
-            ) : (
-              <ThemedText style={buttonStyles.text}>Sign In</ThemedText>
-            )}
-          </Pressable>
-          <ThemedView  style={styles(theme).googleButtonContainer}>
-            <AuthButton />
-          </ThemedView>
-
-          {/* Sign Up Link */}
-          <Link href="/(auth)/register" asChild>
-            <Pressable style={styles(theme).signUpContainer}>
-              <ThemedText>
-                Don't have an account?{' '}
-                <ThemedText style={styles(theme).linkText}>Sign up</ThemedText>
-              </ThemedText>
-            </Pressable>
-          </Link>
-        </ThemedView>
+    <ThemedView style={styles.container}>
+      <ThemedView style={styles.header}>
+        <ThemedText style={[
+          styles.title,
+          { color: theme.colors.content.primary }
+        ]}>
+          Welcome!
+        </ThemedText>
+        <ThemedText style={[
+          styles.subtitle,
+          { color: theme.colors.content.secondary }
+        ]}>
+          We're so glad you're here! Please choose an option below to sign in.
+        </ThemedText>
       </ThemedView>
-    </KeyboardAvoidingView>
+
+      <ThemedView style={styles.optionsContainer}>
+        <AuthOptionButton
+          provider="google"
+          label="Continue with Google"
+          onPress={handleGooglePress}
+        />
+        <AuthOptionButton
+          provider="email"
+          label="Continue with email"
+          onPress={handleEmailSignIn}
+        />
+      </ThemedView>
+    </ThemedView>
   );
 }
 
-const styles = (theme) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: theme.colors.background.default,
-    },
-    content: {
-      flex: 1,
-      paddingHorizontal: theme.spacing.layout.screen.padding,
-      justifyContent: 'center',
-      maxWidth: 450,
-      alignSelf: 'center',
-      width: '100%',
-    },
-    header: {
-      marginBottom: theme.spacing.layout.section.gap,
-      gap: theme.spacing.stack.sm,
-    },
-    title: {
-      ...theme.typography.heading.h1,
-      textAlign: 'center',
-      color: theme.colors.content.primary,
-      marginBottom: theme.spacing.inset.sm,
-    },
-    subtitle: {
-      ...theme.typography.body.medium,
-      textAlign: 'center',
-      color: theme.colors.content.secondary,
-    },
-    form: {
-      gap: theme.spacing.stack.md,
-    },
-    inputWrapper: {
-      gap: theme.spacing.inline.sm,
-    },
-    forgotPasswordContainer: {
-      alignItems: 'flex-end',
-    },
-    signUpContainer: {
-      alignItems: 'center',
-      paddingVertical: theme.spacing.inset.sm,
-    },
-    linkText: {
-      ...theme.typography.button.medium,
-      color: theme.colors.primary.main,
-      fontWeight: theme.typography.button.medium.fontWeight,
-    },
-    loginButton: {
-      marginTop: theme.spacing.inset.sm,
-    },
-    buttonDisabled: {
-      opacity: 0.5,
-    },
-    errorContainer: {
-      backgroundColor: theme.colors.status.error.surface,
-      padding: theme.spacing.inset.md,
-      borderRadius: theme.spacing.inset.sm,
-      marginBottom: theme.spacing.inset.md,
-    },
-    errorText: {
-      ...theme.typography.body.small,
-      color: theme.colors.status.error.content,
-      textAlign: 'center',
-    },
-    googleButtonContainer: {
-      marginVertical: theme.spacing.inset.md,
-      alignItems: 'center',
-    },
-  });
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 48,
+    paddingHorizontal: 20,
+  },
+  title: {
+    fontSize: 32,
+    fontFamily: 'Inter',
+    fontWeight: '700',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    maxWidth: 280,
+    lineHeight: 24,
+  },
+  optionsContainer: {
+    width: '100%',
+    maxWidth: 320,
+    gap: 16,
+  },
+});
