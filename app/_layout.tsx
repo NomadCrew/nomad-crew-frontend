@@ -30,30 +30,25 @@ function RouteGuard({ children }: { children: React.ReactNode }) {
   }), [isFirstTime, token, inAuthGroup, inOnboardingGroup, isVerifying, segments]);
   
   useEffect(() => {
-    console.log('[RouteGuard] Navigation Triggers:', {
-      shouldRedirectToLogin: !token && !inAuthGroup && !inOnboardingGroup && !isVerifying,
-      shouldShowOnboarding: isFirstTime && !inOnboardingGroup && !isVerifying,
-      token,
-      inAuthGroup,
-      inOnboardingGroup,
-      isVerifying,
-      isFirstTime,
-      currentSegment
-    });
+    let navTimeout: NodeJS.Timeout = setTimeout(() => {}, 0); 
     if (!isInitialized || loading) return;
-
-    if (!token) {
-      if (!inAuthGroup) {
-        router.replace('/(auth)/login');
-      }
-      return;
-    }
   
-    if (routingState.shouldShowOnboarding) {
-      router.replace('/(onboarding)/welcome');
-    } else if (routingState.shouldRedirectToTabs) {
-      router.replace('/(tabs)');
-    }
+    const navigate = () => {
+      if (!token) {
+        if (!inAuthGroup) {
+          router.replace('/(auth)/login');
+        }
+      } else if (routingState.shouldShowOnboarding) {
+        router.replace('/(onboarding)/welcome');
+      } else if (routingState.shouldRedirectToTabs) {
+        router.replace('/(tabs)');
+      }
+    };
+  
+    clearTimeout(navTimeout);
+    navTimeout = setTimeout(navigate, 100); // Debounce by 100ms
+  
+    return () => clearTimeout(navTimeout);
   }, [isInitialized, loading, routingState, router]);
 
   return children;

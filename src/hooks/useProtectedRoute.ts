@@ -9,60 +9,53 @@ export default function useProtectedRoute() {
   const { token, isInitialized, isVerifying } = useAuthStore();
   const { isFirstTime } = useOnboarding();
   const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastNavigationRef = useRef<string | null>(null);
 
   useEffect(() => {
+    if (!isInitialized) return;
+
     // Clear any existing navigation timeout
     if (navigationTimeoutRef.current) {
       clearTimeout(navigationTimeoutRef.current);
-    }
-
-    // Don't process navigation until initialization is complete
-    if (!isInitialized) {
-      return;
     }
 
     const currentSegment = segments[0];
     const inAuthGroup = currentSegment === '(auth)';
     const inOnboardingGroup = currentSegment === '(onboarding)';
 
-    // Debounce navigation changes
-    navigationTimeoutRef.current = setTimeout(() => {
-      console.log('[Navigation] Processing route change', {
-        currentSegment,
-        hasToken: !!token,
-        isFirstTime,
-        inAuthGroup,
-        inOnboardingGroup
-      });
+    // Determine target route
+    let targetRoute: string | null = null;
 
-      if (isVerifying) {
-        router.replace('/(auth)/verify-email');
-        return;
-      }
+    if (isVerifying) {
+      targetRoute = '/(auth)/verify-email';
+    } else if (isFirstTime && !inOnboardingGroup && !isVerifying) {
+      targetRoute = '/(onboarding)/welcome';
+    } else if (!token && !inAuthGroup && !inOnboardingGroup) {
+      targetRoute = '/(auth)/login';
+    } else if (token && inAuthGroup) {
+      targetRoute = '/(tabs)';
+    }
 
-      // First-time users should see onboarding
-      if (isFirstTime && !inOnboardingGroup && !isVerifying) {
-        router.replace('/(onboarding)/welcome');
-        return;
-      }
-
-      // Unauthenticated users should be in auth flow
-      if (!token && !inAuthGroup && !inOnboardingGroup) {
-        router.replace('/(auth)/login');
-        return;
-      }
-
-      // Authenticated users shouldn't be in auth flow
-      if (token && inAuthGroup) {
-        router.replace('/(tabs)');
-        return;
-      }
-    }, 100); // Small delay to batch rapid navigation changes
+    // Only navigate if we have a target and it's different from last navigation
+    if (targetRoute && targetRoute !== lastNavigationRef.current) {
+      navigationTimeoutRef.current = setTimeout(() => {
+        console.log('[Navigation] Route change:', {
+          from: currentSegment,
+          to: targetRoute,
+          hasToken: !!token,
+          isFirstTime,
+          isVerifying
+        });
+        
+        lastNavigationRef.current = targetRoute;
+        router.replace(targetRoute as any);
+      }, 100);
+    }
 
     return () => {
       if (navigationTimeoutRef.current) {
         clearTimeout(navigationTimeoutRef.current);
       }
     };
-  }, [segments, token, isInitialized, isFirstTime, router]);
+  }, [segments, token, isInitialized, isFirstTime, isVerifying, router]);
 }
