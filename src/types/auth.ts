@@ -29,6 +29,7 @@ export interface User {
     error: string | null;
     isInitialized: boolean;
     isFirstTime: boolean;
+    isVerifying: boolean;
     register: (credentials: RegisterCredentials) => Promise<void>;
     login: (credentials: LoginCredentials) => Promise<void>;
     logout: () => Promise<void>;

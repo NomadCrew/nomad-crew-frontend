@@ -10,11 +10,11 @@ import AuthErrorBoundary from '@/components/AuthErrorBoundary';
 import { InitialLoadingScreen } from '@/components/InitialLoadingScreen';
 import { useOnboarding } from '@/src/providers/OnboardingProvider';
 
-// Separate component for route protection logic
+
 function RouteGuard({ children }: { children: React.ReactNode }) {
-  const segments = useSegments();
+  const segments: string[] = useSegments();
   const router = useRouter();
-  const { token, isInitialized, loading } = useAuthStore();
+  const { token, isInitialized, loading, isVerifying } = useAuthStore();
   const { isFirstTime } = useOnboarding();
 
   const currentSegment = segments[0];
@@ -23,30 +23,34 @@ function RouteGuard({ children }: { children: React.ReactNode }) {
 
   // Memoize the routing state to prevent unnecessary re-renders
   const routingState = useMemo(() => ({
-    shouldShowOnboarding: isFirstTime && !inOnboardingGroup,
-    shouldRedirectToLogin: !token && !inAuthGroup && !inOnboardingGroup,
-    shouldRedirectToTabs: token && inAuthGroup,
-}), [isFirstTime, token, inAuthGroup, inOnboardingGroup]);
-
-
+    shouldShowVerification: isVerifying && !segments.includes('verify-email'),
+    shouldShowOnboarding: isFirstTime && token && !inOnboardingGroup && !isVerifying,
+    shouldRedirectToLogin: !token && !inAuthGroup && !inOnboardingGroup && !isVerifying,
+    shouldRedirectToTabs: token && !isVerifying && (inAuthGroup || inOnboardingGroup),
+  }), [isFirstTime, token, inAuthGroup, inOnboardingGroup, isVerifying, segments]);
+  
   useEffect(() => {
-    // Don't process navigation until initialization is complete
-    if (!isInitialized || loading) {
+    console.log('[RouteGuard] Navigation Triggers:', {
+      shouldRedirectToLogin: !token && !inAuthGroup && !inOnboardingGroup && !isVerifying,
+      shouldShowOnboarding: isFirstTime && !inOnboardingGroup && !isVerifying,
+      token,
+      inAuthGroup,
+      inOnboardingGroup,
+      isVerifying,
+      isFirstTime,
+      currentSegment
+    });
+    if (!isInitialized || loading) return;
+
+    if (!token) {
+      if (!inAuthGroup) {
+        router.replace('/(auth)/login');
+      }
       return;
     }
-
-    console.log('[Route] Navigation state:', {
-      isInitialized,
-      hasToken: !!token,
-      isFirstTime,
-      currentSegment,
-      ...routingState
-    });
-
+  
     if (routingState.shouldShowOnboarding) {
       router.replace('/(onboarding)/welcome');
-    } else if (routingState.shouldRedirectToLogin) {
-      router.replace('/(auth)/login');
     } else if (routingState.shouldRedirectToTabs) {
       router.replace('/(tabs)');
     }

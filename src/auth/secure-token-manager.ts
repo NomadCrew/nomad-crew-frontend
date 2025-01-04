@@ -59,14 +59,27 @@ class SecureTokenManager implements TokenManager {
     return true;
   }
 
+  private async waitForLock(timeout = 5000): Promise<boolean> {
+    const start = Date.now();
+    while (this.operationLock) {
+      if (Date.now() - start > timeout) {
+        return false;
+      }
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    return this.acquireLock();
+  }
+
   private releaseLock(): void {
     this.operationLock = false;
   }
 
   private async executeWithLock<T>(operation: () => Promise<T>): Promise<T> {
-    if (!await this.acquireLock()) {
-      throw new Error('Operation in progress');
+    const locked = await this.waitForLock();
+    if (!locked) {
+      throw new Error('Failed to acquire lock after timeout');
     }
+    
     try {
       return await operation();
     } finally {

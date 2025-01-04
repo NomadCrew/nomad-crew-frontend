@@ -32,10 +32,32 @@ export interface User {
   type AuthStatus = 'idle' | 'signOut' | 'signIn';
   
   export interface AuthState {
-    status: AuthStatus;
-    isLoading: boolean;
     user: User | null;
+    token: string | null;
+    loading: boolean;
     error: string | null;
+    isInitialized: boolean;
+    isFirstTime: boolean;
+    isVerifying: boolean;
+    initialize: () => Promise<void>;
+    register: (credentials: RegisterCredentials) => Promise<void>;
+    login: (credentials: LoginCredentials) => Promise<void>;
+    logout: () => Promise<void>;
+    setFirstTimeDone: () => Promise<void>;
+    handleGoogleSignInSuccess: (response: any) => Promise<void>;
+  }
+  
+  export interface RegisterCredentials {
+    email: string;
+    password: string;
+    username: string;
+    firstName?: string;
+    lastName?: string;
+  }
+  
+  export interface LoginCredentials {
+    email: string;
+    password: string;
   }
 
   export interface TokenManager {
