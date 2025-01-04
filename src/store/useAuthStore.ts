@@ -5,6 +5,7 @@ import type { AuthState, LoginCredentials, RegisterCredentials, User } from '@/s
 
 export const useAuthStore = create<AuthState>((set, get) => {
   let sessionProcessing: Promise<void> | null = null;
+  let sessionHandled = false;
   // Set up auth state listener
   supabase.auth.onAuthStateChange(async (event, session) => {
     console.log('[AuthStore] Auth state change event:', event);
@@ -21,6 +22,12 @@ export const useAuthStore = create<AuthState>((set, get) => {
       userId: session?.user?.id
     });
 
+    if (sessionHandled && event === 'SIGNED_IN') {
+      console.log('[AuthStore] Skipping redundant session handling');
+      sessionHandled = false; // Reset for future events
+      return;
+    }
+
     if (event === 'SIGNED_IN' && session?.user) {
       if (sessionProcessing) {
         console.log('[AuthStore] Session processing already in progress');
@@ -28,6 +35,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
       }
       sessionProcessing = (async () => {
         try {
+          sessionHandled = true; 
           const user: User = {
             id: parseInt(session.user.id),
             email: session.user.email || '',
