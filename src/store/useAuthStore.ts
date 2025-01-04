@@ -1,40 +1,67 @@
 import { create } from 'zustand';
-import { router } from 'expo-router';
 import { supabase } from '@/src/auth/supabaseClient';
 import { secureTokenManager } from '@/src/auth/secure-token-manager';
 import type { AuthState, LoginCredentials, RegisterCredentials, User } from '@/src/types/auth';
 
 export const useAuthStore = create<AuthState>((set, get) => {
+  let sessionProcessing: Promise<void> | null = null;
   // Set up auth state listener
   supabase.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_IN' && session?.user) {
-      try {
-        // Convert Supabase user to your User type
-        const user: User = {
-          id: parseInt(session.user.id),
-          email: session.user.email || '',
-          username: session.user.user_metadata.username || session.user.email?.split('@')[0] || '',
-          firstName: session.user.user_metadata.firstName,
-          lastName: session.user.user_metadata.lastName,
-          profilePicture: session.user.user_metadata.avatar_url,
-        };
-  
-        // Store tokens securely
-        if (session.access_token && session.refresh_token) {
-          await secureTokenManager.saveTokens(session.access_token, session.refresh_token);
-        }
-  
-        set({ 
-          user,
-          token: session.access_token || null,
-          error: null,
-          loading: false
-        });
-        // Remove the router.replace call
-      } catch (error) {
-        console.error('[AuthStore] Error processing sign in:', error);
-        set({ error: 'Failed to process sign in', loading: false });
+    console.log('[AuthStore] Auth state change event:', event);
+    if (event === 'USER_UPDATED') {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email_confirmed_at) {
+        set({ isVerifying: false });
       }
+    }
+    console.log('[AuthStore] Session:', {
+      hasSession: !!session,
+      hasUser: !!session?.user,
+      accessToken: !!session?.access_token,
+      userId: session?.user?.id
+    });
+
+    if (event === 'SIGNED_IN' && session?.user) {
+      if (sessionProcessing) {
+        console.log('[AuthStore] Session processing already in progress');
+        return;
+      }
+      sessionProcessing = (async () => {
+        try {
+          const user: User = {
+            id: parseInt(session.user.id),
+            email: session.user.email || '',
+            username: session.user.user_metadata.username || session.user.email?.split('@')[0] || '',
+            firstName: session.user.user_metadata.firstName,
+            lastName: session.user.user_metadata.lastName,
+            profilePicture: session.user.user_metadata.avatar_url,
+          };
+
+          await secureTokenManager.saveTokens(session.access_token!, session.refresh_token!);
+          
+          console.log('[AuthStore] Setting state with token:', session.access_token);
+          
+          set({ 
+            user,
+            token: session.access_token,
+            error: null,
+            loading: false
+          });
+        } catch (error) {
+          console.error('[AuthStore] Error processing sign in:', error);
+          set({ error: 'Failed to process sign in', loading: false });
+        } finally {
+          sessionProcessing = null;
+        }
+      })();
+    } else if (event === 'SIGNED_OUT') {
+      console.log('[AuthStore] User signed out');
+      set({
+        user: null,
+        token: null,
+        error: null,
+        loading: false
+      });
     }
   });
 
@@ -45,6 +72,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
     error: null,
     isInitialized: false,
     isFirstTime: false,
+    isVerifying: false,
 
     initialize: async () => {
       const state = get();
@@ -130,22 +158,20 @@ export const useAuthStore = create<AuthState>((set, get) => {
             }
           }
         });
-
+  
         if (error) throw error;
-
-        if (!data.session) {
-          set({ 
-            loading: false,
-            error: 'Please check your email for confirmation link'
-          });
-          return;
-        }
-
-        // Auth state listener will handle the session
+  
+        set({ 
+          isVerifying: true,
+          loading: false,
+          error: null 
+        });
+  
         set({ loading: false });
+        return true;
       } catch (error: any) {
         set({
-          error: error.message || 'Registration failed',
+          error: error.message,
           loading: false
         });
         throw error;
@@ -154,18 +180,51 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
     login: async (credentials: LoginCredentials) => {
       try {
+        console.log('[AuthStore] Starting login - current state:', {
+          loading: get().loading,
+          isVerifying: get().isVerifying,
+          error: get().error
+        });
         set({ loading: true, error: null });
         
         const { data, error } = await supabase.auth.signInWithPassword({
           email: credentials.email,
           password: credentials.password,
         });
+    
+        console.log('[AuthStore] Supabase login response:', {
+          hasData: !!data,
+          hasSession: !!data?.session,
+          error: error?.message
+        });
+    
+        if (error?.message === 'Invalid login credentials') {
+          set({ 
+            loading: false,
+            error: 'unregistered_user'
+          });
+          return;
+        }
 
+        if (error?.message === 'Email not confirmed') {
+          set({ 
+            loading: false,
+            error: 'email_not_verified',
+            user: null,
+            token: null
+          });
+          return;
+        }
+    
         if (error) throw error;
-
-        // Auth state listener will handle the session
+        
+        if (!data.session) {
+          throw new Error('No session returned');
+        }
+    
         set({ loading: false });
       } catch (error: any) {
+        console.error('[AuthStore] Login failed:', error);
         set({
           error: error.message || 'Login failed',
           loading: false

@@ -1,12 +1,13 @@
 import React from 'react';
 import { Pressable, StyleSheet } from 'react-native';
-import { Mail } from 'lucide-react-native';
+import { Mail, Facebook, Apple } from 'lucide-react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useTheme } from '@/src/theme/ThemeProvider';
+import  GoogleIcon  from '../icons/google';
 
 interface AuthOptionButtonProps {
-  provider: 'google' | 'email';
+  provider: 'google' | 'facebook' | 'apple' | 'email';
   label: string;
   onPress: () => void;
   disabled?: boolean;
@@ -20,16 +21,16 @@ export function AuthOptionButton({
 }: AuthOptionButtonProps) {
   const { theme } = useTheme();
   
-  // Define icon based on provider
   const getIcon = () => {
     switch(provider) {
       case 'google':
-        return <ThemedView>
-          {/* Use Google's 'G' logo for brand guidelines */}
-          <ThemedText style={styles.googleIcon}>G</ThemedText>
-        </ThemedView>;
+        return <GoogleIcon color={theme.colors.content.primary} />;
+      case 'facebook':
+        return <Facebook size={20} color={theme.colors.content.primary} />;
+      case 'apple':
+        return <Apple size={20} color={theme.colors.content.primary} />;
       case 'email':
-        return <Mail size={20} color={theme.colors.content.primary} />;
+        return <Mail size={25} color={theme.colors.content.primary} />;
     }
   };
 
@@ -50,10 +51,15 @@ export function AuthOptionButton({
         <ThemedView style={styles.iconContainer}>
           {getIcon()}
         </ThemedView>
-        <ThemedText style={[
-          styles.label,
-          { color: theme.colors.content.primary }
-        ]}>
+        <ThemedText
+          style={[
+            styles.label,
+            {
+              flex: 1, // Center the text by taking up remaining space
+              textAlign: 'center', // Center-align the label within the flex container
+            },
+          ]}
+        >
           {label}
         </ThemedText>
       </ThemedView>
@@ -64,14 +70,15 @@ export function AuthOptionButton({
 const styles = StyleSheet.create({
   button: {
     height: 52,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginVertical: 8,
-    justifyContent: 'center',
+    borderBottomWidth: 1,
+    width: '100%',
+    flexDirection: 'row',
   },
   content: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
   },
   iconContainer: {
@@ -84,10 +91,5 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '500',
-  },
-  googleIcon: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#4285F4',
   },
 });

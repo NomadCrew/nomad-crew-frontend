@@ -6,7 +6,7 @@ import { useOnboarding } from '@/src/providers/OnboardingProvider';
 export default function useProtectedRoute() {
   const router = useRouter();
   const segments = useSegments();
-  const { token, isInitialized } = useAuthStore();
+  const { token, isInitialized, isVerifying } = useAuthStore();
   const { isFirstTime } = useOnboarding();
   const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -35,8 +35,13 @@ export default function useProtectedRoute() {
         inOnboardingGroup
       });
 
+      if (isVerifying) {
+        router.replace('/(auth)/verify-email');
+        return;
+      }
+
       // First-time users should see onboarding
-      if (isFirstTime && !inOnboardingGroup) {
+      if (isFirstTime && !inOnboardingGroup && !isVerifying) {
         router.replace('/(onboarding)/welcome');
         return;
       }
