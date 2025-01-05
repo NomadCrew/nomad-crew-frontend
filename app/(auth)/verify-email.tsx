@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuthStore } from '@/src/store/useAuthStore';
 import { supabase } from '@/src/auth/supabaseClient';
+import { Theme } from '@/src/theme/types';
 
 export default function VerifyEmailScreen() {
     const { theme } = useTheme();
@@ -14,7 +15,7 @@ export default function VerifyEmailScreen() {
   
     useEffect(() => {
       // Auth state change listener
-      const handleAuthChange = supabase.auth.onAuthStateChange(async (event, session) => {
+      const handleAuthChange = supabase.auth.onAuthStateChange(async (event) => {
         if (event === 'USER_UPDATED') {
           const { data: { user } } = await supabase.auth.getUser();
           if (user?.email_confirmed_at) {
@@ -53,7 +54,7 @@ export default function VerifyEmailScreen() {
   );
 }
 
-const styles = (theme) => StyleSheet.create({
+const styles = (theme: Theme) => StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',

@@ -15,6 +15,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { getInputStyles } from '@/src/theme/styles';
+import { Theme } from '@/src/theme/types';
 
 export default function RegisterScreen() {
   const [formData, setFormData] = useState({
@@ -178,7 +179,7 @@ export default function RegisterScreen() {
   );
 }
 
-const styles = (theme) =>
+const styles = (theme: Theme) =>
   StyleSheet.create({
     container: {
       flex: 1,

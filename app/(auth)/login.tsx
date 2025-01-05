@@ -12,6 +12,7 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useGoogleSignIn } from '@/src/hooks/useGoogleSignIn';
 import EmailLoginForm from '@/components/ui/auth/EmailLoginForm';
 import { AuthOptionButton } from '@/components/ui/auth/AuthOptionButton';
+import { Theme } from '@/src/theme/types';
 
 export default function LoginScreen() {
   const [isEmailModalVisible, setEmailModalVisible] = useState(false);
@@ -63,7 +64,7 @@ export default function LoginScreen() {
   );
 }
 
-const styles = (theme) =>
+const styles = (theme: Theme) =>
   StyleSheet.create({
     container: {
       flex: 1,
