@@ -1,46 +1,24 @@
-import * as SecureStore from 'expo-secure-store';
+import createSecureStore from '@neverdull-agency/expo-unlimited-secure-store';
 import axios from 'axios';
-import { Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { jwtDecode } from 'jwt-decode';
 import { api } from '@/src/api/api-client';
 import { API_PATHS } from '@/src/utils/api-paths';
 import type { JWTPayload, TokenValidationResult } from '@/src/types/auth';
-import { TokenManager } from './types';
+import { toByteArray } from 'base64-js';
 
-interface StorageKeys {
-  readonly AUTH_TOKEN: string;
-  readonly REFRESH_TOKEN: string;
-  readonly TOKEN_ID: string;
-}
-
-class SecureTokenManager implements TokenManager {
+class SecureTokenManager {
   private static instance: SecureTokenManager;
+  private secureStore = createSecureStore();
   private refreshPromise: Promise<string> | null = null;
   private operationLock = false;
   private retryCount = 0;
   private readonly MAX_RETRIES = 3;
-  private readonly TOKEN_EXPIRY_THRESHOLD = 5 * 60 * 1000; // 5 minutes in milliseconds
-  
-  private readonly KEYS: StorageKeys = {
+  private readonly TOKEN_EXPIRY_THRESHOLD = 5 * 60 * 1000; // 5 minutes
+
+  private readonly KEYS = {
     AUTH_TOKEN: 'auth_token',
     REFRESH_TOKEN: 'refresh_token',
-    TOKEN_ID: 'token_id'
+    TOKEN_ID: 'token_id',
   };
-
-  // Use SecureStore on native platforms, AsyncStorage on web
-  private readonly storage = Platform.select({
-    native: {
-      getItem: SecureStore.getItemAsync,
-      setItem: SecureStore.setItemAsync,
-      removeItem: SecureStore.deleteItemAsync
-    },
-    default: {
-      getItem: AsyncStorage.getItem,
-      setItem: AsyncStorage.setItem,
-      removeItem: AsyncStorage.removeItem
-    }
-  });
 
   private constructor() {}
 
@@ -65,7 +43,7 @@ class SecureTokenManager implements TokenManager {
       if (Date.now() - start > timeout) {
         return false;
       }
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
     }
     return this.acquireLock();
   }
@@ -79,7 +57,7 @@ class SecureTokenManager implements TokenManager {
     if (!locked) {
       throw new Error('Failed to acquire lock after timeout');
     }
-    
+
     try {
       return await operation();
     } finally {
@@ -87,10 +65,64 @@ class SecureTokenManager implements TokenManager {
     }
   }
 
+  private decodeToken(token: string): JWTPayload | null {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        console.error('[TokenManager] Token is not a valid JWT:', token);
+        return null;
+      }
+      const payloadBase64 = parts[1];
+      const payloadBytes = toByteArray(payloadBase64.replace(/-/g, '+').replace(/_/g, '/'));
+      const payloadString = new TextDecoder().decode(payloadBytes);
+      const payload = JSON.parse(payloadString);
+  
+      if (!payload.exp || !payload.sub) {
+        console.error('[TokenManager] JWT payload missing required fields:', payload);
+        return null;
+      }
+  
+      return payload as JWTPayload;
+    } catch (error) {
+      console.error('[TokenManager] Failed to decode token:', error);
+      return null;
+    }
+  }
+
+  private isTokenExpired(decodedToken: JWTPayload): boolean {
+    const now = Date.now();
+    const expiryTime = decodedToken.exp * 1000;
+    return now >= expiryTime - this.TOKEN_EXPIRY_THRESHOLD;
+  }
+
+  async saveTokens(accessToken: string, refreshToken: string): Promise<void> {
+    return this.executeWithLock(async () => {
+      try {
+        console.log('[TokenManager] Saving tokens...');
+        const decoded = this.decodeToken(accessToken);
+        if (!decoded) throw new Error('Invalid access token format');
+
+        await Promise.all([
+          this.secureStore.setItem(this.KEYS.AUTH_TOKEN, accessToken),
+          this.secureStore.setItem(this.KEYS.REFRESH_TOKEN, refreshToken),
+          decoded.jti
+            ? this.secureStore.setItem(this.KEYS.TOKEN_ID, decoded.jti)
+            : Promise.resolve(),
+        ]);
+
+        this.setupAuthHeader(accessToken);
+        console.log('[TokenManager] Tokens saved successfully');
+      } catch (error) {
+        console.error('[TokenManager] Error saving tokens:', error);
+        throw error;
+      }
+    });
+  }
+
   async getToken(): Promise<string | null> {
     return this.executeWithLock(async () => {
       try {
-        const token = await this.storage.getItem(this.KEYS.AUTH_TOKEN);
+        const token = await this.secureStore.getItem(this.KEYS.AUTH_TOKEN);
         if (!token) return null;
 
         const validationResult = await this.validateToken(token);
@@ -120,64 +152,61 @@ class SecureTokenManager implements TokenManager {
 
       return { isValid: true };
     } catch (error) {
-      return { isValid: false, error: error instanceof Error ? error.message : 'Token validation failed' };
+      return {
+        isValid: false,
+        error: error instanceof Error ? error.message : 'Token validation failed',
+      };
     }
   }
 
-  private decodeToken(token: string): JWTPayload | null {
+  public async getItem(key: string): Promise<string | null> {
     try {
-      const parts = token.split('.');
-      if (parts.length !== 3) return null;
-      const decoded = jwtDecode<JWTPayload>(token);
-      if (!decoded.exp || !decoded.sub) {
+
+      const storedValue = await this.secureStore.getItem(key);
+  
+      if (!storedValue) {
+        console.warn(`[TokenManager] Key "${key}" not found in storage.`);
         return null;
       }
-      return decoded;
-    } catch {
+  
+      return storedValue;
+    } catch (error) {
+      console.error(`[TokenManager] Error getting key "${key}":`, error);
       return null;
     }
   }
 
-  async saveTokens(accessToken: string, refreshToken: string): Promise<void> {
-    return this.executeWithLock(async () => {
-      try {
-        console.log('[TokenManager] Attempting to save tokens');
-        const decoded = this.decodeToken(accessToken);
-        if (!decoded) {
-          console.error('[TokenManager] Invalid token format:', { tokenLength: accessToken?.length });
-          throw new Error('Invalid access token format');
-        }
+  public async setItem(key: string, value: string): Promise<void> {
+    try {
+      console.log(`[TokenManager] Setting key: ${key}, size: ${value.length} bytes`);
+      await this.secureStore.setItem(key, value);
+    } catch (error) {
+      console.error(`[TokenManager] Error setting key "${key}":`, error);
+    }
+  }
   
-        await Promise.all([
-          this.storage.setItem(this.KEYS.AUTH_TOKEN, accessToken),
-          this.storage.setItem(this.KEYS.REFRESH_TOKEN, refreshToken),
-          decoded.jti ? this.storage.setItem(this.KEYS.TOKEN_ID, decoded.jti) : Promise.resolve()
-        ]);
-  
-        this.setupAuthHeader(accessToken);
-        console.log('[TokenManager] Tokens saved successfully');
-      } catch (error) {
-        console.error('[TokenManager] Error saving tokens:', error);
-        throw error;
-      }
-    });
-}
-
+  public async removeItem(key: string): Promise<void> {
+    try {
+      await this.secureStore.removeItem(key);
+    } catch (error) {
+      console.error(`[TokenManager] Error removing key "${key}":`, error);
+    }
+  }
 
   async clearTokens(): Promise<void> {
     return this.executeWithLock(async () => {
       try {
         await Promise.all([
-          this.storage.removeItem(this.KEYS.AUTH_TOKEN),
-          this.storage.removeItem(this.KEYS.REFRESH_TOKEN),
-          this.storage.removeItem(this.KEYS.TOKEN_ID)
+          this.secureStore.removeItem(this.KEYS.AUTH_TOKEN),
+          this.secureStore.removeItem(this.KEYS.REFRESH_TOKEN),
+          this.secureStore.removeItem(this.KEYS.TOKEN_ID),
         ]);
-        
+
         delete api.defaults.headers.common['Authorization'];
         this.retryCount = 0;
       } catch (error) {
         console.error('Error clearing tokens:', error);
-        throw new Error('Failed to clear authentication tokens');
+        throw error;
       }
     });
   }
@@ -188,12 +217,6 @@ class SecureTokenManager implements TokenManager {
       return;
     }
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-  }
-
-  private isTokenExpired(decodedToken: JWTPayload): boolean {
-    const now = Date.now();
-    const expiryTime = decodedToken.exp * 1000;
-    return now >= expiryTime - this.TOKEN_EXPIRY_THRESHOLD;
   }
 
   async refreshToken(): Promise<string> {
@@ -208,22 +231,22 @@ class SecureTokenManager implements TokenManager {
 
     this.refreshPromise = this.executeWithLock(async () => {
       try {
-        const refreshToken = await this.storage.getItem(this.KEYS.REFRESH_TOKEN);
-        const tokenId = await this.storage.getItem(this.KEYS.TOKEN_ID);
-        
+        const refreshToken = await this.secureStore.getItem(this.KEYS.REFRESH_TOKEN);
+        const tokenId = await this.secureStore.getItem(this.KEYS.TOKEN_ID);
+
         if (!refreshToken || !tokenId) {
           throw new Error('No refresh token available');
         }
 
-        const response = await api.post(API_PATHS.auth.refresh, { 
+        const response = await api.post(API_PATHS.auth.refresh, {
           refreshToken,
-          tokenId
+          tokenId,
         });
 
         const { accessToken: newAccessToken, refreshToken: newRefreshToken } = response.data;
         await this.saveTokens(newAccessToken, newRefreshToken);
         this.retryCount++;
-        
+
         return newAccessToken;
       } catch (error) {
         if (axios.isAxiosError(error) && error.response?.status === 401) {
@@ -237,23 +260,6 @@ class SecureTokenManager implements TokenManager {
     });
 
     return this.refreshPromise;
-  }
-
-  // Validate token with server
-  async validateTokenWithServer(): Promise<boolean> {
-    try {
-      const token = await this.getToken();
-      if (!token) return false;
-
-      const tokenId = await this.storage.getItem(this.KEYS.TOKEN_ID);
-      if (!tokenId) return false;
-
-      await api.post(API_PATHS.auth.validate, { tokenId });
-      return true;
-    } catch {
-      await this.clearTokens();
-      return false;
-    }
   }
 }
 

@@ -3,6 +3,34 @@ import { supabase } from '@/src/auth/supabaseClient';
 import { secureTokenManager } from '@/src/auth/secure-token-manager';
 import type { AuthState, LoginCredentials, RegisterCredentials, User } from '@/src/types/auth';
 
+const recoverSession = async () => {
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    
+    if (session?.access_token && session?.refresh_token) {
+      // Try to refresh the session
+      const { data, error: refreshError } = await supabase.auth.refreshSession({
+        refresh_token: session.refresh_token,
+      });
+      
+      if (refreshError) throw refreshError;
+      
+      // If successful, update tokens
+      if (data.session) {
+        await secureTokenManager.saveTokens(
+          data.session.access_token,
+          data.session.refresh_token
+        );
+        return data.session;
+      }
+    }
+  } catch (error) {
+    console.error('[AuthStore] Session recovery failed:', error);
+  }
+  return null;
+};
+
 export const useAuthStore = create<AuthState>((set, get) => {
   let sessionProcessing: Promise<void> | null = null;
   let sessionHandled = false;
@@ -84,22 +112,12 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
     initialize: async () => {
       const state = get();
-      console.log('[AuthStore] Checking initialization state', {
-        loading: state.loading,
-        isInitialized: state.isInitialized
-      });
-    
-      // Prevent duplicate initialization
-      if (state.loading || state.isInitialized) {
-        console.log('[AuthStore] Initialization already in progress or completed');
-        return;
-      }
+      if (state.loading || state.isInitialized) return;
     
       set({ loading: true });
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) throw error;
-    
+        const session = await recoverSession();
+        
         if (session?.user) {
           const user: User = {
             id: parseInt(session.user.id),
