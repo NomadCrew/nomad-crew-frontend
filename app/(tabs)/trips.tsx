@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/src/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedView } from '@/components/ThemedView';
+import { Theme } from '@/src/theme/types';
 
 export default function TripsScreen() {
   const [activeTab, setActiveTab] = useState('Active');
@@ -30,7 +31,7 @@ export default function TripsScreen() {
 
   return (
     <SafeAreaView style={styles(theme, screenWidth).container}>
-      <ThemedView style={styles(theme).header}>
+      <ThemedView style={styles(theme, screenWidth).header}>
         {/* Header Title */}
         <Text style={styles(theme).title} numberOfLines={1}>
           Trips
@@ -99,7 +100,7 @@ export default function TripsScreen() {
   );
 }
 
-const styles = (theme, screenWidth) =>
+const styles = (theme: Theme, screenWidth?: number) =>
   StyleSheet.create({
     container: {
       flex: 1,

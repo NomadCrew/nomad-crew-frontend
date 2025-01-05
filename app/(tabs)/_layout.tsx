@@ -26,7 +26,7 @@ export default function TabLayout() {
           shadowOpacity: 0,
           shadowRadius: 0, 
       },      
-        tabBarIcon: ({ focused, color, size }) => {
+        tabBarIcon: ({ focused, color }) => {
           let iconName;
 
           switch (route.name) {
