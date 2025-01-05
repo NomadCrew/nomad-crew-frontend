@@ -7,14 +7,11 @@ import Animated, {
   FadeInDown, 
   FadeIn,
   BounceIn,
-  useAnimatedStyle,
-  withSpring
 } from 'react-native-reanimated';
 import { MapPin, Bell, CheckCircle2, XCircle } from 'lucide-react';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
-import { useAuthStore } from '@/src/store/useAuthStore';
 import { useOnboarding } from '@/src/providers/OnboardingProvider';
 
 interface PermissionState {

@@ -11,11 +11,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/src/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedView } from '@/components/ThemedView';
+import { TripList } from '@/components/trips/TripList';
+import { DUMMY_TRIPS } from '@/src/data/dummy-trips';
+import { Trip } from '@/src/types/trip';
 import { Theme } from '@/src/theme/types';
 
 export default function TripsScreen() {
   const [activeTab, setActiveTab] = useState('Active');
   const [searchExpanded, setSearchExpanded] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const { theme } = useTheme();
   const screenWidth = Dimensions.get('window').width;
 
@@ -26,7 +30,50 @@ export default function TripsScreen() {
       toValue: searchExpanded ? 40 : screenWidth * 0.7, 
       duration: 300,
       useNativeDriver: false,
-    }).start(() => setSearchExpanded(!searchExpanded));
+    }).start(() => {
+      setSearchExpanded(!searchExpanded);
+      if (!searchExpanded) {
+        setSearchQuery('');
+      }
+    });
+  };
+
+  // Filter trips based on active tab and search query
+  const filteredTrips = React.useMemo(() => {
+    let filtered = [...DUMMY_TRIPS];
+    
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(trip => 
+        trip.name.toLowerCase().includes(query) ||
+        trip.destination.toLowerCase().includes(query)
+      );
+    }
+
+    // Filter by tab
+    switch (activeTab) {
+      case 'Active':
+        return filtered.filter(trip => trip.status === 'ACTIVE');
+      case 'Recent':
+        return filtered.filter(trip => 
+          trip.status === 'COMPLETED' || 
+          new Date(trip.endDate) < new Date()
+        );
+      case 'Cancelled':
+        return filtered.filter(trip => trip.status === 'CANCELLED');
+      default:
+        return filtered;
+    }
+  }, [DUMMY_TRIPS, activeTab, searchQuery]);
+
+  const handleTripPress = (trip: Trip) => {
+    // Navigate to trip details
+    console.log('Navigate to trip:', trip.id);
+  };
+
+  const handleCreateTrip = () => {
+    console.log('Create new trip');
   };
 
   return (
@@ -60,6 +107,8 @@ export default function TripsScreen() {
               placeholder="Search trips"
               placeholderTextColor={theme.colors.content.secondary}
               onBlur={toggleSearch}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
             />
           )}
         </Animated.View>
@@ -88,8 +137,18 @@ export default function TripsScreen() {
         ))}
       </ThemedView>
 
+      {/* Trip List */}
+      <TripList
+        trips={filteredTrips}
+        onTripPress={handleTripPress}
+        style={styles(theme).listContainer}
+      />
+
       {/* FAB */}
-      <TouchableOpacity style={styles(theme).fab}>
+      <TouchableOpacity 
+        style={styles(theme).fab}
+        onPress={handleCreateTrip}
+      >
         <Ionicons
           name="add-outline"
           size={24}
