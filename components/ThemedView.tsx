@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ViewProps, ColorValue } from 'react-native';
+import { View, ViewProps, ColorValue, Pressable } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
 
 export interface ThemedViewProps extends ViewProps {
@@ -7,6 +7,7 @@ export interface ThemedViewProps extends ViewProps {
   darkColor?: ColorValue;
   fullScreen?: boolean;
   elevationLevel?: number;
+  onPress?: () => void;
 }
 
 export function ThemedView({ 
@@ -15,6 +16,7 @@ export function ThemedView({
   darkColor, 
   fullScreen = false,
   elevationLevel,
+  onPress,
   ...otherProps 
 }: ThemedViewProps) {
   const { theme, mode } = useTheme();
@@ -27,14 +29,13 @@ export function ThemedView({
 
   const elevation = React.useMemo(() => {
     if (typeof elevationLevel === 'number') {
-      // Type-safe lookup of elevation levels
       const key = `level${elevationLevel}` as keyof typeof theme.elevation;
       return theme.elevation[key] || undefined;
     }
     return undefined;
   }, [elevationLevel, theme.elevation]);
 
-  return (
+  const content = (
     <View 
       style={[
         {
@@ -49,6 +50,16 @@ export function ThemedView({
       {...otherProps} 
     />
   );
+
+  if (onPress) {
+    return (
+      <Pressable onPress={onPress}>
+        {content}
+      </Pressable>
+    );
+  }
+
+  return content;
 }
 
 export default React.memo(ThemedView);

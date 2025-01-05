@@ -2,6 +2,7 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/src/theme';
+import { Platform } from 'react-native';
 
 export default function TabLayout() {
   const { theme } = useTheme();
@@ -9,16 +10,23 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={({ route }) => ({
-        tabBarActiveTintColor: theme.colors.primary.main,
+        tabBarActiveTintColor: theme.colors.primary.onPrimary,
         tabBarInactiveTintColor: theme.colors.content.secondary,
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: theme.colors.surface.default,
-          borderTopColor: theme.colors.surface.variant,
-        },
-        // Hide the tab bar for the index route
-        tabBarButton: route.name === 'index' ? () => null : undefined,
-        tabBarIcon: ({ focused, color, size }) => {
+          position: 'absolute',
+          bottom: Platform.OS === 'ios' ? theme.spacing.stack.md : theme.spacing.stack.sm,
+          borderWidth: 0,
+          backgroundColor: theme.colors.surface.variant,
+          borderTopWidth: 0.2,
+          borderBottomWidth:0,
+          shadowColor: 'transparent',
+          elevation: 0,
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0,
+          shadowRadius: 0, 
+      },      
+        tabBarIcon: ({ focused, color }) => {
           let iconName;
 
           switch (route.name) {
@@ -32,34 +40,17 @@ export default function TabLayout() {
               iconName = focused ? 'person' : 'person-outline';
               break;
             default:
-              return null; // Don't render an icon for unknown routes
+              return null;
           }
 
-          return <Ionicons name={iconName} size={size || 24} color={color} />;
+          return <Ionicons name={iconName as any} size={28} color={color} />;
         },
       })}
     >
-      {/* Add this line to hide the index screen from tab bar */}
       <Tabs.Screen name="index" options={{ href: null }} />
-      
-      <Tabs.Screen
-        name="trips"
-        options={{
-          title: 'Trips',
-        }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-        }}
-      />
+      <Tabs.Screen name="trips" options={{ title: 'Trips' }} />
+      <Tabs.Screen name="explore" options={{ title: 'Explore' }} />
+      <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
     </Tabs>
   );
 }
