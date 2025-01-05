@@ -1,170 +1,176 @@
-import { useState, useEffect } from 'react';
-import { StyleSheet, FlatList, Pressable, RefreshControl, Platform } from 'react-native';
-import { format } from 'date-fns';
-import { ThemedText } from '@/components/ThemedText';
+import React, { useMemo, useState } from 'react';
+import { 
+  StyleSheet, 
+  SectionList, 
+  RefreshControl,
+  ActivityIndicator,
+  ViewStyle,
+  SectionListRenderItem 
+} from 'react-native';
+import { format, isAfter, isBefore, isWithinInterval } from 'date-fns';
 import { ThemedView } from '@/components/ThemedView';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import { useTripStore } from '@/src/store/useTripStore';
+import { ThemedText } from '@/components/ThemedText';
+import { TripCard } from './TripCard';
+import { Trip } from '@/src/types/trip';
 import { useTheme } from '@/src/theme/ThemeProvider';
 
-import CreateTripModal from './CreateTripModal';
-import { Trip } from './CreateTripModal';
+interface TripSection {
+  title: string;
+  data: Trip[];
+}
 
-export default function TripList() {
-  const { trips, loading, error, fetchTrips, createTrip } = useTripStore();
-  const [modalVisible, setModalVisible] = useState(false);
+interface TripListProps {
+  trips: Trip[];
+  loading?: boolean;
+  onRefresh?: () => Promise<void>;
+  onTripPress?: (trip: Trip) => void;
+  style?: ViewStyle;
+}
+
+export const TripList: React.FC<TripListProps> = ({
+  trips,
+  loading = false,
+  onRefresh,
+  onTripPress,
+  style,
+}) => {
+  const { theme } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
 
-  const { theme } = useTheme();
+  const sections = useMemo(() => {
+    const now = new Date();
+    
+    const upcoming = trips.filter(trip => 
+      isAfter(new Date(trip.startDate), now) && 
+      trip.status !== 'CANCELLED'
+    );
+    
+    const active = trips.filter(trip => 
+      isWithinInterval(now, {
+        start: new Date(trip.startDate),
+        end: new Date(trip.endDate)
+      }) && 
+      trip.status === 'ACTIVE'
+    );
+    
+    const past = trips.filter(trip => 
+      isBefore(new Date(trip.endDate), now) || 
+      trip.status === 'COMPLETED'
+    );
+    
+    const cancelled = trips.filter(trip => 
+      trip.status === 'CANCELLED'
+    );
 
-  useEffect(() => {
-    fetchTrips().catch(console.error);
-  }, []);
+    return [
+      { title: 'Active Trips', data: active },
+      { title: 'Upcoming Trips', data: upcoming },
+      { title: 'Past Trips', data: past },
+      { title: 'Cancelled', data: cancelled },
+    ].filter(section => section.data.length > 0);
+  }, [trips]);
 
-  const handleCreateTrip = async (trip: Omit<Trip, 'id' | 'createdAt' | 'updatedAt'>) => {
-    try {
-      await createTrip(trip);
-      setModalVisible(false);
-    } catch (error) {
-      console.error('Failed to create trip:', error);
-    }
-  };
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await fetchTrips();
-    } finally {
+  const handleRefresh = async () => {
+    if (onRefresh) {
+      setRefreshing(true);
+      await onRefresh();
       setRefreshing(false);
     }
   };
 
-  if (error) {
+  const renderSectionHeader = ({ section: { title, data } }: { 
+    section: TripSection 
+  }) => (
+    <ThemedView style={styles.sectionHeader}>
+      <ThemedText 
+        variant="heading.large"
+        color="content.primary"
+      >
+        {title}
+      </ThemedText>
+      <ThemedText
+        variant="body.small"
+        color="content.secondary"
+      >
+        {data.length} {data.length === 1 ? 'trip' : 'trips'}
+      </ThemedText>
+    </ThemedView>
+  );
+
+  const renderItem: SectionListRenderItem<Trip> = ({ item, index }) => (
+    <TripCard
+      trip={item}
+      onPress={() => onTripPress?.(item)}
+      style={index > 0 ? styles.cardSpacing : undefined}
+    />
+  );
+
+  if (loading && !refreshing) {
     return (
-      <ThemedView style={styles.centerContainer}>
-        <ThemedText style={[styles.errorText, { color: theme.colors.error }]}>
-          {error}
-        </ThemedText>
-        <Pressable 
-          style={[styles.retryButton, { backgroundColor: theme.colors.primary }]} 
-          onPress={fetchTrips}
-        >
-          <ThemedText style={[styles.buttonText, { color: theme.colors.onPrimary }]}>
-            Retry
-          </ThemedText>
-        </Pressable>
+      <ThemedView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={theme.colors.primary.main} />
       </ThemedView>
     );
   }
 
   return (
-    <ThemedView style={styles.container}>
-      {trips.length === 0 && !loading ? (
-        <ThemedView style={styles.emptyState}>
-          <IconSymbol 
-            name="plus.circle.fill" 
-            size={48} 
-            color={theme.colors.primary} 
+    <SectionList
+      sections={sections}
+      renderItem={renderItem}
+      renderSectionHeader={renderSectionHeader}
+      stickySectionHeadersEnabled={false}
+      contentContainerStyle={[styles.listContent, style]}
+      refreshControl={
+        onRefresh ? (
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={theme.colors.primary.main}
           />
-          <ThemedText style={[styles.emptyText, { color: theme.colors.primary }]}>
-            No trips yet
-          </ThemedText>
-          <Pressable 
-            style={[styles.createButton, { backgroundColor: theme.colors.primary }]}
-            onPress={() => setModalVisible(true)}
+        ) : undefined
+      }
+      ListEmptyComponent={
+        <ThemedView style={styles.emptyContainer}>
+          <ThemedText
+            variant="body.large"
+            color="content.secondary"
+            style={styles.emptyText}
           >
-            <ThemedText style={[styles.buttonText, { color: theme.colors.onPrimary }]}>
-              Create Your First Trip
-            </ThemedText>
-          </Pressable>
+            No trips found
+          </ThemedText>
         </ThemedView>
-      ) : (
-        <FlatList
-          data={trips}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
-            <Pressable 
-              style={[styles.tripCard, { 
-                backgroundColor: theme.colors.surface,
-              }]}
-            >
-              <ThemedText type="defaultSemiBold">{item.name}</ThemedText>
-              <ThemedText>{item.destination}</ThemedText>
-              <ThemedText>{format(item.startDate, 'MMM dd, yyyy')}</ThemedText>
-            </Pressable>
-          )}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={theme.colors.primary}
-            />
-          }
-        />
-      )}
-      
-      <CreateTripModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        onSubmit={handleCreateTrip}
-      />
-    </ThemedView>
+      }
+    />
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  listContent: {
     padding: 16,
   },
-  centerContainer: {
-    flex: 1,
+  sectionHeader: {
+    backgroundColor: 'transparent',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
+    marginBottom: 12,
+    marginTop: 24,
   },
-  emptyState: {
+  cardSpacing: {
+    marginTop: 12,
+  },
+  loadingContainer: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    alignItems: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 32,
   },
   emptyText: {
-    marginTop: 12,
-    marginBottom: 20,
-    fontSize: 16,
-  },
-  errorText: {
-    marginBottom: 16,
     textAlign: 'center',
-  },
-  createButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  retryButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  buttonText: {
-    fontWeight: '600',
-  },
-  tripCard: {
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
   },
 });
