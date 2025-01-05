@@ -7,13 +7,15 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useAuthStore } from '@/src/store/useAuthStore';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { getInputStyles } from '@/src/theme/styles'; // Import shared input styles
+import { getInputStyles } from '@/src/theme/styles';
+import { Theme } from '@/src/theme/types';
 
 export default function RegisterScreen() {
   const [formData, setFormData] = useState({
@@ -23,8 +25,8 @@ export default function RegisterScreen() {
     firstName: '',
     lastName: '',
   });
-  const [focusedInput, setFocusedInput] = useState<string | null>(null); // Track focused input
-  const { register, loading, error } = useAuthStore();
+  const [focusedInput, setFocusedInput] = useState<string | null>(null);
+  const { register, loading, error, isVerifying } = useAuthStore();
   const { theme } = useTheme();
 
   // Use shared input styles
@@ -33,7 +35,19 @@ export default function RegisterScreen() {
   const handleRegister = async () => {
     try {
       await register(formData);
-      router.replace('/(tabs)');
+      Alert.alert(
+        "Registration Successful",
+        "We've sent you a verification email. Please click the link in the email to verify and login again.",
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              // Navigate to login screen
+              router.replace('/(auth)/login');
+            }
+          }
+        ]
+      );
     } catch (err) {
       // Error is handled by the store
     }
@@ -165,7 +179,7 @@ export default function RegisterScreen() {
   );
 }
 
-const styles = (theme) =>
+const styles = (theme: Theme) =>
   StyleSheet.create({
     container: {
       flex: 1,
