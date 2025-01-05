@@ -1,5 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { StyleSheet, useWindowDimensions, View, Button } from 'react-native';
+import Onboarding from 'react-native-onboarding-swiper';
 import Animated from 'react-native-reanimated';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -35,25 +36,30 @@ export function OnboardingCarousel({ slides, onComplete }: Props) {
   );
 
   return (
-    <ThemedView style={styles.container}>
-      <Animated.FlatList
-        ref={flatListRef}
-        data={slides}
-        renderItem={renderSlide}
-        keyExtractor={(item) => item.id}
-        horizontal
-        pagingEnabled
-        scrollEnabled={false} // Disable swipe gestures
-        showsHorizontalScrollIndicator={false}
-        bounces={false}
-      />
-      <View style={styles.footer}>
-        <Button
-          title={currentIndex === slides.length - 1 ? 'Finish' : 'Next'}
-          onPress={handleNext}
-        />
-      </View>
-    </ThemedView>
+    // <ThemedView style={styles.container}>
+    //   <Animated.FlatList
+    //     ref={flatListRef}
+    //     data={slides}
+    //     renderItem={renderSlide}
+    //     keyExtractor={(item) => item.id}
+    //     horizontal
+    //     pagingEnabled
+    //     scrollEnabled={false} // Disable swipe gestures
+    //     showsHorizontalScrollIndicator={false}
+    //     bounces={false}
+    //   />
+    //   <View style={styles.footer}>
+    //     <Button
+    //       title={currentIndex === slides.length - 1 ? 'Finish' : 'Next'}
+    //       onPress={handleNext}
+    //     />
+    //   </View>
+    // </ThemedView>
+    <Onboarding
+      pages={slides.map((slide) => ({slide: renderSlide(slide)}))}
+      onSkip={handleNext}
+      onDone={handleNext}
+    />
   );
 }
 

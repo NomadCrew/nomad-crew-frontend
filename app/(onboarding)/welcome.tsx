@@ -1,62 +1,46 @@
-import { StyleSheet, Platform } from 'react-native';
+import React from 'react';
+import { Image, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
-import { OnboardingCarousel } from '@/components/onboarding/OnboardingCarousel';
-import { ThemedView } from '@/components/ThemedView';
-import  { ONBOARDING_SLIDES } from '@/src/constants/onboarding';
+import Onboarding from 'react-native-onboarding-swiper';
 import { useOnboarding } from '@/src/providers/OnboardingProvider';
+import { ONBOARDING_SLIDES } from '@/src/constants/onboarding';
 
 export default function WelcomeScreen() {
   const { setFirstTimeDone } = useOnboarding();
 
   const handleComplete = async () => {
     try {
-      console.log("Onboarding completed");
+      console.log('Onboarding completed');
       await setFirstTimeDone();
       router.replace('/(auth)/login');
     } catch (error) {
-      console.error("Navigation error:", error);
+      console.error('Navigation error:', error);
     }
   };
 
   return (
-    <ThemedView style={{ flex: 1 }}>
-      <OnboardingCarousel slides={ONBOARDING_SLIDES} onComplete={handleComplete} />
-    </ThemedView>
+    <Onboarding
+      pages={ONBOARDING_SLIDES.map((slide) => ({
+        backgroundColor: slide.backgroundColor,
+        image: <Image source={slide.image} style={styles.image} resizeMode="contain" />,
+        title: slide.title,
+        subtitle: slide.subtitle,
+      }))}
+      onSkip={handleComplete}
+      onDone={handleComplete}
+      showNext={true}
+      showSkip={true}
+      nextLabel="Next"
+      skipLabel="Skip"
+      containerStyles={{ flex: 1 }}
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'white',
-  },
-  skipContainer: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 60 : 20,
-    right: 20,
-    zIndex: 10,
-  },
-  skipText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  footer: {
-    paddingHorizontal: 20,
-    paddingBottom: Platform.OS === 'ios' ? 50 : 30,
-    alignItems: 'center',
-  },
-  signInText: {
+  image: {
+    width: '80%',
+    height: '50%',
     marginBottom: 20,
-    fontSize: 16,
-  },
-  buttonContainer: {
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  emailLink: {
-    fontSize: 16,
-    fontWeight: '500',
-    textDecorationLine: 'underline',
   },
 });

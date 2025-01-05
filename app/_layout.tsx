@@ -2,7 +2,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } fro
 import { useFonts } from 'expo-font';
 import { SplashScreen, Stack, useSegments, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { ThemeProvider, useTheme } from '@/src/theme/ThemeProvider';
 import { useAuthStore } from '@/src/store/useAuthStore';
 import { OnboardingProvider } from '@/src/providers/OnboardingProvider';
@@ -16,40 +16,58 @@ function RouteGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { token, isInitialized, loading, isVerifying } = useAuthStore();
   const { isFirstTime } = useOnboarding();
+  const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastNavigationRef = useRef<string | null>(null);
 
   const currentSegment = segments[0];
   const inAuthGroup = currentSegment === '(auth)';
   const inOnboardingGroup = currentSegment === '(onboarding)';
 
-  // Memoize the routing state to prevent unnecessary re-renders
-  const routingState = useMemo(() => ({
-    shouldShowVerification: isVerifying && !segments.includes('verify-email'),
-    shouldShowOnboarding: isFirstTime && token && !inOnboardingGroup && !isVerifying,
-    shouldRedirectToLogin: !token && !inAuthGroup && !inOnboardingGroup && !isVerifying,
-    shouldRedirectToTabs: token && !isVerifying && (inAuthGroup || inOnboardingGroup),
-  }), [isFirstTime, token, inAuthGroup, inOnboardingGroup, isVerifying, segments]);
-  
   useEffect(() => {
-    let navTimeout: NodeJS.Timeout = setTimeout(() => {}, 0); 
-    if (!isInitialized || loading) return;
-  
-    const navigate = () => {
-      if (!token) {
-        if (!inAuthGroup) {
-          router.replace('/(auth)/login');
-        }
-      } else if (routingState.shouldShowOnboarding) {
-        router.replace('/(onboarding)/welcome');
-      } else if (routingState.shouldRedirectToTabs) {
-        router.replace('/(tabs)');
+    if (!isInitialized) return;
+
+    // Clear any existing navigation timeout
+    if (navigationTimeoutRef.current) {
+      clearTimeout(navigationTimeoutRef.current);
+    }
+
+    // Define navigation priorities
+    let targetRoute: string | null = null;
+
+    if (isVerifying) {
+      targetRoute = '/(auth)/verify-email';
+    } else if (isFirstTime && !inOnboardingGroup) {
+      targetRoute = '/(onboarding)/welcome';
+    } else if (!token && !inAuthGroup && !isFirstTime) {
+      targetRoute = '/(auth)/login';
+    } else if (token && (inAuthGroup || inOnboardingGroup)) {
+      targetRoute = '/(tabs)';
+    }
+
+    console.log('Navigation State:', {
+      currentSegment,
+      isFirstTime,
+      token,
+      isVerifying,
+      inAuthGroup,
+      inOnboardingGroup,
+      targetRoute
+    });
+
+    // Only navigate if we have a target and it's different from last navigation
+    if (targetRoute && targetRoute !== lastNavigationRef.current) {
+      navigationTimeoutRef.current = setTimeout(() => {
+        lastNavigationRef.current = targetRoute;
+        router.replace(targetRoute as any);
+      }, 100);
+    }
+
+    return () => {
+      if (navigationTimeoutRef.current) {
+        clearTimeout(navigationTimeoutRef.current);
       }
     };
-  
-    clearTimeout(navTimeout);
-    navTimeout = setTimeout(navigate, 100); // Debounce by 100ms
-  
-    return () => clearTimeout(navTimeout);
-  }, [isInitialized, loading, routingState, router]);
+  }, [segments, token, isInitialized, isFirstTime, isVerifying, router, inAuthGroup, inOnboardingGroup]);
 
   return children;
 }
