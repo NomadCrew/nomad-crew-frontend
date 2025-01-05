@@ -2,13 +2,14 @@ import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } fro
 import { useFonts } from 'expo-font';
 import { SplashScreen, Stack, useSegments, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { ThemeProvider, useTheme } from '@/src/theme/ThemeProvider';
 import { useAuthStore } from '@/src/store/useAuthStore';
 import { OnboardingProvider } from '@/src/providers/OnboardingProvider';
 import AuthErrorBoundary from '@/components/AuthErrorBoundary';
 import { InitialLoadingScreen } from '@/components/InitialLoadingScreen';
 import { useOnboarding } from '@/src/providers/OnboardingProvider';
+import { supabase } from '@/src/auth/supabaseClient';
 
 
 function RouteGuard({ children }: { children: React.ReactNode }) {
@@ -22,6 +23,18 @@ function RouteGuard({ children }: { children: React.ReactNode }) {
   const currentSegment = segments[0];
   const inAuthGroup = currentSegment === '(auth)';
   const inOnboardingGroup = currentSegment === '(onboarding)';
+
+  useEffect(() => {
+    const debugSession = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      console.log('[Auth Debug] Initial session check:', {
+        hasSession: !!session,
+        hasAccessToken: !!session?.access_token,
+        error: error?.message,
+      });
+    };
+    debugSession();
+  }, []);
 
   useEffect(() => {
     if (!isInitialized) return;
@@ -47,7 +60,7 @@ function RouteGuard({ children }: { children: React.ReactNode }) {
     console.log('Navigation State:', {
       currentSegment,
       isFirstTime,
-      token,
+      hasToken: !!token,
       isVerifying,
       inAuthGroup,
       inOnboardingGroup,
@@ -71,6 +84,7 @@ function RouteGuard({ children }: { children: React.ReactNode }) {
 
   return children;
 }
+
 
 function RootLayoutNav() {
   const { theme, mode } = useTheme();
