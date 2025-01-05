@@ -1,52 +1,23 @@
 import { useState } from 'react';
 import {
   StyleSheet,
-  TextInput,
-  Pressable,
   KeyboardAvoidingView,
   Platform,
-} from 'react-native';
-import { Link } from 'expo-router';
-import { Loader2 } from 'lucide-react';
-import { useAuthStore } from '@/src/store/useAuthStore';
+  Modal,
+  Image
+} from 'react-native';;
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { getInputStyles, getButtonStyles } from '@/src/theme/styles';
-
-const getFriendlyErrorMessage = (error: string) => {
-  const errorMap: Record<string, string> = {
-    'auth/invalid-email': 'Please check your email and try again',
-    'auth/wrong-password': 'Unable to sign in. Please check your details and try again',
-    'auth/user-not-found': 'Unable to sign in. Please check your details and try again',
-    'auth/too-many-requests': 'Too many attempts. Please try again later',
-    'network-error': 'Connection issues. Please check your internet and try again',
-  };
-  return errorMap[error] || 'Something went wrong. Please try again';
-};
+import { useGoogleSignIn } from '@/src/hooks/useGoogleSignIn';
+import EmailLoginForm from '@/components/ui/auth/EmailLoginForm';
+import { AuthOptionButton } from '@/components/ui/auth/AuthOptionButton';
+import { Theme } from '@/src/theme/types';
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [focusedInput, setFocusedInput] = useState<'email' | 'password' | null>(
-    null
-  );
-  const { login, loading, error } = useAuthStore();
+  const [isEmailModalVisible, setEmailModalVisible] = useState(false);
   const { theme } = useTheme();
-
-  const inputStyles = getInputStyles(theme); // Shared input styles
-  const buttonStyles = getButtonStyles(theme, loading); // Shared button styles
-
-  const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      return;
-    }
-    try {
-      await login({ email, password });
-    } catch (err) {
-      // Error is handled by the store
-    }
-  };
+  const handleGoogleSignIn = useGoogleSignIn();
 
   return (
     <KeyboardAvoidingView
@@ -54,109 +25,46 @@ export default function LoginScreen() {
       style={styles(theme).container}
     >
       <ThemedView style={styles(theme).content}>
-        {/* Header Section */}
-        <ThemedView style={styles(theme).header}>
-          <ThemedText style={styles(theme).title}>Welcome Back</ThemedText>
+        {/* Top Section for Welcome Message */}
+        <ThemedView style={styles(theme).topSection}>
+          <ThemedText style={styles(theme).title}>Welcome!</ThemedText>
           <ThemedText style={styles(theme).subtitle}>
-            Sign in to continue your journey
+            We're excited to have you on board! Please choose an option below to sign in.
           </ThemedText>
         </ThemedView>
-
-        {/* Error Message */}
-        {error && (
-          <ThemedView style={styles(theme).errorContainer}>
-            <ThemedText style={styles(theme).errorText}>
-              {getFriendlyErrorMessage(error)}
-            </ThemedText>
-          </ThemedView>
-        )}
-
-        {/* Form Section */}
-        <ThemedView style={styles(theme).form}>
-          {/* Email Input */}
-          <ThemedView style={styles(theme).inputWrapper}>
-            <ThemedText>Email</ThemedText>
-            <TextInput
-              style={[
-                inputStyles.states[focusedInput === 'email' ? 'focus' : 'idle'],
-                inputStyles.text,
-              ]}
-              placeholder="Enter your email"
-              placeholderTextColor={theme.colors.content.tertiary}
-              value={email}
-              onChangeText={setEmail}
-              onFocus={() => setFocusedInput('email')}
-              onBlur={() => setFocusedInput(null)}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoComplete="email"
-            />
-          </ThemedView>
-
-          {/* Password Input */}
-          <ThemedView style={styles(theme).inputWrapper}>
-            <ThemedText>Password</ThemedText>
-            <TextInput
-              style={[
-                inputStyles.states[focusedInput === 'password' ? 'focus' : 'idle'],
-                inputStyles.text,
-              ]}
-              placeholder="Enter your password"
-              placeholderTextColor={theme.colors.content.tertiary}
-              value={password}
-              onChangeText={setPassword}
-              onFocus={() => setFocusedInput('password')}
-              onBlur={() => setFocusedInput(null)}
-              secureTextEntry
-              autoComplete="password"
-            />
-          </ThemedView>
-
-          {/* Forgot Password Link */}
-          <Link href="/(auth)/forgot-password" asChild>
-            <Pressable style={styles(theme).forgotPasswordContainer}>
-              <ThemedText style={styles(theme).linkText}>
-                Forgot your password?
-              </ThemedText>
-            </Pressable>
-          </Link>
-
-          {/* Login Button */}
-          <Pressable
-            style={[
-              buttonStyles.container,
-              styles(theme).loginButton,
-              (!email.trim() || !password.trim()) && styles(theme).buttonDisabled,
-            ]}
-            onPress={handleLogin}
-            disabled={loading || !email.trim() || !password.trim()}
-          >
-            {loading ? (
-              <ThemedView style={buttonStyles.loadingContainer}>
-                <Loader2 size={20} color={theme.colors.primary.onPrimary} />
-                <ThemedText style={buttonStyles.text}>Signing in...</ThemedText>
-              </ThemedView>
-            ) : (
-              <ThemedText style={buttonStyles.text}>Sign In</ThemedText>
-            )}
-          </Pressable>
-
-          {/* Sign Up Link */}
-          <Link href="/(auth)/register" asChild>
-            <Pressable style={styles(theme).signUpContainer}>
-              <ThemedText>
-                Don't have an account?{' '}
-                <ThemedText style={styles(theme).linkText}>Sign up</ThemedText>
-              </ThemedText>
-            </Pressable>
-          </Link>
+        <Image
+          source={require('@/assets/images/login-hero.png')}
+          style={styles(theme).image}
+          resizeMode="contain"
+        />
+        {/* Bottom Section for Auth Buttons */}
+        <ThemedView style={styles(theme).bottomSection}>
+          <AuthOptionButton
+            provider="google"
+            label="Continue with Google"
+            onPress={handleGoogleSignIn}
+          />
+          <AuthOptionButton
+            provider="email"
+            label="Continue with Email"
+            onPress={() => setEmailModalVisible(true)}
+          />
         </ThemedView>
       </ThemedView>
+
+      {/* Email Login Modal */}
+      <Modal
+        animationType="slide"
+        visible={isEmailModalVisible}
+        onRequestClose={() => setEmailModalVisible(false)}
+      >
+        <EmailLoginForm onClose={() => setEmailModalVisible(false)} />
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
 
-const styles = (theme) =>
+const styles = (theme: Theme) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -164,26 +72,40 @@ const styles = (theme) =>
     },
     content: {
       flex: 1,
-      paddingHorizontal: theme.spacing.layout.screen.padding,
-      justifyContent: 'center',
       maxWidth: 450,
       alignSelf: 'center',
       width: '100%',
+      justifyContent: 'space-between'
     },
-    header: {
-      marginBottom: theme.spacing.layout.section.gap,
-      gap: theme.spacing.stack.sm,
+    topSection: {
+      // flex: 1,
+      justifyContent: 'center',
+      paddingHorizontal: theme.spacing.inset.md,
+      paddingTop: theme.spacing.inset.xl,
+      marginBottom: theme.spacing.inset.md,
+      marginTop: theme.spacing.inset.xl,
+    },
+    image: {
+      flex: 1,
+      width: '100%',
+      height: undefined,
+      paddingBottom: theme.spacing.inset.xl,
+      marginBottom: theme.spacing.inset.xl,
+    },
+    bottomSection: {
+      justifyContent: 'flex-end',
     },
     title: {
       ...theme.typography.heading.h1,
-      textAlign: 'center',
+      textAlign: 'left',
       color: theme.colors.content.primary,
       marginBottom: theme.spacing.inset.sm,
     },
     subtitle: {
       ...theme.typography.body.medium,
-      textAlign: 'center',
-      color: theme.colors.content.secondary,
+      textAlign: 'left',
+      color: theme.colors.content.primary,
+      marginBottom: theme.spacing.inset.sm,
     },
     form: {
       gap: theme.spacing.stack.md,
