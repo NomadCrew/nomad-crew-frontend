@@ -14,15 +14,18 @@ export default function TabLayout() {
         tabBarInactiveTintColor: theme.colors.content.secondary,
         headerShown: false,
         tabBarStyle: {
-          position: 'absolute', 
+          position: 'absolute',
           bottom: Platform.OS === 'ios' ? theme.spacing.stack.md : theme.spacing.stack.sm,
-          marginHorizontal: theme.spacing.inline.lg,
-          borderRadius: theme.spacing.stack.xl,
-          height: 70, 
-          backgroundColor: theme.colors.surface.default, 
-          borderWidth: 1, 
-          borderColor: theme.colors.surface.variant, 
-        },
+          borderWidth: 0,
+          backgroundColor: theme.colors.surface.variant,
+          borderTopWidth: 0.2,
+          borderBottomWidth:0,
+          shadowColor: 'transparent',
+          elevation: 0,
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0,
+          shadowRadius: 0, 
+      },      
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
 
@@ -40,7 +43,7 @@ export default function TabLayout() {
               return null;
           }
 
-          return <Ionicons name={iconName} size={28} color={color} />;
+          return <Ionicons name={iconName as any} size={28} color={color} />;
         },
       })}
     >
