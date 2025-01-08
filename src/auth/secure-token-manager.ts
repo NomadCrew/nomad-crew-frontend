@@ -165,7 +165,7 @@ class SecureTokenManager {
       const storedValue = await this.secureStore.getItem(key);
   
       if (!storedValue) {
-        console.warn(`[TokenManager] Key "${key}" not found in storage.`);
+        console.log(`[TokenManager] Key "${key}" not found in storage.`);
         return null;
       }
   

@@ -34,6 +34,7 @@ export class ApiClient extends BaseApiClient {
     // Auth Request Interceptor
     this.api.interceptors.request.use(
       async (config) => {
+        config.headers.apikey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
         try {
           if (this.tokenManager) {
             const token = await this.tokenManager.getToken();
