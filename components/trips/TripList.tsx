@@ -1,109 +1,63 @@
-import React, { useMemo, useState } from 'react';
-import { 
-  StyleSheet, 
-  SectionList, 
-  RefreshControl,
-  ActivityIndicator,
-  ViewStyle,
-  SectionListRenderItem 
-} from 'react-native';
-import { format, isAfter, isBefore, isWithinInterval } from 'date-fns';
+// components/trips/TripList.tsx
+import React from 'react';
+import { StyleSheet, RefreshControl, ActivityIndicator, ViewStyle } from 'react-native';
+import { format } from 'date-fns';
+import { useTheme } from '@/src/theme/ThemeProvider';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { TripCard } from './TripCard';
-import { Trip } from '@/src/types/trip';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useTripStore } from '@/src/store/useTripStore';
+import { Trip, TripStatus } from '@/src/types/trip';
 
 interface TripSection {
   title: string;
   data: Trip[];
 }
 
-interface TripListProps {
-  trips: Trip[];
-  loading?: boolean;
-  onRefresh?: () => Promise<void>;
+interface Props {
   onTripPress?: (trip: Trip) => void;
   style?: ViewStyle;
 }
 
-export const TripList: React.FC<TripListProps> = ({
-  trips,
-  loading = false,
-  onRefresh,
-  onTripPress,
-  style,
-}) => {
+export function TripList({ onTripPress, style }: Props) {
   const { theme } = useTheme();
-  const [refreshing, setRefreshing] = useState(false);
+  const { trips, loading, fetchTrips } = useTripStore();
+  const [refreshing, setRefreshing] = React.useState(false);
 
-  const sections = useMemo(() => {
+  React.useEffect(() => {
+    fetchTrips().catch(console.error);
+  }, [fetchTrips]);
+
+  const handleRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await fetchTrips();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchTrips]);
+
+  const sections = React.useMemo(() => {
     const now = new Date();
     
-    const upcoming = trips.filter(trip => 
-      isAfter(new Date(trip.startDate), now) && 
-      trip.status !== 'CANCELLED'
-    );
-    
-    const active = trips.filter(trip => 
-      isWithinInterval(now, {
-        start: new Date(trip.startDate),
-        end: new Date(trip.endDate)
-      }) && 
+    const activeTrips = trips.filter(trip => 
       trip.status === 'ACTIVE'
     );
     
-    const past = trips.filter(trip => 
-      isBefore(new Date(trip.endDate), now) || 
-      trip.status === 'COMPLETED'
+    const upcomingTrips = trips.filter(trip => 
+      trip.status === 'PLANNING' && new Date(trip.startDate) > now
     );
     
-    const cancelled = trips.filter(trip => 
-      trip.status === 'CANCELLED'
+    const pastTrips = trips.filter(trip => 
+      trip.status === 'COMPLETED' || new Date(trip.endDate) < now
     );
 
     return [
-      { title: 'Active Trips', data: active },
-      { title: 'Upcoming Trips', data: upcoming },
-      { title: 'Past Trips', data: past },
-      { title: 'Cancelled', data: cancelled },
+      { title: 'Active Trips', data: activeTrips },
+      { title: 'Upcoming Trips', data: upcomingTrips },
+      { title: 'Past Trips', data: pastTrips },
     ].filter(section => section.data.length > 0);
   }, [trips]);
-
-  const handleRefresh = async () => {
-    if (onRefresh) {
-      setRefreshing(true);
-      await onRefresh();
-      setRefreshing(false);
-    }
-  };
-
-  const renderSectionHeader = ({ section: { title, data } }: { 
-    section: TripSection 
-  }) => (
-    <ThemedView style={styles.sectionHeader}>
-      <ThemedText 
-        variant="heading.large"
-        color="content.primary"
-      >
-        {title}
-      </ThemedText>
-      <ThemedText
-        variant="body.small"
-        color="content.secondary"
-      >
-        {data.length} {data.length === 1 ? 'trip' : 'trips'}
-      </ThemedText>
-    </ThemedView>
-  );
-
-  const renderItem: SectionListRenderItem<Trip> = ({ item, index }) => (
-    <TripCard
-      trip={item}
-      onPress={() => onTripPress?.(item)}
-      style={index > 0 ? styles.cardSpacing : undefined}
-    />
-  );
 
   if (loading && !refreshing) {
     return (
@@ -114,61 +68,67 @@ export const TripList: React.FC<TripListProps> = ({
   }
 
   return (
-    <SectionList
-      sections={sections}
-      renderItem={renderItem}
-      renderSectionHeader={renderSectionHeader}
-      stickySectionHeadersEnabled={false}
-      contentContainerStyle={[styles.listContent, style]}
-      refreshControl={
-        onRefresh ? (
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={theme.colors.primary.main}
-          />
-        ) : undefined
-      }
-      ListEmptyComponent={
+    <ThemedView style={[styles.container, style]}>
+      {sections.map((section, index) => (
+        <ThemedView key={section.title} style={index > 0 ? styles.section : undefined}>
+          <ThemedText 
+            variant="heading.h2" 
+            color="content.primary"
+            style={styles.sectionTitle}
+          >
+            {section.title}
+          </ThemedText>
+          {section.data.map((trip) => (
+            <TripCard
+              key={trip.id}
+              trip={trip}
+              onPress={() => onTripPress?.(trip)}
+              style={styles.card}
+            />
+          ))}
+        </ThemedView>
+      ))}
+      
+      {trips.length === 0 && !loading && (
         <ThemedView style={styles.emptyContainer}>
           <ThemedText
             variant="body.large"
             color="content.secondary"
             style={styles.emptyText}
           >
-            No trips found
+            No trips found. Create your first trip to get started!
           </ThemedText>
         </ThemedView>
-      }
-    />
+      )}
+    </ThemedView>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  listContent: {
-    padding: 16,
-  },
-  sectionHeader: {
-    backgroundColor: 'transparent',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-    marginTop: 24,
-  },
-  cardSpacing: {
-    marginTop: 12,
+  container: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  section: {
+    marginTop: 24,
+  },
+  sectionTitle: {
+    marginBottom: 16,
+    paddingHorizontal: 16,
+  },
+  card: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+  },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 32,
+    padding: 32,
   },
   emptyText: {
     textAlign: 'center',
