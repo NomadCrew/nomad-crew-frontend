@@ -14,7 +14,6 @@ export default function useProtectedRoute() {
   useEffect(() => {
     if (!isInitialized) return;
 
-    // Clear any existing navigation timeout
     if (navigationTimeoutRef.current) {
       clearTimeout(navigationTimeoutRef.current);
     }
@@ -23,9 +22,7 @@ export default function useProtectedRoute() {
     const inAuthGroup = currentSegment === '(auth)';
     const inOnboardingGroup = currentSegment === '(onboarding)';
 
-    // Determine target route
     let targetRoute: string | null = null;
-
     if (isVerifying) {
       targetRoute = '/(auth)/verify-email';
     } else if (isFirstTime && !inOnboardingGroup && !isVerifying) {
@@ -36,17 +33,8 @@ export default function useProtectedRoute() {
       targetRoute = '/(tabs)';
     }
 
-    // Only navigate if we have a target and it's different from last navigation
     if (targetRoute && targetRoute !== lastNavigationRef.current) {
       navigationTimeoutRef.current = setTimeout(() => {
-        console.log('[Navigation] Route change:', {
-          from: currentSegment,
-          to: targetRoute,
-          hasToken: !!token,
-          isFirstTime,
-          isVerifying
-        });
-        
         lastNavigationRef.current = targetRoute;
         router.replace(targetRoute as any);
       }, 100);

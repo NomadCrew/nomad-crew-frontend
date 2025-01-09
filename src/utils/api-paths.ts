@@ -17,11 +17,12 @@ export const API_PATHS = {
   users: {
     create: createApiPath('users'), // Maps to /users (unversioned)
     me: createApiPath('users/me'), // No backend implementation yet
-    byId: (id: number) => createApiPath(`users/${id}`), // Maps to /v1/users/:id
+    byId: (id: string) => createApiPath(`users/${id}`), // Maps to /v1/users/:id
   },
   trips: {
     list: createApiPath('trips/list'), // Maps to /v1/trips/list
     create: createApiPath('trips'), // Maps to /v1/trips (POST)
-    byId: (id: number) => createApiPath(`trips/${id}`), // Maps to /v1/trips/:id
+    byId: (id: string) => createApiPath(`trips/${id}`), // Maps to /v1/trips/:id
+    updateStatus: (id: string) => `/v1/trips/${id}/status` // Maps to /v1/trips/:id/status
   },
 } as const;

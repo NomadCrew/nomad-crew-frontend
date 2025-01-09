@@ -28,3 +28,21 @@ export interface UpdateTripInput {
   endDate?: Date;
   status?: TripStatus;
 }
+
+export interface CreateTripRequest {
+  name: string;
+  description?: string;
+  destination: string;
+  startDate: Date;
+  endDate: Date;
+}
+
+export interface CreateTripResponse {
+  id: string;
+  name: string;
+  description: string;
+  destination: string;
+  startDate: Date;
+  endDate: Date;
+  createdBy: string;
+}

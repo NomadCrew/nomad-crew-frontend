@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { StyleSheet, View, Platform, useWindowDimensions } from 'react-native';
+import { StyleSheet, View, Platform, useWindowDimensions, Image } from 'react-native';
 import Onboarding from 'react-native-onboarding-swiper';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { ThemedText } from '@/components/ThemedText';
@@ -35,16 +35,16 @@ export function OnboardingCarousel({ slides, onComplete }: Props) {
     </ThemedText>
   );
 
-
   const pages = slides.map(slide => ({
     backgroundColor: slide.backgroundColor,
     image: (
-      <Animated.Image
-        source={slide.image}
-        style={[styles.image, slide.imageStyles]}
-        resizeMode="contain"
-        entering={FadeIn.duration(120)}
-      />
+      <Animated.View entering={FadeIn.duration(120)}>
+        <Image
+          source={slide.image}
+          style={[styles.image, slide.imageStyles]}
+          resizeMode="contain"
+        />
+      </Animated.View>
     ),
     title: <Title title={slide.title} titleStyles={slide.titleStyles} />,
     subtitle: <Subtitle subtitle={slide.subtitle} subtitleStyles={slide.subtitleStyles} />,

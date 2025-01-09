@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { api } from '@/src/api/api-client';
-import { Trip, CreateTripInput, UpdateTripInput, TripStatus } from '@/src/types/trip';
+import { Trip, CreateTripInput, UpdateTripInput, TripStatus, CreateTripRequest, CreateTripResponse } from '@/src/types/trip';
 import { API_PATHS } from '@/src/utils/api-paths';
 
 interface TripState {
@@ -23,18 +23,19 @@ export const useTripStore = create<TripState>((set, get) => ({
   loading: false,
   error: null,
 
-  createTrip: async (input) => {
+  createTrip: async (tripData: CreateTripInput) => {
     set({ loading: true, error: null });
     try {
-      const response = await api.post(API_PATHS.trips.create, input);
-      const newTrip = response.data;
+      const response = await api.post<Trip>(
+        API_PATHS.trips.create, 
+        tripData
+      );
       set(state => ({
-        trips: [...state.trips, newTrip]
+        trips: [...state.trips, response.data]
       }));
-      return newTrip;
+      return response.data;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to create trip';
-      set({ error: message });
+      set({ error: getErrorMessage(error) });
       throw error;
     } finally {
       set({ loading: false });

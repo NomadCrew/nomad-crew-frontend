@@ -18,7 +18,6 @@ export default function AuthButton({ onPress }: AuthButtonProps) {
     try {
       await GoogleSignin.hasPlayServices();
       const userInfo = await GoogleSignin.signIn();
-      console.log('Google Sign-In userInfo:', userInfo); // Debug log
       await handleGoogleSignInSuccess(userInfo);
       } catch (error: any) {
       console.log('Google Sign-In Error Details:', error); // Detailed error log

@@ -1,12 +1,11 @@
-// components/trips/TripList.tsx
-import React from 'react';
+import React, { useEffect, useCallback, useState, useMemo } from 'react';
 import { StyleSheet, RefreshControl, ActivityIndicator, ViewStyle } from 'react-native';
-import { format } from 'date-fns';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { TripCard } from './TripCard';
 import { useTripStore } from '@/src/store/useTripStore';
+import { useAuthStore } from '@/src/store/useAuthStore';
 import { Trip, TripStatus } from '@/src/types/trip';
 
 interface TripSection {
@@ -22,22 +21,25 @@ interface Props {
 export function TripList({ onTripPress, style }: Props) {
   const { theme } = useTheme();
   const { trips, loading, fetchTrips } = useTripStore();
-  const [refreshing, setRefreshing] = React.useState(false);
+  const { token } = useAuthStore();
+  const [refreshing, setRefreshing] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
+    if (!token) return;
     fetchTrips().catch(console.error);
-  }, [fetchTrips]);
+  }, [fetchTrips, token]);
 
-  const handleRefresh = React.useCallback(async () => {
+  const handleRefresh = useCallback(async () => {
+    if (!token) return;
     setRefreshing(true);
     try {
       await fetchTrips();
     } finally {
       setRefreshing(false);
     }
-  }, [fetchTrips]);
+  }, [fetchTrips, token]);
 
-  const sections = React.useMemo(() => {
+  const sections = useMemo(() => {
     const now = new Date();
     
     const activeTrips = trips.filter(trip => 
@@ -63,6 +65,16 @@ export function TripList({ onTripPress, style }: Props) {
     return (
       <ThemedView style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={theme.colors.primary.main} />
+      </ThemedView>
+    );
+  }
+
+  if (!token) {
+    return (
+      <ThemedView style={styles.unauthorizedContainer}>
+        <ThemedText style={{ textAlign: 'center' }}>
+          You must be logged in to view your trips.
+        </ThemedText>
       </ThemedView>
     );
   }
@@ -112,6 +124,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  unauthorizedContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
   },
   section: {
     marginTop: 24,

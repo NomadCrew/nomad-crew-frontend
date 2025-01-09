@@ -35,7 +35,6 @@ export interface User {
     logout: () => Promise<void>;
     initialize: () => Promise<void>;
     setFirstTimeDone: () => Promise<void>;
-    loginWithGoogle: () => Promise<void>;
     handleGoogleSignInSuccess: (response: GoogleSignInResponse) => Promise<void>;
   }
   
@@ -49,6 +48,7 @@ export interface User {
     exp: number;
     iat: number;
     email: string;
+    role: string;
     jti?: string;
   }
   
