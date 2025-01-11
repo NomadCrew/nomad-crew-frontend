@@ -1,12 +1,12 @@
 export type TripStatus = 'PLANNING' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
 
 export interface Trip {
-  id: number;
+  id: string;
   name: string;
   description?: string;
   destination: string;
-  startDate: Date;
-  endDate: Date;
+  startDate: string;
+  endDate: string;
   status: TripStatus;
   createdBy: number; 
   participantCount: number;

@@ -1,5 +1,3 @@
-// src/store/useAuthStore.ts
-
 import { create } from 'zustand';
 import { supabase } from '@/src/auth/supabaseClient';
 import type { AuthState, LoginCredentials, RegisterCredentials, User } from '@/src/types/auth';

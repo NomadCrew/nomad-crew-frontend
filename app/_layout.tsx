@@ -1,4 +1,5 @@
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
+import { Provider as PaperProvider } from 'react-native-paper';
 import { useFonts } from 'expo-font';
 import { SplashScreen, Stack, useSegments, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -135,12 +136,14 @@ export default function RootLayout() {
   }
 
   return (
-    <OnboardingProvider>
-      <ThemeProvider>
-        <AuthErrorBoundary>
-          <RootLayoutNav />
-        </AuthErrorBoundary>
-      </ThemeProvider>
-    </OnboardingProvider>
+    <PaperProvider>
+      <OnboardingProvider>
+        <ThemeProvider>
+          <AuthErrorBoundary>
+            <RootLayoutNav />
+          </AuthErrorBoundary>
+        </ThemeProvider>
+      </OnboardingProvider>
+    </PaperProvider>
   );
 }
