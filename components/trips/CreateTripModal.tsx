@@ -1,125 +1,99 @@
-import { Modal, ScrollView, Platform, TextInput, KeyboardAvoidingView, Pressable, ActivityIndicator, Alert } from 'react-native';
-import { useState, useEffect } from 'react';
-import { format } from 'date-fns';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { IconSymbol } from '@/components/ui/IconSymbol';
+import React, { useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  Platform,
+  KeyboardAvoidingView,
+  ScrollView,
+  Pressable,
+  Alert,
+} from 'react-native';
+import { Portal, Modal, Text, TextInput, Button, useTheme } from 'react-native-paper';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import Animated, { useSharedValue, useAnimatedStyle, withSequence, withTiming } from 'react-native-reanimated';
+import { format } from 'date-fns';
 
-import { useTheme } from '@/src/theme/ThemeProvider';
+// Import your Trip type from wherever it's defined
+import { Trip } from '@/src/types/trip';
 
-export interface Trip {
-  name: string;
-  description: string;
-  destination: string;
-  startDate: Date;
-  endDate: Date;
-}
-
+// The props match your existing code’s usage
 interface CreateTripModalProps {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (trip: Trip) => Promise<void>;
+  // The onSubmit function accepts a Trip and returns a Promise<void>
+  onSubmit: (tripData: Trip) => Promise<void>;
 }
 
-interface FormErrors {
-  name?: string;
-  destination?: string;
-  endDate?: string;
-}
+export default function CreateTripModal({
+  visible,
+  onClose,
+  onSubmit,
+}: CreateTripModalProps) {
+  const theme = useTheme();
 
-const initialTripState: Trip = {
-  name: '',
-  description: '',
-  destination: '',
-  startDate: new Date(),
-  endDate: new Date(),
-};
+  // Local state for the trip data
+  const [trip, setTrip] = useState<Trip>({
+    id: '', // The backend will ultimately set this, if needed
+    name: '',
+    destination: '',
+    description: '',
+    startDate: new Date().toISOString(),
+    endDate: new Date().toISOString(),
+    // If your Trip type has additional fields (e.g., status),
+    // initialize them as needed
+  });
 
-export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTripModalProps) {
-  const [trip, setTrip] = useState<Trip>(initialTripState);
-  const [errors, setErrors] = useState<FormErrors>({});
+  // Which date picker is open? 'start' or 'end'
+  const [showDatePicker, setShowDatePicker] = useState<'start' | 'end' | null>(
+    null
+  );
   const [loading, setLoading] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState<'start' | 'end' | null>(null);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  const nameShake = useSharedValue(0);
-  const destinationShake = useSharedValue(0);
-  const endDateShake = useSharedValue(0);
-
-  const { theme } = useTheme();
-
-  useEffect(() => {
-    const hasChanges = Object.keys(trip).some((key) => {
-      const k = key as keyof Trip;
-      if (k === 'startDate' || k === 'endDate') {
-        return trip[k].getTime() !== initialTripState[k].getTime();
-      }
-      return trip[k] !== initialTripState[k];
-    });
-    setHasUnsavedChanges(hasChanges);
-  }, [trip]);
-
-  const resetForm = () => {
-    setTrip(initialTripState);
-    setErrors({});
-    setHasUnsavedChanges(false);
-  };
-
-  const handleClose = () => {
-    if (!hasUnsavedChanges) {
-      onClose();
-      return;
+  /**
+   * Handle the selection of a date from the DateTimePicker
+   */
+  const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(null);
     }
 
-    Alert.alert(
-      'Unsaved Changes',
-      'You have unsaved changes. Are you sure you want to discard them?',
-      [
-        { text: Platform.OS === 'ios' ? 'Keep Editing' : 'Cancel', style: 'cancel' },
-        { text: 'Discard', style: 'destructive', onPress: () => {
-          resetForm();
-          onClose();
-        }},
-      ],
-    );
+    if (!selectedDate || !showDatePicker) return;
+
+    const dateKey = showDatePicker === 'start' ? 'startDate' : 'endDate';
+    setTrip((prev) => ({
+      ...prev,
+      [dateKey]: selectedDate.toISOString(),
+    }));
   };
 
-  const validateForm = (): boolean => {
-    const newErrors: FormErrors = {};
-    let isValid = true;
-
+  /**
+   * Optional: Basic form validation before submitting
+   */
+  const validateForm = () => {
     if (!trip.name.trim()) {
-      newErrors.name = 'Trip name is required';
-      nameShake.value = withSequence(withTiming(10), withTiming(-10), withTiming(0));
-      isValid = false;
+      Alert.alert('Validation Error', 'Please enter a trip name.');
+      return false;
     }
-
     if (!trip.destination.trim()) {
-      newErrors.destination = 'Destination is required';
-      destinationShake.value = withSequence(withTiming(10), withTiming(-10), withTiming(0));
-      isValid = false;
+      Alert.alert('Validation Error', 'Please enter a destination.');
+      return false;
     }
-
-    if (trip.endDate < trip.startDate) {
-      newErrors.endDate = 'End date must be after start date';
-      endDateShake.value = withSequence(withTiming(10), withTiming(-10), withTiming(0));
-      isValid = false;
+    if (new Date(trip.endDate) < new Date(trip.startDate)) {
+      Alert.alert('Validation Error', 'End date must be after start date.');
+      return false;
     }
-
-    setErrors(newErrors);
-    return isValid;
+    return true;
   };
 
+  /**
+   * Submit the trip data to the parent via onSubmit
+   */
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
     setLoading(true);
     try {
       await onSubmit(trip);
-      resetForm();
-      onClose();
+      onClose(); // Close the modal after successful submit
     } catch (error) {
       Alert.alert('Error', 'Failed to create trip. Please try again.');
     } finally {
@@ -127,319 +101,203 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
     }
   };
 
-  const onDateChange = (event: DateTimePickerEvent, selectedDate: Date | undefined) => {
-    if (Platform.OS === 'android') {
-      setShowDatePicker(null);
-    }
-
-    if (selectedDate && showDatePicker) {
-      const dateKey = showDatePicker === 'start' ? 'startDate' : 'endDate';
-      setTrip((prev) => ({
-        ...prev,
-        [dateKey]: selectedDate,
-      }));
-      setErrors((prev) => ({ ...prev, endDate: undefined }));
-    }
+  /**
+   * Dismiss the modal, optionally checking for unsaved changes if desired
+   */
+  const handleDismiss = () => {
+    onClose();
   };
 
-  const nameAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: nameShake.value }],
-  }));
-
-  const destinationAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: destinationShake.value }],
-  }));
-
-  const endDateAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: endDateShake.value }],
-  }));
-
   return (
-    <Modal
-      animationType="slide"
-      transparent={true}
-      visible={visible}
-      onRequestClose={handleClose}
-    >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
+    <Portal>
+      {/* 
+        contentContainerStyle + marginTop:'auto' + borderRadius 
+        creates a bottom-sheet–like effect
+      */}
+      <Modal
+        visible={visible}
+        onDismiss={handleDismiss}
+        contentContainerStyle={[
+          styles.modalContainer,
+          { backgroundColor: theme.colors.background },
+        ]}
       >
-        <ThemedView
-          style={{
-            flex: 1,
-            justifyContent: 'flex-end',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          }}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ maxHeight: '90%' }}
         >
-          <ThemedView
-            style={{
-              backgroundColor: theme.colors.background,
-              borderTopLeftRadius: 20,
-              borderTopRightRadius: 20,
-              padding: 20,
-              maxHeight: '90%',
-              ...Platform.select({
-                ios: {
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: -2 },
-                  shadowOpacity: 0.25,
-                  shadowRadius: 4,
-                },
-                android: {
-                  elevation: 5,
-                },
-              }),
-            }}
-          >
-            <ThemedView
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: 20,
-                paddingHorizontal: 4,
-              }}
-            >
-              <ThemedText
-                style={{
-                  fontSize: 20,
-                  fontWeight: '600',
-                  color: theme.colors.onBackground,
-                }}
-              >
-                New Trip
-              </ThemedText>
-              <Pressable 
-                onPress={handleClose}
-                accessibilityLabel="Close modal"
-                accessibilityRole="button"
-              >
-                <IconSymbol
-                  name={Platform.OS === 'ios' ? 'xmark.circle.fill' : 'close'}
-                  size={24}
-                  color={theme.colors.primary}
-                />
-              </Pressable>
-            </ThemedView>
+          {/* 
+            Optional: Press outside the sheet to dismiss (like a transparent overlay).
+            This can be done with an absolutely-positioned Pressable if you wish.
+          */}
+          <Pressable style={StyleSheet.absoluteFill} onPress={handleDismiss} />
+
+          <View style={styles.contentWrapper}>
+            {/* Drag handle style bar — purely decorative */}
+            <View style={styles.dragHandleWrapper}>
+              <View style={styles.dragHandle} />
+            </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              <ThemedView style={{ gap: 16 }}>
-                {/* Name Input */}
-                <ThemedView style={{ gap: 8 }}>
-                  <ThemedText style={{ 
-                    fontSize: 16,
-                    fontWeight: '500',
-                    color: theme.colors.onBackground,
-                  }}>
-                    Trip Name*
-                  </ThemedText>
-                  <Animated.View style={nameAnimatedStyle}>
-                    <TextInput
-                      style={{
-                        borderWidth: 1,
-                        borderColor: errors.name ? theme.colors.error : theme.colors.primary,
-                        borderRadius: 8,
-                        padding: 12,
-                        fontSize: 16,
-                        backgroundColor: theme.colors.surface,
-                        color: theme.colors.onSurface,
-                      }}
-                      value={trip.name}
-                      onChangeText={(text) => {
-                        setTrip(prev => ({ ...prev, name: text }));
-                        setErrors(prev => ({ ...prev, name: undefined }));
-                      }}
-                      placeholder="Enter trip name"
-                      placeholderTextColor={theme.colors.onSurfaceVariant}
-                    />
-                  </Animated.View>
-                  {errors.name && (
-                    <ThemedText style={{
-                      color: theme.colors.error,
-                      fontSize: 12,
-                      marginTop: 4,
-                    }}>
-                      {errors.name}
-                    </ThemedText>
-                  )}
-                </ThemedView>
+              {/* Header row with a title & close button */}
+              <View style={styles.headerRow}>
+                <Text variant="titleLarge" style={styles.headerTitle}>
+                  New Trip
+                </Text>
+                <Pressable onPress={handleDismiss} style={styles.closeButton}>
+                  <Text style={{ fontSize: 18 }}>✕</Text>
+                </Pressable>
+              </View>
 
-                {/* Destination Input */}
-                <ThemedView style={{ gap: 8 }}>
-                  <ThemedText style={{
-                    fontSize: 16,
-                    fontWeight: '500',
-                    color: theme.colors.onBackground,
-                  }}>
-                    Destination*
-                  </ThemedText>
-                  <Animated.View style={destinationAnimatedStyle}>
-                    <TextInput
-                      style={{
-                        borderWidth: 1,
-                        borderColor: errors.destination ? theme.colors.error : theme.colors.primary,
-                        borderRadius: 8,
-                        padding: 12,
-                        fontSize: 16,
-                        backgroundColor: theme.colors.surface,
-                        color: theme.colors.onSurface,
-                      }}
-                      value={trip.destination}
-                      onChangeText={(text) => {
-                        setTrip(prev => ({ ...prev, destination: text }));
-                        setErrors(prev => ({ ...prev, destination: undefined }));
-                      }}
-                      placeholder="Where are you going?"
-                      placeholderTextColor={theme.colors.onSurfaceVariant}
-                    />
-                  </Animated.View>
-                  {errors.destination && (
-                    <ThemedText style={{
-                      color: theme.colors.error,
-                      fontSize: 12,
-                      marginTop: 4,
-                    }}>
-                      {errors.destination}
-                    </ThemedText>
-                  )}
-                </ThemedView>
+              {/* Trip Name */}
+              <TextInput
+                mode="outlined"
+                label="Trip Name*"
+                value={trip.name}
+                onChangeText={(text) => setTrip((prev) => ({ ...prev, name: text }))}
+                style={styles.textInput}
+              />
 
-                {/* Description Input */}
-                <ThemedView style={{ gap: 8 }}>
-                  <ThemedText style={{
-                    fontSize: 16,
-                    fontWeight: '500',
-                    color: theme.colors.onBackground,
-                  }}>
-                    Description
-                  </ThemedText>
-                  <TextInput
-                    style={{
-                      borderWidth: 1,
-                      borderColor: theme.colors.primary,
-                      borderRadius: 8,
-                      padding: 12,
-                      fontSize: 16,
-                      backgroundColor: theme.colors.surface,
-                      color: theme.colors.onSurface,
-                      height: 100,
-                      textAlignVertical: 'top',
-                    }}
-                    value={trip.description}
-                    onChangeText={(text) => setTrip(prev => ({ ...prev, description: text }))}
-                    placeholder="Add some details about your trip"
-                    placeholderTextColor={theme.colors.onSurfaceVariant}
-                    multiline
-                    numberOfLines={4}
-                  />
-                </ThemedView>
+              {/* Destination */}
+              <TextInput
+                mode="outlined"
+                label="Destination*"
+                value={trip.destination}
+                onChangeText={(text) => setTrip((prev) => ({ ...prev, destination: text }))}
+                style={styles.textInput}
+              />
 
-                {/* Date Inputs */}
-                <ThemedView style={{ gap: 8 }}>
-                  <ThemedText style={{
-                    fontSize: 16,
-                    fontWeight: '500',
-                    color: theme.colors.onBackground,
-                  }}>
+              {/* Description */}
+              <TextInput
+                mode="outlined"
+                label="Description"
+                value={trip.description}
+                onChangeText={(text) => setTrip((prev) => ({ ...prev, description: text }))}
+                multiline
+                numberOfLines={4}
+                style={[styles.textInput, { height: 100 }]}
+              />
+
+              {/* Row of start & end date pickers */}
+              <View style={styles.dateRow}>
+                <View style={[styles.dateField, { marginRight: 8 }]}>
+                  <Text variant="labelLarge" style={styles.dateLabel}>
                     Start Date*
-                  </ThemedText>
+                  </Text>
                   <Pressable
                     onPress={() => setShowDatePicker('start')}
-                    style={{
-                      borderWidth: 1,
-                      borderColor: theme.colors.primary,
-                      borderRadius: 8,
-                      padding: 12,
-                      backgroundColor: theme.colors.surface,
-                    }}
+                    style={styles.dateDisplay}
                   >
-                    <ThemedText>{format(trip.startDate, 'MMM dd, yyyy')}</ThemedText>
+                    <Text style={{ color: theme.colors.onSurface }}>
+                      {format(new Date(trip.startDate), 'MMM dd, yyyy')}
+                    </Text>
                   </Pressable>
-                </ThemedView>
+                </View>
 
-                <ThemedView style={{ gap: 8 }}>
-                  <ThemedText style={{
-                    fontSize: 16,
-                    fontWeight: '500',
-                    color: theme.colors.onBackground,
-                  }}>
+                <View style={styles.dateField}>
+                  <Text variant="labelLarge" style={styles.dateLabel}>
                     End Date*
-                  </ThemedText>
-                  <Animated.View style={endDateAnimatedStyle}>
-                    <Pressable
-                      onPress={() => setShowDatePicker('end')}
-                      style={{
-                        borderWidth: 1,
-                        borderColor: errors.endDate ? theme.colors.error : theme.colors.primary,
-                        borderRadius: 8,
-                        padding: 12,
-                        backgroundColor: theme.colors.surface,
-                      }}
-                    >
-                      <ThemedText>{format(trip.endDate, 'MMM dd, yyyy')}</ThemedText>
-                    </Pressable>
-                  </Animated.View>
-                  {errors.endDate && (
-                    <ThemedText style={{
-                      color: theme.colors.error,
-                      fontSize: 12,
-                      marginTop: 4,
-                    }}>
-                      {errors.endDate}
-                    </ThemedText>
-                  )}
-                </ThemedView>
-
-                {/* Date Picker */}
-                {(showDatePicker || Platform.OS === 'ios') && (
-                  <DateTimePicker
-                    value={showDatePicker === 'start' ? trip.startDate : trip.endDate}
-                    mode="date"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    onChange={onDateChange}
-                    minimumDate={showDatePicker === 'end' ? trip.startDate : undefined}
-                  />
-                )}
-
-                {/* Submit Button */}
-                <ThemedView style={{ 
-                  marginTop: 24,
-                  marginBottom: Platform.OS === 'ios' ? 34 : 24,
-                }}>
+                  </Text>
                   <Pressable
-                    style={{
-                      backgroundColor: theme.colors.primary,
-                      padding: 16,
-                      borderRadius: 8,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      minHeight: 50,
-                      opacity: loading ? 0.7 : 1,
-                    }}
-                    onPress={handleSubmit}
-                    disabled={loading}
-                    accessibilityLabel="Create trip"
-                    accessibilityRole="button"
+                    onPress={() => setShowDatePicker('end')}
+                    style={styles.dateDisplay}
                   >
-                    {loading ? (
-                      <ActivityIndicator color={theme.colors.onPrimary} />
-                    ) : (
-                      <ThemedText style={{
-                        color: theme.colors.onPrimary,
-                        fontSize: 16,
-                        fontWeight: '600',
-                      }}>
-                        Create Trip
-                      </ThemedText>
-                    )}
+                    <Text style={{ color: theme.colors.onSurface }}>
+                      {format(new Date(trip.endDate), 'MMM dd, yyyy')}
+                    </Text>
                   </Pressable>
-                </ThemedView>
-              </ThemedView>
+                </View>
+              </View>
+
+              {/* Actual DateTimePicker */}
+              {showDatePicker && (
+                <DateTimePicker
+                  value={
+                    showDatePicker === 'start'
+                      ? new Date(trip.startDate)
+                      : new Date(trip.endDate)
+                  }
+                  mode="date"
+                  display="default"
+                  onChange={handleDateChange}
+                  minimumDate={
+                    showDatePicker === 'end'
+                      ? new Date(trip.startDate)
+                      : undefined
+                  }
+                />
+              )}
+
+              {/* Submit Button */}
+              <Button
+                mode="contained"
+                onPress={handleSubmit}
+                loading={loading}
+                style={styles.submitButton}
+              >
+                Create Trip
+              </Button>
             </ScrollView>
-          </ThemedView>
-        </ThemedView>
-      </KeyboardAvoidingView>
-    </Modal>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+    </Portal>
   );
 }
+
+const styles = StyleSheet.create({
+  modalContainer: {
+    // Position the modal at bottom of screen for a bottom sheet look
+    marginTop: 'auto',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+  contentWrapper: {
+    padding: 16,
+    paddingBottom: 24,
+  },
+  dragHandleWrapper: {
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  dragHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#ccc',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontWeight: '600',
+  },
+  closeButton: {
+    padding: 8,
+  },
+  textInput: {
+    marginTop: 12,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    marginTop: 16,
+  },
+  dateField: {
+    flex: 1,
+  },
+  dateLabel: {
+    marginBottom: 4,
+  },
+  dateDisplay: {
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#999',
+    justifyContent: 'center',
+  },
+  submitButton: {
+    marginTop: 24,
+  },
+});
