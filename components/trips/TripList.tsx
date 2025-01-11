@@ -20,9 +20,10 @@ interface Props {
 
 export function TripList({ onTripPress, style }: Props) {
   const { theme } = useTheme();
-  const { trips, loading, fetchTrips } = useTripStore();
+  const { trips, loading, fetchTrips, createTrip } = useTripStore();
   const { token } = useAuthStore();
   const [refreshing, setRefreshing] = useState(false);
+  const [isCreateModalVisible, setCreateModalVisible] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -60,6 +61,22 @@ export function TripList({ onTripPress, style }: Props) {
       { title: 'Past Trips', data: pastTrips },
     ].filter(section => section.data.length > 0);
   }, [trips]);
+
+  const handleCreateTrip = () => {
+    setCreateModalVisible(true);
+  };
+  const handleModalClose = () => {
+    setCreateModalVisible(false);
+  };
+  const handleTripSubmit = async (tripData: Trip) => {
+    try {
+      await createTrip(tripData);
+      setCreateModalVisible(false);
+    } catch (error) {
+      console.error('Failed to create trip:', error);
+      // Optionally show an error message to the user
+    }
+  };
 
   if (loading && !refreshing) {
     return (
@@ -112,6 +129,7 @@ export function TripList({ onTripPress, style }: Props) {
           </ThemedText>
         </ThemedView>
       )}
+      
     </ThemedView>
   );
 }
