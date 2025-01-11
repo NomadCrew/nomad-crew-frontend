@@ -12,22 +12,42 @@ import { useTheme } from '@/src/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedView } from '@/components/ThemedView';
 import { TripList } from '@/components/trips/TripList';
-import { DUMMY_TRIPS } from '@/src/data/dummy-trips';
 import { Trip } from '@/src/types/trip';
 import { Theme } from '@/src/theme/types';
+import { useTripStore } from '@/src/store/useTripStore';
+import CreateTripModal from '@/components/trips/CreateTripModal';
+import { useAuthStore } from '@/src/store/useAuthStore';
+import { ActivityIndicator } from 'react-native';
+
 
 export default function TripsScreen() {
-  const [activeTab, setActiveTab] = useState('Active');
+  const [activeTab, setActiveTab] = useState<'Active' | 'Recent' | 'Cancelled'>('Active');
   const [searchExpanded, setSearchExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const { theme } = useTheme();
   const screenWidth = Dimensions.get('window').width;
+  const { token, isInitialized } = useAuthStore();
 
   const searchWidth = useRef(new Animated.Value(40)).current;
 
+  // State for Create Trip Modal
+  const [isCreateModalVisible, setCreateModalVisible] = useState(false);
+
+  // Import trips and fetchTrips from the store
+  const { trips, fetchTrips, createTrip, loading: tripsLoading } = useTripStore();
+
+  // Fetch trips when component mounts
+  useEffect(() => {
+    if (isInitialized && token) {
+      fetchTrips();
+    } else {
+      console.log('Auth not initialized or token not available yet.');
+    }
+  }, [fetchTrips, token, isInitialized]);
+
   const toggleSearch = () => {
     Animated.timing(searchWidth, {
-      toValue: searchExpanded ? 40 : screenWidth * 0.7, 
+      toValue: searchExpanded ? 40 : screenWidth * 0.7,
       duration: 300,
       useNativeDriver: false,
     }).start(() => {
@@ -40,43 +60,66 @@ export default function TripsScreen() {
 
   // Filter trips based on active tab and search query
   const filteredTrips = React.useMemo(() => {
-    let filtered = [...DUMMY_TRIPS];
-    
+    let filtered = [...trips];
+
     // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(trip => 
+      filtered = filtered.filter((trip) =>
         trip.name.toLowerCase().includes(query) ||
-        trip.destination.toLowerCase().includes(query)
+        (trip.destination && trip.destination.toLowerCase().includes(query))
       );
     }
 
     // Filter by tab
     switch (activeTab) {
       case 'Active':
-        return filtered.filter(trip => trip.status === 'ACTIVE');
+        return filtered.filter((trip) => trip.status === 'ACTIVE');
       case 'Recent':
-        return filtered.filter(trip => 
-          trip.status === 'COMPLETED' || 
-          new Date(trip.endDate) < new Date()
+        return filtered.filter(
+          (trip) =>
+            trip.status === 'COMPLETED' || new Date(trip.endDate) < new Date()
         );
       case 'Cancelled':
-        return filtered.filter(trip => trip.status === 'CANCELLED');
+        return filtered.filter((trip) => trip.status === 'CANCELLED');
       default:
         return filtered;
     }
-  }, [DUMMY_TRIPS, activeTab, searchQuery]);
+  }, [trips, activeTab, searchQuery]);
 
   const handleTripPress = (trip: Trip) => {
     // Navigate to trip details
     console.log('Navigate to trip:', trip.id);
+    // You can use your navigation logic here
+    // e.g., navigation.navigate('TripDetails', { tripId: trip.id });
   };
 
   const handleCreateTrip = () => {
-    console.log('Create new trip');
+    setCreateModalVisible(true);
+  };
+
+  const handleModalClose = () => {
+    setCreateModalVisible(false);
+  };
+
+  const handleTripSubmit = async (tripData: Trip) => {
+    try {
+      await createTrip({
+        name: tripData.name,
+        description: tripData.description,
+        destination: tripData.destination,
+        startDate: tripData.startDate,
+        endDate: tripData.endDate,
+      });
+      setCreateModalVisible(false);
+    } catch (error) {
+      console.error('Failed to create trip:', error);
+      // Optionally, show an error message to the user
+    }
   };
 
   return (
+    
     <SafeAreaView style={styles(theme, screenWidth).container}>
       <ThemedView style={styles(theme, screenWidth).header}>
         {/* Header Title */}
@@ -85,16 +128,8 @@ export default function TripsScreen() {
         </Text>
 
         {/* Animated Search Bar */}
-        <Animated.View
-          style={[
-            styles(theme).searchBar,
-            { width: searchWidth },
-          ]}
-        >
-          <TouchableOpacity
-            onPress={toggleSearch}
-            style={styles(theme).searchIcon}
-          >
+        <Animated.View style={[styles(theme).searchBar, { width: searchWidth }]}>
+          <TouchableOpacity onPress={toggleSearch} style={styles(theme).searchIcon}>
             <Ionicons
               name={searchExpanded ? 'close-outline' : 'search-outline'}
               size={20}
@@ -119,7 +154,7 @@ export default function TripsScreen() {
         {['Active', 'Recent', 'Cancelled'].map((tab) => (
           <TouchableOpacity
             key={tab}
-            onPress={() => setActiveTab(tab)}
+            onPress={() => setActiveTab(tab as 'Active' | 'Recent' | 'Cancelled')}
             style={[
               styles(theme).tabButton,
               activeTab === tab && styles(theme).activeTabButton,
@@ -145,16 +180,20 @@ export default function TripsScreen() {
       />
 
       {/* FAB */}
-      <TouchableOpacity 
-        style={styles(theme).fab}
-        onPress={handleCreateTrip}
-      >
+      <TouchableOpacity style={styles(theme).fab} onPress={handleCreateTrip}>
         <Ionicons
           name="add-outline"
           size={24}
           color={theme.colors.primary.onPrimary}
         />
       </TouchableOpacity>
+
+      {/* Create Trip Modal */}
+      <CreateTripModal
+        visible={isCreateModalVisible}
+        onClose={handleModalClose}
+        onSubmit={handleTripSubmit}
+      />
     </SafeAreaView>
   );
 }
@@ -167,8 +206,8 @@ const styles = (theme: Theme, screenWidth?: number) =>
     },
     header: {
       flexDirection: 'row',
-      alignItems: 'flex-end', 
-      justifyContent: 'space-between', 
+      alignItems: 'flex-end',
+      justifyContent: 'space-between',
       paddingHorizontal: theme.spacing.layout.screen.padding,
       marginBottom: theme.spacing.layout.section.gap,
       backgroundColor: theme.colors.surface.variant,
@@ -241,5 +280,8 @@ const styles = (theme: Theme, screenWidth?: number) =>
       shadowOffset: { width: 0, height: 4 },
       shadowRadius: 1,
       elevation: 5,
+    },
+    listContainer: {
+      flex: 1,
     },
   });
