@@ -57,10 +57,17 @@ export class BaseApiClient {
       },
       (error: AxiosError) => {
         if (__DEV__) {
-          console.error('❌ Response Error:', {
+          console.error('❌ Response Error Details:', {
             message: error.message,
             response: error.response?.data,
             status: error.response?.status,
+            headers: error.response?.headers,
+            requestHeaders: {
+              ...error.config?.headers,
+              Authorization: error.config?.headers?.Authorization ? 
+                `Bearer ${error.config.headers.Authorization.split(' ')[1].substring(0, 20)}...` : 
+                undefined
+            }
           });
         }
 
