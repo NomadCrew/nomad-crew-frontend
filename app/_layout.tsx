@@ -1,7 +1,6 @@
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { Provider as PaperProvider } from 'react-native-paper';
-import { useFonts } from 'expo-font';
-import { SplashScreen, Stack, useSegments, useRouter } from 'expo-router';
+import { Stack, useSegments, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
 import { ThemeProvider, useTheme } from '@/src/theme/ThemeProvider';
@@ -11,6 +10,7 @@ import AuthErrorBoundary from '@/components/AuthErrorBoundary';
 import { InitialLoadingScreen } from '@/components/InitialLoadingScreen';
 import { supabase } from '@/src/auth/supabaseClient';
 import { useOnboarding } from '@/src/providers/OnboardingProvider';
+import AppInitializer from './AppInitializer';
 
 function RouteGuard({ children }: { children: React.ReactNode }) {
   const segments = useSegments();
@@ -104,43 +104,14 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
-  const { initialize } = useAuthStore();
-  
-  const [fontsLoaded, fontError] = useFonts({
-    'Inter': require('../assets/fonts/Inter/Inter-VariableFont_opsz,wght.ttf'),
-    'Inter-Italic': require('../assets/fonts/Inter/Inter-Italic-VariableFont_opsz,wght.ttf'),
-    'SpaceMono': require('../assets/fonts/SpaceMono-Regular.ttf'),
-    'Manrope': require('../assets/fonts/Manrope/Manrope-VariableFont_wght.ttf'),
-  });
-
-  useEffect(() => {
-    async function initApp() {
-      try {
-        console.log('Starting auth initialization');
-        await initialize();  // Grabs or refreshes session
-        if (fontsLoaded || fontError) {
-          console.log('Hiding splash screen');
-          await SplashScreen.hideAsync();
-        }
-      } catch (error) {
-        console.error('Failed to initialize:', error);
-      }
-    }
-
-    initApp();
-  }, [initialize, fontsLoaded, fontError]);
-
-  if (!fontsLoaded && !fontError) {
-    console.log('Fonts not loaded yet');
-    return null;
-  }
-
   return (
     <PaperProvider>
       <OnboardingProvider>
         <ThemeProvider>
           <AuthErrorBoundary>
-            <RootLayoutNav />
+            <AppInitializer>
+              <RootLayoutNav />
+            </AppInitializer>
           </AuthErrorBoundary>
         </ThemeProvider>
       </OnboardingProvider>
