@@ -8,8 +8,10 @@ export interface Trip {
   startDate: string;
   endDate: string;
   status: TripStatus;
-  createdBy: number; 
+  createdBy: string;
   participantCount: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CreateTripInput {
@@ -45,4 +47,6 @@ export interface CreateTripResponse {
   startDate: Date;
   endDate: Date;
   createdBy: string;
+  createdAt: string;
+  updatedAt: string;
 }
