@@ -7,11 +7,19 @@ export interface Trip {
   destination: string;
   startDate: string;
   endDate: string;
+  participantCount?: number;
   status: TripStatus;
   createdBy: string;
-  participantCount: number;
   createdAt?: string;
   updatedAt?: string;
+  isGhostCard?: boolean;
+}
+export interface UpdateTripStatusRequest {
+    status: TripStatus;
+}
+
+export interface UpdateTripStatusResponse {
+    message: string;
 }
 
 export interface CreateTripInput {

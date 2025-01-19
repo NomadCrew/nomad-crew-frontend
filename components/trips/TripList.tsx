@@ -1,11 +1,9 @@
-import React, { useEffect, useCallback, useState, useMemo } from 'react';
-import { StyleSheet, RefreshControl, ActivityIndicator, ViewStyle } from 'react-native';
+import React, { useMemo } from 'react';
+import { StyleSheet, ActivityIndicator, ViewStyle } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { TripCard } from './TripCard';
-import { useTripStore } from '@/src/store/useTripStore';
-import { useAuthStore } from '@/src/store/useAuthStore';
 import { Trip, TripStatus } from '@/src/types/trip';
 
 interface TripSection {
@@ -14,111 +12,89 @@ interface TripSection {
 }
 
 interface Props {
+  trips: Trip[];
   onTripPress?: (trip: Trip) => void;
   style?: ViewStyle;
 }
 
-export function TripList({ onTripPress, style }: Props) {
+const GHOST_CARD: Trip = {
+  id: 'ghost-spacer',
+  name: 'adad',
+  description: 'asdasd',
+  destination: 'adasd',
+  startDate: new Date().toISOString(),
+  endDate: new Date().toISOString(),
+  status: 'PLANNING',
+  createdBy: 'asdas',
+  isGhostCard: true
+};
+
+export function TripList({ trips, onTripPress, style }: Props) {
   const { theme } = useTheme();
-  const { trips, loading, fetchTrips, createTrip } = useTripStore();
-  const { token } = useAuthStore();
-  const [refreshing, setRefreshing] = useState(false);
-  const [isCreateModalVisible, setCreateModalVisible] = useState(false);
-
-  useEffect(() => {
-    if (!token) return;
-    fetchTrips().catch(console.error);
-  }, [fetchTrips, token]);
-
-  const handleRefresh = useCallback(async () => {
-    if (!token) return;
-    setRefreshing(true);
-    try {
-      await fetchTrips();
-    } finally {
-      setRefreshing(false);
-    }
-  }, [fetchTrips, token]);
 
   const sections = useMemo(() => {
     const now = new Date();
-    
-    const activeTrips = trips.filter(trip => 
-      trip.status === 'ACTIVE'
-    );
-    
-    const upcomingTrips = trips.filter(trip => 
-      trip.status === 'PLANNING' && new Date(trip.startDate) > now
-    );
-    
-    const pastTrips = trips.filter(trip => 
-      trip.status === 'COMPLETED' || new Date(trip.endDate) < now
-    );
-
-    return [
+  
+    const activeTrips = trips.filter(trip => {
+      const startDate = new Date(trip.startDate);
+      const endDate = new Date(trip.endDate);
+      return (
+        (trip.status === 'PLANNING' || trip.status === 'ACTIVE') &&
+        startDate <= now && endDate >= now
+      );
+    });
+  
+    const upcomingTrips = trips.filter(trip => {
+      const startDate = new Date(trip.startDate);
+      return (
+        (trip.status === 'PLANNING' || trip.status === 'ACTIVE') &&
+        startDate > now
+      );
+    });
+  
+    const pastTrips = trips.filter(trip => {
+      const endDate = new Date(trip.endDate);
+      return (
+        (trip.status === 'COMPLETED' || trip.status === 'CANCELLED') ||
+        endDate < now
+      );
+    });
+  
+    // Create sections first
+    let sections = [
       { title: 'Active Trips', data: activeTrips },
       { title: 'Upcoming Trips', data: upcomingTrips },
       { title: 'Past Trips', data: pastTrips },
     ].filter(section => section.data.length > 0);
-  }, [trips]);
-
-  const handleCreateTrip = () => {
-    setCreateModalVisible(true);
-  };
-  const handleModalClose = () => {
-    setCreateModalVisible(false);
-  };
-  const handleTripSubmit = async (tripData: Trip) => {
-    try {
-      await createTrip(tripData);
-      setCreateModalVisible(false);
-    } catch (error) {
-      console.error('Failed to create trip:', error);
-      // Optionally show an error message to the user
+  
+    // Add ghost card to the last section if there are any sections
+    if (sections.length > 0) {
+      const lastSection = sections[sections.length - 1];
+      lastSection.data = [...lastSection.data, GHOST_CARD];
     }
-  };
-
-  if (loading && !refreshing) {
-    return (
-      <ThemedView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary.main} />
-      </ThemedView>
-    );
-  }
-
-  if (!token) {
-    return (
-      <ThemedView style={styles.unauthorizedContainer}>
-        <ThemedText style={{ textAlign: 'center' }}>
-          You must be logged in to view your trips.
-        </ThemedText>
-      </ThemedView>
-    );
-  }
+  
+    return sections;
+  }, [trips]);
 
   return (
     <ThemedView style={[styles.container, style]}>
       {sections.map((section, index) => (
         <ThemedView key={section.title} style={index > 0 ? styles.section : undefined}>
-          <ThemedText 
-            variant="heading.h2" 
-            color="content.primary"
-            style={styles.sectionTitle}
-          >
-            {section.title}
-          </ThemedText>
           {section.data.map((trip) => (
             <TripCard
               key={trip.id}
               trip={trip}
-              onPress={() => onTripPress?.(trip)}
-              style={styles.card}
+              onPress={() => !trip.isGhostCard && onTripPress?.(trip)}
+              style={[
+                styles.card,
+                trip.isGhostCard && styles.ghostCard
+              ]}
             />
           ))}
         </ThemedView>
       ))}
-      
-      {trips.length === 0 && !loading && (
+
+      {trips.length === 0 && (
         <ThemedView style={styles.emptyContainer}>
           <ThemedText
             variant="body.large"
@@ -129,25 +105,14 @@ export function TripList({ onTripPress, style }: Props) {
           </ThemedText>
         </ThemedView>
       )}
-      
     </ThemedView>
   );
 }
 
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  unauthorizedContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
   },
   section: {
     marginTop: 24,
@@ -168,5 +133,12 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     textAlign: 'center',
+  },
+  ghostCard: {
+    backgroundColor: 'transparent',
+    elevation: 0,
+    height: 120,
+    shadowOpacity: 0,
+    borderWidth: 0,
   },
 });
