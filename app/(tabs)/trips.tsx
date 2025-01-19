@@ -22,6 +22,7 @@ import CreateTripModal from '@/components/trips/CreateTripModal';
 import { useAuthStore } from '@/src/store/useAuthStore';
 import { RefreshControl } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
+import Avatar from '@/components/ui/Avatar';
 
 
 export default function TripsScreen() {
@@ -163,9 +164,11 @@ export default function TripsScreen() {
     <SafeAreaView style={styles(theme, screenWidth).container}>
       <ThemedView style={styles(theme, screenWidth).header}>
         {/* Header Title */}
-        <Text style={styles(theme).title} numberOfLines={1}>
-          Trips
-        </Text>
+        <Avatar 
+            user={useAuthStore.getState().user}
+            size="md"
+            style={styles(theme).avatar}
+          />
 
         {/* Animated Search Bar */}
         <Animated.View style={[styles(theme).searchBar, { width: searchWidth }]}>
@@ -274,6 +277,7 @@ const styles = (theme: Theme, screenWidth?: number) =>
       paddingHorizontal: theme.spacing.layout.screen.padding,
       marginBottom: theme.spacing.layout.section.gap,
       backgroundColor: theme.colors.surface.variant,
+      paddingTop: theme.spacing.layout.section.padding,
     },
     title: {
       ...theme.typography.heading.h1,
@@ -349,6 +353,5 @@ const styles = (theme: Theme, screenWidth?: number) =>
     },
     listContentContainer: {
       flexGrow: 1,
-      // paddingBottom: 100, // Add padding for FAB
     },
   });

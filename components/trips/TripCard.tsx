@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, Pressable, View, Text, Platform, ViewStyle } from 'react-native';
-import { format } from 'date-fns';
-import { MapPin, Calendar, Users } from 'lucide-react-native';
+import { differenceInDays, formatDistanceToNow, isAfter, isBefore, format } from 'date-fns';
+import { CalendarClock, Users, MapPin, Clock } from 'lucide-react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { TripStatusBadge } from './TripStatusBadge';
 import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
@@ -26,6 +26,36 @@ interface TripCardProps {
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
+const getTripTiming = (startDate: string, endDate: string) => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const now = new Date();
+  
+  // For Active trips
+  if (isBefore(start, now) && isAfter(end, now)) {
+    const daysLeft = differenceInDays(end, now);
+    return `${daysLeft} days remaining`;
+  }
+  
+  // For Upcoming trips
+  if (isAfter(start, now)) {
+    return `Starts ${formatDistanceToNow(start, { addSuffix: true })}`;
+  }
+  
+  // For Past trips
+  if (isBefore(end, now)) {
+    const duration = differenceInDays(end, start);
+    return `${duration} day trip`;
+  }
+  
+  return '';
+};
+
+const getDurationString = (startDate: string, endDate: string) => {
+  const duration = differenceInDays(new Date(endDate), new Date(startDate));
+  return `${duration} day${duration !== 1 ? 's' : ''}`;
+};
+
 export const TripCard: React.FC<TripCardProps> = ({
   trip,
   onPress,
@@ -39,10 +69,13 @@ export const TripCard: React.FC<TripCardProps> = ({
   }));
 
   const styles = makeStyles(theme);
-
+  
   if (trip.isGhostCard) {
     return <View style={[styles.container, styles.ghostCard, style]} />;
   }
+
+  const timing = getTripTiming(trip.startDate, trip.endDate);
+  const duration = getDurationString(trip.startDate, trip.endDate);
 
   const InfoRow = ({ icon: Icon, text }: { icon: typeof MapPin; text: string }) => (
     <View style={styles.infoRow}>
@@ -62,6 +95,7 @@ export const TripCard: React.FC<TripCardProps> = ({
       onPress={onPress}
       style={[styles.container, style, animatedStyle]}
     >
+      {/* Header Section */}
       <View style={styles.header}>
         <Text style={styles.title} numberOfLines={1}>
           {trip.name}
@@ -69,21 +103,27 @@ export const TripCard: React.FC<TripCardProps> = ({
         <TripStatusBadge status={trip.status} />
       </View>
 
+      {/* Info Section */}
       <View style={styles.detailsContainer}>
         <InfoRow 
           icon={MapPin} 
           text={trip.destination} 
         />
+        
+        <InfoRow 
+          icon={CalendarClock} 
+          text={timing}
+        />
 
         <InfoRow 
-          icon={Calendar} 
-          text={`${format(new Date(trip.startDate), 'MMM d')} - ${format(new Date(trip.endDate), 'MMM d, yyyy')}`} 
+          icon={Clock} 
+          text={duration}
         />
 
         {trip.participantCount && (
           <InfoRow 
             icon={Users} 
-            text={`${trip.participantCount} participants`} 
+            text={`${trip.participantCount} participant${trip.participantCount !== 1 ? 's' : ''}`} 
           />
         )}
       </View>
