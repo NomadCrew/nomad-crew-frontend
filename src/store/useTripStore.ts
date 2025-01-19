@@ -5,6 +5,8 @@ import {
   CreateTripInput,
   UpdateTripInput,
   TripStatus,
+  UpdateTripStatusRequest,
+  UpdateTripStatusResponse,
 } from '@/src/types/trip';
 import { API_PATHS } from '@/src/utils/api-paths';
 
@@ -31,9 +33,13 @@ export const useTripStore = create<TripState>((set, get) => ({
   createTrip: async (tripData: CreateTripInput) => {
     set({ loading: true, error: null });
     try {
-      const response = await api.post<Trip>(API_PATHS.trips.create, tripData);
-      set((state) => ({
+      const response = await api.post<Trip>(API_PATHS.trips.create, {
+        ...tripData,
+        status: 'PLANNING' as TripStatus,
+      });
+      set(state => ({
         trips: [...state.trips, response.data],
+        loading: false,
       }));
       return response.data;
     } catch (error) {
@@ -103,22 +109,26 @@ export const useTripStore = create<TripState>((set, get) => ({
     return get().trips.find((trip) => trip.id === id);
   },
 
-  updateTripStatus: async (id, status) => {
+  updateTripStatus: async (id: string, status: TripStatus) => {
     set({ loading: true, error: null });
     try {
-      await api.patch(`/v1/trips/${id}/status`, { status });
-      set((state) => ({
-        trips: state.trips.map((trip) =>
-          trip.id === id ? { ...trip, status } : trip
-        ),
-      }));
+        const response = await api.patch<UpdateTripStatusResponse>(
+            `${API_PATHS.trips.updateStatus(id)}`,
+            { status } as UpdateTripStatusRequest
+        );
+
+        // Update trip in local state
+        const trips = get().trips.map(trip => 
+            trip.id === id ? { ...trip, status } : trip
+        );
+        
+        set({ trips });
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Failed to update trip status';
-      set({ error: message });
-      throw error;
+        const message = error instanceof Error ? error.message : 'Failed to update trip status';
+        set({ error: message });
+        throw error;
     } finally {
-      set({ loading: false });
+        set({ loading: false });
     }
-  },
+},
 }));

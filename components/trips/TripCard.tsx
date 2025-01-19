@@ -1,25 +1,23 @@
 import React, { useState } from 'react';
-import { StyleSheet, Pressable, Platform } from 'react-native';
+import { StyleSheet, Pressable, View, Text, Platform, ViewStyle } from 'react-native';
 import { format } from 'date-fns';
-import { MapPin, Calendar, Users, ChevronRight } from 'lucide-react-native';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { MapPin, Calendar, Users } from 'lucide-react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import Animated, { 
-  useAnimatedStyle, 
-  withSpring,
-  interpolate
-} from 'react-native-reanimated';
+import { TripStatusBadge } from './TripStatusBadge';
+import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { TripStatus } from '@/src/types/trip';
 
 interface TripCardProps {
   trip: {
-    id: number;
+    id: string;
     name: string;
     description?: string;
     destination: string;
-    startDate: Date;
-    endDate: Date;
+    startDate: string;
+    endDate: string;
     participantCount?: number;
+    status: TripStatus;
+    isGhostCard?: boolean;
   };
   onPress?: () => void;
   expanded?: boolean;
@@ -40,6 +38,23 @@ export const TripCard: React.FC<TripCardProps> = ({
     transform: [{ scale: withSpring(pressed ? 0.98 : 1) }],
   }));
 
+  const styles = makeStyles(theme);
+
+  if (trip.isGhostCard) {
+    return <View style={[styles.container, styles.ghostCard, style]} />;
+  }
+
+  const InfoRow = ({ icon: Icon, text }: { icon: typeof MapPin; text: string }) => (
+    <View style={styles.infoRow}>
+      <Icon 
+        size={18} 
+        color={theme.colors.content.secondary}
+        strokeWidth={1.5}
+      />
+      <Text style={styles.infoText}>{text}</Text>
+    </View>
+  );
+
   return (
     <AnimatedPressable
       onPressIn={() => setPressed(true)}
@@ -47,71 +62,45 @@ export const TripCard: React.FC<TripCardProps> = ({
       onPress={onPress}
       style={[styles.container, style, animatedStyle]}
     >
-      {/* Title and Status */}
-      <ThemedView style={styles.header}>
-        <ThemedText 
-          style={styles.title}
-          numberOfLines={1}
-        >
+      <View style={styles.header}>
+        <Text style={styles.title} numberOfLines={1}>
           {trip.name}
-        </ThemedText>
-        
-        <ThemedText style={styles.status}>
-          PAST
-        </ThemedText>
-      </ThemedView>
+        </Text>
+        <TripStatusBadge status={trip.status} />
+      </View>
 
-      {/* Info Rows */}
-      <ThemedView style={styles.detailsContainer}>
-        <ThemedView style={styles.infoRow}>
-          <MapPin 
-            size={18} 
-            color="#9CA3AF"  // Matching the screenshot's gray
-            strokeWidth={1.5}
-          />
-          <ThemedText style={styles.infoText}>
-            {trip.destination}
-          </ThemedText>
-        </ThemedView>
+      <View style={styles.detailsContainer}>
+        <InfoRow 
+          icon={MapPin} 
+          text={trip.destination} 
+        />
 
-        <ThemedView style={styles.infoRow}>
-          <Calendar 
-            size={18} 
-            color="#9CA3AF"
-            strokeWidth={1.5}
-          />
-          <ThemedText style={styles.infoText}>
-            {format(new Date(trip.startDate), 'MMM d')} - {format(new Date(trip.endDate), 'MMM d, yyyy')}
-          </ThemedText>
-        </ThemedView>
+        <InfoRow 
+          icon={Calendar} 
+          text={`${format(new Date(trip.startDate), 'MMM d')} - ${format(new Date(trip.endDate), 'MMM d, yyyy')}`} 
+        />
 
         {trip.participantCount && (
-          <ThemedView style={styles.infoRow}>
-            <Users 
-              size={18} 
-              color="#9CA3AF"
-              strokeWidth={1.5}
-            />
-            <ThemedText style={styles.infoText}>
-              {trip.participantCount} participants
-            </ThemedText>
-          </ThemedView>
+          <InfoRow 
+            icon={Users} 
+            text={`${trip.participantCount} participants`} 
+          />
         )}
-      </ThemedView>
+      </View>
     </AnimatedPressable>
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: Theme) => StyleSheet.create({
   container: {
-    backgroundColor: '#161922', // Matching the dark navy from screenshot
-    borderRadius: 12,
-    marginHorizontal: 16,
-    marginVertical: 8,
-    padding: 16,
+    backgroundColor: theme.colors.surface.variant,
+    borderRadius: theme.spacing.inset.md,
+    marginHorizontal: theme.spacing.inset.md,
+    marginVertical: theme.spacing.inset.sm,
+    padding: theme.spacing.inset.md,
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: theme.colors.content.primary,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 8,
@@ -125,32 +114,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: theme.spacing.stack.md,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    ...theme.typography.heading.h3,
+    color: theme.colors.content.primary,
     flex: 1,
-    marginRight: 12,
-  },
-  status: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    fontWeight: '500',
-    letterSpacing: 0.5,
+    marginRight: theme.spacing.inline.sm,
   },
   detailsContainer: {
-    gap: 12,
+    gap: theme.spacing.stack.sm,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: theme.spacing.inline.sm,
   },
   infoText: {
-    fontSize: 15,
-    color: '#9CA3AF', // Matching the screenshot's text color
+    ...theme.typography.body.medium,
+    color: theme.colors.content.secondary,
     flex: 1,
+  },
+  ghostCard: {
+    backgroundColor: 'transparent',
+    elevation: 0,
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    borderWidth: 0,
   },
 });

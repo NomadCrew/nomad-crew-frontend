@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   StyleSheet,
   TouchableOpacity,
@@ -11,13 +11,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/src/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedView } from '@/components/ThemedView';
+import { ActivityIndicator } from 'react-native';
+import { ThemedText } from '@/components/ThemedText';
 import { TripList } from '@/components/trips/TripList';
 import { Trip } from '@/src/types/trip';
 import { Theme } from '@/src/theme/types';
 import { useTripStore } from '@/src/store/useTripStore';
+import { TripStatus } from '@/src/types/trip';
 import CreateTripModal from '@/components/trips/CreateTripModal';
 import { useAuthStore } from '@/src/store/useAuthStore';
-import { ActivityIndicator } from 'react-native';
+import { RefreshControl } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 
 
 export default function TripsScreen() {
@@ -36,6 +40,8 @@ export default function TripsScreen() {
   // Import trips and fetchTrips from the store
   const { trips, fetchTrips, createTrip, loading: tripsLoading } = useTripStore();
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   // Fetch trips when component mounts
   useEffect(() => {
     if (isInitialized && token) {
@@ -44,6 +50,7 @@ export default function TripsScreen() {
       console.log('Auth not initialized or token not available yet.');
     }
   }, [fetchTrips, token, isInitialized]);
+  
 
   const toggleSearch = () => {
     Animated.timing(searchWidth, {
@@ -61,7 +68,17 @@ export default function TripsScreen() {
   // Filter trips based on active tab and search query
   const filteredTrips = React.useMemo(() => {
     let filtered = [...trips];
-
+    filtered = filtered.map(trip => {
+      let normalizedStatus = trip.status?.toUpperCase();
+      if (normalizedStatus === 'PLANNED') {
+        normalizedStatus = 'PLANNING';
+      }
+      return {
+        ...trip,
+        status: normalizedStatus as TripStatus
+      };
+    });
+  
     // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -70,11 +87,18 @@ export default function TripsScreen() {
         (trip.destination && trip.destination.toLowerCase().includes(query))
       );
     }
-
+  
+    // Normalize status for comparison
+    filtered = filtered.map(trip => ({
+      ...trip,
+      status: trip.status?.toUpperCase() as TripStatus
+    }));
+  
     // Filter by tab
     switch (activeTab) {
       case 'Active':
-        return filtered.filter((trip) => trip.status === 'ACTIVE');
+        return filtered.filter((trip) => 
+          trip.status === 'ACTIVE' || trip.status === 'PLANNING');
       case 'Recent':
         return filtered.filter(
           (trip) =>
@@ -87,12 +111,28 @@ export default function TripsScreen() {
     }
   }, [trips, activeTab, searchQuery]);
 
+  useEffect(() => {
+    console.log('All trips:', trips);
+    console.log('Filtered trips:', filteredTrips);
+  }, [trips, filteredTrips]);
+
   const handleTripPress = (trip: Trip) => {
     // Navigate to trip details
     console.log('Navigate to trip:', trip.id);
     // You can use your navigation logic here
     // e.g., navigation.navigate('TripDetails', { tripId: trip.id });
   };
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await fetchTrips();
+    } catch (error) {
+      console.error('Failed to refresh trips:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [fetchTrips]);
 
   const handleCreateTrip = () => {
     setCreateModalVisible(true);
@@ -108,8 +148,8 @@ export default function TripsScreen() {
         name: tripData.name,
         description: tripData.description,
         destination: tripData.destination,
-        startDate: tripData.startDate,
-        endDate: tripData.endDate,
+        startDate: new Date(tripData.startDate),
+        endDate: new Date(tripData.endDate),
       });
       setCreateModalVisible(false);
     } catch (error) {
@@ -173,11 +213,34 @@ export default function TripsScreen() {
       </ThemedView>
 
       {/* Trip List */}
-      <TripList
-        trips={filteredTrips}
-        onTripPress={handleTripPress}
+      <ScrollView
         style={styles(theme).listContainer}
-      />
+        contentContainerStyle={styles(theme).listContentContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            colors={[theme.colors.primary.main]}
+            tintColor={theme.colors.primary.main}
+            progressBackgroundColor={theme.colors.surface.default}
+          />
+        }
+      >
+        {tripsLoading ? (
+          <ActivityIndicator size="large" color={theme.colors.primary.main} />
+        ) : filteredTrips && filteredTrips.length > 0 ? (
+          <TripList
+            trips={filteredTrips}
+            onTripPress={handleTripPress}
+          />
+        ) : (
+          <ThemedView style={styles(theme).emptyContainer}>
+            <ThemedText style={styles(theme).emptyText}>
+              No trips found for this filter
+            </ThemedText>
+          </ThemedView>
+        )}
+      </ScrollView>
 
       {/* FAB */}
       <TouchableOpacity style={styles(theme).fab} onPress={handleCreateTrip}>
@@ -283,5 +346,9 @@ const styles = (theme: Theme, screenWidth?: number) =>
     },
     listContainer: {
       flex: 1,
+    },
+    listContentContainer: {
+      flexGrow: 1,
+      // paddingBottom: 100, // Add padding for FAB
     },
   });

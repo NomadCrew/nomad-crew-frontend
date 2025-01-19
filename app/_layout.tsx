@@ -1,4 +1,5 @@
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { Stack, useSegments, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -90,16 +91,18 @@ function RootLayoutNav() {
   }
 
   return (
-    <NavigationThemeProvider value={mode === 'dark' ? DarkTheme : DefaultTheme}>
-      <RouteGuard>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        </Stack>
-      </RouteGuard>
-      <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
-    </NavigationThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <NavigationThemeProvider value={mode === 'dark' ? DarkTheme : DefaultTheme}>
+        <RouteGuard>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          </Stack>
+        </RouteGuard>
+        <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
+      </NavigationThemeProvider>
+    </GestureHandlerRootView>
   );
 }
 
