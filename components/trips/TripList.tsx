@@ -116,6 +116,7 @@ const styles = StyleSheet.create({
   },
   section: {
     marginTop: 24,
+    flexGrow: 1,
   },
   sectionTitle: {
     marginBottom: 16,
@@ -124,6 +125,7 @@ const styles = StyleSheet.create({
   card: {
     marginHorizontal: 16,
     marginBottom: 12,
+    flex: 1,
   },
   emptyContainer: {
     flex: 1,

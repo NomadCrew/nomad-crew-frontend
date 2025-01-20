@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Pressable, View, Text, Platform, ViewStyle } from 'react-native';
+import { StyleSheet, Pressable, View, Text, Platform, ViewStyle, ImageBackground } from 'react-native';
 import { differenceInDays, formatDistanceToNow, isAfter, isBefore, format } from 'date-fns';
 import { CalendarClock, Users, MapPin, Clock } from 'lucide-react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
@@ -18,6 +18,7 @@ interface TripCardProps {
     participantCount?: number;
     status: TripStatus;
     isGhostCard?: boolean;
+    backgroundImageUrl?: string;
   };
   onPress?: () => void;
   expanded?: boolean;
@@ -77,67 +78,80 @@ export const TripCard: React.FC<TripCardProps> = ({
   const timing = getTripTiming(trip.startDate, trip.endDate);
   const duration = getDurationString(trip.startDate, trip.endDate);
 
-  const InfoRow = ({ icon: Icon, text }: { icon: typeof MapPin; text: string }) => (
+  const InfoRow = ({ 
+    icon: Icon, 
+    text, 
+    lightText 
+  }: { 
+    icon: typeof MapPin; 
+    text: string; 
+    lightText?: boolean 
+  }) => (
     <View style={styles.infoRow}>
       <Icon 
         size={18} 
-        color={theme.colors.content.secondary}
+        color={lightText ? "#FFFFFF" : theme.colors.content.secondary}
         strokeWidth={1.5}
       />
-      <Text style={styles.infoText}>{text}</Text>
+      <Text style={[
+        styles.infoText, 
+        lightText && styles.lightText
+      ]}>
+        {text}
+      </Text>
     </View>
   );
 
   return (
     <AnimatedPressable
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      onPress={onPress}
-      style={[styles.container, style, animatedStyle]}
+    onPressIn={() => setPressed(true)}
+    onPressOut={() => setPressed(false)}
+    onPress={onPress}
+    style={[styles.container, style, animatedStyle]}
+  >
+    <ImageBackground
+      source={trip.backgroundImageUrl ? { uri: trip.backgroundImageUrl } : require('@/assets/images/splash.png')}
+      style={styles.backgroundImage}
+      imageStyle={styles.backgroundImageStyle}
     >
-      {/* Header Section */}
-      <View style={styles.header}>
-        <Text style={styles.title} numberOfLines={1}>
-          {trip.name}
-        </Text>
-        <TripStatusBadge status={trip.status} />
+      {/* Overlay for better readability */}
+      <View style={styles.overlay}>
+        {/* Header Section */}
+        <View style={styles.header}>
+          <Text style={[styles.title, styles.lightText]} numberOfLines={1}>
+            {trip.name}
+          </Text>
+          <TripStatusBadge status={trip.status} />
+        </View>
+
+        {/* Info Section */}
+        <View style={styles.detailsContainer}>
+          <InfoRow icon={MapPin} text={trip.destination} lightText />
+          <InfoRow icon={CalendarClock} text={timing} lightText />
+          <InfoRow icon={Clock} text={duration} lightText />
+          <InfoRow icon={Users} text={`${trip.participantCount || 1} ${(trip.participantCount || 1) !== 1 ? 's' : ''}`} />
+        </View>
       </View>
+    </ImageBackground>
 
-      {/* Info Section */}
-      <View style={styles.detailsContainer}>
-        <InfoRow 
-          icon={MapPin} 
-          text={trip.destination} 
-        />
-        
-        <InfoRow 
-          icon={CalendarClock} 
-          text={timing}
-        />
-
-        <InfoRow 
-          icon={Clock} 
-          text={duration}
-        />
-
-        {trip.participantCount && (
-          <InfoRow 
-            icon={Users} 
-            text={`${trip.participantCount} participant${trip.participantCount !== 1 ? 's' : ''}`} 
-          />
-        )}
-      </View>
-    </AnimatedPressable>
+  </AnimatedPressable>
   );
 };
 
 const makeStyles = (theme: Theme) => StyleSheet.create({
+  ghostCard: {
+    backgroundColor: 'transparent',
+    elevation: 0,
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    borderWidth: 0,
+  },
   container: {
     backgroundColor: theme.colors.surface.variant,
     borderRadius: theme.spacing.inset.md,
     marginHorizontal: theme.spacing.inset.md,
     marginVertical: theme.spacing.inset.sm,
-    padding: theme.spacing.inset.md,
+    overflow: 'hidden',
     ...Platform.select({
       ios: {
         shadowColor: theme.colors.content.primary,
@@ -149,6 +163,20 @@ const makeStyles = (theme: Theme) => StyleSheet.create({
         elevation: 4,
       },
     }),
+  },
+  backgroundImage: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  backgroundImageStyle: {
+    opacity: 0.5, // Set background image opacity
+  },
+  overlay: {
+    flex: 1,
+    padding: theme.spacing.inset.md,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)', // Semi-transparent black overlay
+    borderRadius: theme.spacing.inset.md,
   },
   header: {
     flexDirection: 'row',
@@ -175,11 +203,10 @@ const makeStyles = (theme: Theme) => StyleSheet.create({
     color: theme.colors.content.secondary,
     flex: 1,
   },
-  ghostCard: {
-    backgroundColor: 'transparent',
-    elevation: 0,
-    shadowColor: 'transparent',
-    shadowOpacity: 0,
-    borderWidth: 0,
+  lightText: {
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10,
   },
 });

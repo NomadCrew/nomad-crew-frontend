@@ -13,6 +13,7 @@ export interface Trip {
   createdAt?: string;
   updatedAt?: string;
   isGhostCard?: boolean;
+  backgroundImageUrl?: string;
 }
 export interface UpdateTripStatusRequest {
     status: TripStatus;
