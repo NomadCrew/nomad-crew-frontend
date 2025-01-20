@@ -170,12 +170,12 @@ const makeStyles = (theme: Theme) => StyleSheet.create({
     height: '100%',
   },
   backgroundImageStyle: {
-    opacity: 0.5, // Set background image opacity
+    opacity: 0.5,
   },
   overlay: {
     flex: 1,
     padding: theme.spacing.inset.md,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)', // Semi-transparent black overlay
+    backgroundColor: 'rgba(77, 78, 69, 0.4)', // Semi-transparent black overlay
     borderRadius: theme.spacing.inset.md,
   },
   header: {
