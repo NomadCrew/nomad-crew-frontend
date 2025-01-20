@@ -41,7 +41,6 @@ export const TripStatusBadge: React.FC<TripStatusBadgeProps> = ({
         <View style={[
             styles.container,
             styles[size],
-            { backgroundColor: statusColor + '20' },
             style
         ]}>
             <Text style={[
@@ -60,6 +59,7 @@ const makeStyles = (theme: Theme) => StyleSheet.create({
     container: {
         borderRadius: theme.spacing.inset.sm,
         alignSelf: 'flex-start',
+        elevation: 5,
     },
     text: {
         ...theme.typography.button.small,
@@ -67,7 +67,7 @@ const makeStyles = (theme: Theme) => StyleSheet.create({
     },
     small: {
         paddingHorizontal: theme.spacing.inset.xs,
-        paddingVertical: theme.spacing.inset.xxs,
+        paddingVertical: theme.spacing.inset.xs,
     },
     medium: {
         paddingHorizontal: theme.spacing.inset.sm,

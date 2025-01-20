@@ -97,7 +97,7 @@ export function TripList({ trips, onTripPress, style }: Props) {
       {trips.length === 0 && (
         <ThemedView style={styles.emptyContainer}>
           <ThemedText
-            variant="body.large"
+            variant="bodyLarge"
             color="content.secondary"
             style={styles.emptyText}
           >
