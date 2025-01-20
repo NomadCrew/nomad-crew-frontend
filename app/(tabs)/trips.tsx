@@ -6,6 +6,7 @@ import {
   TextInput,
   Dimensions,
   Animated,
+  ScrollView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/src/theme';
@@ -21,7 +22,6 @@ import { TripStatus } from '@/src/types/trip';
 import CreateTripModal from '@/components/trips/CreateTripModal';
 import { useAuthStore } from '@/src/store/useAuthStore';
 import { RefreshControl } from 'react-native';
-import { ScrollView } from 'react-native-gesture-handler';
 import Avatar from '@/components/ui/Avatar';
 
 
@@ -125,9 +125,11 @@ export default function TripsScreen() {
   };
 
   const handleRefresh = useCallback(async () => {
+    console.log('Pull-to-refresh triggered'); // Add this log
     setIsRefreshing(true);
     try {
       await fetchTrips();
+      console.log('Refresh completed successfully'); // Add this log
     } catch (error) {
       console.error('Failed to refresh trips:', error);
     } finally {
@@ -217,8 +219,15 @@ export default function TripsScreen() {
 
       {/* Trip List */}
       <ScrollView
-        style={styles(theme).listContainer}
-        contentContainerStyle={styles(theme).listContentContainer}
+        style={[
+          styles(theme).listContainer,
+          { flex: 1 }  // Ensure it takes up available space
+        ]}
+        contentContainerStyle={[
+          styles(theme).listContentContainer,
+          // Only add flexGrow if list is empty
+          trips.length === 0 ? { flexGrow: 1 } : undefined
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -226,8 +235,14 @@ export default function TripsScreen() {
             colors={[theme.colors.primary.main]}
             tintColor={theme.colors.primary.main}
             progressBackgroundColor={theme.colors.surface.default}
+            // Add these props to help with gesture detection
+            enabled={true}
+            progressViewOffset={0}
           />
         }
+        scrollEventThrottle={16}
+        alwaysBounceVertical={true} // iOS specific
+        bounces={true} // iOS specific
       >
         {tripsLoading ? (
           <ActivityIndicator size="large" color={theme.colors.primary.main} />
@@ -350,6 +365,7 @@ const styles = (theme: Theme, screenWidth?: number) =>
     },
     listContainer: {
       flex: 1,
+      paddingTop: 0,
     },
     listContentContainer: {
       flexGrow: 1,
