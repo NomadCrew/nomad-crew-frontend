@@ -107,12 +107,22 @@ export const colorTokens = {
       error: {
         surface: isDark ? colorTokens.red[900] : colorTokens.red[50],
         content: isDark ? colorTokens.red[200] : colorTokens.red[700],
+        background: isDark ? colorTokens.red[800] : colorTokens.red[100],
         border: isDark ? colorTokens.red[800] : colorTokens.red[300],
       },
       success: {
         surface: isDark ? colorTokens.green[900] : colorTokens.green[50],
         content: isDark ? colorTokens.green[200] : colorTokens.green[700],
+        background: isDark ? colorTokens.green[800] : colorTokens.green[100],
         border: isDark ? colorTokens.green[800] : colorTokens.green[300],
+      },
+      planning: {
+        background: isDark ? colorTokens.orange[800] : colorTokens.orange[100],
+        content: isDark ? colorTokens.orange[200] : colorTokens.orange[700]
+      },
+      completed: {
+        background: isDark ? colorTokens.gray[800] : colorTokens.gray[100],
+        content: isDark ? colorTokens.gray[200] : colorTokens.gray[700]
       },
     },
     border: {

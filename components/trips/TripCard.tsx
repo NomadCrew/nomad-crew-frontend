@@ -175,7 +175,7 @@ const makeStyles = (theme: Theme) => StyleSheet.create({
   overlay: {
     flex: 1,
     padding: theme.spacing.inset.md,
-    backgroundColor: 'rgba(77, 78, 69, 0.4)', // Semi-transparent black overlay
+    backgroundColor: 'rgba(77, 78, 69, 0.4)', 
     borderRadius: theme.spacing.inset.md,
   },
   header: {

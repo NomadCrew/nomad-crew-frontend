@@ -98,6 +98,14 @@ function RootLayoutNav() {
             <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
             <Stack.Screen name="(auth)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            {/* Add this new Stack.Screen */}
+            <Stack.Screen 
+              name="trip/[id]" 
+              options={{ 
+                headerShown: false,
+                presentation: 'card'
+              }} 
+            />
           </Stack>
         </RouteGuard>
         <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />

@@ -52,7 +52,7 @@ export default function TabLayout() {
 
           switch (route.name) {
             case 'trips':
-              iconName = focused ? 'briefcase' : 'briefcase-outline';
+              iconName = focused ? 'airplane' : 'airplane-outline';
               break;
             case 'explore':
               iconName = focused ? 'compass' : 'compass-outline';

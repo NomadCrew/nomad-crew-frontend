@@ -8,6 +8,7 @@ import {
   Animated,
   ScrollView
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/src/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -32,6 +33,8 @@ export default function TripsScreen() {
   const { theme } = useTheme();
   const screenWidth = Dimensions.get('window').width;
   const { token, isInitialized } = useAuthStore();
+
+  const router = useRouter();
 
   const searchWidth = useRef(new Animated.Value(40)).current;
 
@@ -118,18 +121,16 @@ export default function TripsScreen() {
   }, [trips, filteredTrips]);
 
   const handleTripPress = (trip: Trip) => {
-    // Navigate to trip details
-    console.log('Navigate to trip:', trip.id);
-    // You can use your navigation logic here
-    // e.g., navigation.navigate('TripDetails', { tripId: trip.id });
+    router.push({
+      pathname: '/trip/[id]',
+      params: { id: trip.id }
+    });
   };
 
   const handleRefresh = useCallback(async () => {
-    console.log('Pull-to-refresh triggered'); // Add this log
     setIsRefreshing(true);
     try {
       await fetchTrips();
-      console.log('Refresh completed successfully'); // Add this log
     } catch (error) {
       console.error('Failed to refresh trips:', error);
     } finally {
