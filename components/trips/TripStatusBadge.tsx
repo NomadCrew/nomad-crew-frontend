@@ -11,37 +11,39 @@ interface TripStatusBadgeProps {
     textStyle?: TextStyle;
 }
 
-export const TripStatusBadge: React.FC<TripStatusBadgeProps> = ({ 
+export const TripStatusBadge: React.FC<TripStatusBadgeProps> = ({
     status,
     size = 'medium',
     style,
-    textStyle
+    textStyle,
 }) => {
     const { theme } = useTheme();
     const styles = makeStyles(theme);
 
-    const getStatusColor = (status: TripStatus) => {
+    const getStatusColorAndBackground = (status: TripStatus, theme: Theme) => {
         switch (status) {
             case 'PLANNING':
-                return theme.colors.primary.main;
+                return { content: theme.colors.status.planning.content, background: theme.colors.status.planning.background };
             case 'ACTIVE':
-                return theme.colors.status.success.content;
+                return { content: theme.colors.status.success.content, background: theme.colors.status.success.background };
             case 'COMPLETED':
-                return theme.colors.content.secondary;
+                return { content: theme.colors.status.completed.content, background: theme.colors.status.completed.background };
             case 'CANCELLED':
-                return theme.colors.status.error.content;
+                return { content: theme.colors.status.error.content, background: theme.colors.status.error.background };
             default:
-                return theme.colors.content.secondary;
+                console.warn(`Unexpected TripStatus: ${status}`);
+                return { content: theme.colors.content.secondary, background: theme.colors.primary.hover };
         }
     };
 
-    const statusColor = getStatusColor(status);
+    const { content: statusColor, background: backgroundColor } = getStatusColorAndBackground(status, theme);
 
     return (
         <View style={[
             styles.container,
             styles[size],
-            style
+            style,
+            { backgroundColor }
         ]}>
             <Text style={[
                 styles.text,
@@ -59,7 +61,7 @@ const makeStyles = (theme: Theme) => StyleSheet.create({
     container: {
         borderRadius: theme.spacing.inset.sm,
         alignSelf: 'flex-start',
-        elevation: 5,
+        // backgroundColor: theme.colors.primary.hover, // Removed - handled dynamically
     },
     text: {
         ...theme.typography.button.small,
