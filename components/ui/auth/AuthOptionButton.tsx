@@ -70,7 +70,6 @@ export function AuthOptionButton({
 const styles = StyleSheet.create({
   button: {
     height: 52,
-    borderBottomWidth: 1,
     width: '100%',
     flexDirection: 'row',
   },
