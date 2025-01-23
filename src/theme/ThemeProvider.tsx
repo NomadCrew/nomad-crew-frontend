@@ -1,9 +1,6 @@
 import React, { createContext, useContext } from 'react';
 import { useColorScheme } from 'react-native';
-import { createSemanticColors } from './foundations/colors';
-import { createSemanticElevation} from './foundations/elevation';
-import { createSemanticSpacing} from './foundations/spacing';
-import { createTypography} from './foundations/typography';
+import { createTheme } from './create-theme';
 import type { Theme, ThemeMode } from './types';
 
 // Theme context type
@@ -17,17 +14,6 @@ interface ThemeContextType {
 // Create the theme context
 const ThemeContext = createContext<ThemeContextType | null>(null);
 
-// Create theme based on color scheme
-function createTheme(isDark: boolean): Theme {
-  return {
-    colors: createSemanticColors(isDark),
-    typography: createTypography('Inter'),
-    spacing: createSemanticSpacing(),
-    elevation: createSemanticElevation(isDark),
-    components: {}, // Empty for now, will be expanded later
-  };
-}
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemColorScheme = useColorScheme();
   const [mode, setMode] = React.useState<ThemeMode>('system');
@@ -39,7 +25,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return mode === 'dark';
   }, [mode, systemColorScheme]);
 
-  const theme = React.useMemo(() => createTheme(isDark), [isDark]);
+  // Use the main createTheme function instead
+  const theme = React.useMemo(() => createTheme({ isDark }), [isDark]);
 
   const toggleColorScheme = React.useCallback(() => {
     setMode(prev => prev === 'dark' ? 'light' : 'dark');

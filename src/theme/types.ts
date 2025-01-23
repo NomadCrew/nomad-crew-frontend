@@ -6,6 +6,16 @@ import { SemanticElevation } from './foundations/elevation';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 
+// Define breakpoints
+export const BREAKPOINTS = {
+  mobile: 320,
+  tablet: 720, 
+  desktop: 1024,
+} as const;
+
+export type Breakpoint = keyof typeof BREAKPOINTS;
+
+// Single ThemeOptions interface
 export interface ThemeOptions {
   isDark?: boolean;
   fontFamily?: string;
@@ -18,14 +28,7 @@ export interface ThemeOptions {
     xl?: number;
     full?: number;
   };
-}
-
-export interface Theme {
-  colors: SemanticColors;
-  typography: Typography;
-  spacing: SemanticSpacing;
-  elevation: SemanticElevation;
-  components: ComponentStyles;
+  breakpoints?: typeof BREAKPOINTS;
 }
 
 export interface ComponentStyles {
@@ -34,11 +37,21 @@ export interface ComponentStyles {
     variants?: Record<string, ViewStyle>;
     sizes?: Record<string, ViewStyle & Partial<TextStyle>>;
   };
-  // Add other component styles as needed
+  Container?: {
+    base?: ViewStyle;
+    variants?: Record<string, ViewStyle>;
+  };
 }
 
-// Helper type for getting nested theme values
-export type ThemeNestedValue<T> = T | Record<string, T>;
+export interface Theme {
+  colors: SemanticColors;
+  typography: Typography;
+  spacing: SemanticSpacing;
+  elevation: SemanticElevation;
+  components: ComponentStyles;
+  breakpoints: typeof BREAKPOINTS;
+}
 
-// Helper type for color values that can be either direct or semantic
+// Helper types
+export type ThemeNestedValue<T> = T | Record<string, T>;
 export type ThemeColorValue = ColorValue | keyof SemanticColors;

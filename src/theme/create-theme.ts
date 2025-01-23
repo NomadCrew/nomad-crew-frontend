@@ -1,4 +1,4 @@
-import { ThemeOptions, Theme } from './types';
+import { ThemeOptions, Theme, BREAKPOINTS } from './types';
 import { createSemanticColors } from './foundations/colors';
 import { createTypography } from './foundations/typography';
 import { createSemanticSpacing } from './foundations/spacing';
@@ -19,6 +19,7 @@ export function createTheme(options: ThemeOptions = {}): Theme {
     fontFamily = 'Inter',
     spacing: customSpacing,
     borderRadius: customBorderRadius,
+    breakpoints = BREAKPOINTS,
   } = options;
 
   const semanticColors = createSemanticColors(isDark);
@@ -34,6 +35,7 @@ export function createTheme(options: ThemeOptions = {}): Theme {
       ...customSpacing,
     },
     elevation,
+    breakpoints,
     components: {
       Button: {
         base: {
@@ -49,7 +51,7 @@ export function createTheme(options: ThemeOptions = {}): Theme {
             backgroundColor: semanticColors.primary.main,
           },
           secondary: {
-            backgroundColor: semanticColors.background.surfaceVariant,
+            backgroundColor: semanticColors.background.surface,
           },
         },
         sizes: {
@@ -70,6 +72,14 @@ export function createTheme(options: ThemeOptions = {}): Theme {
             ...typography.button,
             fontSize: 18,
           },
+        },
+      },
+      Container: {
+        base: {
+          width: '100%',
+          maxWidth: breakpoints.desktop,
+          marginHorizontal: 'auto',
+          paddingHorizontal: spacing.layout.screen.padding,
         },
       },
     },
