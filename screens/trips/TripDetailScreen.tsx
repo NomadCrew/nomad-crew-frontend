@@ -2,6 +2,7 @@ import React from 'react';
 import { View, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { format } from 'date-fns';
 import { Surface, Text, IconButton } from 'react-native-paper';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { TripHeader } from '@/components/trips/TripHeader';
@@ -14,38 +15,29 @@ const TripInfoCard = ({ trip }: { trip: Trip }) => {
     
   return (
     <Surface style={styles(theme).infoCard} elevation={0}>
+      {/* Location Section */}
       <View>
-        <Text 
-          variant="bodyMedium" 
-          style={styles(theme).label}
-        >
-          Location
-        </Text>
         <View style={styles(theme).destinationContainer}>
           <Text 
             variant="displaySmall" 
             style={styles(theme).destination}
           >
-            New{'\n'}York
+            {trip.destination.split(',')[0]}
           </Text>
         </View>
       </View>
       
+      {/* Date Section */}
       <View style={styles(theme).dateContainer}>
         <Text 
           variant="titleLarge" 
           style={styles(theme).date}
         >
-          Jan 19 -{'\n'}Jan 29, 2025
+          {format(new Date(trip.startDate), 'MMM dd')} -{'\n'}
+          {format(new Date(trip.endDate), 'MMM dd, yyyy')}
         </Text>
       </View>
       
-      <Text 
-        variant="bodyLarge" 
-        style={styles(theme).description}
-      >
-        {trip.description}
-      </Text>
     </Surface>
   );
 };
@@ -69,7 +61,7 @@ const QuickActions = () => {
       </Text>
       <View style={styles(theme).actionButtons}>
         {actions.map((action) => (
-          <View key={action.label} style={styles(theme).actionButton}>
+          <View key={action.label} style={styles(theme).actionButtons}>
             <Surface 
               style={styles(theme).iconContainer} 
               elevation={0}
@@ -189,7 +181,7 @@ const styles = (theme: Theme) => StyleSheet.create({
     width: '100%',
   },
   infoCard: {
-    padding: 28,
+    padding: theme.spacing.inset.xl,
     height: '100%',
     justifyContent: 'space-between',
     backgroundColor: theme.colors.surface.variant,
@@ -200,18 +192,18 @@ const styles = (theme: Theme) => StyleSheet.create({
     marginBottom: 8,
   },
   destinationContainer: {
-    marginTop: 4,
+    marginTop: theme.spacing.stack.md,
   },
   destination: {
+    ...theme.typography.display.small,
     color: theme.colors.content.primary,
-    fontWeight: '700',
-    lineHeight: 52,
+    lineHeight: 48,
   },
   dateContainer: {
-    marginTop: 'auto',
-    marginBottom: 'auto',
+    marginVertical: theme.spacing.stack.xl,
   },
   date: {
+    ...theme.typography.heading.h3,
     color: theme.colors.content.secondary,
     lineHeight: 32,
   },
@@ -220,23 +212,20 @@ const styles = (theme: Theme) => StyleSheet.create({
     opacity: 0.8,
   },
   actionsCard: {
-    padding: 24,
+    padding: theme.spacing.inset.lg,
     height: '100%',
     backgroundColor: theme.colors.surface.variant,
   },
   actionTitle: {
+    ...theme.typography.heading.h3,
     color: theme.colors.content.primary,
-    marginBottom: 24,
-    lineHeight: 32,
+    marginBottom: theme.spacing.stack.lg,
   },
   actionButtons: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    marginTop: 8,
-  },
-  actionButton: {
-    alignItems: 'center',
+    marginTop: theme.spacing.stack.md,
   },
   iconContainer: {
     width: 64,
@@ -255,13 +244,14 @@ const styles = (theme: Theme) => StyleSheet.create({
     textAlign: 'center',
   },
   statsCard: {
-    padding: 24,
+    padding: theme.spacing.inset.lg,
     height: '100%',
     backgroundColor: theme.colors.surface.variant,
   },
   statsTitle: {
+    ...theme.typography.heading.h3,
     color: theme.colors.content.primary,
-    marginBottom: 16,
+    marginBottom: theme.spacing.stack.md,
   },
   statsContent: {
     flex: 1,
