@@ -14,6 +14,8 @@ export interface Trip {
   updatedAt?: string;
   isGhostCard?: boolean;
   backgroundImageUrl?: string;
+  weatherCondition?: string;
+  weatherTemp?: string;
 }
 export interface UpdateTripStatusRequest {
     status: TripStatus;

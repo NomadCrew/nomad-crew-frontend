@@ -5,17 +5,22 @@ import { Typography } from '@/src/theme/foundations/typography';
 import { SemanticColors } from '@/src/theme/foundations/colors';
 
 // Helper type to create dot notation paths for nested objects
-type DotNotation<T, P extends string = ''> = T extends object
-  ? {
-      [K in keyof T]: DotNotation<
-        T[K],
-        P extends '' ? `${string & K}` : `${P}.${string & K}`
-      >;
-    }[keyof T]
-  : P;
+type DotNotation<T, D extends number = 2, P extends string = ''> =
+  [D] extends [0]
+    ? P
+    : T extends object
+      ? {
+          [K in keyof T & string]:
+            DotNotation<
+              T[K],
+              D extends 2 ? 1 : 0,
+              P extends '' ? K : `${P}.${K}`
+            >
+        }[keyof T & string]
+      : P;
 
 // Type for typography variants using dot notation
-type TypographyVariant = DotNotation<Typography>;
+type TypographyVariant = DotNotation<Typography, 2>;
 
 // Type for color variants using dot notation
 type ColorVariant = DotNotation<SemanticColors>;
@@ -84,14 +89,17 @@ export function ThemedText({
       style={[
         getTypographyStyle(),
         { color: getTextColor() },
-        minTouchSize && { minHeight: minTouchSize, minWidth: minTouchSize },
-        style
-      ]} 
+        minTouchSize
+          ? { minHeight: minTouchSize, minWidth: minTouchSize }
+          : undefined,
+        style,
+      ]}
       accessibilityRole={accessibilityRole || (isHeading ? 'header' : 'text')}
       {...rest}
     >
       {children}
     </Text>
+
   );
 }
 
