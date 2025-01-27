@@ -1,14 +1,10 @@
 import { BaseApiClient } from './base-client';
-import { router } from 'expo-router';
-import type { TokenManager } from '@/src/auth/types';
-import { ERROR_MESSAGES } from './constants';
-import type { AxiosError } from 'axios';
+import { supabase } from '@/src/auth/supabaseClient';
+import { useAuthStore } from '@/src/store/useAuthStore';
+import { AxiosHeaders } from 'axios';
 
 export class ApiClient extends BaseApiClient {
   private static instance: ApiClient;
-  private tokenManager: TokenManager | null = null;
-  private refreshPromise: Promise<string> | null = null;
-  private unauthorizedCallback: (() => void) | null = null;
 
   private constructor() {
     super();
@@ -22,87 +18,84 @@ export class ApiClient extends BaseApiClient {
     return ApiClient.instance;
   }
 
-  public setTokenManager(tokenManager: TokenManager): void {
-    this.tokenManager = tokenManager;
-  }
-
-  public setUnauthorizedCallback(callback: () => void): void {
-    this.unauthorizedCallback = callback;
-  }
-
   private setupAuthInterceptors(): void {
-    // Auth Request Interceptor
+    // 1) Attach the current token from Supabase before each request
     this.api.interceptors.request.use(
       async (config) => {
-        try {
-          if (this.tokenManager) {
-            const token = await this.tokenManager.getToken();
-            if (token) {
-              config.headers.Authorization = `Bearer ${token}`;
-            }
-          }
-          return config;
-        } catch (error) {
-          console.error('Failed to get token:', error);
-          return config;
+        // Wait for both initialization AND token availability
+        let attempts = 0;
+        const maxAttempts = 5; // Prevent infinite loop
+        
+        while ((!useAuthStore.getState().isInitialized || !useAuthStore.getState().token) && attempts < maxAttempts) {
+          console.log('[API Client] Waiting for auth token...', {
+            isInitialized: useAuthStore.getState().isInitialized,
+            hasToken: !!useAuthStore.getState().token,
+            attempt: attempts + 1
+          });
+          await new Promise(resolve => setTimeout(resolve, 200));
+          attempts++;
         }
+    
+        const token = useAuthStore.getState().token;
+        const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+    
+        if (!token) {
+          throw new Error('No auth token available after waiting');
+        }
+    
+        const headers = new AxiosHeaders(config.headers);
+        headers.set('Content-Type', 'application/json');
+        headers.set('Accept', 'application/json');
+        headers.set('Authorization', `Bearer ${token}`);
+        headers.set('apikey', anonKey!);
+        config.headers = headers;
+    
+        return config;
       },
       (error) => Promise.reject(error)
     );
 
-    // Auth Response Interceptor
+    // 2) If a 401 slips through, you can sign out or handle it gracefully
     this.api.interceptors.response.use(
       (response) => response,
-      async (error: AxiosError) => {
+      async (error) => {
         const originalRequest = error.config;
-        if (!originalRequest) {
-          return Promise.reject(error);
-        }
-
-        // Handle 401 Unauthorized with token refresh
-        if (error.response?.status === 401 && !originalRequest._retry && this.tokenManager) {
+  
+        if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
-
+  
           try {
-            if (!this.refreshPromise) {
-              this.refreshPromise = this.tokenManager.refreshToken();
+            const { error: refreshError } = await supabase.auth.refreshSession();
+            if (refreshError) {
+              // Token refresh failed, sign out the user
+              useAuthStore.getState().logout();
+              return Promise.reject(refreshError);
             }
-
-            const newToken = await this.refreshPromise;
-            originalRequest.headers.Authorization = `Bearer ${newToken}`;
-            
-            return this.api(originalRequest);
-          } catch (refreshError) {
-            this.refreshPromise = null;
-            if (this.tokenManager) {
-              await this.tokenManager.clearTokens();
-            }
-            
-            if (this.unauthorizedCallback) {
-              this.unauthorizedCallback();
+  
+            // Get the new access token from the store
+            const token = useAuthStore.getState().token;
+            if (token) {
+              // Update the Authorization header and retry the request
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+              return this.api(originalRequest);
             } else {
-              router.replace('/login');
+              // No token available, sign out the user
+              useAuthStore.getState().logout();
+              return Promise.reject(new Error('No access token available'));
             }
-            return Promise.reject(new Error(ERROR_MESSAGES.SESSION_EXPIRED));
-          } finally {
-            this.refreshPromise = null;
+          } catch (refreshError) {
+            // Refresh token request failed
+            useAuthStore.getState().logout();
+            return Promise.reject(refreshError);
           }
         }
-
+  
         return Promise.reject(error);
       }
     );
   }
 }
 
-// Export singleton instance
+// Singleton
 export const apiClient = ApiClient.getInstance();
 export const api = apiClient.getAxiosInstance();
-
-// Type for config with retry count
-declare module 'axios' {
-  export interface AxiosRequestConfig {
-    _retry?: boolean;
-    _retryCount?: number;
-  }
-}

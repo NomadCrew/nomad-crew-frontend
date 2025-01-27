@@ -1,55 +1,83 @@
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { SplashScreen, Stack, useSegments, useRouter } from 'expo-router';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Provider as PaperProvider } from 'react-native-paper';
+import { Stack, useSegments, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useRef } from 'react';
 import { ThemeProvider, useTheme } from '@/src/theme/ThemeProvider';
 import { useAuthStore } from '@/src/store/useAuthStore';
 import { OnboardingProvider } from '@/src/providers/OnboardingProvider';
 import AuthErrorBoundary from '@/components/AuthErrorBoundary';
 import { InitialLoadingScreen } from '@/components/InitialLoadingScreen';
+import { supabase } from '@/src/auth/supabaseClient';
 import { useOnboarding } from '@/src/providers/OnboardingProvider';
-
+import AppInitializer from './AppInitializer';
 
 function RouteGuard({ children }: { children: React.ReactNode }) {
-  const segments: string[] = useSegments();
+  const segments = useSegments();
   const router = useRouter();
   const { token, isInitialized, loading, isVerifying } = useAuthStore();
   const { isFirstTime } = useOnboarding();
+  const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastNavigationRef = useRef<string | null>(null);
 
   const currentSegment = segments[0];
   const inAuthGroup = currentSegment === '(auth)';
   const inOnboardingGroup = currentSegment === '(onboarding)';
 
-  // Memoize the routing state to prevent unnecessary re-renders
-  const routingState = useMemo(() => ({
-    shouldShowVerification: isVerifying && !segments.includes('verify-email'),
-    shouldShowOnboarding: isFirstTime && token && !inOnboardingGroup && !isVerifying,
-    shouldRedirectToLogin: !token && !inAuthGroup && !inOnboardingGroup && !isVerifying,
-    shouldRedirectToTabs: token && !isVerifying && (inAuthGroup || inOnboardingGroup),
-  }), [isFirstTime, token, inAuthGroup, inOnboardingGroup, isVerifying, segments]);
-  
   useEffect(() => {
-    let navTimeout: NodeJS.Timeout = setTimeout(() => {}, 0); 
-    if (!isInitialized || loading) return;
-  
-    const navigate = () => {
-      if (!token) {
-        if (!inAuthGroup) {
-          router.replace('/(auth)/login');
-        }
-      } else if (routingState.shouldShowOnboarding) {
-        router.replace('/(onboarding)/welcome');
-      } else if (routingState.shouldRedirectToTabs) {
-        router.replace('/(tabs)');
+    const debugSession = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      console.log('[Auth Debug] Initial session check:', {
+        hasSession: !!session,
+        hasAccessToken: !!session?.access_token,
+        error: error?.message,
+      });
+    };
+    debugSession();
+  }, []);
+
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    if (navigationTimeoutRef.current) {
+      clearTimeout(navigationTimeoutRef.current);
+    }
+
+    let targetRoute: string | null = null;
+    if (isVerifying) {
+      targetRoute = '/(auth)/verify-email';
+    } else if (isFirstTime && !inOnboardingGroup) {
+      targetRoute = '/(onboarding)/welcome';
+    } else if (!token && !inAuthGroup && !isFirstTime) {
+      targetRoute = '/(auth)/login';
+    } else if (token && (inAuthGroup || inOnboardingGroup)) {
+      targetRoute = '/(tabs)';
+    }
+
+    console.log('Navigation State:', {
+      currentSegment,
+      isFirstTime,
+      hasToken: !!token,
+      isVerifying,
+      inAuthGroup,
+      inOnboardingGroup,
+      targetRoute
+    });
+
+    if (targetRoute && targetRoute !== lastNavigationRef.current) {
+      navigationTimeoutRef.current = setTimeout(() => {
+        lastNavigationRef.current = targetRoute;
+        router.replace(targetRoute as any);
+      }, 100);
+    }
+
+    return () => {
+      if (navigationTimeoutRef.current) {
+        clearTimeout(navigationTimeoutRef.current);
       }
     };
-  
-    clearTimeout(navTimeout);
-    navTimeout = setTimeout(navigate, 100); // Debounce by 100ms
-  
-    return () => clearTimeout(navTimeout);
-  }, [isInitialized, loading, routingState, router]);
+  }, [segments, token, isInitialized, isFirstTime, isVerifying, router, inAuthGroup, inOnboardingGroup]);
 
   return children;
 }
@@ -63,59 +91,41 @@ function RootLayoutNav() {
   }
 
   return (
-    <NavigationThemeProvider value={mode === 'dark' ? DarkTheme : DefaultTheme}>
-      <RouteGuard>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        </Stack>
-      </RouteGuard>
-      <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
-    </NavigationThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <NavigationThemeProvider value={mode === 'dark' ? DarkTheme : DefaultTheme}>
+        <RouteGuard>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            {/* Add this new Stack.Screen */}
+            <Stack.Screen 
+              name="trip/[id]" 
+              options={{ 
+                headerShown: false,
+                presentation: 'card'
+              }} 
+            />
+          </Stack>
+        </RouteGuard>
+        <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
+      </NavigationThemeProvider>
+    </GestureHandlerRootView>
   );
 }
 
 export default function RootLayout() {
-  const { initialize } = useAuthStore();
-  
-  const [fontsLoaded, fontError] = useFonts({
-    'Inter': require('../assets/fonts/Inter/Inter-VariableFont_opsz,wght.ttf'),
-    'Inter-Italic': require('../assets/fonts/Inter/Inter-Italic-VariableFont_opsz,wght.ttf'),
-    'SpaceMono': require('../assets/fonts/SpaceMono-Regular.ttf'),
-    'Manrope': require('../assets/fonts/Manrope/Manrope-VariableFont_wght.ttf'),
-  });
-
-  useEffect(() => {
-    async function initApp() {
-      try {
-        console.log('Starting auth initialization');
-        await initialize();
-        
-        if (fontsLoaded || fontError) {
-          console.log('Hiding splash screen');
-          await SplashScreen.hideAsync();
-        }
-      } catch (error) {
-        console.error('Failed to initialize:', error);
-      }
-    }
-
-    initApp();
-  }, [initialize, fontsLoaded, fontError]);
-
-  if (!fontsLoaded && !fontError) {
-    console.log('Fonts not loaded yet');
-    return null;
-  }
-
   return (
-    <OnboardingProvider>
-      <ThemeProvider>
-        <AuthErrorBoundary>
-          <RootLayoutNav />
-        </AuthErrorBoundary>
-      </ThemeProvider>
-    </OnboardingProvider>
+    <PaperProvider>
+      <OnboardingProvider>
+        <ThemeProvider>
+          <AuthErrorBoundary>
+            <AppInitializer>
+              <RootLayoutNav />
+            </AppInitializer>
+          </AuthErrorBoundary>
+        </ThemeProvider>
+      </OnboardingProvider>
+    </PaperProvider>
   );
 }

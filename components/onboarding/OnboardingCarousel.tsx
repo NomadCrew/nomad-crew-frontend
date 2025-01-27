@@ -1,59 +1,68 @@
-import React, { useCallback, useRef, useState } from 'react';
-import { StyleSheet, useWindowDimensions, View, Button } from 'react-native';
-import Animated from 'react-native-reanimated';
+import React, { useCallback, useState } from 'react';
+import { StyleSheet, View, Platform, useWindowDimensions, Image } from 'react-native';
+import Onboarding from 'react-native-onboarding-swiper';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { useTheme } from '@/src/theme/ThemeProvider';
+import type { OnboardingSlide } from '@/src/types/onboarding';
 
 interface Props {
-  slides: Array<{ id: string; title: string; subtitle: string; image: any }>;
+  slides: OnboardingSlide[];
   onComplete?: () => void;
 }
 
 export function OnboardingCarousel({ slides, onComplete }: Props) {
-  const { width: screenWidth } = useWindowDimensions();
-  const flatListRef = useRef<Animated.FlatList<{ id: string; title: string; subtitle: string; image: any }>>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const { theme } = useTheme();
+  const { width: screenWidth } = useWindowDimensions();
 
-  const handleNext = useCallback(() => {
-    if (currentIndex < slides.length - 1) {
-      setCurrentIndex((prev) => prev + 1);
-      flatListRef.current?.scrollToIndex({ index: currentIndex + 1, animated: true });
-    } else if (onComplete) {
-      onComplete();
-    }
-  }, [currentIndex, slides.length, onComplete]);
-
-  const renderSlide = useCallback(
-    ({ item }: { item: { title: string; subtitle: string; image: any } }) => (
-      <ThemedView style={[styles.slide, { width: screenWidth }]}>
-        <Animated.Image source={item.image} style={styles.image} resizeMode="contain" />
-        <ThemedText style={styles.title}>{item.title}</ThemedText>
-        <ThemedText style={styles.subtitle}>{item.subtitle}</ThemedText>
-      </ThemedView>
-    ),
-    [screenWidth]
+  // Components for the onboarding pages
+  const Title = ({ title, titleStyles }: { title: string; titleStyles?: any }) => (
+    <ThemedText 
+      style={[styles.title, titleStyles]}
+      variant="heading.h1.fontSize"
+    >
+      {title}
+    </ThemedText>
   );
 
-  return (
-    <ThemedView style={styles.container}>
-      <Animated.FlatList
-        ref={flatListRef}
-        data={slides}
-        renderItem={renderSlide}
-        keyExtractor={(item) => item.id}
-        horizontal
-        pagingEnabled
-        scrollEnabled={false} // Disable swipe gestures
-        showsHorizontalScrollIndicator={false}
-        bounces={false}
-      />
-      <View style={styles.footer}>
-        <Button
-          title={currentIndex === slides.length - 1 ? 'Finish' : 'Next'}
-          onPress={handleNext}
+  const Subtitle = ({ subtitle, subtitleStyles }: { subtitle: string; subtitleStyles?: any }) => (
+    <ThemedText 
+      style={[styles.subtitle, subtitleStyles]}
+      variant="body.large.fontSize"
+    >
+      {subtitle}
+    </ThemedText>
+  );
+
+  const pages = slides.map(slide => ({
+    backgroundColor: slide.backgroundColor,
+    image: (
+      <Animated.View entering={FadeIn.duration(120)}>
+        <Image
+          source={slide.image}
+          style={[styles.image, slide.imageStyles]}
+          resizeMode="contain"
         />
-      </View>
-    </ThemedView>
+      </Animated.View>
+    ),
+    title: <Title title={slide.title} titleStyles={slide.titleStyles} />,
+    subtitle: <Subtitle subtitle={slide.subtitle} subtitleStyles={slide.subtitleStyles} />,
+  }));
+
+  return (
+    <View style={styles.container}>
+      <Onboarding
+        pages={pages}
+        onDone={onComplete}
+        containerStyles={styles.onboardingContainer}
+        imageContainerStyles={styles.imageContainer}
+        bottomBarColor="transparent"
+        bottomBarHeight={80}
+        transitionAnimationDuration={120}
+        showSkip={false}
+      />
+    </View>
   );
 }
 
@@ -61,31 +70,46 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  slide: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
+  onboardingContainer: {
+    paddingBottom: Platform.OS === 'ios' ? 20 : 16,
   },
-  image: {
-    width: '80%',
-    height: '50%',
-    marginBottom: 20,
+  imageContainer: {
+    paddingBottom: 20,
   },
+
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 32,
+    fontWeight: '700',
     textAlign: 'center',
     marginBottom: 10,
+    paddingHorizontal: 20,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 18,
     textAlign: 'center',
     marginBottom: 20,
+    opacity: 0.8,
+    paddingHorizontal: 40,
   },
-  footer: {
-    padding: 20,
-    alignItems: 'center',
+  frostedGlass: {
+    width: 120,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 20,
+  },
+  iosFrostedGlass: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  androidFrostedGlass: {
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
   },
 });

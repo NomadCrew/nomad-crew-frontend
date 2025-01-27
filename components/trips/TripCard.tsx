@@ -1,131 +1,212 @@
-import { useState } from 'react';
-import { format } from 'date-fns';
-import { MapPin, Calendar, Users, ChevronRight, Share2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState } from 'react';
+import { StyleSheet, Pressable, View, Text, Platform, ViewStyle, ImageBackground } from 'react-native';
+import { differenceInDays, formatDistanceToNow, isAfter, isBefore, format } from 'date-fns';
+import { CalendarClock, Users, MapPin, Clock } from 'lucide-react-native';
+import { useTheme } from '@/src/theme/ThemeProvider';
+import { TripStatusBadge } from './TripStatusBadge';
+import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { TripStatus } from '@/src/types/trip';
 
-const TripCard = ({ 
+interface TripCardProps {
+  trip: {
+    id: string;
+    name: string;
+    description?: string;
+    destination: string;
+    startDate: string;
+    endDate: string;
+    participantCount?: number;
+    status: TripStatus;
+    isGhostCard?: boolean;
+    backgroundImageUrl?: string;
+  };
+  onPress?: () => void;
+  expanded?: boolean;
+  style?: StyleSheet.StyleProp<ViewStyle>;
+}
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+const getTripTiming = (startDate: string, endDate: string) => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const now = new Date();
+  
+  // For Active trips
+  if (isBefore(start, now) && isAfter(end, now)) {
+    const daysLeft = differenceInDays(end, now);
+    return `${daysLeft} days remaining`;
+  }
+  
+  // For Upcoming trips
+  if (isAfter(start, now)) {
+    return `Starts ${formatDistanceToNow(start, { addSuffix: true })}`;
+  }
+  
+  // For Past trips
+  if (isBefore(end, now)) {
+    const duration = differenceInDays(end, start);
+    return `${duration} day trip`;
+  }
+  
+  return '';
+};
+
+const getDurationString = (startDate: string, endDate: string) => {
+  const duration = differenceInDays(new Date(endDate), new Date(startDate));
+  return `${duration} day${duration !== 1 ? 's' : ''}`;
+};
+
+export const TripCard: React.FC<TripCardProps> = ({
   trip,
   onPress,
   style,
-  expanded = false,
-  onShare,
-  participantAvatars = [],
-  showParticipants = true,
 }) => {
-  const [isPressed, setIsPressed] = useState(false);
+  const { theme } = useTheme();
+  const [pressed, setPressed] = useState(false);
 
-  const handlePressIn = () => setIsPressed(true);
-  const handlePressOut = () => setIsPressed(false);
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: withSpring(pressed ? 0.98 : 1) }],
+  }));
 
-  const getStatusColor = () => {
-    const now = new Date();
-    if (new Date(trip.startDate) > now) {
-      return 'bg-blue-500'; // Upcoming
-    } else if (new Date(trip.endDate) < now) {
-      return 'bg-gray-500'; // Past
-    }
-    return 'bg-green-500'; // Active
-  };
+  const styles = makeStyles(theme);
+  
+  if (trip.isGhostCard) {
+    return <View style={[styles.container, styles.ghostCard, style]} />;
+  }
+
+  const timing = getTripTiming(trip.startDate, trip.endDate);
+  const duration = getDurationString(trip.startDate, trip.endDate);
+
+  const InfoRow = ({ 
+    icon: Icon, 
+    text, 
+    lightText 
+  }: { 
+    icon: typeof MapPin; 
+    text: string; 
+    lightText?: boolean 
+  }) => (
+    <View style={styles.infoRow}>
+      <Icon 
+        size={18} 
+        color={lightText ? "#FFFFFF" : theme.colors.content.secondary}
+        strokeWidth={1.5}
+      />
+      <Text style={[
+        styles.infoText, 
+        lightText && styles.lightText
+      ]}>
+        {text}
+      </Text>
+    </View>
+  );
 
   return (
-    <motion.div
-      animate={{
-        scale: isPressed ? 0.98 : 1,
-        opacity: isPressed ? 0.9 : 1,
-      }}
-      className={`
-        bg-white dark:bg-gray-800 
-        rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700
-        overflow-hidden
-        ${expanded ? 'p-4' : 'p-3'}
-      `}
-      style={style}
-      onTouchStart={handlePressIn}
-      onTouchEnd={handlePressOut}
-      onClick={onPress}
+    <AnimatedPressable
+    onPressIn={() => setPressed(true)}
+    onPressOut={() => setPressed(false)}
+    onPress={onPress}
+    style={[styles.container, style, animatedStyle]}
+  >
+    <ImageBackground
+      source={trip.backgroundImageUrl ? { uri: trip.backgroundImageUrl } : require('@/assets/images/splash.png')}
+      style={styles.backgroundImage}
+      imageStyle={styles.backgroundImageStyle}
     >
-      {/* Status Indicator */}
-      <div className="flex items-center gap-2 mb-3">
-        <div className={`w-2 h-2 rounded-full ${getStatusColor()}`} />
-        <span className="text-xs text-gray-500 dark:text-gray-400">
-          {new Date(trip.startDate) > new Date() ? 'Upcoming' : 
-           new Date(trip.endDate) < new Date() ? 'Past' : 'Active'}
-        </span>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex justify-between items-start">
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+      {/* Overlay for better readability */}
+      <View style={styles.overlay}>
+        {/* Header Section */}
+        <View style={styles.header}>
+          <Text style={[styles.title, styles.lightText]} numberOfLines={1}>
             {trip.name}
-          </h3>
-          
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <MapPin size={16} className="text-orange-500" />
-              <span className="text-sm text-gray-600 dark:text-gray-300">
-                {trip.destination}
-              </span>
-            </div>
+          </Text>
+          <TripStatusBadge status={trip.status} />
+        </View>
 
-            <div className="flex items-center gap-2">
-              <Calendar size={16} className="text-orange-500" />
-              <span className="text-sm text-gray-600 dark:text-gray-300">
-                {format(new Date(trip.startDate), 'MMM d')} - {format(new Date(trip.endDate), 'MMM d, yyyy')}
-              </span>
-            </div>
-          </div>
-        </div>
+        {/* Info Section */}
+        <View style={styles.detailsContainer}>
+          <InfoRow icon={MapPin} text={trip.destination} lightText />
+          <InfoRow icon={CalendarClock} text={timing} lightText />
+          <InfoRow icon={Clock} text={duration} lightText />
+          <InfoRow icon={Users} text={`${trip.participantCount || 1} ${(trip.participantCount || 1) !== 1 ? 's' : ''}`} />
+        </View>
+      </View>
+    </ImageBackground>
 
-        {expanded ? (
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={(e) => {
-              e.stopPropagation();
-              onShare?.();
-            }}
-            className="p-2 rounded-full bg-gray-100 dark:bg-gray-700"
-          >
-            <Share2 size={20} className="text-gray-600 dark:text-gray-300" />
-          </motion.button>
-        ) : (
-          <ChevronRight size={20} className="text-gray-400 mt-1" />
-        )}
-      </div>
-
-      {/* Participants Section */}
-      {showParticipants && (
-        <AnimatePresence>
-          <motion.div 
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            className="mt-4 flex items-center gap-2"
-          >
-            <div className="flex -space-x-2">
-              {participantAvatars.slice(0, 3).map((avatar, index) => (
-                <img
-                  key={index}
-                  src={avatar}
-                  alt={`Participant ${index + 1}`}
-                  className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-800"
-                />
-              ))}
-              {participantAvatars.length > 3 && (
-                <div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs text-gray-600 dark:text-gray-300 border-2 border-white dark:border-gray-800">
-                  +{participantAvatars.length - 3}
-                </div>
-              )}
-            </div>
-            <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
-              <Users size={14} />
-              <span>{participantAvatars.length} participants</span>
-            </div>
-          </motion.div>
-        </AnimatePresence>
-      )}
-    </motion.div>
+  </AnimatedPressable>
   );
 };
 
-export default TripCard;
+const makeStyles = (theme: Theme) => StyleSheet.create({
+  ghostCard: {
+    backgroundColor: 'transparent',
+    elevation: 0,
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    borderWidth: 0,
+  },
+  container: {
+    backgroundColor: theme.colors.surface.variant,
+    borderRadius: theme.spacing.inset.md,
+    marginHorizontal: theme.spacing.inset.md,
+    marginVertical: theme.spacing.inset.sm,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: theme.colors.content.primary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  backgroundImage: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  backgroundImageStyle: {
+    opacity: 0.5,
+  },
+  overlay: {
+    flex: 1,
+    padding: theme.spacing.inset.md,
+    backgroundColor: 'rgba(77, 78, 69, 0.4)', 
+    borderRadius: theme.spacing.inset.md,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.stack.md,
+  },
+  title: {
+    ...theme.typography.heading.h3,
+    color: theme.colors.content.primary,
+    flex: 1,
+    marginRight: theme.spacing.inline.sm,
+  },
+  detailsContainer: {
+    gap: theme.spacing.stack.sm,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.inline.sm,
+  },
+  infoText: {
+    ...theme.typography.body.medium,
+    color: theme.colors.content.secondary,
+    flex: 1,
+  },
+  lightText: {
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10,
+  },
+});

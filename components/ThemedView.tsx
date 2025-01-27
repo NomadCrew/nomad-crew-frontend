@@ -44,7 +44,6 @@ export function ThemedView({
           width: fullScreen ? '100%' : undefined,
           height: fullScreen ? '100%' : undefined,
         },
-        elevation,
         style
       ]} 
       {...otherProps} 
