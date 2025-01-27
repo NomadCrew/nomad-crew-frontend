@@ -1,48 +1,71 @@
 import { create } from 'zustand';
 import { api } from '@/src/api/api-client';
-
-export interface Trip {
-  id: number;
-  name: string;
-  description: string;
-  destination: string;
-  startDate: Date;
-  endDate: Date;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import {
+  Trip,
+  CreateTripInput,
+  UpdateTripInput,
+  TripStatus,
+  UpdateTripStatusRequest,
+  UpdateTripStatusResponse,
+} from '@/src/types/trip';
+import { API_PATHS } from '@/src/utils/api-paths';
 
 interface TripState {
   trips: Trip[];
   loading: boolean;
   error: string | null;
-  createTrip: (trip: Omit<Trip, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  // Core operations
+  createTrip: (input: CreateTripInput) => Promise<Trip>;
+  updateTrip: (id: string, input: UpdateTripInput) => Promise<Trip>;
+  deleteTrip: (id: string) => Promise<void>;
+  // Read operations
   fetchTrips: () => Promise<void>;
-  deleteTrip: (id: number) => Promise<void>;
-  updateTrip: (id: number, trip: Partial<Trip>) => Promise<void>;
+  getTripById: (id: string) => Trip | undefined;
+  // Status operations
+  updateTripStatus: (id: string, status: TripStatus) => Promise<void>;
 }
 
-export const useTripStore = create<TripState>((set) => ({
+export const useTripStore = create<TripState>((set, get) => ({
   trips: [],
   loading: false,
   error: null,
 
-  createTrip: async (tripData) => {
+  createTrip: async (tripData: CreateTripInput) => {
     set({ loading: true, error: null });
     try {
-      const response = await api.post('/v1/trips', tripData);
-      const newTrip = response.data;
+      const response = await api.post<Trip>(API_PATHS.trips.create, {
+        ...tripData,
+        status: 'PLANNING' as TripStatus,
+      });
       set(state => ({
-        trips: [...state.trips, {
-          ...newTrip,
-          startDate: new Date(newTrip.startDate),
-          endDate: new Date(newTrip.endDate),
-          createdAt: new Date(newTrip.createdAt),
-          updatedAt: new Date(newTrip.updatedAt),
-        }],
+        trips: [...state.trips, response.data],
+        loading: false,
       }));
+      return response.data;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to create trip';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to create trip';
+      set({ error: errorMessage });
+      throw error;
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  updateTrip: async (id, input) => {
+    set({ loading: true, error: null });
+    try {
+      const response = await api.put<Trip>(`/v1/trips/${id}`, input);
+      const updatedTrip = response.data;
+      set((state) => ({
+        trips: state.trips.map((trip) =>
+          trip.id === id ? updatedTrip : trip
+        ),
+      }));
+      return updatedTrip;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to update trip';
       set({ error: message });
       throw error;
     } finally {
@@ -53,17 +76,11 @@ export const useTripStore = create<TripState>((set) => ({
   fetchTrips: async () => {
     set({ loading: true, error: null });
     try {
-      const response = await api.get('/v1/trips/list');
-      const trips = response.data.map((trip: any) => ({
-        ...trip,
-        startDate: new Date(trip.startDate),
-        endDate: new Date(trip.endDate),
-        createdAt: new Date(trip.createdAt),
-        updatedAt: new Date(trip.updatedAt),
-      }));
-      set({ trips });
+      const response = await api.get<Trip[]>(API_PATHS.trips.list);
+      set({ trips: response.data || [] });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to fetch trips';
+      const message =
+        error instanceof Error ? error.message : 'Failed to fetch trips';
       set({ error: message });
       throw error;
     } finally {
@@ -75,11 +92,12 @@ export const useTripStore = create<TripState>((set) => ({
     set({ loading: true, error: null });
     try {
       await api.delete(`/v1/trips/${id}`);
-      set(state => ({
-        trips: state.trips.filter(trip => trip.id !== id)
+      set((state) => ({
+        trips: state.trips.filter((trip) => trip.id !== id),
       }));
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to delete trip';
+      const message =
+        error instanceof Error ? error.message : 'Failed to delete trip';
       set({ error: message });
       throw error;
     } finally {
@@ -87,28 +105,30 @@ export const useTripStore = create<TripState>((set) => ({
     }
   },
 
-  updateTrip: async (id, tripData) => {
+  getTripById: (id) => {
+    return get().trips.find((trip) => trip.id === id);
+  },
+
+  updateTripStatus: async (id: string, status: TripStatus) => {
     set({ loading: true, error: null });
     try {
-      const response = await api.put(`/v1/trips/${id}`, tripData);
-      const updatedTrip = response.data;
-      set(state => ({
-        trips: state.trips.map(trip => 
-          trip.id === id ? {
-            ...trip,
-            ...updatedTrip,
-            startDate: new Date(updatedTrip.startDate),
-            endDate: new Date(updatedTrip.endDate),
-            updatedAt: new Date(updatedTrip.updatedAt),
-          } : trip
-        )
-      }));
+        const response = await api.patch<UpdateTripStatusResponse>(
+            `${API_PATHS.trips.updateStatus(id)}`,
+            { status } as UpdateTripStatusRequest
+        );
+
+        // Update trip in local state
+        const trips = get().trips.map(trip => 
+            trip.id === id ? { ...trip, status } : trip
+        );
+        
+        set({ trips });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to update trip';
-      set({ error: message });
-      throw error;
+        const message = error instanceof Error ? error.message : 'Failed to update trip status';
+        set({ error: message });
+        throw error;
     } finally {
-      set({ loading: false });
+        set({ loading: false });
     }
-  },
+},
 }));

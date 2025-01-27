@@ -14,6 +14,12 @@ const MAPPING = {
   'chevron.right': 'chevron-right',
   'backpack.fill': 'luggage',
   'plus.circle.fill': 'add-circle',
+  'calendar': 'event',
+  'calendar.circle.fill': 'event',
+  'calendar.badge.plus': 'event-available',
+  'calendar.badge.minus': 'event-busy',
+  'calendar.badge.checkmark': 'event-note',
+  
 } as Partial<
   Record<
     import('expo-symbols').SymbolViewProps['name'],

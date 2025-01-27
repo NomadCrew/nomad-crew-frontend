@@ -1,170 +1,146 @@
-import { useState, useEffect } from 'react';
-import { StyleSheet, FlatList, Pressable, RefreshControl, Platform } from 'react-native';
-import { format } from 'date-fns';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import { useTripStore } from '@/src/store/useTripStore';
+import React, { useMemo } from 'react';
+import { StyleSheet, ActivityIndicator, ViewStyle } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
+import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from '@/components/ThemedText';
+import { TripCard } from './TripCard';
+import { Trip, TripStatus } from '@/src/types/trip';
 
-import CreateTripModal from './CreateTripModal';
-import { Trip } from './CreateTripModal';
+interface TripSection {
+  title: string;
+  data: Trip[];
+}
 
-export default function TripList() {
-  const { trips, loading, error, fetchTrips, createTrip } = useTripStore();
-  const [modalVisible, setModalVisible] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+interface Props {
+  trips: Trip[];
+  onTripPress?: (trip: Trip) => void;
+  style?: ViewStyle;
+}
 
+const GHOST_CARD: Trip = {
+  id: 'ghost-spacer',
+  name: 'adad',
+  description: 'asdasd',
+  destination: 'adasd',
+  startDate: new Date().toISOString(),
+  endDate: new Date().toISOString(),
+  status: 'PLANNING',
+  createdBy: 'asdas',
+  isGhostCard: true
+};
+
+export function TripList({ trips, onTripPress, style }: Props) {
   const { theme } = useTheme();
 
-  useEffect(() => {
-    fetchTrips().catch(console.error);
-  }, []);
-
-  const handleCreateTrip = async (trip: Omit<Trip, 'id' | 'createdAt' | 'updatedAt'>) => {
-    try {
-      await createTrip(trip);
-      setModalVisible(false);
-    } catch (error) {
-      console.error('Failed to create trip:', error);
+  const sections = useMemo(() => {
+    const now = new Date();
+  
+    const activeTrips = trips.filter(trip => {
+      const startDate = new Date(trip.startDate);
+      const endDate = new Date(trip.endDate);
+      return (
+        (trip.status === 'PLANNING' || trip.status === 'ACTIVE') &&
+        startDate <= now && endDate >= now
+      );
+    });
+  
+    const upcomingTrips = trips.filter(trip => {
+      const startDate = new Date(trip.startDate);
+      return (
+        (trip.status === 'PLANNING' || trip.status === 'ACTIVE') &&
+        startDate > now
+      );
+    });
+  
+    const pastTrips = trips.filter(trip => {
+      const endDate = new Date(trip.endDate);
+      return (
+        (trip.status === 'COMPLETED' || trip.status === 'CANCELLED') ||
+        endDate < now
+      );
+    });
+  
+    // Create sections first
+    let sections = [
+      { title: 'Active Trips', data: activeTrips },
+      { title: 'Upcoming Trips', data: upcomingTrips },
+      { title: 'Past Trips', data: pastTrips },
+    ].filter(section => section.data.length > 0);
+  
+    // Add ghost card to the last section if there are any sections
+    if (sections.length > 0) {
+      const lastSection = sections[sections.length - 1];
+      lastSection.data = [...lastSection.data, GHOST_CARD];
     }
-  };
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await fetchTrips();
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  if (error) {
-    return (
-      <ThemedView style={styles.centerContainer}>
-        <ThemedText style={[styles.errorText, { color: theme.colors.error }]}>
-          {error}
-        </ThemedText>
-        <Pressable 
-          style={[styles.retryButton, { backgroundColor: theme.colors.primary }]} 
-          onPress={fetchTrips}
-        >
-          <ThemedText style={[styles.buttonText, { color: theme.colors.onPrimary }]}>
-            Retry
-          </ThemedText>
-        </Pressable>
-      </ThemedView>
-    );
-  }
+  
+    return sections;
+  }, [trips]);
 
   return (
-    <ThemedView style={styles.container}>
-      {trips.length === 0 && !loading ? (
-        <ThemedView style={styles.emptyState}>
-          <IconSymbol 
-            name="plus.circle.fill" 
-            size={48} 
-            color={theme.colors.primary} 
-          />
-          <ThemedText style={[styles.emptyText, { color: theme.colors.primary }]}>
-            No trips yet
-          </ThemedText>
-          <Pressable 
-            style={[styles.createButton, { backgroundColor: theme.colors.primary }]}
-            onPress={() => setModalVisible(true)}
-          >
-            <ThemedText style={[styles.buttonText, { color: theme.colors.onPrimary }]}>
-              Create Your First Trip
-            </ThemedText>
-          </Pressable>
-        </ThemedView>
-      ) : (
-        <FlatList
-          data={trips}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
-            <Pressable 
-              style={[styles.tripCard, { 
-                backgroundColor: theme.colors.surface,
-              }]}
-            >
-              <ThemedText type="defaultSemiBold">{item.name}</ThemedText>
-              <ThemedText>{item.destination}</ThemedText>
-              <ThemedText>{format(item.startDate, 'MMM dd, yyyy')}</ThemedText>
-            </Pressable>
-          )}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={theme.colors.primary}
+    <ThemedView style={[styles.container, style]}>
+      {sections.map((section, index) => (
+        <ThemedView key={section.title} style={index > 0 ? styles.section : undefined}>
+          {section.data.map((trip) => (
+            <TripCard
+              key={trip.id}
+              trip={trip}
+              onPress={() => !trip.isGhostCard && onTripPress?.(trip)}
+              style={[
+                styles.card,
+                trip.isGhostCard && styles.ghostCard
+              ]}
             />
-          }
-        />
+          ))}
+        </ThemedView>
+      ))}
+
+      {trips.length === 0 && (
+        <ThemedView style={styles.emptyContainer}>
+          <ThemedText
+            variant="bodyLarge"
+            color="content.secondary"
+            style={styles.emptyText}
+          >
+            No trips found. Create your first trip to get started!
+          </ThemedText>
+        </ThemedView>
       )}
-      
-      <CreateTripModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        onSubmit={handleCreateTrip}
-      />
     </ThemedView>
   );
 }
 
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
   },
-  centerContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
+  section: {
+    marginTop: 24,
+    flexGrow: 1,
   },
-  emptyState: {
+  sectionTitle: {
+    marginBottom: 16,
+    paddingHorizontal: 16,
+  },
+  card: {
+    marginHorizontal: 16,
+    marginBottom: 12,
     flex: 1,
-    alignItems: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
     justifyContent: 'center',
-    padding: 20,
+    alignItems: 'center',
+    padding: 32,
   },
   emptyText: {
-    marginTop: 12,
-    marginBottom: 20,
-    fontSize: 16,
-  },
-  errorText: {
-    marginBottom: 16,
     textAlign: 'center',
   },
-  createButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  retryButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  buttonText: {
-    fontWeight: '600',
-  },
-  tripCard: {
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
+  ghostCard: {
+    backgroundColor: 'transparent',
+    elevation: 0,
+    height: 120,
+    shadowOpacity: 0,
+    borderWidth: 0,
   },
 });

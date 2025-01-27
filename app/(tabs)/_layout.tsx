@@ -6,32 +6,53 @@ import { Platform } from 'react-native';
 
 export default function TabLayout() {
   const { theme } = useTheme();
-
+  
   return (
     <Tabs
       screenOptions={({ route }) => ({
-        tabBarActiveTintColor: theme.colors.primary.onPrimary,
-        tabBarInactiveTintColor: theme.colors.content.secondary,
+        tabBarActiveTintColor: theme.colors.primary.main,
+        tabBarInactiveTintColor: theme.colors.content.tertiary,
         headerShown: false,
         tabBarStyle: {
           position: 'absolute',
-          bottom: Platform.OS === 'ios' ? theme.spacing.stack.md : theme.spacing.stack.sm,
-          borderWidth: 0,
+          left: 16,
+          right: 16,
+          borderTopLeftRadius: 1,
+          borderTopRightRadius: 1,
+          borderBottomLeftRadius: 0,
+          borderBottomRightRadius: 0,
           backgroundColor: theme.colors.surface.variant,
-          borderTopWidth: 0.2,
-          borderBottomWidth:0,
-          shadowColor: 'transparent',
-          elevation: 0,
-          shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: 0,
-          shadowRadius: 0, 
-      },      
+          borderTopWidth: 0.5,
+          borderTopColor: theme.colors.content.tertiary,
+          height: 64,
+          paddingBottom: Platform.OS === 'ios' ? 4 : 0,
+          paddingTop: 4,
+          ...Platform.select({
+            ios: {
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.1,
+              shadowRadius: 12,
+            },
+            android: {
+              elevation: 8,
+            },
+          }),
+        },
+        tabBarItemStyle: {
+          paddingBottom: 4,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '500',
+          paddingBottom: 2,
+        },
         tabBarIcon: ({ focused, color }) => {
           let iconName;
 
           switch (route.name) {
             case 'trips':
-              iconName = focused ? 'briefcase' : 'briefcase-outline';
+              iconName = focused ? 'airplane' : 'airplane-outline';
               break;
             case 'explore':
               iconName = focused ? 'compass' : 'compass-outline';
@@ -43,7 +64,7 @@ export default function TabLayout() {
               return null;
           }
 
-          return <Ionicons name={iconName as any} size={28} color={color} />;
+          return <Ionicons name={iconName as any} size={24} color={color} />;
         },
       })}
     >

@@ -1,78 +1,29 @@
 import { create } from 'zustand';
 import { supabase } from '@/src/auth/supabaseClient';
-import { secureTokenManager } from '@/src/auth/secure-token-manager';
 import type { AuthState, LoginCredentials, RegisterCredentials, User } from '@/src/types/auth';
+import { Session } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+/**
+ * Attempt to recover a session from Supabase.
+ */
+const recoverSession = async () => {
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error) throw error;
+
+    // If there's a session, return it
+    if (session) {
+      return session;
+    }
+  } catch (error) {
+    console.error('[AuthStore] Session recovery failed:', error);
+  }
+  return null;
+};
 
 export const useAuthStore = create<AuthState>((set, get) => {
-  let sessionProcessing: Promise<void> | null = null;
-  let sessionHandled = false;
-  // Set up auth state listener
-  supabase.auth.onAuthStateChange(async (event, session) => {
-    console.log('[AuthStore] Auth state change event:', event);
-    if (event === 'USER_UPDATED') {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email_confirmed_at) {
-        set({ isVerifying: false });
-      }
-    }
-    console.log('[AuthStore] Session:', {
-      hasSession: !!session,
-      hasUser: !!session?.user,
-      accessToken: !!session?.access_token,
-      userId: session?.user?.id
-    });
-
-    if (sessionHandled && event === 'SIGNED_IN') {
-      console.log('[AuthStore] Skipping redundant session handling');
-      sessionHandled = false; // Reset for future events
-      return;
-    }
-
-    if (event === 'SIGNED_IN' && session?.user) {
-      if (sessionProcessing) {
-        console.log('[AuthStore] Session processing already in progress');
-        return;
-      }
-      sessionProcessing = (async () => {
-        try {
-          sessionHandled = true; 
-          const user: User = {
-            id: parseInt(session.user.id),
-            email: session.user.email || '',
-            username: session.user.user_metadata.username || session.user.email?.split('@')[0] || '',
-            firstName: session.user.user_metadata.firstName,
-            lastName: session.user.user_metadata.lastName,
-            profilePicture: session.user.user_metadata.avatar_url,
-          };
-
-          await secureTokenManager.saveTokens(session.access_token!, session.refresh_token!);
-          
-          console.log('[AuthStore] Setting state with token:', session.access_token);
-          
-          set({ 
-            user,
-            token: session.access_token,
-            error: null,
-            loading: false
-          });
-        } catch (error) {
-          console.error('[AuthStore] Error processing sign in:', error);
-          set({ error: 'Failed to process sign in', loading: false });
-        } finally {
-          sessionProcessing = null;
-        }
-      })();
-    } else if (event === 'SIGNED_OUT') {
-      console.log('[AuthStore] User signed out');
-      set({
-        user: null,
-        token: null,
-        error: null,
-        loading: false
-      });
-    }
-  });
-
+  // State for user, token, loading, etc.
   return {
     user: null,
     token: null,
@@ -82,62 +33,75 @@ export const useAuthStore = create<AuthState>((set, get) => {
     isFirstTime: false,
     isVerifying: false,
 
+    /**
+     * Called on app start to recover session
+     */
     initialize: async () => {
       const state = get();
-      console.log('[AuthStore] Checking initialization state', {
-        loading: state.loading,
-        isInitialized: state.isInitialized
-      });
-    
-      // Prevent duplicate initialization
-      if (state.loading || state.isInitialized) {
-        console.log('[AuthStore] Initialization already in progress or completed');
-        return;
-      }
-    
+      if (state.loading || state.isInitialized) return;
+
       set({ loading: true });
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
         if (error) throw error;
-    
+  
         if (session?.user) {
+          console.log('[AuthStore] Session during initialization:', session);
+
+        // Store the token for comparison
+        await AsyncStorage.setItem('tokenAfterReload', session.access_token);
           const user: User = {
-            id: parseInt(session.user.id),
-            email: session.user.email || '',
-            username: session.user.user_metadata.username || session.user.email?.split('@')[0] || '',
-            firstName: session.user.user_metadata.firstName,
-            lastName: session.user.user_metadata.lastName,
-            profilePicture: session.user.user_metadata.avatar_url,
+            id: session.user.id,
+            email: session.user.email ?? '',
+            username: session.user.user_metadata?.username ?? '',
+            firstName: session.user.user_metadata?.firstName,
+            lastName: session.user.user_metadata?.lastName,
+            profilePicture: session.user.user_metadata?.avatar_url,
           };
-    
-          try {
-            // Store tokens securely
-            if (session.access_token && session.refresh_token) {
-              await secureTokenManager.saveTokens(session.access_token, session.refresh_token);
-            }
-          } catch (tokenError) {
-            console.error('[AuthStore] Token save error:', tokenError);
-            // Continue with session - don't fail initialization
-          }
-    
+
           set({
             user,
-            token: session.access_token || null,
+            token: session.access_token,
             isInitialized: true,
             loading: false,
             error: null
           });
         } else {
-          console.log('[AuthStore] No active session found');
+          // No active session
           set({
+            user: null,
+            token: null,
             isInitialized: true,
             loading: false,
-            user: null,
-            token: null
+            error: null
           });
         }
-    
-        console.log('[AuthStore] Initialization complete');
+
+        supabase.auth.onAuthStateChange((event, session) => {
+          if (session?.user) {
+            const user: User = {
+              id: session.user.id,
+              email: session.user.email ?? '',
+              username: session.user.user_metadata?.username ?? '',
+              firstName: session.user.user_metadata?.firstName,
+              lastName: session.user.user_metadata?.lastName,
+              profilePicture: session.user.user_metadata?.avatar_url,
+            };
+  
+            set({
+              user,
+              token: session.access_token,
+            });
+          } else {
+            set({
+              user: null,
+              token: null,
+            });
+          }
+        });
       } catch (error: any) {
         console.error('[AuthStore] Initialization error:', error);
         set({
@@ -147,14 +111,46 @@ export const useAuthStore = create<AuthState>((set, get) => {
           user: null,
           token: null
         });
+      }
+    },
+
+    refreshSession: async () => {
+      try {
+        const { data, error } = await supabase.auth.refreshSession();
+        if (error) throw error;
+    
+        const { session } = data;
+        if (session) {
+          const user: User = {
+            id: session.user.id,
+            email: session.user.email ?? '',
+            username: session.user.user_metadata?.username ?? '',
+            firstName: session.user.user_metadata?.firstName,
+            lastName: session.user.user_metadata?.lastName,
+            profilePicture: session.user.user_metadata?.avatar_url,
+          };
+    
+          set({
+            user,
+            token: session.access_token,
+          });
+    
+          return session.access_token;
+        } else {
+          throw new Error('Failed to refresh session');
+        }
+      } catch (error: any) {
+        console.error('[AuthStore] Refresh session error:', error);
         throw error;
       }
     },
 
+    /**
+     * Basic registration via Supabase
+     */
     register: async (credentials: RegisterCredentials) => {
       try {
         set({ loading: true, error: null });
-        
         const { data, error } = await supabase.auth.signUp({
           email: credentials.email,
           password: credentials.password,
@@ -166,17 +162,15 @@ export const useAuthStore = create<AuthState>((set, get) => {
             }
           }
         });
-  
         if (error) throw error;
-  
-        set({ 
+
+        // If sign-up is successful but email not verified
+        set({
           isVerifying: true,
           loading: false,
-          error: null 
+          error: null
         });
-  
-        set({ loading: false });
-        return true;
+        return;
       } catch (error: any) {
         set({
           error: error.message,
@@ -186,85 +180,102 @@ export const useAuthStore = create<AuthState>((set, get) => {
       }
     },
 
+    /**
+     * Basic login via Supabase
+     */
     login: async (credentials: LoginCredentials) => {
       try {
-        console.log('[AuthStore] Starting login - current state:', {
-          loading: get().loading,
-          isVerifying: get().isVerifying,
-          error: get().error
-        });
         set({ loading: true, error: null });
-        
         const { data, error } = await supabase.auth.signInWithPassword({
           email: credentials.email,
           password: credentials.password,
         });
+        if (error) {
+          set({ loading: false, error: error.message });
+          return;
+        }
+        if (!data.session) {
+          throw new Error('No session returned during login');
+        }
     
-        console.log('[AuthStore] Supabase login response:', {
-          hasData: !!data,
-          hasSession: !!data?.session,
-          error: error?.message
+        // Build user from session
+        const user: User = {
+          id: data.session.user.id,
+          email: data.session.user.email ?? '',
+          username: data.session.user.user_metadata?.username ?? '',
+          firstName: data.session.user.user_metadata?.firstName,
+          lastName: data.session.user.user_metadata?.lastName,
+          profilePicture: data.session.user.user_metadata?.avatar_url,
+        };
+    
+        // Set the user and token in the state
+        set({
+          user,
+          token: data.session.access_token,
+          error: null,
+          loading: false,
+          isVerifying: false,
         });
     
-        if (error?.message === 'Invalid login credentials') {
-          set({ 
-            loading: false,
-            error: 'unregistered_user'
-          });
-          return;
-        }
-
-        if (error?.message === 'Email not confirmed') {
-          set({ 
-            loading: false,
-            error: 'email_not_verified',
-            user: null,
-            token: null
-          });
-          return;
-        }
-    
-        if (error) throw error;
-        
-        if (!data.session) {
-          throw new Error('No session returned');
-        }
-    
-        set({ loading: false });
       } catch (error: any) {
         console.error('[AuthStore] Login failed:', error);
         set({
           error: error.message || 'Login failed',
-          loading: false
+          loading: false,
         });
         throw error;
       }
     },
 
+    /**
+     * Google sign-in success handler
+     */
     handleGoogleSignInSuccess: async (response: any) => {
       try {
-        console.log('[AuthStore] Processing Google Sign-in response');
         set({ loading: true, error: null });
-    
-        // Extract token from the nested structure
+        // Response should contain an idToken
         const idToken = response?.data?.idToken;
         if (!idToken) {
           throw new Error('No ID token in response');
         }
     
-        console.log('[AuthStore] Signing in with Supabase using Google token');
-        const { error } = await supabase.auth.signInWithIdToken({
+        // Sign in with Supabase using the ID token
+        const { data, error } = await supabase.auth.signInWithIdToken({
           provider: 'google',
           token: idToken,
         });
-        
-        if (error) {
-          console.error('[AuthStore] Supabase sign-in error:', error);
-          throw error;
+        if (error) throw error;
+    
+        if (!data.session) {
+          throw new Error('No session returned from Google sign-in');
         }
-        
-        console.log('[AuthStore] Google sign-in successful');
-        set({ loading: false });
+    
+        // Log the session and token
+        console.log('[AuthStore] Session after Google sign-in:', data.session);
+    
+        // Store the token temporarily for comparison
+        await AsyncStorage.setItem('tokenAfterSignIn', data.session.access_token);
+    
+        // Build user from session
+        const user: User = {
+          id: data.session.user.id,
+          email: data.session.user.email ?? '',
+          username: data.session.user.user_metadata?.username ?? '',
+          firstName: data.session.user.user_metadata?.firstName,
+          lastName: data.session.user.user_metadata?.lastName,
+          profilePicture: data.session.user.user_metadata?.avatar_url,
+        };
+    
+        set({
+          user,
+          token: data.session.access_token,
+          loading: false,
+          error: null,
+          isVerifying: false
+        });
+        console.log('[AuthStore] Token stored after Google sign-in:', data.session.access_token.substring(0, 20) + '...');
+
+        await supabase.auth.refreshSession();
       } catch (error: any) {
         console.error('[AuthStore] Google sign-in error:', error);
         set({
@@ -275,23 +286,30 @@ export const useAuthStore = create<AuthState>((set, get) => {
       }
     },
 
+    /**
+     * Logout: sign out from Supabase and reset store
+     */
     logout: async () => {
       try {
         set({ loading: true });
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
-        
-        // Auth state listener will handle the cleanup
-        set({ loading: false });
       } catch (error: any) {
-        console.error('Logout error:', error);
+        console.error('[AuthStore] Logout error:', error);
+      } finally {
         set({
-          error: error.message || 'Logout failed',
-          loading: false
+          user: null,
+          token: null,
+          loading: false,
+          error: null,
+          isVerifying: false
         });
       }
     },
 
+    /**
+     * Mark first-time onboarding as done
+     */
     setFirstTimeDone: async () => {
       set({ isFirstTime: false });
     }

@@ -13,6 +13,7 @@ import { useGoogleSignIn } from '@/src/hooks/useGoogleSignIn';
 import EmailLoginForm from '@/components/ui/auth/EmailLoginForm';
 import { AuthOptionButton } from '@/components/ui/auth/AuthOptionButton';
 import { Theme } from '@/src/theme/types';
+import { Divider } from 'react-native-paper';
 
 export default function LoginScreen() {
   const [isEmailModalVisible, setEmailModalVisible] = useState(false);
@@ -44,6 +45,7 @@ export default function LoginScreen() {
             label="Continue with Google"
             onPress={handleGoogleSignIn}
           />
+          <Divider />
           <AuthOptionButton
             provider="email"
             label="Continue with Email"

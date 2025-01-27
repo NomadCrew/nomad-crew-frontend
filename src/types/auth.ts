@@ -1,7 +1,7 @@
 export interface User {
-    id: number;
-    username: string;
+    id: string;
     email: string;
+    username: string;
     firstName?: string;
     lastName?: string;
     profilePicture?: string;
@@ -22,11 +22,18 @@ export interface User {
     password: string;
   }
   
+  export enum AuthStatus {
+    IDLE = 'idle',
+    SIGNED_OUT = 'signOut',
+    SIGNED_IN = 'signIn'
+  }
+  
   export interface AuthState {
     user: User | null;
     token: string | null;
     loading: boolean;
     error: string | null;
+    status: AuthStatus;
     isInitialized: boolean;
     isFirstTime: boolean;
     isVerifying: boolean;
@@ -35,8 +42,8 @@ export interface User {
     logout: () => Promise<void>;
     initialize: () => Promise<void>;
     setFirstTimeDone: () => Promise<void>;
-    loginWithGoogle: () => Promise<void>;
     handleGoogleSignInSuccess: (response: GoogleSignInResponse) => Promise<void>;
+    refreshToken: () => Promise<void>;
   }
   
   export interface AuthTokens {
@@ -49,6 +56,7 @@ export interface User {
     exp: number;
     iat: number;
     email: string;
+    role?: string;
     jti?: string;
   }
   
@@ -60,18 +68,13 @@ export interface User {
   }
 
   export interface GoogleSignInResponse {
-    data: {
+    authentication: {
+      accessToken: string;
       idToken: string;
-      scopes: string[];
-      serverAuthCode: string;
-      user: {
-        email: string;
-        familyName: string;
-        givenName: string;
-        id: string;
-        name: string;
-        photo?: string;
-      };
     };
-    type: 'success' | 'cancel';
+    user: {
+      email?: string;
+      name?: string;
+      photo?: string;
+    };
   }
