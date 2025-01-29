@@ -11,11 +11,12 @@ import {
 import { Portal, Modal, Text, TextInput, Button, useTheme } from 'react-native-paper';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
+import { useAuthStore } from '@/src/store/useAuthStore';
 
 // Import your Trip type from wherever it's defined
 import { Trip } from '@/src/types/trip';
 
-// The props match your existing code’s usage
+// The props match your existing code's usage
 interface CreateTripModalProps {
   visible: boolean;
   onClose: () => void;
@@ -32,14 +33,14 @@ export default function CreateTripModal({
 
   // Local state for the trip data
   const [trip, setTrip] = useState<Trip>({
-    id: '', // The backend will ultimately set this, if needed
+    id: '',
     name: '',
     destination: '',
     description: '',
     startDate: new Date().toISOString(),
     endDate: new Date().toISOString(),
-    // If your Trip type has additional fields (e.g., status),
-    // initialize them as needed
+    status: 'PLANNING',
+    createdBy: useAuthStore().user?.id || '',
   });
 
   // Which date picker is open? 'start' or 'end'

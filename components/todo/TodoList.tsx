@@ -11,21 +11,21 @@ import { Todo } from '@/src/types/todo';
 
 interface TodoListProps {
   tripId: string;
+  onAddTodoPress?: () => void;
 }
 
 const ITEMS_PER_PAGE = 5;
 
-export const TodoList = ({ tripId }: TodoListProps) => {
+export const TodoList = ({ tripId, onAddTodoPress }: TodoListProps) => {
   return (
     <TodoErrorBoundary>
-      <TodoListContent tripId={tripId} />
+      <TodoListContent tripId={tripId} onAddTodoPress={onAddTodoPress} />
     </TodoErrorBoundary>
   );
 };
 
-const TodoListContent = ({ tripId }: TodoListProps) => {
+const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
   const { theme } = useTheme();
-  const [retryCount, setRetryCount] = useState(0);
   const { 
     todos,
     loading,
@@ -51,7 +51,7 @@ const TodoListContent = ({ tripId }: TodoListProps) => {
 
     loadTodos();
     return () => unsubscribeFromTodoEvents();
-  }, [tripId, retryCount]);
+  }, [tripId]);
 
   const handleLoadMore = useCallback(() => {
     if (!loading && hasMore) {
@@ -60,8 +60,11 @@ const TodoListContent = ({ tripId }: TodoListProps) => {
   }, [loading, hasMore, todos.length, tripId]);
 
   const handleRetry = useCallback(() => {
-    setRetryCount(count => count + 1);
-  }, []);
+    unsubscribeFromTodoEvents();
+    fetchTodos(tripId, 0, ITEMS_PER_PAGE)
+      .then(() => subscribeToTodoEvents(tripId))
+      .catch(console.error);
+  }, [tripId]);
 
   const renderItem = useCallback(({ item }: { item: Todo }) => (
     <TodoItem
@@ -99,6 +102,13 @@ const TodoListContent = ({ tripId }: TodoListProps) => {
         <Text style={styles(theme).emptyText}>
           No todos yet. Create your first one!
         </Text>
+        <Button 
+          mode="contained" 
+          onPress={onAddTodoPress}
+          style={{ marginTop: 16 }}
+        >
+          Add Todo
+        </Button>
       </Surface>
     );
   }
