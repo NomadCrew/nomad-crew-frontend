@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, useWindowDimensions, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -10,6 +10,7 @@ import { BentoGrid } from '@/components/ui/BentoGrid';
 import { TodoList } from '@/components/todo/TodoList';
 import { BentoCarousel } from '@/components/ui/BentoCarousel';
 import type { Trip } from '@/src/types/trip';
+import { AddTodoModal } from '@/components/todo/AddTodoModal';
 
 interface TripDetailScreenProps {
   trip: Trip;
@@ -17,12 +18,13 @@ interface TripDetailScreenProps {
 
 const QuickActions = () => {
   const { theme } = useTheme();
+  const [showAddTodo, setShowAddTodo] = useState(false);
   
   const actions = [
     { icon: 'map-marker', label: 'Location', onPress: () => console.log('Location pressed') },
     { icon: 'message-outline', label: 'Chat', onPress: () => console.log('Chat pressed') },
     { icon: 'account-group', label: 'Members', onPress: () => console.log('Members pressed') },
-    { icon: 'plus', label: 'Add Todo', onPress: () => console.log('Add Todo pressed') },
+    { icon: 'plus', label: 'Add Todo', onPress: () => setShowAddTodo(true) },
   ];
   
   return (
@@ -80,6 +82,7 @@ const TripStats = () => {
 export default function TripDetailScreen({ trip }: { trip: Trip }) {
   const { theme } = useTheme();
   const { width: screenWidth } = useWindowDimensions();
+  const [showAddTodo, setShowAddTodo] = useState(false);
 
   const GRID_MARGIN = theme.spacing.layout.screen.padding;
   const GRID_GAP = theme.spacing.layout.section.gap;
@@ -99,7 +102,10 @@ export default function TripDetailScreen({ trip }: { trip: Trip }) {
     {
         id: 'todo-list',
         component: TodoList,
-        props: { tripId: trip.id }, 
+        props: { 
+          tripId: trip.id,
+          onAddTodoPress: () => setShowAddTodo(true)
+        }, 
     },
     // Other carousel items can be added here
 ];
@@ -161,6 +167,12 @@ React.useEffect(() => {
       >
         <BentoGrid items={bentoItems} />
       </ScrollView>
+
+      <AddTodoModal
+        visible={showAddTodo}
+        onClose={() => setShowAddTodo(false)}
+        tripId={trip.id}
+      />
     </View>
   );
 }
