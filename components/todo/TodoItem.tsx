@@ -12,20 +12,12 @@ import Animated, {
     withRepeat,
     withSequence,
     runOnJS,
-    interpolateColor,
     Easing,
+    interpolate,
   } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Todo } from '@/src/types/todo';
 import { useTheme } from '@/src/theme/ThemeProvider';
-
-type PanContext = {
-    startX: number;
-};
-
-type LongPressContext = {
-    startTime: number;
-};
 
 interface TodoItemProps {
   todo: Todo;
@@ -36,8 +28,7 @@ interface TodoItemProps {
 }
 
 const SWIPE_THRESHOLD = 80;
-const DELETE_DURATION = 3000;
-const DELETE_THRESHOLD = 0.7;
+const DELETE_DURATION = 1200;
 
 export const TodoItem = ({
   todo,
@@ -75,47 +66,36 @@ export const TodoItem = ({
       if (Math.abs(translateX.value) > SWIPE_THRESHOLD) runOnJS(onComplete)();
     });
   
-
     const longPressGesture = Gesture.LongPress()
     .minDuration(DELETE_DURATION)
-    .onStart(() => {
+    .onBegin(() => {
       pressed.value = true;
       longPressStartTime.value = Date.now();
-      // Start the progress animation
       deleteProgress.value = withTiming(1, {
         duration: DELETE_DURATION,
         easing: Easing.linear,
       });
     })
     .onEnd(() => {
-      pressed.value = false;
-      const elapsedTime = Date.now() - longPressStartTime.value;
-      if (elapsedTime >= DELETE_THRESHOLD * DELETE_DURATION) {
-        runOnJS(onDelete)();
-      }
-      deleteProgress.value = withTiming(0);
+      runOnJS(onDelete)();
     })
-    .onTouchesMove(() => {
-      // Optional: Cancel the long press if user moves their finger
-      deleteProgress.value = withTiming(0);
-    })
-    .onTouchesCancelled(() => {
+    .onFinalize(() => {
       pressed.value = false;
-      deleteProgress.value = withTiming(0);
-    });
+      deleteProgress.value = withTiming(0, {
+        duration: 250,
+        easing: Easing.bezier(0.82, 0.06, 0.42, 1.01),
+      });
+    });  
 
   // Animated styles
   const { theme } = useTheme();
   const containerStyle = useAnimatedStyle(() => {
-    const backgroundColor = interpolateColor(
-        deleteProgress.value,
-        [0, 1],
-        [theme.colors.background.default, theme.colors.primary.pressed]
-    );
-
     return {
-      backgroundColor,
+      backgroundColor: theme.colors.background.default,
       transform: [{ translateX: translateX.value }],
+      position: 'relative',
+      overflow: 'hidden',
+      opacity: pressed.value ? 0.9 : 1,
     };
   });
 
@@ -144,6 +124,24 @@ export const TodoItem = ({
     };
   });
 
+  const progressStyle = useAnimatedStyle(() => {
+    const width = interpolate(
+      deleteProgress.value,
+      [0, 1],
+      [0, containerWidth.value]
+    );
+    
+    return {
+      position: 'absolute',
+      left: 0,
+      top: 0,
+      bottom: 0,
+      width,
+      backgroundColor: theme.colors.status.error.background,
+      opacity: 0.9,
+    };
+  });
+
   // Measure text and container width
   const onTextLayout = useCallback((event: {
     nativeEvent: { layout: { width: number } }
@@ -157,22 +155,22 @@ export const TodoItem = ({
         containerWidth.value = event.nativeEvent.layout.width;
     }, []);
 
-
   return (
     <GestureDetector gesture={Gesture.Race(panGesture, longPressGesture)}>
+    <Animated.View 
+      style={[styles.container, containerStyle]}
+      onLayout={onContainerLayout}
+    >
+      <Animated.View style={progressStyle} />
       <Animated.View 
-        style={[styles.container, containerStyle]}
-        onLayout={onContainerLayout}
+        style={[styles.textContainer, { opacity: pressed.value ? 0.7 : 1 }]}
+        onTouchStart={() => {
+          scrolling.value = true;
+        }}
+        onTouchEnd={() => {
+          scrolling.value = false;
+        }}
       >
-        <Animated.View 
-          style={[styles.textContainer, { opacity: pressed.value ? 0.7 : 1 }]}
-          onTouchStart={() => {
-            scrolling.value = true;
-          }}
-          onTouchEnd={() => {
-            scrolling.value = false;
-          }}
-        >
           <Animated.Text
             ref={textRef}
             style={[
