@@ -16,9 +16,8 @@ interface TripDetailScreenProps {
   trip: Trip;
 }
 
-const QuickActions = () => {
+const QuickActions = ({ setShowAddTodo }: { setShowAddTodo: React.Dispatch<React.SetStateAction<boolean>> }) => {
   const { theme } = useTheme();
-  const [showAddTodo, setShowAddTodo] = useState(false);
   
   const actions = [
     { icon: 'map-marker', label: 'Location', onPress: () => console.log('Location pressed') },
@@ -42,10 +41,9 @@ const QuickActions = () => {
             <View style={styles(theme).iconContainer}>
               <IconButton
                 icon={action.icon}
-                size={20} // Reduced from 24
+                size={20}
                 iconColor={theme.colors.content.primary}
                 style={styles(theme).icon}
-                onPress={action.onPress}
               />
             </View>
           </Pressable>
@@ -132,7 +130,7 @@ const bentoItems = React.useMemo(
     },
     {
         id: '3',
-        element: <QuickActions />,
+        element: <QuickActions setShowAddTodo={setShowAddTodo} />,
         height: 'short' as const,
         position: 'right' as const,
     },

@@ -23,12 +23,17 @@ interface TripState {
   getTripById: (id: string) => Trip | undefined;
   // Status operations
   updateTripStatus: (id: string, status: TripStatus) => Promise<void>;
+  connectionState: 'CONNECTING' | 'OPEN' | 'CLOSED';
+  processedEvents: Set<string>;
+  subscribeToTripEvents: (tripId: string) => void;
+  unsubscribeFromTripEvents: () => void;
 }
 
 export const useTripStore = create<TripState>((set, get) => ({
   trips: [],
   loading: false,
   error: null,
+  
 
   createTrip: async (tripData: CreateTripInput) => {
     set({ loading: true, error: null });
@@ -131,4 +136,36 @@ export const useTripStore = create<TripState>((set, get) => ({
         set({ loading: false });
     }
 },
+connectionState: 'CLOSED',
+processedEvents: new Set(),
+
+subscribeToTripEvents: (tripId: string) => {
+  const url = `${api.defaults.baseURL}${API_PATHS.trips.stream(tripId)}`;
+  
+  useEventSource({
+    url,
+    onEvent: (data) => {
+      // Skip if event already processed
+      if (get().processedEvents.has(data.id)) {
+        return;
+      }
+
+      set({ processedEvents: get().processedEvents.add(data.id) });
+      
+      switch (data.type) {
+        case 'TRIP_UPDATED':
+          set(state => ({
+            trips: state.trips.map(trip =>
+              trip.id === data.payload.id ? { ...trip, ...data.payload } : trip
+            )
+          }));
+          break;
+      }
+    },
+  });
+},
+
+unsubscribeFromTripEvents: () => {
+  set({ connectionState: 'CLOSED' });
+}
 }));
