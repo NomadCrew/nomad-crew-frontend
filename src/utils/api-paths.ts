@@ -25,4 +25,11 @@ export const API_PATHS = {
     byId: (id: string) => createApiPath(`trips/${id}`), // Maps to /v1/trips/:id
     updateStatus: (id: string) => `/v1/trips/${id}/status` // Maps to /v1/trips/:id/status
   },
+  todos: {
+    create: (tripId: string) => `/v1/trips/${tripId}/todos`,
+    delete: (tripId: string, todoId: string) => `/v1/trips/${tripId}/todos/${todoId}`,
+    list: (tripId: string) => `/v1/trips/${tripId}/todos`,
+    update: (tripId: string, todoId: string) => `/v1/trips/${tripId}/todos/${todoId}`,
+    stream: (tripId: string) => `/v1/trips/${tripId}/todos/stream`,
+  },
 } as const;

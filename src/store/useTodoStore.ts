@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import { api } from '@/src/api/api-client';
-import EventSource, { EventSourceListener } from "react-native-sse";
-import "react-native-url-polyfill/auto";
-import { Todo, CreateTodoInput, UpdateTodoInput, TodosResponse } from '@/src/types/todo';
+import { EventSourceManager, ConnectionState } from '@/src/hooks/useEventSource';
 import { useAuthStore } from '@/src/store/useAuthStore';
+import { Todo, CreateTodoInput, UpdateTodoInput, TodosResponse } from '@/src/types/todo';
+import { API_PATHS } from '@/src/utils/api-paths';
 
 interface TodoState {
   todos: Todo[];
@@ -11,8 +11,9 @@ interface TodoState {
   error: string | null;
   total: number;
   hasMore: boolean;
-  eventSource: EventSource | null;
-  connectionState: 'CONNECTING' | 'OPEN' | 'CLOSED';
+  connectionState: ConnectionState;
+  processedEvents: Set<string>;
+  eventSourceManager: EventSourceManager | null;
   
   // Core operations
   createTodo: (input: CreateTodoInput) => Promise<Todo>;
@@ -27,21 +28,20 @@ interface TodoState {
   unsubscribeFromTodoEvents: () => void;
 }
 
-type TodoEvents = "event";
-
 export const useTodoStore = create<TodoState>((set, get) => ({
+  eventSourceManager: null,
   todos: [],
   loading: false,
   error: null,
   total: 0,
   hasMore: true,
-  eventSource: null,
-  connectionState: 'CONNECTING',
+  connectionState: 'CLOSED',
+  processedEvents: new Set(),
   
   createTodo: async (input) => {
     set({ loading: true, error: null });
     try {
-      const response = await api.post<Todo>(`/v1/trips/${input.tripId}/todos`, input);
+      const response = await api.post<Todo>(API_PATHS.todos.create(input.tripId), input);
       set(state => ({
         todos: [response.data, ...state.todos],
         total: state.total + 1
@@ -57,13 +57,14 @@ export const useTodoStore = create<TodoState>((set, get) => ({
   },
 
   updateTodo: async (id, input) => {
+    const todo = get().todos.find(t => t.id === id);
+    if (!todo) throw new Error('Todo not found');
+
     set({ loading: true, error: null });
     try {
-      const response = await api.put<Todo>(`/v1/trips/${id}/todos`, input);
+      const response = await api.put<Todo>(API_PATHS.todos.update(todo.tripId, id), input);
       set(state => ({
-        todos: state.todos.map(todo => 
-          todo.id === id ? { ...todo, ...response.data } : todo
-        )
+        todos: state.todos.map(t => t.id === id ? { ...t, ...response.data } : t)
       }));
       return response.data;
     } catch (error) {
@@ -76,11 +77,14 @@ export const useTodoStore = create<TodoState>((set, get) => ({
   },
 
   deleteTodo: async (id) => {
+    const todo = get().todos.find(t => t.id === id);
+    if (!todo) return;
+
     set({ loading: true, error: null });
     try {
-      await api.delete(`/v1/trips/${id}/todos`);
+      await api.delete(API_PATHS.todos.delete(todo.tripId, id));
       set(state => ({
-        todos: state.todos.filter(todo => todo.id !== id),
+        todos: state.todos.filter(t => t.id !== id),
         total: state.total - 1
       }));
     } catch (error) {
@@ -96,11 +100,9 @@ export const useTodoStore = create<TodoState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const response = await api.get<TodosResponse>(
-        `/v1/trips/${tripId}/todos?offset=${offset}&limit=${limit}`
+        `${API_PATHS.todos.list(tripId)}?offset=${offset}&limit=${limit}`
       );
-      
       const todoData = response.data.data ?? [];
-      
       set(state => ({
         todos: offset === 0 ? todoData : [...state.todos, ...todoData],
         total: response.data.pagination.total,
@@ -117,91 +119,84 @@ export const useTodoStore = create<TodoState>((set, get) => ({
   },
 
   subscribeToTodoEvents: (tripId) => {
-    const state = get();
-    if (state.eventSource) {
-      state.eventSource.removeAllEventListeners();
-      state.eventSource.close();
-    }
-
-    const url = new URL(`${api.defaults.baseURL}/v1/trips/${tripId}/todos/stream`);
-
     const token = useAuthStore.getState().token;
     const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-
     if (!token || !anonKey) {
       console.error('Missing authentication credentials for SSE');
       set({ error: 'Authentication failed' });
       return;
     }
+    // Clear processed events on new subscription
+    set({ processedEvents: new Set() });
 
-    const eventSource = new EventSource<TodoEvents>(url, {
+    const url = `${api.defaults.baseURL}${API_PATHS.todos.stream(tripId)}`;
+    // If an existing connection exists, disconnect first
+    if (get().eventSourceManager) {
+      get().eventSourceManager.disconnect();
+    }
+
+    const manager = new EventSourceManager({
+      url,
       headers: {
         'apikey': anonKey,
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
       },
-    });
-
-    const listener: EventSourceListener<TodoEvents> = (event) => {
-      if (event.type === 'event') {
-        try {
-          if (!event.data) {
-            console.error('Received empty SSE event data');
-            return;
+      onEvent: (data) => {
+        // Use an immutable update for processedEvents
+        set((state) => {
+          if (state.processedEvents.has(data.id)) {
+            return {};
           }
-          const data = JSON.parse(event.data);
-          const state = get();
-          
+          const newProcessedEvents = new Set(state.processedEvents);
+          newProcessedEvents.add(data.id);
+          let updatedTodos = state.todos;
           switch (data.type) {
             case 'TODO_CREATED':
-              set({ todos: [data.payload, ...state.todos] });
-              break;
+              if (!state.todos.find(t => t.id === data.payload.id)) {
+                updatedTodos = [data.payload, ...state.todos];
+              }
+              return { todos: updatedTodos, total: state.total + 1, processedEvents: newProcessedEvents };
             case 'TODO_UPDATED':
-              set({
-                todos: state.todos.map(todo =>
-                  todo.id === data.payload.id ? data.payload : todo
-                )
-              });
-              break;
+              updatedTodos = state.todos.map(todo =>
+                todo.id === data.payload.id ? data.payload : todo
+              );
+              return { todos: updatedTodos, processedEvents: newProcessedEvents };
             case 'TODO_DELETED':
-              set({
-                todos: state.todos.filter(todo => todo.id !== data.payload.id)
-              });
-              break;
+              updatedTodos = state.todos.filter(todo => todo.id !== data.payload.id);
+              return { todos: updatedTodos, total: state.total - 1, processedEvents: newProcessedEvents };
+            default:
+              return { processedEvents: newProcessedEvents };
           }
-        } catch (error) {
-          console.error('Error processing SSE event:', error);
-        }
-      }
-    };
-
-    eventSource.addEventListener("event", listener);
-    eventSource.addEventListener("error", (event) => {
-      if (event.type === "error") {
-        console.error("SSE Connection error:", event.message);
+        });
+      },
+      onError: (error) => {
+        console.error('SSE Error:', error);
         set({ connectionState: 'CLOSED' });
-      } else if (event.type === "exception") {
-        console.error("SSE Error:", event.message, event.error);
-        set({ connectionState: 'CLOSED' });
+      },
+      onOpen: () => {
+        set({ connectionState: 'OPEN' });
+      },
+      onStateChange: (state: ConnectionState) => {
+        set({ connectionState: state });
       }
     });
 
-    eventSource.addEventListener("open", () => {
-      set({ connectionState: 'OPEN' });
+    manager.connect();
+    set({
+      eventSourceManager: manager,
+      connectionState: 'CONNECTING'
     });
-
-    // Store eventSource reference for cleanup
-    set({ eventSource, connectionState: 'CONNECTING' });
   },
 
   unsubscribeFromTodoEvents: () => {
-    const state = get();
-    if (state.eventSource) {
-      state.eventSource.removeAllEventListeners();
-      state.eventSource.close();
-      set({ eventSource: null, connectionState: 'CLOSED' });
+    const { eventSourceManager } = get();
+    if (eventSourceManager) {
+      eventSourceManager.disconnect();
+      set({
+        eventSourceManager: null,
+        connectionState: 'CLOSED'
+      });
     }
   }
 }));

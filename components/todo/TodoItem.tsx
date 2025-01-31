@@ -63,7 +63,7 @@ export const TodoItem = ({
       translateX.value = Math.abs(translateX.value) > SWIPE_THRESHOLD
         ? withSpring(SWIPE_THRESHOLD * Math.sign(translateX.value))
         : withSpring(0);
-      if (Math.abs(translateX.value) > SWIPE_THRESHOLD) runOnJS(onComplete)();
+      if (Math.abs(translateX.value) > SWIPE_THRESHOLD) runOnJS(onDelete)();
     });
   
     const longPressGesture = Gesture.LongPress()
@@ -77,7 +77,7 @@ export const TodoItem = ({
       });
     })
     .onEnd(() => {
-      runOnJS(onDelete)();
+      runOnJS(onComplete)();
     })
     .onFinalize(() => {
       pressed.value = false;
@@ -89,58 +89,68 @@ export const TodoItem = ({
 
   // Animated styles
   const { theme } = useTheme();
-  const containerStyle = useAnimatedStyle(() => {
-    return {
-      backgroundColor: theme.colors.background.default,
-      transform: [{ translateX: translateX.value }],
-      position: 'relative',
-      overflow: 'hidden',
-      opacity: pressed.value ? 0.9 : 1,
-    };
-  });
 
-  const textStyle = useAnimatedStyle(() => {
-    if (!scrolling.value || textWidth.value <= containerWidth.value) {
-      return {};
-    }
+const containerStyle = useAnimatedStyle(() => ({
+  backgroundColor: theme.colors.background.default,
+  transform: [{ translateX: translateX.value }],
+  position: 'relative',
+  overflow: 'hidden',
+  opacity: pressed.value ? 0.9 : 1,
+}));
 
-    return {
-      transform: [
-        {
-          translateX: withRepeat(
-            withSequence(
-              withTiming(0, { duration: 0 }),
-              withTiming(-(textWidth.value - containerWidth.value), {
-                duration: 3000,
-                easing: Easing.linear,
-              }),
-              withTiming(0, { duration: 1000 })
-            ),
-            -1,
-            true
+const textContainerStyle = useAnimatedStyle(() => ({
+  opacity: pressed.value ? 0.7 : 1,
+}));
+
+const textStyle = useAnimatedStyle(() => {
+  'worklet';
+  const currentScrolling = scrolling.value;
+  const currentTextWidth = textWidth.value;
+  const currentContainerWidth = containerWidth.value;
+
+  if (!currentScrolling || currentTextWidth <= currentContainerWidth) {
+    return {};
+  }
+
+  return {
+    transform: [
+      {
+        translateX: withRepeat(
+          withSequence(
+            withTiming(0, { duration: 0 }),
+            withTiming(-(currentTextWidth - currentContainerWidth), {
+              duration: 3000,
+              easing: Easing.linear,
+            }),
+            withTiming(0, { duration: 1000 })
           ),
-        },
-      ],
-    };
-  });
+          -1,
+          true
+        ),
+      },
+    ],
+  };
+});
 
-  const progressStyle = useAnimatedStyle(() => {
-    const width = interpolate(
-      deleteProgress.value,
-      [0, 1],
-      [0, containerWidth.value]
-    );
-    
-    return {
-      position: 'absolute',
-      left: 0,
-      top: 0,
-      bottom: 0,
-      width,
-      backgroundColor: theme.colors.status.error.background,
-      opacity: 0.9,
-    };
-  });
+const progressStyle = useAnimatedStyle(() => {
+  'worklet';
+  const currentContainerWidth = containerWidth.value;
+  const width = interpolate(
+    deleteProgress.value,
+    [0, 1],
+    [0, currentContainerWidth]
+  );
+  
+  return {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width,
+    backgroundColor: theme.colors.status.success.background,
+    opacity: 0.9,
+  };
+});
 
   // Measure text and container width
   const onTextLayout = useCallback((event: {
@@ -163,7 +173,7 @@ export const TodoItem = ({
     >
       <Animated.View style={progressStyle} />
       <Animated.View 
-        style={[styles.textContainer, { opacity: pressed.value ? 0.7 : 1 }]}
+        style={[styles.textContainer, textContainerStyle]}
         onTouchStart={() => {
           scrolling.value = true;
         }}
