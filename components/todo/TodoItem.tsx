@@ -15,6 +15,7 @@ import Animated, {
     Easing,
     interpolate,
   } from 'react-native-reanimated';
+  import { Check } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { Todo } from '@/src/types/todo';
 import { useTheme } from '@/src/theme/ThemeProvider';
@@ -148,6 +149,7 @@ const progressStyle = useAnimatedStyle(() => {
     bottom: 0,
     width,
     backgroundColor: theme.colors.status.success.background,
+    color: theme.colors.status.success.content,
     opacity: 0.9,
   };
 });
@@ -195,12 +197,17 @@ const progressStyle = useAnimatedStyle(() => {
           </Animated.Text>
         </Animated.View>
         <Animated.View style={styles.statusIndicator}>
-          <View 
-            style={[
-              styles.dot,
-              { backgroundColor: todo.status === 'COMPLETE' ? '#4CAF50' : '#FFC107' }
-            ]} 
-          />
+          {todo.status === 'COMPLETE' ? (
+            <Check  
+              size={16} 
+              color={theme.colors.status.success.background} 
+            />
+          ) : (
+            <View style={[
+              styles.dot, 
+              { backgroundColor: theme.colors.status.planning.background }
+            ]} />
+          )}
         </Animated.View>
       </Animated.View>
     </GestureDetector>
@@ -214,7 +221,6 @@ const styles = StyleSheet.create({
     padding: 12,
     marginVertical: 4,
     borderRadius: 8,
-    backgroundColor: 'white',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
