@@ -111,9 +111,9 @@ export const colorTokens = {
         border: isDark ? colorTokens.red[800] : colorTokens.red[300],
       },
       success: {
-        surface: isDark ? colorTokens.green[900] : colorTokens.green[50],
+        surface: isDark ? colorTokens.green[800] : colorTokens.green[400],
         content: isDark ? colorTokens.green[200] : colorTokens.green[700],
-        background: isDark ? colorTokens.green[800] : colorTokens.green[100],
+        background: isDark ? colorTokens.green[500] : colorTokens.green[100],
         border: isDark ? colorTokens.green[800] : colorTokens.green[300],
       },
       planning: {
