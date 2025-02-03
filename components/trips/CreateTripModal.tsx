@@ -30,6 +30,7 @@ export default function CreateTripModal({
   onSubmit,
 }: CreateTripModalProps) {
   const theme = useTheme();
+  const authStore = useAuthStore();
 
   // Local state for the trip data
   const [trip, setTrip] = useState<Trip>({
@@ -40,7 +41,7 @@ export default function CreateTripModal({
     startDate: new Date().toISOString(),
     endDate: new Date().toISOString(),
     status: 'PLANNING',
-    createdBy: useAuthStore().user?.id || '',
+    createdBy: authStore.user?.id || '',
   });
 
   // Which date picker is open? 'start' or 'end'

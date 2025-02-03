@@ -1,9 +1,16 @@
 import { create } from 'zustand';
 import { api } from '@/src/api/api-client';
-import { EventSourceManager, ConnectionState } from '@/src/hooks/useEventSource';
-import { useAuthStore } from '@/src/store/useAuthStore';
 import { Todo, CreateTodoInput, UpdateTodoInput, TodosResponse } from '@/src/types/todo';
 import { API_PATHS } from '@/src/utils/api-paths';
+import { 
+  WebSocketEvent,
+  WebSocketConnectionState,
+  isTodoEvent,
+  TodoCreatedEvent,
+  TodoUpdatedEvent,
+  TodoDeletedEvent
+} from '@/src/types/events';
+import { WebSocketConnection } from '@/src/hooks/WebSocketConnection';
 
 interface TodoState {
   todos: Todo[];
@@ -11,9 +18,8 @@ interface TodoState {
   error: string | null;
   total: number;
   hasMore: boolean;
-  connectionState: ConnectionState;
+  wsConnection: WebSocketConnectionState | null;
   processedEvents: Set<string>;
-  eventSourceManager: EventSourceManager | null;
   
   // Core operations
   createTodo: (input: CreateTodoInput) => Promise<Todo>;
@@ -23,19 +29,19 @@ interface TodoState {
   // List operations with pagination
   fetchTodos: (tripId: string, offset: number, limit: number) => Promise<void>;
   
-  // SSE operations
-  subscribeToTodoEvents: (tripId: string) => void;
-  unsubscribeFromTodoEvents: () => void;
+  // WebSocket operations
+  connectToTodoStream: (tripId: string) => void;
+  disconnectFromTodoStream: () => void;
+  handleTodoEvent: (event: WebSocketEvent) => void;
 }
 
 export const useTodoStore = create<TodoState>((set, get) => ({
-  eventSourceManager: null,
   todos: [],
   loading: false,
   error: null,
   total: 0,
   hasMore: true,
-  connectionState: 'CLOSED',
+  wsConnection: null,
   processedEvents: new Set(),
   
   createTodo: async (input) => {
@@ -118,85 +124,73 @@ export const useTodoStore = create<TodoState>((set, get) => ({
     }
   },
 
-  subscribeToTodoEvents: (tripId) => {
-    const token = useAuthStore.getState().token;
-    const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-    if (!token || !anonKey) {
-      console.error('Missing authentication credentials for SSE');
-      set({ error: 'Authentication failed' });
-      return;
-    }
-    // Clear processed events on new subscription
-    set({ processedEvents: new Set() });
-
-    const url = `${api.defaults.baseURL}${API_PATHS.todos.stream(tripId)}`;
-    // If an existing connection exists, disconnect first
-    if (get().eventSourceManager) {
-      get().eventSourceManager.disconnect();
-    }
-
-    const manager = new EventSourceManager({
-      url,
-      headers: {
-        'apikey': anonKey,
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'text/event-stream',
+  connectToTodoStream: (tripId: string) => {
+    const wsUrl = `${api.defaults.baseURL}${API_PATHS.todos.ws(tripId)}`.replace('http', 'ws');
+    
+    const wsConnection = WebSocketConnection({
+      url: wsUrl,
+      onMessage: (event: WebSocketEvent) => {
+        get().handleTodoEvent(event);
       },
-      onEvent: (data) => {
-        // Use an immutable update for processedEvents
-        set((state) => {
-          if (state.processedEvents.has(data.id)) {
-            return {};
-          }
-          const newProcessedEvents = new Set(state.processedEvents);
-          newProcessedEvents.add(data.id);
-          let updatedTodos = state.todos;
-          switch (data.type) {
-            case 'TODO_CREATED':
-              if (!state.todos.find(t => t.id === data.payload.id)) {
-                updatedTodos = [data.payload, ...state.todos];
-              }
-              return { todos: updatedTodos, total: state.total + 1, processedEvents: newProcessedEvents };
-            case 'TODO_UPDATED':
-              updatedTodos = state.todos.map(todo =>
-                todo.id === data.payload.id ? data.payload : todo
-              );
-              return { todos: updatedTodos, processedEvents: newProcessedEvents };
-            case 'TODO_DELETED':
-              updatedTodos = state.todos.filter(todo => todo.id !== data.payload.id);
-              return { todos: updatedTodos, total: state.total - 1, processedEvents: newProcessedEvents };
-            default:
-              return { processedEvents: newProcessedEvents };
-          }
-        });
+      onError: (error: Error) => {
+        set({ error: error.message });
       },
-      onError: (error) => {
-        console.error('SSE Error:', error);
-        set({ connectionState: 'CLOSED' });
-      },
-      onOpen: () => {
-        set({ connectionState: 'OPEN' });
-      },
-      onStateChange: (state: ConnectionState) => {
-        set({ connectionState: state });
+      onReconnect: async () => {
+        // Fetch latest todos on reconnection
+        await get().fetchTodos(tripId, 0, 20); // Fetch first page
       }
     });
 
-    manager.connect();
-    set({
-      eventSourceManager: manager,
-      connectionState: 'CONNECTING'
-    });
+    set({ wsConnection });
   },
 
-  unsubscribeFromTodoEvents: () => {
-    const { eventSourceManager } = get();
-    if (eventSourceManager) {
-      eventSourceManager.disconnect();
-      set({
-        eventSourceManager: null,
-        connectionState: 'CLOSED'
-      });
+  disconnectFromTodoStream: () => {
+    const { wsConnection } = get();
+    if (wsConnection) {
+      // Cleanup handled by the hook
+      set({ wsConnection: null });
     }
-  }
+  },
+
+  handleTodoEvent: (event: WebSocketEvent) => {
+    if (!isTodoEvent(event)) return;
+
+    // Prevent duplicate event processing
+    if (get().processedEvents.has(event.id)) return;
+
+    set(state => {
+      const newProcessedEvents = new Set(state.processedEvents);
+      newProcessedEvents.add(event.id);
+
+      switch (event.type) {
+        case 'TODO_CREATED': {
+          const todoEvent = event as TodoCreatedEvent;
+          return {
+            todos: [todoEvent.payload, ...state.todos],
+            total: state.total + 1,
+            processedEvents: newProcessedEvents
+          };
+        }
+        case 'TODO_UPDATED': {
+          const todoEvent = event as TodoUpdatedEvent;
+          return {
+            todos: state.todos.map(todo => 
+              todo.id === todoEvent.payload.id ? todoEvent.payload : todo
+            ),
+            processedEvents: newProcessedEvents
+          };
+        }
+        case 'TODO_DELETED': {
+          const todoEvent = event as TodoDeletedEvent;
+          return {
+            todos: state.todos.filter(todo => todo.id !== todoEvent.payload.id),
+            total: state.total - 1,
+            processedEvents: newProcessedEvents
+          };
+        }
+        default:
+          return { processedEvents: newProcessedEvents };
+      }
+    });
+  },
 }));

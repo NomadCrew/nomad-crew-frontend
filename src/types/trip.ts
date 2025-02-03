@@ -1,3 +1,5 @@
+import { BaseEvent } from './events';
+
 export type TripStatus = 'PLANNING' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
 
 export interface Trip {
@@ -17,13 +19,6 @@ export interface Trip {
   weatherCondition?: string;
   weatherTemp?: string;
 }
-export interface UpdateTripStatusRequest {
-    status: TripStatus;
-}
-
-export interface UpdateTripStatusResponse {
-    message: string;
-}
 
 export interface CreateTripInput {
   name: string;
@@ -42,22 +37,18 @@ export interface UpdateTripInput {
   status?: TripStatus;
 }
 
-export interface CreateTripRequest {
-  name: string;
-  description?: string;
-  destination: string;
-  startDate: Date;
-  endDate: Date;
+export interface UpdateTripStatusRequest {
+  status: TripStatus;
 }
 
-export interface CreateTripResponse {
+export interface UpdateTripStatusResponse {
+  message: string;
+}
+
+// Response types for REST API
+export interface CreateTripResponse extends Trip {}
+export interface UpdateTripResponse extends Trip {}
+export interface DeleteTripResponse {
   id: string;
-  name: string;
-  description: string;
-  destination: string;
-  startDate: Date;
-  endDate: Date;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
+  success: boolean;
 }

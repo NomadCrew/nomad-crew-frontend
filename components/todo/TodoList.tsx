@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, View, ActivityIndicator } from 'react-native';
 import { Text, Surface, Button } from 'react-native-paper';
 import { FlashList } from '@shopify/flash-list';
@@ -32,66 +32,33 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
     loading,
     error,
     hasMore,
-    connectionState,
     fetchTodos,
     updateTodo,
     deleteTodo,
-    subscribeToTodoEvents,
-    unsubscribeFromTodoEvents
+    wsConnection
   } = useTodoStore();
 
-  const prevConnectionStateRef = useRef(connectionState);
-  const isMountedRef = useRef(false);
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    
-    const handleStateChange = () => {
-      if (!isMountedRef.current) return;
-      if (prevConnectionStateRef.current !== connectionState) {
-        console.debug('[SSE] Connection state changed:', {
-          from: prevConnectionStateRef.current,
-          to: connectionState
-        });
-        prevConnectionStateRef.current = connectionState;
-      }
-    };
-
-    const unsubscribe = useTodoStore.subscribe(handleStateChange, (state) => state.connectionState);
-    return () => {
-      isMountedRef.current = false;
-      unsubscribe();
-    };
-  }, [connectionState]);
-
-  useEffect(() => {
-    const loadTodos = async () => {
-      try {
-        await fetchTodos(tripId, 0, ITEMS_PER_PAGE);
-        subscribeToTodoEvents(tripId);
-      } catch (error) {
-        console.error('Failed to load todos:', error);
-      }
-    };
-
-    loadTodos();
-    return () => unsubscribeFromTodoEvents();
-  }, [tripId, fetchTodos, subscribeToTodoEvents, unsubscribeFromTodoEvents]);
-
-  const handleLoadMore = useCallback(() => {
+  const connectionStatus = wsConnection?.status;
+  
+  // Handle pagination
+  const handleLoadMore = React.useCallback(() => {
     if (!loading && hasMore) {
-      fetchTodos(tripId, todos.length, ITEMS_PER_PAGE);
+      fetchTodos(tripId, todos.length, 20);
     }
   }, [loading, hasMore, todos.length, tripId, fetchTodos]);
 
-  const handleRetry = useCallback(() => {
-    unsubscribeFromTodoEvents();
-    fetchTodos(tripId, 0, ITEMS_PER_PAGE)
-      .then(() => subscribeToTodoEvents(tripId))
+  const handleRetry = React.useCallback(() => {
+    fetchTodos(tripId, 0, 20)
       .catch(console.error);
-  }, [tripId, fetchTodos, subscribeToTodoEvents, unsubscribeFromTodoEvents]);
+  }, [tripId, fetchTodos]);
 
-  const renderItem = useCallback(({ item }: { item: Todo }) => (
+  // Initial data load
+  useEffect(() => {
+    fetchTodos(tripId, 0, 20);
+  }, [tripId]);
+
+  // Render items
+  const renderItem = React.useCallback(({ item }: { item: Todo }) => (
     <TodoItem
       todo={item}
       onComplete={() => updateTodo(item.id, {
@@ -141,13 +108,23 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
 
   return (
     <View style={styles(theme).container}>
-      {(connectionState === 'CONNECTING' || connectionState === 'RECONNECTING' || connectionState === 'CLOSED') && (
-        <Surface style={styles(theme).reconnectingBanner}>
-          <Text style={styles(theme).reconnectingText}>
-            {connectionState === 'RECONNECTING' ? 'Reconnecting...' : 'Connecting...'}
+      {/* Connection Status Banner */}
+      {(connectionStatus === 'CONNECTING' || connectionStatus === 'RECONNECTING') && (
+        <Surface style={styles(theme).connectionBanner}>
+          <Text style={styles(theme).connectionText}>
+            {connectionStatus === 'CONNECTING' ? 'Connecting...' : 'Reconnecting...'}
           </Text>
         </Surface>
       )}
+
+      {connectionStatus === 'ERROR' && (
+        <Surface style={[styles(theme).loader, styles(theme).loader]}>
+          <Text style={styles(theme).errorText}>
+            Connection error. Please check your internet connection.
+          </Text>
+        </Surface>
+      )}
+
       <FlashList
         data={todos}
         renderItem={renderItem}

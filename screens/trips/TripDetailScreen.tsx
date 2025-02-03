@@ -1,20 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, useWindowDimensions, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Surface, Text, IconButton } from 'react-native-paper';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { TripHeader } from '@/components/trips/TripHeader';
-import type { Theme } from '@/src/theme/types';
+import { Theme } from '@/src/theme/types';
 import { BentoGrid } from '@/components/ui/BentoGrid';
 import { TodoList } from '@/components/todo/TodoList';
 import { BentoCarousel } from '@/components/ui/BentoCarousel';
-import type { Trip } from '@/src/types/trip';
+import { Trip } from '@/src/types/trip';
 import { AddTodoModal } from '@/components/todo/AddTodoModal';
-
-interface TripDetailScreenProps {
-  trip: Trip;
-}
+import { useTripStore } from '@/src/store/useTripStore';
+import { useTodoStore } from '@/src/store/useTodoStore';
 
 const QuickActions = ({ setShowAddTodo }: { setShowAddTodo: React.Dispatch<React.SetStateAction<boolean>> }) => {
   const { theme } = useTheme();
@@ -77,7 +75,43 @@ const TripStats = () => {
   );
 };
 
+const useStreamConnections = (tripId: string | undefined) => {
+  const { connectToTrip, disconnectFromTrip } = useTripStore();
+  const { connectToTodoStream, disconnectFromTodoStream } = useTodoStore();
+
+  useEffect(() => {
+    let isMounted = true;
+    let tripDisconnectFn: (() => void) | null = null;
+
+    const connect = async () => {
+      if (!isMounted || !tripId) return;
+      
+      try {
+        await connectToTrip(tripId);
+        tripDisconnectFn = () => disconnectFromTrip(tripId);
+        await connectToTodoStream(tripId);
+      } catch (error) {
+        console.error('Connection error:', error);
+        if (isMounted) {
+          // Implement retry logic here if needed
+        }
+      }
+    };
+
+    connect();
+
+    return () => {
+      isMounted = false;
+      if (tripId) {
+        disconnectFromTodoStream();
+        tripDisconnectFn?.();
+      }
+    };
+  }, [tripId, connectToTrip, connectToTodoStream, disconnectFromTrip, disconnectFromTodoStream]);
+};
+
 export default function TripDetailScreen({ trip }: { trip: Trip }) {
+  useStreamConnections(trip?.id);
   const { theme } = useTheme();
   const { width: screenWidth } = useWindowDimensions();
   const [showAddTodo, setShowAddTodo] = useState(false);
@@ -119,8 +153,8 @@ const bentoItems = React.useMemo(
           height={TALL_CARD_HEIGHT}
         />
       ),
-      height: 'tall',
-      position: 'left',
+      height: 'tall' as const,
+      position: 'left' as const,
     },
     {
       id: '2',

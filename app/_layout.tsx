@@ -4,7 +4,7 @@ import { Provider as PaperProvider } from 'react-native-paper';
 import { Stack, useSegments, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
-import { EventSource as RNEventSource } from 'react-native-sse';
+import RNEventSource from 'react-native-sse';
 import { ThemeProvider, useTheme } from '@/src/theme/ThemeProvider';
 import { useAuthStore } from '@/src/store/useAuthStore';
 import { OnboardingProvider } from '@/src/providers/OnboardingProvider';
@@ -15,6 +15,7 @@ import { useOnboarding } from '@/src/providers/OnboardingProvider';
 import AppInitializer from './AppInitializer';
 
 if (!global.EventSource) {
+  // @ts-ignore - React Native SSE polyfill
   global.EventSource = RNEventSource;
 }
 
