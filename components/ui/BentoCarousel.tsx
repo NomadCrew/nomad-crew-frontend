@@ -1,7 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
 import Carousel from 'react-native-reanimated-carousel';
-import { useTheme } from '@/src/theme/ThemeProvider';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { runOnJS } from 'react-native-reanimated';
 

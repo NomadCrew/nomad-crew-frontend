@@ -9,11 +9,17 @@ import {
   UpdateTripStatusResponse,
 } from '@/src/types/trip';
 import { API_PATHS } from '@/src/utils/api-paths';
+import {
+  WebSocketEvent,
+  WebSocketConnectionState,
+  isTripEvent,
+} from '@/src/types/events';
 
 interface TripState {
   trips: Trip[];
   loading: boolean;
   error: string | null;
+  wsConnection: WebSocketConnectionState | null;
   // Core operations
   createTrip: (input: CreateTripInput) => Promise<Trip>;
   updateTrip: (id: string, input: UpdateTripInput) => Promise<Trip>;
@@ -23,17 +29,17 @@ interface TripState {
   getTripById: (id: string) => Trip | undefined;
   // Status operations
   updateTripStatus: (id: string, status: TripStatus) => Promise<void>;
-  connectionState: 'CONNECTING' | 'OPEN' | 'CLOSED';
-  processedEvents: Set<string>;
-  subscribeToTripEvents: (tripId: string) => void;
-  unsubscribeFromTripEvents: () => void;
+  // WebSocket operations
+  connectToTrip: (tripId: string) => void;
+  disconnectFromTrip: (tripId: string) => void;
+  handleTripEvent: (event: WebSocketEvent) => void;
 }
 
 export const useTripStore = create<TripState>((set, get) => ({
   trips: [],
   loading: false,
   error: null,
-  
+  wsConnection: null,
 
   createTrip: async (tripData: CreateTripInput) => {
     set({ loading: true, error: null });
@@ -48,33 +54,26 @@ export const useTripStore = create<TripState>((set, get) => ({
       }));
       return response.data;
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Failed to create trip';
-      set({ error: errorMessage });
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create trip';
+      set({ error: errorMessage, loading: false });
       throw error;
-    } finally {
-      set({ loading: false });
     }
   },
 
   updateTrip: async (id, input) => {
     set({ loading: true, error: null });
     try {
-      const response = await api.put<Trip>(`/v1/trips/${id}`, input);
+      const response = await api.put<Trip>(`${API_PATHS.trips.byId(id)}`, input);
       const updatedTrip = response.data;
-      set((state) => ({
-        trips: state.trips.map((trip) =>
-          trip.id === id ? updatedTrip : trip
-        ),
+      set(state => ({
+        trips: state.trips.map(trip => trip.id === id ? updatedTrip : trip),
+        loading: false,
       }));
       return updatedTrip;
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Failed to update trip';
-      set({ error: message });
+      const message = error instanceof Error ? error.message : 'Failed to update trip';
+      set({ error: message, loading: false });
       throw error;
-    } finally {
-      set({ loading: false });
     }
   },
 
@@ -82,90 +81,95 @@ export const useTripStore = create<TripState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const response = await api.get<Trip[]>(API_PATHS.trips.list);
-      set({ trips: response.data || [] });
+      set({ 
+        trips: response.data || [],
+        loading: false,
+      });
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Failed to fetch trips';
-      set({ error: message });
+      const message = error instanceof Error ? error.message : 'Failed to fetch trips';
+      set({ error: message, loading: false });
       throw error;
-    } finally {
-      set({ loading: false });
     }
   },
 
   deleteTrip: async (id) => {
     set({ loading: true, error: null });
     try {
-      await api.delete(`/v1/trips/${id}`);
-      set((state) => ({
-        trips: state.trips.filter((trip) => trip.id !== id),
+      await api.delete(`${API_PATHS.trips.byId(id)}`);
+      set(state => ({
+        trips: state.trips.filter(trip => trip.id !== id),
+        loading: false,
       }));
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Failed to delete trip';
-      set({ error: message });
+      const message = error instanceof Error ? error.message : 'Failed to delete trip';
+      set({ error: message, loading: false });
       throw error;
-    } finally {
-      set({ loading: false });
     }
   },
 
   getTripById: (id) => {
-    return get().trips.find((trip) => trip.id === id);
+    return get().trips.find(trip => trip.id === id);
   },
 
   updateTripStatus: async (id: string, status: TripStatus) => {
     set({ loading: true, error: null });
     try {
-        const response = await api.patch<UpdateTripStatusResponse>(
-            `${API_PATHS.trips.updateStatus(id)}`,
-            { status } as UpdateTripStatusRequest
-        );
-
-        // Update trip in local state
-        const trips = get().trips.map(trip => 
-            trip.id === id ? { ...trip, status } : trip
-        );
-        
-        set({ trips });
-    } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to update trip status';
-        set({ error: message });
-        throw error;
-    } finally {
-        set({ loading: false });
-    }
-},
-connectionState: 'CLOSED',
-processedEvents: new Set(),
-
-subscribeToTripEvents: (tripId: string) => {
-  const url = `${api.defaults.baseURL}${API_PATHS.trips.stream(tripId)}`;
-  
-  useEventSource({
-    url,
-    onEvent: (data) => {
-      // Skip if event already processed
-      if (get().processedEvents.has(data.id)) {
-        return;
-      }
-
-      set({ processedEvents: get().processedEvents.add(data.id) });
+      const response = await api.patch<UpdateTripStatusResponse>(
+        `${API_PATHS.trips.updateStatus(id)}`,
+        { status } as UpdateTripStatusRequest
+      );
       
-      switch (data.type) {
-        case 'TRIP_UPDATED':
-          set(state => ({
-            trips: state.trips.map(trip =>
-              trip.id === data.payload.id ? { ...trip, ...data.payload } : trip
-            )
-          }));
-          break;
-      }
-    },
-  });
-},
+      set(state => ({
+        trips: state.trips.map(trip => 
+          trip.id === id ? { ...trip, status } : trip
+        ),
+        loading: false,
+      }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update trip status';
+      set({ error: message, loading: false });
+      throw error;
+    }
+  },
 
-unsubscribeFromTripEvents: () => {
-  set({ connectionState: 'CLOSED' });
-}
+  // WebSocket Operations
+  connectToTrip: (tripId: string) => {
+    const wsUrl = `${api.defaults.baseURL}${API_PATHS.trips.ws(tripId)}`.replace('http', 'ws');
+    try {
+      const connection = new WebSocket(wsUrl);
+      connection.onmessage = (event) => {
+        const tripEvent = JSON.parse(event.data);
+        get().handleTripEvent(tripEvent);
+      };
+      connection.onerror = (errorEvent) => {
+        set({ error: `WebSocket error: ${errorEvent.type}` });
+      };
+      connection.onclose = () => {
+        set({ wsConnection: null });
+      };
+      set({ wsConnection: { instance: connection, status: 'CONNECTED', reconnectAttempt: 0 } });
+    } catch (error) {
+      console.error('Trip WebSocket connection failed:', error);
+      set({ wsConnection: { instance: null, status: 'DISCONNECTED', reconnectAttempt: 0 } });
+    }
+  },
+
+  disconnectFromTrip: (tripId: string) => {
+    const { wsConnection } = get();
+    if (wsConnection?.instance) {
+      wsConnection.instance.close();
+      set({ wsConnection: null });
+    }
+  },
+
+  handleTripEvent: (event: WebSocketEvent) => {
+    if (!isTripEvent(event)) return;
+
+    const updatedTrip = event.payload;
+    set(state => ({
+      trips: state.trips.map(trip =>
+        trip.id === updatedTrip.id ? { ...trip, ...updatedTrip } : trip
+      ),
+    }));
+  },
 }));
