@@ -10,7 +10,7 @@ import {
   TodoUpdatedEvent,
   TodoDeletedEvent
 } from '@/src/types/events';
-import { WebSocketConnection } from '@/src/hooks/WebSocketConnection';
+import { WebSocketConnection } from '@/src/hooks/useWebSocketConnection';
 
 interface TodoState {
   todos: Todo[];
@@ -125,23 +125,28 @@ export const useTodoStore = create<TodoState>((set, get) => ({
   },
 
   connectToTodoStream: (tripId: string) => {
+    console.log('[TodoStore] connectToTodoStream called with tripId:', tripId);
     const wsUrl = `${api.defaults.baseURL}${API_PATHS.todos.ws(tripId)}`.replace('http', 'ws');
     
-    const wsConnection = WebSocketConnection({
-      url: wsUrl,
-      onMessage: (event: WebSocketEvent) => {
-        get().handleTodoEvent(event);
-      },
-      onError: (error: Error) => {
-        set({ error: error.message });
-      },
-      onReconnect: async () => {
-        // Fetch latest todos on reconnection
-        await get().fetchTodos(tripId, 0, 20); // Fetch first page
-      }
-    });
-
-    set({ wsConnection });
+    try {
+      const connection = new WebSocket(wsUrl);
+      connection.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (isTodoEvent(data)) {
+          get().handleTodoEvent(data);
+        }
+      };
+      connection.onerror = (errorEvent) => {
+        set({ error: `Todo WebSocket error: ${errorEvent.type}` });
+      };
+      connection.onclose = () => {
+        set({ wsConnection: null });
+      };
+      set({ wsConnection: { instance: connection, status: 'CONNECTED', reconnectAttempt: 0 } });
+    } catch (error) {
+      console.error('Todo WebSocket connection failed:', error);
+      set({ wsConnection: { instance: null, status: 'DISCONNECTED', reconnectAttempt: 0 } });
+    }
   },
 
   disconnectFromTodoStream: () => {

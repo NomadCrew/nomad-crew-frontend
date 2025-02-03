@@ -22,7 +22,7 @@ export interface UseWebSocketConnectionProps extends WebSocketConfig {
   onReconnect?: () => void;
 }
 
-export function WebSocketConnection({
+export function useWebSocketConnection({
   url,
   protocols,
   onMessage,
@@ -30,6 +30,7 @@ export function WebSocketConnection({
   onReconnect,
   ...customConfig
 }: UseWebSocketConnectionProps) {
+  console.log('[WebSocketConnection] Hook initialized for URL:', url);
   // Merge custom config with defaults
   const config = { ...DEFAULT_CONFIG, ...customConfig };
   
@@ -98,6 +99,7 @@ export function WebSocketConnection({
 
   // Connection establishment
   const connect = useCallback(() => {
+    console.log('[WebSocketConnection] Connection process started');
     cleanup();
 
     // Add auth headers
@@ -231,6 +233,7 @@ export function WebSocketConnection({
 
   // Effect for initial connection and cleanup
   useEffect(() => {
+    console.log('[WebSocketConnection] useEffect triggered for URL:', url);
     connect();
     return cleanup;
   }, [connect, cleanup]);
@@ -245,12 +248,7 @@ export function WebSocketConnection({
   return {
     connectionState,
     sendMessage,
-    reconnect: () => {
-      setConnectionState(prev => ({
-        ...prev,
-        reconnectAttempt: 0
-      }));
-      reconnect();
-    }
+    reconnect,
+    cleanup
   };
 }
