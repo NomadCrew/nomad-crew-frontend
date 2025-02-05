@@ -5,7 +5,7 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 interface BentoItem {
   id: string | number;
   element: React.ReactNode;
-  height: 'normal' | 'tall';
+  height: 'short' | 'normal' | 'tall';
   position: 'left' | 'right';
 }
 
@@ -25,6 +25,7 @@ export const BentoGrid: React.FC<BentoGridProps> = ({ items }) => {
   
   // Base and tall card heights
   const BASE_CARD_HEIGHT = 180;
+  const SHORT_CARD_HEIGHT = BASE_CARD_HEIGHT / 2;
   const TALL_CARD_HEIGHT = (BASE_CARD_HEIGHT * 2) + GRID_GAP;
   
   // Calculate card width based on available space
@@ -33,6 +34,11 @@ export const BentoGrid: React.FC<BentoGridProps> = ({ items }) => {
   // Separate items by position
   const leftItems = items.filter(item => item.position === 'left');
   const rightItems = items.filter(item => item.position === 'right');
+
+  // New height definitions for right column combinations
+  const TALL_COLUMN_HEIGHT = (BASE_CARD_HEIGHT * 2) + GRID_GAP;
+  const RIGHT_COLUMN_NORMAL = TALL_COLUMN_HEIGHT * 0.75 - GRID_GAP/2;
+  const RIGHT_COLUMN_SHORT = TALL_COLUMN_HEIGHT * 0.25 - GRID_GAP/2;
 
   return (
     <View style={[styles.container, { padding: GRID_MARGIN }]}>
@@ -46,7 +52,9 @@ export const BentoGrid: React.FC<BentoGridProps> = ({ items }) => {
                 styles.card,
                 {
                   width: CARD_WIDTH,
-                  height: item.height === 'tall' ? TALL_CARD_HEIGHT : BASE_CARD_HEIGHT,
+                  height: item.height === 'tall' ? TALL_CARD_HEIGHT : 
+                          item.height === 'short' ? SHORT_CARD_HEIGHT : 
+                          BASE_CARD_HEIGHT,
                   backgroundColor: theme.colors.surface.variant,
                 },
               ]}
@@ -65,7 +73,9 @@ export const BentoGrid: React.FC<BentoGridProps> = ({ items }) => {
                 styles.card,
                 {
                   width: CARD_WIDTH,
-                  height: BASE_CARD_HEIGHT,
+                  height: item.height === 'normal' ? RIGHT_COLUMN_NORMAL :
+                          item.height === 'short' ? RIGHT_COLUMN_SHORT :
+                          BASE_CARD_HEIGHT,
                   marginBottom: index === 0 ? GRID_GAP : 0,
                   backgroundColor: theme.colors.surface.variant,
                 },

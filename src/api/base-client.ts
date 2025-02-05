@@ -29,7 +29,7 @@ export class BaseApiClient {
             data: config.data,
             headers: { 
               ...config.headers,
-              Authorization: config.headers.Authorization ? 'Bearer [HIDDEN]' : undefined,
+              Authorization: config.headers.Authorization ? 'Bearer [HIDDED]': undefined,
               apikey: config.headers.apikey ? '[HIDDEN]' : undefined 
             },
           });

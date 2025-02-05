@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, ActivityIndicator, ViewStyle } from 'react-native';
+import { StyleSheet, ViewStyle } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { TripCard } from './TripCard';
-import { Trip, TripStatus } from '@/src/types/trip';
+import { Trip } from '@/src/types/trip';
+import { useTripStore } from '@/src/store/useTripStore';
 
 interface TripSection {
   title: string;
@@ -12,7 +13,6 @@ interface TripSection {
 }
 
 interface Props {
-  trips: Trip[];
   onTripPress?: (trip: Trip) => void;
   style?: ViewStyle;
 }
@@ -29,8 +29,10 @@ const GHOST_CARD: Trip = {
   isGhostCard: true
 };
 
-export function TripList({ trips, onTripPress, style }: Props) {
+export function TripList({  onTripPress, style }: Props) {
   const { theme } = useTheme();
+  const { trips, fetchTrips, loading, error, wsConnection } = useTripStore();
+  const connectionStatus = wsConnection?.status;
 
   const sections = useMemo(() => {
     const now = new Date();

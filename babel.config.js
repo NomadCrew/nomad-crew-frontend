@@ -7,7 +7,8 @@ module.exports = function (api) {
       '@babel/preset-typescript' // TypeScript support
     ],
     plugins: [
-      ['@babel/plugin-transform-react-jsx', { runtime: 'automatic' }] // Ensures automatic JSX runtime
+      ['@babel/plugin-transform-react-jsx', { runtime: 'automatic' }], // Ensures automatic JSX runtime
+      'react-native-reanimated/plugin' 
     ],
   };
 };

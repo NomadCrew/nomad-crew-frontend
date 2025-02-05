@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, View, Platform, useWindowDimensions, Image } from 'react-native';
 import Onboarding from 'react-native-onboarding-swiper';
 import Animated, { FadeIn } from 'react-native-reanimated';
