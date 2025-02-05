@@ -1,85 +1,50 @@
-import React from 'react';
-import { View, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet, ScrollView, useWindowDimensions, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { format } from 'date-fns';
 import { Surface, Text, IconButton } from 'react-native-paper';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { TripHeader } from '@/components/trips/TripHeader';
-import type { Theme } from '@/src/theme/types';
+import { Theme } from '@/src/theme/types';
 import { BentoGrid } from '@/components/ui/BentoGrid';
-import type { Trip } from '@/src/types/trip';
+import { TodoList } from '@/components/todo/TodoList';
+import { BentoCarousel } from '@/components/ui/BentoCarousel';
+import { Trip } from '@/src/types/trip';
+import { AddTodoModal } from '@/components/todo/AddTodoModal';
+import { useTripStore } from '@/src/store/useTripStore';
+import { useTodoStore } from '@/src/store/useTodoStore';
 
-const TripInfoCard = ({ trip }: { trip: Trip }) => {
-  const { theme } = useTheme();
-    
-  return (
-    <Surface style={styles(theme).infoCard} elevation={0}>
-      {/* Location Section */}
-      <View>
-        <View style={styles(theme).destinationContainer}>
-          <Text 
-            variant="displaySmall" 
-            style={styles(theme).destination}
-          >
-            {trip.destination.split(',')[0]}
-          </Text>
-        </View>
-      </View>
-      
-      {/* Date Section */}
-      <View style={styles(theme).dateContainer}>
-        <Text 
-          variant="titleLarge" 
-          style={styles(theme).date}
-        >
-          {format(new Date(trip.startDate), 'MMM dd')} -{'\n'}
-          {format(new Date(trip.endDate), 'MMM dd, yyyy')}
-        </Text>
-      </View>
-      
-    </Surface>
-  );
-};
-
-const QuickActions = () => {
+const QuickActions = ({ setShowAddTodo }: { setShowAddTodo: React.Dispatch<React.SetStateAction<boolean>> }) => {
   const { theme } = useTheme();
   
   const actions = [
-    { icon: 'map-marker', label: 'Location' },
-    { icon: 'message-outline', label: 'Chat' },
-    { icon: 'account-group', label: 'Members' },
+    { icon: 'map-marker', label: 'Location', onPress: () => console.log('Location pressed') },
+    { icon: 'message-outline', label: 'Chat', onPress: () => console.log('Chat pressed') },
+    { icon: 'account-group', label: 'Members', onPress: () => console.log('Members pressed') },
+    { icon: 'plus', label: 'Add Todo', onPress: () => setShowAddTodo(true) },
   ];
   
   return (
     <Surface style={styles(theme).actionsCard} elevation={0}>
-      <Text 
-        variant="headlineSmall" 
-        style={styles(theme).actionTitle}
-      >
-        Quick{'\n'}Actions
-      </Text>
       <View style={styles(theme).actionButtons}>
         {actions.map((action) => (
-          <View key={action.label} style={styles(theme).actionButtons}>
-            <Surface 
-              style={styles(theme).iconContainer} 
-              elevation={0}
-            >
+          <Pressable 
+            key={action.label} 
+            onPress={action.onPress}
+            style={({ pressed }) => [
+              styles(theme).actionItem,
+              { opacity: pressed ? 0.6 : 1 }
+            ]}
+          >
+            <View style={styles(theme).iconContainer}>
               <IconButton
                 icon={action.icon}
-                size={32}
+                size={20}
                 iconColor={theme.colors.content.primary}
                 style={styles(theme).icon}
               />
-            </Surface>
-            <Text 
-              variant="bodyMedium" 
-              style={styles(theme).actionLabel}
-            >
-              {action.label}
-            </Text>
-          </View>
+            </View>
+          </Pressable>
         ))}
       </View>
     </Surface>
@@ -110,35 +75,120 @@ const TripStats = () => {
   );
 };
 
+const useStreamConnections = (tripId: string | undefined) => {
+  console.log('[useStreamConnections] Initializing hook');
+  const { connectToTrip, disconnectFromTrip } = useTripStore();
+  const { connectToTodoStream, disconnectFromTodoStream } = useTodoStore();
+
+  useEffect(() => {
+    console.log('[useStreamConnections] useEffect triggered for tripId:', tripId);
+    let isMounted = true;
+    let tripDisconnectFn: (() => void) | null = null;
+
+    const connect = async () => {
+      console.log('[useStreamConnections] Connection process started');
+      if (!isMounted || !tripId) return;
+      
+      try {
+        console.log('[useStreamConnections] Connecting to trip:', tripId);
+        await connectToTrip(tripId);
+        console.log('[useStreamConnections] Trip connected, connecting to todos');
+        tripDisconnectFn = () => disconnectFromTrip(tripId);
+        await connectToTodoStream(tripId);
+        console.log('[useStreamConnections] Todo stream connected');
+      } catch (error) {
+        console.error('[useStreamConnections] Connection error:', error);
+        if (isMounted) {
+          console.log('[useStreamConnections] Handling error in mounted state');
+        }
+      }
+    };
+
+    connect();
+
+    return () => {
+      console.log('[useStreamConnections] Cleanup triggered');
+      isMounted = false;
+      if (tripId) {
+        console.log('[useStreamConnections] Disconnecting from streams');
+        disconnectFromTodoStream();
+        tripDisconnectFn?.();
+      }
+    };
+  }, [tripId, connectToTrip, connectToTodoStream, disconnectFromTrip, disconnectFromTodoStream]);
+};
+
 export default function TripDetailScreen({ trip }: { trip: Trip }) {
+  useStreamConnections(trip?.id);
   const { theme } = useTheme();
   const { width: screenWidth } = useWindowDimensions();
-  
-  // Calculate responsive values
-  console.log(theme);
-  const isTablet = screenWidth >= theme.breakpoints.tablet;
-  const containerWidth = Math.min(screenWidth, theme.breakpoints.desktop);
+  const [showAddTodo, setShowAddTodo] = useState(false);
 
-  const bentoItems = React.useMemo(() => [
+  const GRID_MARGIN = theme.spacing.layout.screen.padding;
+  const GRID_GAP = theme.spacing.layout.section.gap;
+  const MAX_WIDTH = Math.min(screenWidth, theme.breakpoints.desktop);
+  const CONTENT_WIDTH = MAX_WIDTH - GRID_MARGIN * 2;
+
+  const BASE_CARD_HEIGHT = 180;
+  const TALL_CARD_HEIGHT = BASE_CARD_HEIGHT * 2 + GRID_GAP;
+  const CARD_WIDTH = (CONTENT_WIDTH - GRID_GAP) / 2;
+  
+  // Add container width calculation
+  const containerWidth = Math.min(
+    screenWidth, 
+    theme.breakpoints.desktop
+  );
+  const carouselItems = [
     {
-      id: '1',
-      element: <TripInfoCard trip={trip} />,
+        id: 'todo-list',
+        component: TodoList,
+        props: { 
+          tripId: trip.id,
+          onAddTodoPress: () => setShowAddTodo(true)
+        }, 
+    },
+    // Other carousel items can be added here
+];
+
+const bentoItems = React.useMemo(
+  () => [
+    {
+      id: 'carousel',
+      element: (
+        <BentoCarousel
+          items={carouselItems}
+          width={CARD_WIDTH}
+          height={TALL_CARD_HEIGHT}
+        />
+      ),
       height: 'tall' as const,
       position: 'left' as const,
     },
     {
       id: '2',
-      element: <QuickActions />,
-      height: 'normal' as const,
-      position: 'right' as const,
-    },
-    {
-      id: '3',
       element: <TripStats />,
       height: 'normal' as const,
       position: 'right' as const,
     },
-  ], [trip]);
+    {
+        id: '3',
+        element: <QuickActions setShowAddTodo={setShowAddTodo} />,
+        height: 'short' as const,
+        position: 'right' as const,
+    },
+], [carouselItems, trip]);
+
+React.useEffect(() => {
+  console.log('TripDetailScreen mounted with dimensions:', {
+    screenWidth,
+    GRID_MARGIN,
+    GRID_GAP,
+    MAX_WIDTH,
+    CONTENT_WIDTH,
+    CARD_WIDTH,
+    TALL_CARD_HEIGHT,
+  });
+}, []);
 
   return (
     <View style={styles(theme).container}>
@@ -157,6 +207,12 @@ export default function TripDetailScreen({ trip }: { trip: Trip }) {
       >
         <BentoGrid items={bentoItems} />
       </ScrollView>
+
+      <AddTodoModal
+        visible={showAddTodo}
+        onClose={() => setShowAddTodo(false)}
+        tripId={trip.id}
+      />
     </View>
   );
 }
@@ -211,36 +267,40 @@ const styles = (theme: Theme) => StyleSheet.create({
     color: theme.colors.content.secondary,
     opacity: 0.8,
   },
-  actionsCard: {
-    padding: theme.spacing.inset.lg,
-    height: '100%',
-    backgroundColor: theme.colors.surface.variant,
-  },
   actionTitle: {
     ...theme.typography.heading.h3,
     color: theme.colors.content.primary,
     marginBottom: theme.spacing.stack.lg,
   },
+  actionsCard: {
+    padding: theme.spacing.inset.sm,
+    paddingTop: theme.spacing.inset.lg,
+    height: '100%',
+    backgroundColor: theme.colors.surface.default,
+  },
   actionButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: theme.spacing.stack.md,
+  },
+  actionItem: {
+    alignItems: 'center',
+    flex: 1,
   },
   iconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    width: 36,
+    height: 36, 
+    borderRadius: 18,
+    backgroundColor: theme.colors.surface.default,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
-  },
-  icon: {
-    margin: 0,
+    borderWidth: 1,
+    borderColor: theme.colors.content.primary,
   },
   actionLabel: {
+    ...theme.typography.body.small,
     color: theme.colors.content.secondary,
+    marginTop: 4,
     textAlign: 'center',
   },
   statsCard: {

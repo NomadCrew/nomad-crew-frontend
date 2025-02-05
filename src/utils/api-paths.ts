@@ -9,20 +9,28 @@ export const createApiPath = (path: string) => {
 // Define all API endpoints
 export const API_PATHS = {
   auth: {
-    login: '/login', // Maps to /login (unversioned)
-    logout: createApiPath('auth/logout'), // No backend implementation yet
-    refresh: createApiPath('auth/refresh'), // No backend implementation yet
-    validate: createApiPath('auth/validate'), // No backend implementation yet
+    login: '/login',
+    logout: createApiPath('auth/logout'),
+    refresh: createApiPath('auth/refresh'),
+    validate: createApiPath('auth/validate'),
   },
   users: {
-    create: createApiPath('users'), // Maps to /users (unversioned)
-    me: createApiPath('users/me'), // No backend implementation yet
-    byId: (id: string) => createApiPath(`users/${id}`), // Maps to /v1/users/:id
+    create: createApiPath('users'),
+    me: createApiPath('users/me'),
+    byId: (id: string) => createApiPath(`users/${id}`),
   },
   trips: {
-    list: createApiPath('trips/list'), // Maps to /v1/trips/list
-    create: createApiPath('trips'), // Maps to /v1/trips (POST)
-    byId: (id: string) => createApiPath(`trips/${id}`), // Maps to /v1/trips/:id
-    updateStatus: (id: string) => `/v1/trips/${id}/status` // Maps to /v1/trips/:id/status
+    list: createApiPath('trips/list'),
+    create: createApiPath('trips'),
+    byId: (id: string) => createApiPath(`trips/${id}`),
+    updateStatus: (id: string) => `/v1/trips/${id}/status`,
+    ws: (id: string) => createApiPath(`trips/${id}/ws`),
+  },
+  todos: {
+    create: (tripId: string) => `/v1/trips/${tripId}/todos`,
+    delete: (tripId: string, todoId: string) => `/v1/trips/${tripId}/todos/${todoId}`,
+    list: (tripId: string) => `/v1/trips/${tripId}/todos`,
+    update: (tripId: string, todoId: string) => `/v1/trips/${tripId}/todos/${todoId}`,
+    ws: (tripId: string) => createApiPath(`trips/${tripId}/todos/ws`),
   },
 } as const;
