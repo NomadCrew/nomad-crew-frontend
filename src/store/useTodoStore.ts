@@ -124,38 +124,6 @@ export const useTodoStore = create<TodoState>((set, get) => ({
     }
   },
 
-  connectToTodoStream: (tripId: string) => {
-    console.log('[TodoStore] connectToTodoStream called with tripId:', tripId);
-    const wsUrl = `${api.defaults.baseURL}${API_PATHS.todos.ws(tripId)}`.replace('http', 'ws');
-    
-    try {
-      const connection = new WebSocket(wsUrl);
-      connection.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        if (isTodoEvent(data)) {
-          get().handleTodoEvent(data);
-        }
-      };
-      connection.onerror = (errorEvent) => {
-        set({ error: `Todo WebSocket error: ${errorEvent.type}` });
-      };
-      connection.onclose = () => {
-        set({ wsConnection: null });
-      };
-      set({ wsConnection: { instance: connection, status: 'CONNECTED', reconnectAttempt: 0 } });
-    } catch (error) {
-      console.error('Todo WebSocket connection failed:', error);
-      set({ wsConnection: { instance: null, status: 'DISCONNECTED', reconnectAttempt: 0 } });
-    }
-  },
-
-  disconnectFromTodoStream: () => {
-    const { wsConnection } = get();
-    if (wsConnection) {
-      // Cleanup handled by the hook
-      set({ wsConnection: null });
-    }
-  },
 
   handleTodoEvent: (event: WebSocketEvent) => {
     if (!isTodoEvent(event)) return;

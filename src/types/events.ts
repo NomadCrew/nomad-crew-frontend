@@ -1,5 +1,3 @@
-// src/types/events.ts
-
 import { Trip } from './trip';
 import { Todo } from './todo';
 
@@ -9,6 +7,7 @@ export type EventType =
   | 'TODO_CREATED' 
   | 'TODO_UPDATED' 
   | 'TODO_DELETED'
+  | 'WEATHER_UPDATED'
   | 'USER_MESSAGE'
   | 'CONNECT'
   | 'DISCONNECT'
@@ -66,6 +65,7 @@ export type WebSocketEvent =
   | TodoCreatedEvent
   | TodoUpdatedEvent
   | TodoDeletedEvent
+  | WeatherUpdatedEvent
   | UserMessageEvent
   | ConnectEvent
   | DisconnectEvent
@@ -85,13 +85,20 @@ export const isWebSocketEvent = (event: unknown): event is WebSocketEvent => {
   );
 };
 
-export const isTripEvent = (event: WebSocketEvent): event is TripUpdatedEvent => {
-  return event.type === 'TRIP_UPDATED';
+export const isTripEvent = (event: WebSocketEvent): event is TripUpdatedEvent | WeatherUpdatedEvent => {
+  return event.type === 'TRIP_UPDATED' || event.type === 'WEATHER_UPDATED';
 };
 
 export const isTodoEvent = (event: WebSocketEvent): event is TodoCreatedEvent | TodoUpdatedEvent | TodoDeletedEvent => {
   return ['TODO_CREATED', 'TODO_UPDATED', 'TODO_DELETED'].includes(event.type);
 };
+
+export interface WeatherUpdatedEvent extends BaseEvent<{
+  weatherCondition: string;
+  weatherTemp: string;
+}> {
+  type: 'WEATHER_UPDATED';
+}
 
 // WebSocket Connection States
 export type WebSocketConnectionState = {
