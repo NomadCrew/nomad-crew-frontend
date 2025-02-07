@@ -12,15 +12,11 @@ import { Portal, Modal, Text, TextInput, Button, useTheme } from 'react-native-p
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
 import { useAuthStore } from '@/src/store/useAuthStore';
-
-// Import your Trip type from wherever it's defined
 import { Trip } from '@/src/types/trip';
 
-// The props match your existing code's usage
 interface CreateTripModalProps {
   visible: boolean;
   onClose: () => void;
-  // The onSubmit function accepts a Trip and returns a Promise<void>
   onSubmit: (tripData: Trip) => Promise<void>;
 }
 
@@ -50,9 +46,6 @@ export default function CreateTripModal({
   );
   const [loading, setLoading] = useState(false);
 
-  /**
-   * Handle the selection of a date from the DateTimePicker
-   */
   const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     if (Platform.OS === 'android') {
       setShowDatePicker(null);
@@ -67,9 +60,7 @@ export default function CreateTripModal({
     }));
   };
 
-  /**
-   * Optional: Basic form validation before submitting
-   */
+
   const validateForm = () => {
     if (!trip.name.trim()) {
       Alert.alert('Validation Error', 'Please enter a trip name.');
@@ -86,16 +77,13 @@ export default function CreateTripModal({
     return true;
   };
 
-  /**
-   * Submit the trip data to the parent via onSubmit
-   */
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
     setLoading(true);
     try {
       await onSubmit(trip);
-      onClose(); // Close the modal after successful submit
+      onClose();
     } catch (error) {
       Alert.alert('Error', 'Failed to create trip. Please try again.');
     } finally {
@@ -103,19 +91,12 @@ export default function CreateTripModal({
     }
   };
 
-  /**
-   * Dismiss the modal, optionally checking for unsaved changes if desired
-   */
   const handleDismiss = () => {
     onClose();
   };
 
   return (
     <Portal>
-      {/* 
-        contentContainerStyle + marginTop:'auto' + borderRadius 
-        creates a bottom-sheet–like effect
-      */}
       <Modal
         visible={visible}
         onDismiss={handleDismiss}
@@ -128,14 +109,8 @@ export default function CreateTripModal({
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ maxHeight: '90%' }}
         >
-          {/* 
-            Optional: Press outside the sheet to dismiss (like a transparent overlay).
-            This can be done with an absolutely-positioned Pressable if you wish.
-          */}
           <Pressable style={StyleSheet.absoluteFill} onPress={handleDismiss} />
-
           <View style={styles.contentWrapper}>
-            {/* Drag handle style bar — purely decorative */}
             <View style={styles.dragHandleWrapper}>
               <View style={styles.dragHandle} />
             </View>

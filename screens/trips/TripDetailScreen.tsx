@@ -76,46 +76,17 @@ const TripStats = () => {
 };
 
 const useStreamConnections = (tripId: string | undefined) => {
-  console.log('[useStreamConnections] Initializing hook');
   const { connectToTrip, disconnectFromTrip } = useTripStore();
-  const { connectToTodoStream, disconnectFromTodoStream } = useTodoStore();
 
   useEffect(() => {
-    console.log('[useStreamConnections] useEffect triggered for tripId:', tripId);
-    let isMounted = true;
-    let tripDisconnectFn: (() => void) | null = null;
+    if (!tripId) return;
 
-    const connect = async () => {
-      console.log('[useStreamConnections] Connection process started');
-      if (!isMounted || !tripId) return;
-      
-      try {
-        console.log('[useStreamConnections] Connecting to trip:', tripId);
-        await connectToTrip(tripId);
-        console.log('[useStreamConnections] Trip connected, connecting to todos');
-        tripDisconnectFn = () => disconnectFromTrip(tripId);
-        await connectToTodoStream(tripId);
-        console.log('[useStreamConnections] Todo stream connected');
-      } catch (error) {
-        console.error('[useStreamConnections] Connection error:', error);
-        if (isMounted) {
-          console.log('[useStreamConnections] Handling error in mounted state');
-        }
-      }
-    };
-
-    connect();
+    connectToTrip(tripId);
 
     return () => {
-      console.log('[useStreamConnections] Cleanup triggered');
-      isMounted = false;
-      if (tripId) {
-        console.log('[useStreamConnections] Disconnecting from streams');
-        disconnectFromTodoStream();
-        tripDisconnectFn?.();
-      }
+      disconnectFromTrip(tripId);
     };
-  }, [tripId, connectToTrip, connectToTodoStream, disconnectFromTrip, disconnectFromTodoStream]);
+  }, [tripId, connectToTrip, disconnectFromTrip]);
 };
 
 export default function TripDetailScreen({ trip }: { trip: Trip }) {

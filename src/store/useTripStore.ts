@@ -13,7 +13,9 @@ import {
   WebSocketEvent,
   WebSocketConnectionState,
   isTripEvent,
+  isTodoEvent,
 } from '@/src/types/events';
+import { useTodoStore } from '@/src/store/useTodoStore';
 
 interface TripState {
   trips: Trip[];
@@ -134,11 +136,27 @@ export const useTripStore = create<TripState>((set, get) => ({
 
   // WebSocket Operations
   connectToTrip: (tripId: string) => {
-    const wsUrl = `${api.defaults.baseURL}${API_PATHS.trips.ws(tripId)}`.replace('http', 'ws');
+    const { wsConnection } = get();
+    if (wsConnection?.instance && wsConnection.instance.readyState === WebSocket.OPEN) {
+      return;
+    }
+
+    // Create URL object from existing base URL
+    const apiUrl = new URL(api.defaults.baseURL!);
+    // Replace host with localhost while preserving port
+    const wsHost = `localhost:${apiUrl.port || (apiUrl.protocol === 'https:' ? 443 : 80)}`;
+    
+    const wsUrl = `${api.defaults.baseURL}${API_PATHS.trips.ws(tripId)}`
+      .replace(apiUrl.host, wsHost)  // Replace host for WS
+      .replace('http', 'ws');
+
+    console.log('Connecting to trip WebSocket:', wsUrl);
     try {
       const connection = new WebSocket(wsUrl);
       connection.onmessage = (event) => {
+        console.log('Received WebSocket message:', event.data, 'for trip:', tripId);
         const tripEvent = JSON.parse(event.data);
+        console.log('Parsed WebSocket event:', tripEvent);
         get().handleTripEvent(tripEvent);
       };
       connection.onerror = (errorEvent) => {
@@ -163,13 +181,21 @@ export const useTripStore = create<TripState>((set, get) => ({
   },
 
   handleTripEvent: (event: WebSocketEvent) => {
-    if (!isTripEvent(event)) return;
+    if (isTripEvent(event)) {
+      const updatedTrip = event.type === 'WEATHER_UPDATED' 
+        ? { ...event.payload } 
+        : event.payload;
 
-    const updatedTrip = event.payload;
-    set(state => ({
-      trips: state.trips.map(trip =>
-        trip.id === updatedTrip.id ? { ...trip, ...updatedTrip } : trip
-      ),
-    }));
+      set(state => ({
+        trips: state.trips.map(trip =>
+          trip.id === updatedTrip.id ? { ...trip, ...updatedTrip } : trip
+        ),
+      }));
+    }
+    
+    if (isTodoEvent(event)) {
+      // Forward todo events to todo store
+      useTodoStore.getState().handleTodoEvent(event);
+    }
   },
 }));

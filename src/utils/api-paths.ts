@@ -31,6 +31,5 @@ export const API_PATHS = {
     delete: (tripId: string, todoId: string) => `/v1/trips/${tripId}/todos/${todoId}`,
     list: (tripId: string) => `/v1/trips/${tripId}/todos`,
     update: (tripId: string, todoId: string) => `/v1/trips/${tripId}/todos/${todoId}`,
-    ws: (tripId: string) => createApiPath(`trips/${tripId}/todos/ws`),
   },
 } as const;

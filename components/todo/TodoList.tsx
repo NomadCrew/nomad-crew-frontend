@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, ActivityIndicator } from 'react-native';
 import { Text, Surface, Button } from 'react-native-paper';
 import { FlashList } from '@shopify/flash-list';
@@ -9,6 +9,7 @@ import { TodoItem } from './TodoItem';
 import { TodoErrorBoundary } from './TodoErrorBoundary';
 import { Todo } from '@/src/types/todo';
 import { getColorForUUID } from '@/src/utils/uuidToColor';
+import LottieView from 'lottie-react-native';
 
 interface TodoListProps {
   tripId: string;
@@ -27,6 +28,8 @@ export const TodoList = ({ tripId, onAddTodoPress }: TodoListProps) => {
 
 const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
   const { theme } = useTheme();
+  const [showCompletionAnimation, setShowCompletionAnimation] = useState(false);
+  const animationRef = React.useRef<LottieView>(null);
   const { 
     todos,
     loading,
@@ -61,9 +64,15 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
   const renderItem = React.useCallback(({ item }: { item: Todo }) => (
     <TodoItem
       todo={item}
-      onComplete={() => updateTodo(item.id, {
-        status: item.status === 'COMPLETE' ? 'INCOMPLETE' : 'COMPLETE'
-      })}
+      onComplete={async () => {
+        const newStatus = item.status === 'COMPLETE' ? 'INCOMPLETE' : 'COMPLETE';
+        const updatedTodo = await updateTodo(item.id, { status: newStatus });
+        if (updatedTodo.status === 'COMPLETE') {
+          setShowCompletionAnimation(true);
+          // Use onAnimationFinish below to clear the state, or use a timeout as a fallback:
+          setTimeout(() => setShowCompletionAnimation(false), 2000);
+        }
+      }}            
       onDelete={() => deleteTodo(item.id)}
       disabled={loading}
       textColor={getColorForUUID(item.id)}
@@ -108,6 +117,19 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
 
   return (
     <View style={styles(theme).container}>
+      {/* Add LottieView at the root level */}
+      {showCompletionAnimation && (
+        <View style={styles(theme).overlay}>
+          <LottieView
+            source={require('@/assets/animations/confetti.json')}
+            autoPlay
+            loop={false}
+            onAnimationFinish={() => setShowCompletionAnimation(false)}
+            style={StyleSheet.absoluteFill}
+          />
+        </View>
+      )}
+
       {/* Connection Status Banner */}
       {(connectionStatus === 'CONNECTING' || connectionStatus === 'RECONNECTING') && (
         <Surface style={styles(theme).connectionBanner}>
@@ -147,6 +169,7 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
 const styles = (theme: Theme) => StyleSheet.create({
   container: {
     flex: 1,
+    position: 'relative',
   },
   centerContainer: {
     flex: 1,
@@ -155,6 +178,16 @@ const styles = (theme: Theme) => StyleSheet.create({
     padding: theme.spacing.inset.lg,
     backgroundColor: theme.colors.surface.variant,
   },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 10,
+    // Optionally a semi-transparent background:
+    // backgroundColor: 'rgba(0,0,0,0.2)',
+  },  
   loader: {
     padding: theme.spacing.inset.md,
   },
