@@ -12,7 +12,14 @@ interface TripCardProps {
     id: string;
     name: string;
     description?: string;
-    destination: string;
+    destination: {
+      address: string;
+      placeId: string;
+      coordinates?: {
+        lat: number;
+        lng: number;
+      };
+    };
     startDate: string;
     endDate: string;
     participantCount?: number;
@@ -126,7 +133,7 @@ export const TripCard: React.FC<TripCardProps> = ({
 
         {/* Info Section */}
         <View style={styles.detailsContainer}>
-          <InfoRow icon={MapPin} text={trip.destination} lightText />
+          <InfoRow icon={MapPin} text={trip.destination.address} lightText />
           <InfoRow icon={CalendarClock} text={timing} lightText />
           <InfoRow icon={Clock} text={duration} lightText />
           <InfoRow icon={Users} text={`${trip.participantCount || 1} ${(trip.participantCount || 1) !== 1 ? 's' : ''}`} />

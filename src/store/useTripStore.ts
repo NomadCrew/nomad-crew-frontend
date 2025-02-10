@@ -9,13 +9,17 @@ import {
   UpdateTripStatusResponse,
 } from '@/src/types/trip';
 import { API_PATHS } from '@/src/utils/api-paths';
+import { API_CONFIG } from '@/src/api/env';
 import {
   WebSocketEvent,
   WebSocketConnectionState,
   isTripEvent,
   isTodoEvent,
+  isWebSocketEvent,
 } from '@/src/types/events';
 import { useTodoStore } from '@/src/store/useTodoStore';
+import { mapWeatherCode } from '@/src/utils/weather';
+import { useAuthStore } from '@/src/store/useAuthStore';
 
 interface TripState {
   trips: Trip[];
@@ -48,6 +52,11 @@ export const useTripStore = create<TripState>((set, get) => ({
     try {
       const response = await api.post<Trip>(API_PATHS.trips.create, {
         ...tripData,
+        destination: {
+          address: tripData.destination.address,
+          coordinates: tripData.destination.coordinates,
+          placeId: tripData.destination.placeId
+        },
         status: 'PLANNING' as TripStatus,
       });
       set(state => ({
@@ -136,39 +145,112 @@ export const useTripStore = create<TripState>((set, get) => ({
 
   // WebSocket Operations
   connectToTrip: (tripId: string) => {
-    const { wsConnection } = get();
-    if (wsConnection?.instance && wsConnection.instance.readyState === WebSocket.OPEN) {
-      return;
-    }
-
-    // Create URL object from existing base URL
-    const apiUrl = new URL(api.defaults.baseURL!);
-    // Replace host with localhost while preserving port
-    const wsHost = `localhost:${apiUrl.port || (apiUrl.protocol === 'https:' ? 443 : 80)}`;
+    const MAX_RECONNECT_ATTEMPTS = 5;
+    const BASE_DELAY = 3000; // 3 seconds
     
-    const wsUrl = `${api.defaults.baseURL}${API_PATHS.trips.ws(tripId)}`
-      .replace(apiUrl.host, wsHost)  // Replace host for WS
-      .replace('http', 'ws');
+    const attemptReconnect = (currentAttempt: number) => {
+      if (currentAttempt >= MAX_RECONNECT_ATTEMPTS) {
+        console.error('Max reconnect attempts reached');
+        return;
+      }
 
-    console.log('Connecting to trip WebSocket:', wsUrl);
+      const delay = BASE_DELAY * Math.pow(2, currentAttempt);
+      console.log(`Reconnecting in ${delay/1000} seconds...`);
+      
+      setTimeout(() => {
+        console.log('Attempting reconnect...');
+        get().connectToTrip(tripId);
+      }, delay);
+    };
+
     try {
-      const connection = new WebSocket(wsUrl);
+      const baseUrl = API_CONFIG.BASE_URL;
+      if (!baseUrl) {
+        console.error('No API base URL configured');
+        return;
+      }
+
+      const token = useAuthStore.getState().token;
+      if (!token) {
+        console.error('No JWT token available');
+        return;
+      }
+
+      const apiUrl = new URL(baseUrl);
+      const protocol = apiUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = new URL(`${protocol}//${apiUrl.host}/v1/trips/${tripId}/ws`);
+
+      wsUrl.searchParams.set('apikey', process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '');
+      wsUrl.searchParams.set('token', token);
+
+      console.log('Connecting to WebSocket:', wsUrl.toString());
+
+      const connection = new WebSocket(wsUrl.toString());
+
+      connection.onopen = () => {
+        console.log('WebSocket connection established');
+        set({ 
+          wsConnection: { 
+            instance: connection, 
+            status: 'CONNECTED',
+            reconnectAttempt: 0 
+          } 
+        });
+      };
+
       connection.onmessage = (event) => {
-        console.log('Received WebSocket message:', event.data, 'for trip:', tripId);
-        const tripEvent = JSON.parse(event.data);
-        console.log('Parsed WebSocket event:', tripEvent);
-        get().handleTripEvent(tripEvent);
+        try {
+          const parsed = JSON.parse(event.data);
+          if (isWebSocketEvent(parsed)) {
+            get().handleTripEvent(parsed);
+          }
+        } catch (error) {
+          console.error('Message parsing error:', error);
+        }
       };
-      connection.onerror = (errorEvent) => {
-        set({ error: `WebSocket error: ${errorEvent.type}` });
+
+      connection.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        const currentAttempt = get().wsConnection?.reconnectAttempt || 0;
+        set({ 
+          wsConnection: { 
+            instance: null, 
+            status: 'ERROR',
+            reconnectAttempt: currentAttempt + 1 
+          } 
+        });
+        attemptReconnect(currentAttempt + 1);
       };
-      connection.onclose = () => {
-        set({ wsConnection: null });
+
+      connection.onclose = (event) => {
+        console.log(`WebSocket closed: ${event.code} - ${event.reason}`);
+        const currentAttempt = get().wsConnection?.reconnectAttempt || 0;
+        
+        if (event.code !== 1000) { // Only reconnect for abnormal closures
+          set({
+            wsConnection: {
+              instance: null,
+              status: 'RECONNECTING',
+              reconnectAttempt: currentAttempt + 1
+            }
+          });
+          attemptReconnect(currentAttempt + 1);
+        } else {
+          set({ wsConnection: null });
+        }
       };
-      set({ wsConnection: { instance: connection, status: 'CONNECTED', reconnectAttempt: 0 } });
+
     } catch (error) {
-      console.error('Trip WebSocket connection failed:', error);
-      set({ wsConnection: { instance: null, status: 'DISCONNECTED', reconnectAttempt: 0 } });
+      console.error('Connection failed:', error);
+      const currentAttempt = get().wsConnection?.reconnectAttempt || 0;
+      set({ 
+        wsConnection: { 
+          instance: null, 
+          status: 'ERROR',
+          reconnectAttempt: currentAttempt + 1 
+        } 
+      });
+      attemptReconnect(currentAttempt + 1);
     }
   },
 
@@ -182,19 +264,34 @@ export const useTripStore = create<TripState>((set, get) => ({
 
   handleTripEvent: (event: WebSocketEvent) => {
     if (isTripEvent(event)) {
-      const updatedTrip = event.type === 'WEATHER_UPDATED' 
-        ? { ...event.payload } 
-        : event.payload;
+      let updatedTrip: Partial<Trip> = {};
 
-      set(state => ({
-        trips: state.trips.map(trip =>
-          trip.id === updatedTrip.id ? { ...trip, ...updatedTrip } : trip
-        ),
-      }));
+      if (event.type === 'WEATHER_UPDATED') {
+        console.log(
+          'Received WEATHER_UPDATED event for trip:',
+          event.payload.tripId,
+          'Temperature:', event.payload.temperature_2m,
+          'Weather code:', event.payload.weather_code
+        );
+        updatedTrip = {
+          weatherTemp: `${Math.round(event.payload.temperature_2m)}°C`,
+          weatherCondition: mapWeatherCode(event.payload.weather_code),
+          id: event.payload.tripId
+        };
+      } else if (event.type === 'TRIP_UPDATED') {
+        updatedTrip = event.payload;
+      }
+
+      if (Object.keys(updatedTrip).length > 0) {
+        set(state => ({
+          trips: state.trips.map(trip => 
+            trip.id === updatedTrip.id ? { ...trip, ...updatedTrip } : trip
+          )
+        }));
+      }
     }
     
     if (isTodoEvent(event)) {
-      // Forward todo events to todo store
       useTodoStore.getState().handleTodoEvent(event);
     }
   },

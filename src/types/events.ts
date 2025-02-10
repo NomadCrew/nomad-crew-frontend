@@ -94,8 +94,9 @@ export const isTodoEvent = (event: WebSocketEvent): event is TodoCreatedEvent | 
 };
 
 export interface WeatherUpdatedEvent extends BaseEvent<{
-  weatherCondition: string;
-  weatherTemp: string;
+  tripId: string;
+  temperature_2m: number;
+  weather_code: number;
 }> {
   type: 'WEATHER_UPDATED';
 }

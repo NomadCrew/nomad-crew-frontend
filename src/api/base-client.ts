@@ -29,8 +29,8 @@ export class BaseApiClient {
             data: config.data,
             headers: { 
               ...config.headers,
-              Authorization: config.headers.Authorization ? 'Bearer [HIDDED]': undefined,
-              apikey: config.headers.apikey ? '[HIDDEN]' : undefined 
+              Authorization: config.headers.Authorization ? 'Bearer '+config.headers.Authorization: undefined,
+              apikey: config.headers.apikey ? '[HIDDEN] ' + config.headers.apikey : undefined 
             },
           });
         }
@@ -65,7 +65,7 @@ export class BaseApiClient {
             requestHeaders: {
               ...error.config?.headers,
               Authorization: error.config?.headers?.Authorization ? 
-                `Bearer ${error.config.headers.Authorization.split(' ')[1].substring(0, 20)}...` : 
+                `Bearer ${(error.config.headers.Authorization as string).split(' ')[1].substring(0, 20)}...` : 
                 undefined
             }
           });
