@@ -10,7 +10,6 @@ import {
   TodoUpdatedEvent,
   TodoDeletedEvent
 } from '@/src/types/events';
-import { WebSocketConnection } from '@/src/hooks/useWebSocketConnection';
 
 interface TodoState {
   todos: Todo[];
@@ -124,7 +123,6 @@ export const useTodoStore = create<TodoState>((set, get) => ({
     }
   },
 
-
   handleTodoEvent: (event: WebSocketEvent) => {
     if (!isTodoEvent(event)) return;
 
@@ -165,5 +163,13 @@ export const useTodoStore = create<TodoState>((set, get) => ({
           return { processedEvents: newProcessedEvents };
       }
     });
+  },
+
+  connectToTodoStream: (tripId: string) => {
+    // Implementation logic for WebSocket connection
+  },
+  
+  disconnectFromTodoStream: () => {
+    // Implementation logic for disconnecting WebSocket
   },
 }));

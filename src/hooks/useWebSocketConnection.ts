@@ -157,11 +157,13 @@ export function useWebSocketConnection({
         try {
           const data = JSON.parse(event.data);
           if (isWebSocketEvent(data)) {
-            // Update last event ID
-            setConnectionState(prev => ({
-              ...prev,
-              lastEventId: data.id
-            }));
+            // Update last event ID only for non-PONG messages
+            if (data.type !== 'PONG') {
+              setConnectionState(prev => ({
+                ...prev,
+                lastEventId: data.id
+              }));
+            }
 
             // Handle pong messages
             if (data.type === 'PONG') {
@@ -223,7 +225,7 @@ export function useWebSocketConnection({
     } else {
       // Queue message for retry
       messageQueueRef.current.push({
-        id: message.id,
+        id: (message as WebSocketEvent & { id: string }).id,
         message: message as any,
         timestamp: Date.now(),
         retries: 0

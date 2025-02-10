@@ -6,7 +6,14 @@ export interface Trip {
   id: string;
   name: string;
   description?: string;
-  destination: string;
+  destination: {
+    address: string;
+    placeId: string;
+    coordinates?: {
+      lat: number;
+      lng: number;
+    };
+  };
   startDate: string;
   endDate: string;
   participantCount?: number;
@@ -23,7 +30,14 @@ export interface Trip {
 export interface CreateTripInput {
   name: string;
   description?: string;
-  destination: string;
+  destination: {
+    address: string;
+    placeId: string;
+    coordinates?: {
+      lat: number;
+      lng: number;
+    };
+  };
   startDate: Date;
   endDate: Date;
 }
@@ -51,4 +65,15 @@ export interface UpdateTripResponse extends Trip {}
 export interface DeleteTripResponse {
   id: string;
   success: boolean;
+}
+
+export interface PlaceDetails {
+  addressComponents: string[];
+  coordinate: {
+    latitude: number;
+    longitude: number;
+  };
+  formattedAddress: string;
+  name: string;
+  placeId: string;
 }

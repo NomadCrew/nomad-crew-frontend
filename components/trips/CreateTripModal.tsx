@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -12,7 +12,8 @@ import { Portal, Modal, Text, TextInput, Button, useTheme } from 'react-native-p
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
 import { useAuthStore } from '@/src/store/useAuthStore';
-import { Trip } from '@/src/types/trip';
+import { Trip, PlaceDetails } from '@/src/types/trip';
+import CustomPlacesAutocomplete from '@/components/PlacesAutocomplete';
 
 interface CreateTripModalProps {
   visible: boolean;
@@ -32,7 +33,11 @@ export default function CreateTripModal({
   const [trip, setTrip] = useState<Trip>({
     id: '',
     name: '',
-    destination: '',
+    destination: {
+      address: '',
+      placeId: '',
+      coordinates: undefined,
+    },
     description: '',
     startDate: new Date().toISOString(),
     endDate: new Date().toISOString(),
@@ -66,8 +71,8 @@ export default function CreateTripModal({
       Alert.alert('Validation Error', 'Please enter a trip name.');
       return false;
     }
-    if (!trip.destination.trim()) {
-      Alert.alert('Validation Error', 'Please enter a destination.');
+    if (!trip.destination?.address?.trim()) {
+      Alert.alert('Validation Error', 'Please select a valid destination.');
       return false;
     }
     if (new Date(trip.endDate) < new Date(trip.startDate)) {
@@ -79,9 +84,10 @@ export default function CreateTripModal({
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
-
+  
     setLoading(true);
     try {
+      console.log('Submitting trip with destination:', trip.destination);
       await onSubmit(trip);
       onClose();
     } catch (error) {
@@ -136,13 +142,25 @@ export default function CreateTripModal({
               />
 
               {/* Destination */}
-              <TextInput
-                mode="outlined"
-                label="Destination*"
-                value={trip.destination}
-                onChangeText={(text) => setTrip((prev) => ({ ...prev, destination: text }))}
-                style={styles.textInput}
-              />
+              <View style={styles.textInput}>
+                <CustomPlacesAutocomplete
+                  onPlaceSelected={(details) => {
+                    console.log('Setting destination from details:', details);
+                    setTrip(prev => ({
+                      ...prev,
+                      destination: {
+                        address: details.formattedAddress || details.name,
+                        placeId: details.placeId,
+                        coordinates: details.coordinate ? {
+                          lat: details.coordinate.latitude,
+                          lng: details.coordinate.longitude
+                        } : undefined
+                      }
+                    }));
+                  }}
+                  placeholder="Search Destination*"
+                />
+              </View>
 
               {/* Description */}
               <TextInput
@@ -276,5 +294,34 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     marginTop: 24,
+  },
+  resultsContainer: {
+    position: 'absolute',
+    top: 60,
+    left: 0,
+    right: 0,
+    borderRadius: 4,
+    zIndex: 1000,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  resultItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  helperText: {
+    marginTop: 4,
+    marginLeft: 12,
+    fontSize: 12,
   },
 });
