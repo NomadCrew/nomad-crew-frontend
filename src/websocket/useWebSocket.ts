@@ -2,6 +2,7 @@ import { useEffect, useCallback, useState } from 'react';
 import { WebSocketManager } from './WebSocketManager';
 import { WebSocketEvent, WebSocketStatus } from '@/src/types/events';
 import { useAuthStore } from '@/src/store/useAuthStore';
+import { useFocusEffect } from '@react-navigation/native';
 
 interface UseWebSocketOptions {
   onMessage?: (event: WebSocketEvent) => void;
@@ -17,8 +18,6 @@ export function useWebSocket(tripId: string | undefined, options: UseWebSocketOp
   const handleStatus = useCallback((newStatus: WebSocketStatus) => {
     setStatus(newStatus);
     options.onStatusChange?.(newStatus);
-    
-    // Handle duplicate connection warning
     setShowWarning(newStatus === 'DUPLICATE_CONNECTION');
   }, [options.onStatusChange]);
 
@@ -38,15 +37,21 @@ export function useWebSocket(tripId: string | undefined, options: UseWebSocketOp
 
   const disconnect = useCallback(() => {
     if (tripId) {
-      wsManager.disconnect(tripId);
+      wsManager.disconnect();
+      handleStatus('DISCONNECTED');
     }
-  }, [tripId]);
+  }, [tripId, handleStatus]);
 
-  // Handle connection lifecycle
-  useEffect(() => {
-    connect();
-    return () => disconnect();
-  }, [connect, disconnect]);
+  // Use both useEffect and useFocusEffect for proper cleanup
+  useFocusEffect(
+    useCallback(() => {
+      connect();
+      return () => {
+        disconnect();
+        wsManager.cleanup();
+      };
+    }, [connect, disconnect, wsManager])
+  );
 
   // Handle token changes
   useEffect(() => {
