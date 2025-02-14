@@ -12,6 +12,8 @@ import { BentoCarousel } from '@/components/ui/BentoCarousel';
 import { Trip } from '@/src/types/trip';
 import { AddTodoModal } from '@/components/todo/AddTodoModal';
 import { useTripStore } from '@/src/store/useTripStore';
+import { useWebSocket } from '@/src/websocket/useWebSocket';
+import { WebSocketEvent } from '@/src/types/events';
 
 const QuickActions = ({ setShowAddTodo }: { setShowAddTodo: React.Dispatch<React.SetStateAction<boolean>> }) => {
   const { theme } = useTheme();
@@ -75,21 +77,21 @@ const TripStats = () => {
 };
 
 const useStreamConnections = (tripId: string | undefined) => {
-  const { connectToTrip, disconnectFromTrip } = useTripStore();
+  const { disconnect } = useWebSocket(tripId);
 
   useEffect(() => {
     if (!tripId) return;
 
-    connectToTrip(tripId);
-
     return () => {
-      disconnectFromTrip(tripId);
+      disconnect();
     };
-  }, [tripId, connectToTrip, disconnectFromTrip]);
+  }, [tripId, disconnect]);
 };
 
 export default function TripDetailScreen({ trip }: { trip: Trip }) {
-  useStreamConnections(trip?.id);
+  const { status, error, showWarning } = useWebSocket(trip?.id, {
+    onMessage: useTripStore.getState().handleTripEvent
+  });
   const { theme } = useTheme();
   const { width: screenWidth } = useWindowDimensions();
   const [showAddTodo, setShowAddTodo] = useState(false);
@@ -162,6 +164,18 @@ React.useEffect(() => {
 
   return (
     <View style={styles(theme).container}>
+      {/* Connection Status Banner */}
+      {error && (
+        <Surface style={styles(theme).errorBanner}>
+          <Text style={styles(theme).errorText}>{error}</Text>
+          {showWarning && (
+            <Text style={styles(theme).warningText}>
+              Connection will close in 5 seconds
+            </Text>
+          )}
+        </Surface>
+      )}
+
       <SafeAreaView style={styles(theme).headerContainer}>
         <View style={[styles(theme).headerContent, { maxWidth: containerWidth }]}>
           <TripHeader trip={trip} onBack={() => router.back()} />
@@ -267,6 +281,9 @@ const styles = (theme: Theme) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.content.primary,
   },
+  icon: {
+    margin: 0,
+  },
   actionLabel: {
     ...theme.typography.body.small,
     color: theme.colors.content.secondary,
@@ -292,5 +309,17 @@ const styles = (theme: Theme) => StyleSheet.create({
     color: theme.colors.content.secondary,
     textAlign: 'center',
     opacity: 0.8,
+  },
+  errorBanner: {
+    padding: theme.spacing.stack.md,
+    margin: theme.spacing.stack.md,
+    backgroundColor: theme.colors.status.error.background,
+  },
+  errorText: {
+    color: theme.colors.primary.main,
+  },
+  warningText: {
+    color: theme.colors.primary.main,
+    marginTop: theme.spacing.stack.sm,
   },
 });

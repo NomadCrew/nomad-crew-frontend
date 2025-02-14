@@ -25,7 +25,7 @@ interface TripState {
   trips: Trip[];
   loading: boolean;
   error: string | null;
-  wsConnection: WebSocketConnectionState | null;
+  // Removed wsConnection
   // Core operations
   createTrip: (input: CreateTripInput) => Promise<Trip>;
   updateTrip: (id: string, input: UpdateTripInput) => Promise<Trip>;
@@ -35,17 +35,15 @@ interface TripState {
   getTripById: (id: string) => Trip | undefined;
   // Status operations
   updateTripStatus: (id: string, status: TripStatus) => Promise<void>;
-  // WebSocket operations
-  connectToTrip: (tripId: string) => void;
-  disconnectFromTrip: (tripId: string) => void;
+  // WebSocket operations (simplified)
   handleTripEvent: (event: WebSocketEvent) => void;
+  // Removed connectToTrip/disconnectFromTrip
 }
 
 export const useTripStore = create<TripState>((set, get) => ({
   trips: [],
   loading: false,
   error: null,
-  wsConnection: null,
 
   createTrip: async (tripData: CreateTripInput) => {
     set({ loading: true, error: null });
@@ -144,124 +142,6 @@ export const useTripStore = create<TripState>((set, get) => ({
   },
 
   // WebSocket Operations
-  connectToTrip: (tripId: string) => {
-    const MAX_RECONNECT_ATTEMPTS = 5;
-    const BASE_DELAY = 3000; // 3 seconds
-    
-    const attemptReconnect = (currentAttempt: number) => {
-      if (currentAttempt >= MAX_RECONNECT_ATTEMPTS) {
-        console.error('Max reconnect attempts reached');
-        return;
-      }
-
-      const delay = BASE_DELAY * Math.pow(2, currentAttempt);
-      console.log(`Reconnecting in ${delay/1000} seconds...`);
-      
-      setTimeout(() => {
-        console.log('Attempting reconnect...');
-        get().connectToTrip(tripId);
-      }, delay);
-    };
-
-    try {
-      const baseUrl = API_CONFIG.BASE_URL;
-      if (!baseUrl) {
-        console.error('No API base URL configured');
-        return;
-      }
-
-      const token = useAuthStore.getState().token;
-      if (!token) {
-        console.error('No JWT token available');
-        return;
-      }
-
-      const apiUrl = new URL(baseUrl);
-      const protocol = apiUrl.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = new URL(`${protocol}//${apiUrl.host}/v1/trips/${tripId}/ws`);
-
-      wsUrl.searchParams.set('apikey', process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '');
-      wsUrl.searchParams.set('token', token);
-
-      console.log('Connecting to WebSocket:', wsUrl.toString());
-
-      const connection = new WebSocket(wsUrl.toString());
-
-      connection.onopen = () => {
-        console.log('WebSocket connection established');
-        set({ 
-          wsConnection: { 
-            instance: connection, 
-            status: 'CONNECTED',
-            reconnectAttempt: 0 
-          } 
-        });
-      };
-
-      connection.onmessage = (event) => {
-        try {
-          const parsed = JSON.parse(event.data);
-          if (isWebSocketEvent(parsed)) {
-            get().handleTripEvent(parsed);
-          }
-        } catch (error) {
-          console.error('Message parsing error:', error);
-        }
-      };
-
-      connection.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        const currentAttempt = get().wsConnection?.reconnectAttempt || 0;
-        set({ 
-          wsConnection: { 
-            instance: null, 
-            status: 'ERROR',
-            reconnectAttempt: currentAttempt + 1 
-          } 
-        });
-        attemptReconnect(currentAttempt + 1);
-      };
-
-      connection.onclose = (event) => {
-        console.log(`WebSocket closed: ${event.code} - ${event.reason}`);
-        const currentAttempt = get().wsConnection?.reconnectAttempt || 0;
-        
-        if (event.code !== 1000) { // Only reconnect for abnormal closures
-          set({
-            wsConnection: {
-              instance: null,
-              status: 'RECONNECTING',
-              reconnectAttempt: currentAttempt + 1
-            }
-          });
-          attemptReconnect(currentAttempt + 1);
-        } else {
-          set({ wsConnection: null });
-        }
-      };
-
-    } catch (error) {
-      console.error('Connection failed:', error);
-      const currentAttempt = get().wsConnection?.reconnectAttempt || 0;
-      set({ 
-        wsConnection: { 
-          instance: null, 
-          status: 'ERROR',
-          reconnectAttempt: currentAttempt + 1 
-        } 
-      });
-      attemptReconnect(currentAttempt + 1);
-    }
-  },
-
-  disconnectFromTrip: (tripId: string) => {
-    const { wsConnection } = get();
-    if (wsConnection?.instance) {
-      wsConnection.instance.close();
-      set({ wsConnection: null });
-    }
-  },
-
   handleTripEvent: (event: WebSocketEvent) => {
     if (isTripEvent(event)) {
       let updatedTrip: Partial<Trip> = {};

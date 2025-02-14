@@ -114,9 +114,10 @@ export type WebSocketConnectionState = {
 export type WebSocketStatus = 
   | 'CONNECTING' 
   | 'CONNECTED' 
-  | 'DISCONNECTED' 
-  | 'RECONNECTING' 
-  | 'ERROR';
+  | 'DISCONNECTED'
+  | 'RECONNECTING'
+  | 'ERROR'
+  | 'DUPLICATE_CONNECTION';
 
 // WebSocket Configuration
 export interface WebSocketConfig {
