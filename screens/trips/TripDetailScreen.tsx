@@ -12,7 +12,6 @@ import { BentoCarousel } from '@/components/ui/BentoCarousel';
 import { Trip } from '@/src/types/trip';
 import { AddTodoModal } from '@/components/todo/AddTodoModal';
 import { useTripStore } from '@/src/store/useTripStore';
-import { useTodoStore } from '@/src/store/useTodoStore';
 
 const QuickActions = ({ setShowAddTodo }: { setShowAddTodo: React.Dispatch<React.SetStateAction<boolean>> }) => {
   const { theme } = useTheme();
