@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback} from 'react';
 import { View, StyleSheet, ScrollView, useWindowDimensions, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -13,7 +13,8 @@ import { Trip } from '@/src/types/trip';
 import { AddTodoModal } from '@/components/todo/AddTodoModal';
 import { useTripStore } from '@/src/store/useTripStore';
 import { useWebSocket } from '@/src/websocket/useWebSocket';
-import { WebSocketEvent } from '@/src/types/events';
+import { WebSocketManager } from '@/src/websocket/WebSocketManager';
+import { useFocusEffect } from '@react-navigation/native';
 
 const QuickActions = ({ setShowAddTodo }: { setShowAddTodo: React.Dispatch<React.SetStateAction<boolean>> }) => {
   const { theme } = useTheme();
@@ -74,18 +75,6 @@ const TripStats = () => {
       </View>
     </Surface>
   );
-};
-
-const useStreamConnections = (tripId: string | undefined) => {
-  const { disconnect } = useWebSocket(tripId);
-
-  useEffect(() => {
-    if (!tripId) return;
-
-    return () => {
-      disconnect();
-    };
-  }, [tripId, disconnect]);
 };
 
 export default function TripDetailScreen({ trip }: { trip: Trip }) {
@@ -149,6 +138,7 @@ const bentoItems = React.useMemo(
         position: 'right' as const,
     },
 ], [carouselItems, trip]);
+
 
 React.useEffect(() => {
   console.log('TripDetailScreen mounted with dimensions:', {

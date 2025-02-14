@@ -31,6 +31,9 @@ export class WebSocketConnection {
   private reconnectAttempt = 0;
   private status: WebSocketStatus = 'DISCONNECTED';
   
+  // Flag to track intentional disconnects
+  private isManuallyDisconnected = false;
+
   constructor(
     private config: ConnectionConfig,
     private healthCheck: HealthCheckConfig = DEFAULT_HEALTH_CHECK
@@ -50,7 +53,9 @@ export class WebSocketConnection {
       if (this.ws?.readyState === WebSocket.OPEN) {
         this.ws.send(JSON.stringify({ type: 'PING' }));
         
+        // Schedule pong timeout with an extra guard for manual disconnects
         this.pongTimeout = setTimeout(() => {
+          if (this.isManuallyDisconnected) return;
           this.missedPongs++;
           if (this.missedPongs >= this.healthCheck.maxMissedPongs) {
             console.warn('Max missed pongs reached, reconnecting...');
@@ -95,6 +100,9 @@ export class WebSocketConnection {
   }
 
   public async connect(): Promise<void> {
+    // Reset the manual disconnect flag when attempting a connection
+    this.isManuallyDisconnected = false;
+
     if (this.ws?.readyState === WebSocket.OPEN) {
       return;
     }
@@ -166,13 +174,16 @@ export class WebSocketConnection {
   }
 
   private async reconnect() {
+    // Do not attempt to reconnect if manually disconnected.
+    if (this.isManuallyDisconnected) return;
+
     if (this.status === 'RECONNECTING') return;
     
     this.setStatus('RECONNECTING');
     const backoffDelay = Math.min(1000 * Math.pow(2, this.reconnectAttempt), 30000);
     
     setTimeout(() => {
-      if (this.status === 'RECONNECTING') {
+      if (this.status === 'RECONNECTING' && !this.isManuallyDisconnected) {
         this.reconnectAttempt++;
         this.connect().catch(() => {
           // Error handling is done in connect()
@@ -182,6 +193,8 @@ export class WebSocketConnection {
   }
 
   public disconnect() {
+    // Mark as manually disconnected and cancel pending timers.
+    this.isManuallyDisconnected = true;
     this.setStatus('DISCONNECTED');
     this.stopHealthCheck();
     
@@ -202,5 +215,38 @@ export class WebSocketConnection {
 
   public getConnectionId(): string {
     return this.connectionId;
+  }
+
+  public close(): void {
+    this.setStatus('CLOSING');
+    this.stopHealthCheck(); // Ensure health checks are stopped
+    
+    if (this.ws) {
+      this.ws.close(1000, 'Client disconnected');
+      this.removeAllListeners();
+      this.ws = null;
+    }
+    
+    // Clear all timeouts and intervals
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
+    }
+    if (this.pongTimeout) {
+      clearTimeout(this.pongTimeout);
+      this.pongTimeout = null;
+    }
+    
+    this.missedPongs = 0;
+    this.setStatus('DISCONNECTED');
+  }
+
+  private removeAllListeners(): void {
+    if (this.ws) {
+      this.ws.onopen = null;
+      this.ws.onclose = null;
+      this.ws.onerror = null;
+      this.ws.onmessage = null;
+    }
   }
 }

@@ -115,6 +115,7 @@ export type WebSocketStatus =
   | 'CONNECTING' 
   | 'CONNECTED' 
   | 'DISCONNECTED'
+  | 'CLOSING'
   | 'RECONNECTING'
   | 'ERROR'
   | 'DUPLICATE_CONNECTION';

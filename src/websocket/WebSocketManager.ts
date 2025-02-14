@@ -17,6 +17,7 @@ export class WebSocketManager {
   private connections: Map<string, WebSocketConnection> = new Map();
   private storage = createPlatformStorage();
   private callbacks: Map<string, ConnectionCallbacks> = new Map();
+  private activeConnection: WebSocketConnection | null = null;
 
   private constructor() {
     // Private constructor for singleton
@@ -60,6 +61,11 @@ export class WebSocketManager {
     tripId: string, 
     callbacks?: ConnectionCallbacks
   ): Promise<void> {
+    if (this.activeConnection) {
+      // Already connected
+      return;
+    }
+
     try {
       // Check authentication
       const authStore = useAuthStore.getState();
@@ -123,6 +129,8 @@ export class WebSocketManager {
         }
       });
 
+      this.activeConnection = connection;
+
     } catch (error) {
       console.error('Failed to establish WebSocket connection:', error);
       throw error;
@@ -137,18 +145,16 @@ export class WebSocketManager {
       
       // Give 5 seconds before disconnecting
       setTimeout(() => {
-        this.disconnect(tripId);
+        this.disconnect();
       }, 5000);
     }
   }
 
-  public disconnect(tripId: string): void {
-    const connection = this.connections.get(tripId);
-    if (connection) {
-      connection.disconnect();
-      this.connections.delete(tripId);
-      this.callbacks.delete(tripId);
-      this.storage.unregisterConnection(tripId).catch(console.error);
+  public disconnect(): void {
+    if (this.activeConnection) {
+      console.log('Closing WebSocket connection');
+      this.activeConnection.disconnect();
+      this.activeConnection = null;
     }
   }
 
@@ -161,14 +167,19 @@ export class WebSocketManager {
   }
 
   public async cleanup(): Promise<void> {
-    // Disconnect all connections
-    for (const [tripId, connection] of this.connections) {
-      connection.disconnect();
+    // First disconnect active connection
+    if (this.activeConnection) {
+      this.activeConnection.close();
+      this.activeConnection = null;
     }
-
+  
+    // Clear all connections
+    for (const connection of this.connections.values()) {
+      connection.close();
+    }
     this.connections.clear();
     this.callbacks.clear();
-
+  
     // Clean up storage
     await this.storage.cleanup();
   }
