@@ -120,7 +120,8 @@ export const useTodoStore = create<TodoState>((set, get) => ({
   },
 
   handleTodoEvent: (event: WebSocketEvent) => {
-    if (isTodoEvent(event)) {
+    if (event.type === 'TODO_CREATED' || event.type === 'TODO_UPDATED' || 
+       event.type === 'TODO_DELETED' || event.type === 'TODO_COMPLETED') {
       // Prevent duplicate event processing
       if (get().processedEvents.has(event.id)) return;
 
@@ -153,6 +154,10 @@ export const useTodoStore = create<TodoState>((set, get) => ({
               total: state.total - 1,
               processedEvents: newProcessedEvents
             };
+          }
+          case 'TODO_COMPLETED': {
+            // Handle TODO_COMPLETED event
+            return { processedEvents: newProcessedEvents };
           }
           default:
             return { processedEvents: newProcessedEvents };
