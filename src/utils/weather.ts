@@ -6,7 +6,8 @@ export type WeatherCondition =
   | 'stormy';
 
 export function mapWeatherCode(code: number): WeatherCondition {
-  // https://open-meteo.com/en/docs#api_form
+  console.debug('[Weather] Mapping weather code:', code);
+  // WMO codes https://open-meteo.com/en/docs
   const weatherMap: Record<number, WeatherCondition> = {
     0: 'clear',
     1: 'clear',
@@ -38,5 +39,7 @@ export function mapWeatherCode(code: number): WeatherCondition {
     99: 'stormy',
   };
 
-  return weatherMap[code] || 'clear';
+  const result = weatherMap[code] || 'clear';
+  console.log(`[Weather] Mapped code ${code} to ${result}`);
+  return result;
 } 

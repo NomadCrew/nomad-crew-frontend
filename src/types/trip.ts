@@ -1,6 +1,10 @@
-import { BaseEvent } from './events';
-
 export type TripStatus = 'PLANNING' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+
+export interface WeatherForecast {
+  time: string;
+  temperature: number;
+  precipitation: number;
+}
 
 export interface Trip {
   id: string;
@@ -8,24 +12,26 @@ export interface Trip {
   description?: string;
   destination: {
     address: string;
-    placeId: string;
     coordinates?: {
       lat: number;
       lng: number;
     };
+    placeId?: string;
   };
   startDate: string;
   endDate: string;
-  participantCount?: number;
   status: TripStatus;
   createdBy: string;
-  createdAt?: string;
-  updatedAt?: string;
-  isGhostCard?: boolean;
-  backgroundImageUrl?: string;
-  weatherCondition?: string;
+  createdAt: string;
+  updatedAt: string;
+  // Weather-related fields
   weatherTemp?: string;
+  weatherCondition?: WeatherCondition;
+  weatherForecast?: WeatherForecast[];
+  backgroundImageUrl?: string;
 }
+
+export type WeatherCondition = 'clear' | 'cloudy' | 'rainy' | 'snowy' | 'stormy';
 
 export interface CreateTripInput {
   name: string;
@@ -45,10 +51,16 @@ export interface CreateTripInput {
 export interface UpdateTripInput {
   name?: string;
   description?: string;
-  destination?: string;
-  startDate?: Date;
-  endDate?: Date;
-  status?: TripStatus;
+  destination?: {
+    address: string;
+    coordinates?: {
+      lat: number;
+      lng: number;
+    };
+    placeId?: string;
+  };
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface UpdateTripStatusRequest {
@@ -56,6 +68,7 @@ export interface UpdateTripStatusRequest {
 }
 
 export interface UpdateTripStatusResponse {
+  status: TripStatus;
   message: string;
 }
 

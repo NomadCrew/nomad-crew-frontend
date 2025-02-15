@@ -29,8 +29,8 @@ export class BaseApiClient {
             data: config.data,
             headers: { 
               ...config.headers,
-              Authorization: config.headers.Authorization ? 'Bearer '+config.headers.Authorization: undefined,
-              apikey: config.headers.apikey ? '[HIDDEN] ' + config.headers.apikey : undefined 
+              Authorization: config.headers.Authorization ? config.headers.Authorization: undefined,
+              apikey: config.headers.apikey ? config.headers.apikey : undefined 
             },
           });
         }
