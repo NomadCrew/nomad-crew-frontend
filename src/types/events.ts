@@ -2,15 +2,21 @@ import { z } from 'zod';
 
 // Core event types
 export const ServerEventType = z.enum([
-  'connection_ack',
-  'trip_updated',
+  'TRIP_CREATED',
+  'TRIP_UPDATED',
+  'TRIP_DELETED',
+  'TRIP_STARTED',
+  'TRIP_ENDED',
+  'TRIP_STATUS_UPDATED',
+  'TODO_CREATED',
+  'TODO_UPDATED',
+  'TODO_DELETED',
+  'TODO_COMPLETED',
   'WEATHER_UPDATED',
-  'member_joined',
-  'member_left',
-  'todo_created',
-  'todo_updated',
-  'todo_deleted',
-  'error'
+  'WEATHER_ALERT',
+  'MEMBER_ADDED',
+  'MEMBER_ROLE_UPDATED',
+  'MEMBER_REMOVED'
 ]);
 
 export type ServerEventType = z.infer<typeof ServerEventType>;
@@ -35,13 +41,18 @@ export const EventMetadataSchema = z.object({
 
 // Base event schema
 export const BaseEventSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   type: ServerEventType,
   tripId: z.string(),
-  userId: z.string(),
+  userId: z.string().optional(),
   timestamp: z.string().datetime(),
-  version: z.number().default(1),
-  metadata: EventMetadataSchema,
+  version: z.number(),
+  metadata: z.object({
+    correlationId: z.string().optional(),
+    causationId: z.string().optional(),
+    source: z.string(),
+    tags: z.record(z.string()).optional()
+  }),
   payload: z.unknown()
 });
 
@@ -88,13 +99,14 @@ export const EventSchemas = {
   }),
 
   todo: BaseEventSchema.extend({
-    type: z.enum(['todo_created', 'todo_updated', 'todo_deleted']),
+    type: z.enum(['TODO_CREATED', 'TODO_UPDATED', 'TODO_DELETED', 'TODO_COMPLETED']),
     payload: z.object({
       id: z.string(),
-      tripId: z.string(),
-      title: z.string(),
-      description: z.string().optional(),
-      status: z.enum(['pending', 'in_progress', 'completed']),
+      text: z.string(),
+      status: z.enum(['INCOMPLETE', 'COMPLETED']),
+      createdAt: z.string().datetime(),
+      completedAt: z.string().datetime().optional(),
+      createdBy: z.string(),
       assignedTo: z.string().optional()
     })
   }),
@@ -105,6 +117,15 @@ export const EventSchemas = {
       code: z.number(),
       message: z.string(),
       details: z.record(z.unknown()).optional()
+    })
+  }),
+
+  member: BaseEventSchema.extend({
+    type: z.enum(['MEMBER_ADDED', 'MEMBER_ROLE_UPDATED', 'MEMBER_REMOVED']),
+    payload: z.object({
+      userId: z.string(),
+      role: z.string().optional(),
+      previousRole: z.string().optional()
     })
   })
 };
@@ -123,6 +144,6 @@ export const isWeatherEvent = (event: ServerEvent): event is z.infer<typeof Even
 };
 
 export const isTodoEvent = (event: ServerEvent): event is z.infer<typeof EventSchemas.todo> => {
-  return ['todo_created', 'todo_updated', 'todo_deleted'].includes(event.type) && 
+  return ['TODO_CREATED', 'TODO_UPDATED', 'TODO_DELETED'].includes(event.type) && 
     EventSchemas.todo.safeParse(event).success;
 };
