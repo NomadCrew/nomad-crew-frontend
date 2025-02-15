@@ -10,11 +10,11 @@ import { BentoGrid } from '@/components/ui/BentoGrid';
 import { TodoList } from '@/components/todo/TodoList';
 import { BentoCarousel } from '@/components/ui/BentoCarousel';
 import { Trip } from '@/src/types/trip';
+import { ServerEvent } from '@/src/types/events';
 import { AddTodoModal } from '@/components/todo/AddTodoModal';
 import { useTripStore } from '@/src/store/useTripStore';
-import { useWebSocket } from '@/src/websocket/useWebSocket';
 import { WebSocketManager } from '@/src/websocket/WebSocketManager';
-import { useFocusEffect } from '@react-navigation/native';
+import { useTodoStore } from '@/src/store/useTodoStore';
 
 const QuickActions = ({ setShowAddTodo }: { setShowAddTodo: React.Dispatch<React.SetStateAction<boolean>> }) => {
   const { theme } = useTheme();
@@ -78,9 +78,7 @@ const TripStats = () => {
 };
 
 export default function TripDetailScreen({ trip }: { trip: Trip }) {
-  const { status, error, showWarning } = useWebSocket(trip?.id, {
-    onMessage: useTripStore.getState().handleTripEvent
-  });
+  const { id: tripId } = trip;
   const { theme } = useTheme();
   const { width: screenWidth } = useWindowDimensions();
   const [showAddTodo, setShowAddTodo] = useState(false);
@@ -104,7 +102,7 @@ export default function TripDetailScreen({ trip }: { trip: Trip }) {
         id: 'todo-list',
         component: TodoList,
         props: { 
-          tripId: trip.id,
+          tripId: tripId,
           onAddTodoPress: () => setShowAddTodo(true)
         }, 
     },
@@ -152,10 +150,24 @@ React.useEffect(() => {
   });
 }, []);
 
+useEffect(() => {
+  const manager = WebSocketManager.getInstance();
+  manager.connect(tripId, {
+    onMessage: (event) => {
+      useTripStore.getState().handleTripEvent(event);
+      useTodoStore.getState().handleTodoEvent(event);
+    }
+  });
+
+  return () => manager.disconnect();
+}, [tripId]);
+
+
+
   return (
     <View style={styles(theme).container}>
       {/* Connection Status Banner */}
-      {error && (
+      {/* {error && (
         <Surface style={styles(theme).errorBanner}>
           <Text style={styles(theme).errorText}>{error}</Text>
           {showWarning && (
@@ -164,7 +176,7 @@ React.useEffect(() => {
             </Text>
           )}
         </Surface>
-      )}
+      )} */}
 
       <SafeAreaView style={styles(theme).headerContainer}>
         <View style={[styles(theme).headerContent, { maxWidth: containerWidth }]}>
@@ -185,7 +197,7 @@ React.useEffect(() => {
       <AddTodoModal
         visible={showAddTodo}
         onClose={() => setShowAddTodo(false)}
-        tripId={trip.id}
+        tripId={tripId}
       />
     </View>
   );
