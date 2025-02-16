@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback} from 'react';
 import { View, StyleSheet, ScrollView, useWindowDimensions, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -10,8 +10,10 @@ import { BentoGrid } from '@/components/ui/BentoGrid';
 import { TodoList } from '@/components/todo/TodoList';
 import { BentoCarousel } from '@/components/ui/BentoCarousel';
 import { Trip } from '@/src/types/trip';
+import { ServerEvent } from '@/src/types/events';
 import { AddTodoModal } from '@/components/todo/AddTodoModal';
 import { useTripStore } from '@/src/store/useTripStore';
+import { WebSocketManager } from '@/src/websocket/WebSocketManager';
 import { useTodoStore } from '@/src/store/useTodoStore';
 
 const QuickActions = ({ setShowAddTodo }: { setShowAddTodo: React.Dispatch<React.SetStateAction<boolean>> }) => {
@@ -75,51 +77,8 @@ const TripStats = () => {
   );
 };
 
-const useStreamConnections = (tripId: string | undefined) => {
-  console.log('[useStreamConnections] Initializing hook');
-  const { connectToTrip, disconnectFromTrip } = useTripStore();
-  const { connectToTodoStream, disconnectFromTodoStream } = useTodoStore();
-
-  useEffect(() => {
-    console.log('[useStreamConnections] useEffect triggered for tripId:', tripId);
-    let isMounted = true;
-    let tripDisconnectFn: (() => void) | null = null;
-
-    const connect = async () => {
-      console.log('[useStreamConnections] Connection process started');
-      if (!isMounted || !tripId) return;
-      
-      try {
-        console.log('[useStreamConnections] Connecting to trip:', tripId);
-        await connectToTrip(tripId);
-        console.log('[useStreamConnections] Trip connected, connecting to todos');
-        tripDisconnectFn = () => disconnectFromTrip(tripId);
-        await connectToTodoStream(tripId);
-        console.log('[useStreamConnections] Todo stream connected');
-      } catch (error) {
-        console.error('[useStreamConnections] Connection error:', error);
-        if (isMounted) {
-          console.log('[useStreamConnections] Handling error in mounted state');
-        }
-      }
-    };
-
-    connect();
-
-    return () => {
-      console.log('[useStreamConnections] Cleanup triggered');
-      isMounted = false;
-      if (tripId) {
-        console.log('[useStreamConnections] Disconnecting from streams');
-        disconnectFromTodoStream();
-        tripDisconnectFn?.();
-      }
-    };
-  }, [tripId, connectToTrip, connectToTodoStream, disconnectFromTrip, disconnectFromTodoStream]);
-};
-
 export default function TripDetailScreen({ trip }: { trip: Trip }) {
-  useStreamConnections(trip?.id);
+  const { id: tripId } = trip;
   const { theme } = useTheme();
   const { width: screenWidth } = useWindowDimensions();
   const [showAddTodo, setShowAddTodo] = useState(false);
@@ -143,7 +102,7 @@ export default function TripDetailScreen({ trip }: { trip: Trip }) {
         id: 'todo-list',
         component: TodoList,
         props: { 
-          tripId: trip.id,
+          tripId: tripId,
           onAddTodoPress: () => setShowAddTodo(true)
         }, 
     },
@@ -178,6 +137,7 @@ const bentoItems = React.useMemo(
     },
 ], [carouselItems, trip]);
 
+
 React.useEffect(() => {
   console.log('TripDetailScreen mounted with dimensions:', {
     screenWidth,
@@ -190,8 +150,34 @@ React.useEffect(() => {
   });
 }, []);
 
+useEffect(() => {
+  const manager = WebSocketManager.getInstance();
+  manager.connect(tripId, {
+    onMessage: (event) => {
+      useTripStore.getState().handleTripEvent(event);
+      useTodoStore.getState().handleTodoEvent(event);
+    }
+  });
+
+  return () => manager.disconnect();
+}, [tripId]);
+
+
+
   return (
     <View style={styles(theme).container}>
+      {/* Connection Status Banner */}
+      {/* {error && (
+        <Surface style={styles(theme).errorBanner}>
+          <Text style={styles(theme).errorText}>{error}</Text>
+          {showWarning && (
+            <Text style={styles(theme).warningText}>
+              Connection will close in 5 seconds
+            </Text>
+          )}
+        </Surface>
+      )} */}
+
       <SafeAreaView style={styles(theme).headerContainer}>
         <View style={[styles(theme).headerContent, { maxWidth: containerWidth }]}>
           <TripHeader trip={trip} onBack={() => router.back()} />
@@ -211,7 +197,7 @@ React.useEffect(() => {
       <AddTodoModal
         visible={showAddTodo}
         onClose={() => setShowAddTodo(false)}
-        tripId={trip.id}
+        tripId={tripId}
       />
     </View>
   );
@@ -297,6 +283,9 @@ const styles = (theme: Theme) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.content.primary,
   },
+  icon: {
+    margin: 0,
+  },
   actionLabel: {
     ...theme.typography.body.small,
     color: theme.colors.content.secondary,
@@ -322,5 +311,17 @@ const styles = (theme: Theme) => StyleSheet.create({
     color: theme.colors.content.secondary,
     textAlign: 'center',
     opacity: 0.8,
+  },
+  errorBanner: {
+    padding: theme.spacing.stack.md,
+    margin: theme.spacing.stack.md,
+    backgroundColor: theme.colors.status.error.background,
+  },
+  errorText: {
+    color: theme.colors.primary.main,
+  },
+  warningText: {
+    color: theme.colors.primary.main,
+    marginTop: theme.spacing.stack.sm,
   },
 });

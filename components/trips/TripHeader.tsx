@@ -11,7 +11,7 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { ThemedText } from '@/components/ThemedText';
 import type { Trip } from '@/src/types/trip';
 import { WeatherIcon } from '../ui/WeatherIcon';
-import type { WeatherCondition } from '@/components/ui/WeatherIcons';
+import { WeatherCondition } from '@/src/utils/weather';
 
 interface TripHeaderProps {
   trip: Trip;

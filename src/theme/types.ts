@@ -43,6 +43,15 @@ export interface ComponentStyles {
   };
 }
 
+export interface ThemeColors {
+  // ... other color definitions
+  error: {
+    background: string;
+    content: string;
+    border: string;
+  };
+}
+
 export interface Theme {
   colors: SemanticColors;
   typography: Typography;

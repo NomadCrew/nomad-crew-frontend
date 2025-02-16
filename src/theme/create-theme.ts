@@ -28,7 +28,14 @@ export function createTheme(options: ThemeOptions = {}): Theme {
   const elevation = createSemanticElevation(isDark);
 
   return {
-    colors: semanticColors,
+    colors: {
+      ...semanticColors,
+      error: {
+        background: '#FEF2F2',
+        content: '#DC2626',
+        border: '#FCA5A5',
+      },
+    },
     typography,
     spacing: {
       ...spacing,

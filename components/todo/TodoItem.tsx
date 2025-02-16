@@ -19,6 +19,7 @@ import Animated, {
 import * as Haptics from 'expo-haptics';
 import { Todo } from '@/src/types/todo';
 import { useTheme } from '@/src/theme/ThemeProvider';
+import LottieView from 'lottie-react-native';
 
 interface TodoItemProps {
   todo: Todo;
