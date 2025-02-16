@@ -15,6 +15,12 @@ interface ConnectionConfig {
   onError?: (error: any) => void;
 }
 
+interface ConnectionCallbacks {
+  onMessage?: (event: any) => void;
+  onStatus?: (status: WebSocketStatus) => void;
+  onError?: (error: any) => void;
+}
+
 export class WebSocketConnection {
   private ws: WebSocket | null = null;
   private status: WebSocketStatus = 'DISCONNECTED';

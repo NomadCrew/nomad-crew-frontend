@@ -68,7 +68,7 @@ export const EventSchemas = {
   }),
 
   trip_updated: BaseEventSchema.extend({
-    type: z.literal('trip_updated'),
+    type: z.literal('TRIP_UPDATED'),
     payload: z.object({
       id: z.string(),
       name: z.string(),
@@ -136,7 +136,7 @@ export const isServerEvent = (event: unknown): event is ServerEvent => {
 };
 
 export const isTripEvent = (event: ServerEvent): event is z.infer<typeof EventSchemas.trip_updated> => {
-  return event.type === 'trip_updated' && EventSchemas.trip_updated.safeParse(event).success;
+  return event.type === 'TRIP_UPDATED' && EventSchemas.trip_updated.safeParse(event).success;
 };
 
 export const isWeatherEvent = (event: ServerEvent): event is z.infer<typeof EventSchemas.weather_update> => {

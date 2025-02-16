@@ -29,6 +29,8 @@ export interface Trip {
   weatherCondition?: WeatherCondition;
   weatherForecast?: WeatherForecast[];
   backgroundImageUrl?: string;
+  isGhostCard?: boolean;
+  participantCount?: number;
 }
 
 export type WeatherCondition = 'clear' | 'cloudy' | 'rainy' | 'snowy' | 'stormy';

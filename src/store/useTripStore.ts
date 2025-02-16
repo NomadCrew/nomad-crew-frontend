@@ -161,12 +161,12 @@ export const useTripStore = create<TripState>((set, get) => ({
       }));
     } else if (isTripEvent(event)) {
          console.debug('[Trip] Update received:', {
-          tripId: event.tripID,
+          tripId: event.tripId,
           type: event.type
          });
          set(state => ({
           trips: state.trips.map(trip =>
-           trip.id === event.tripID ? {
+           trip.id === event.tripId ? {
             ...trip,
             name: event.payload.name,
             description: event.payload.description,
@@ -178,7 +178,7 @@ export const useTripStore = create<TripState>((set, get) => ({
          }));
     } else if (isTodoEvent(event)) {
       console.debug('[Todo] Forwarding event:', {
-        tripId: event.tripID,
+        tripId: event.tripId,
         type: event.type
       });
       useTodoStore.getState().handleTodoEvent(event);

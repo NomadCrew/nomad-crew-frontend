@@ -3,12 +3,8 @@ import { api } from '@/src/api/api-client';
 import { Todo, CreateTodoInput, UpdateTodoInput, TodosResponse } from '@/src/types/todo';
 import { API_PATHS } from '@/src/utils/api-paths';
 import { 
-  WebSocketEvent,
-  WebSocketConnectionState,
-  isTodoEvent,
-  TodoCreatedEvent,
-  TodoUpdatedEvent,
-  TodoDeletedEvent
+  ServerEvent,
+  isTodoEvent
 } from '@/src/types/events';
 
 interface TodoState {
@@ -28,7 +24,7 @@ interface TodoState {
   fetchTodos: (tripId: string, offset: number, limit: number) => Promise<void>;
   
   // WebSocket operations
-  handleTodoEvent: (event: WebSocketEvent) => void;
+  handleTodoEvent: (event: ServerEvent) => void;
 }
 
 export const useTodoStore = create<TodoState>((set, get) => ({
@@ -119,7 +115,7 @@ export const useTodoStore = create<TodoState>((set, get) => ({
     }
   },
 
-  handleTodoEvent: (event: WebSocketEvent) => {
+  handleTodoEvent: (event: ServerEvent) => {
     if (event.type === 'TODO_CREATED' || event.type === 'TODO_UPDATED' || 
        event.type === 'TODO_DELETED' || event.type === 'TODO_COMPLETED') {
       // Prevent duplicate event processing
@@ -130,28 +126,13 @@ export const useTodoStore = create<TodoState>((set, get) => ({
         newProcessedEvents.add(event.id);
 
         switch (event.type) {
-          case 'TODO_CREATED': {
-            const todoEvent = event as TodoCreatedEvent;
-            return {
-              todos: [todoEvent.payload, ...state.todos],
-              total: state.total + 1,
-              processedEvents: newProcessedEvents
-            };
-          }
-          case 'TODO_UPDATED': {
-            const todoEvent = event as TodoUpdatedEvent;
-            return {
-              todos: state.todos.map(todo => 
-                todo.id === todoEvent.payload.id ? todoEvent.payload : todo
-              ),
-              processedEvents: newProcessedEvents
-            };
-          }
+          case 'TODO_CREATED':
+          case 'TODO_UPDATED':
           case 'TODO_DELETED': {
-            const todoEvent = event as TodoDeletedEvent;
+            const todo = event.payload as Todo;
             return {
-              todos: state.todos.filter(todo => todo.id !== todoEvent.payload.id),
-              total: state.total - 1,
+              todos: event.type === 'TODO_CREATED' ? [todo, ...state.todos] : state.todos.filter(t => t.id !== todo.id),
+              total: event.type === 'TODO_CREATED' ? state.total + 1 : state.total - 1,
               processedEvents: newProcessedEvents
             };
           }
