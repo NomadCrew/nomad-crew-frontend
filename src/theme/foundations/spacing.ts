@@ -36,6 +36,10 @@ export const createSemanticSpacing = () => ({
 
   // Component spacing
   components: {
+    container: {
+      padding: spaceScale.md,
+      gap: spaceScale.sm,
+    },
     card: {
       padding: spaceScale.md,
       gap: spaceScale.sm,
@@ -141,7 +145,7 @@ export const createLayoutHelpers = (spacing: SemanticSpacing) => ({
     padding: spacing.layout.screen.padding,
   },
   containerPadding: {
-    padding: spacing.components.container.padding,
+    padding: spacing.components.container.padding
   },
   centeredContent: {
     justifyContent: 'center',

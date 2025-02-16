@@ -24,13 +24,12 @@ export const API_PATHS = {
     create: createApiPath('trips'),
     byId: (id: string) => createApiPath(`trips/${id}`),
     updateStatus: (id: string) => `/v1/trips/${id}/status`,
-    ws: (id: string) => createApiPath(`trips/${id}/ws`),
+    ws: (id: string) => `/v1/trips/${id}/ws`,
   },
   todos: {
     create: (tripId: string) => `/v1/trips/${tripId}/todos`,
     delete: (tripId: string, todoId: string) => `/v1/trips/${tripId}/todos/${todoId}`,
     list: (tripId: string) => `/v1/trips/${tripId}/todos`,
     update: (tripId: string, todoId: string) => `/v1/trips/${tripId}/todos/${todoId}`,
-    ws: (tripId: string) => createApiPath(`trips/${tripId}/todos/ws`),
   },
 } as const;

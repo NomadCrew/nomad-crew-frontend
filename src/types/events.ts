@@ -1,129 +1,149 @@
-// src/types/events.ts
+import { z } from 'zod';
 
-import { Trip } from './trip';
-import { Todo } from './todo';
+// Core event types
+export const ServerEventType = z.enum([
+  'TRIP_CREATED',
+  'TRIP_UPDATED',
+  'TRIP_DELETED',
+  'TRIP_STARTED',
+  'TRIP_ENDED',
+  'TRIP_STATUS_UPDATED',
+  'TODO_CREATED',
+  'TODO_UPDATED',
+  'TODO_DELETED',
+  'TODO_COMPLETED',
+  'WEATHER_UPDATED',
+  'WEATHER_ALERT',
+  'MEMBER_ADDED',
+  'MEMBER_ROLE_UPDATED',
+  'MEMBER_REMOVED'
+]);
 
-// Base Event Types
-export type EventType = 
-  | 'TRIP_UPDATED' 
-  | 'TODO_CREATED' 
-  | 'TODO_UPDATED' 
-  | 'TODO_DELETED'
-  | 'USER_MESSAGE'
-  | 'CONNECT'
-  | 'DISCONNECT'
-  | 'ERROR'
-  | 'PONG';
+export type ServerEventType = z.infer<typeof ServerEventType>;
 
-// Base Event Interface matching backend
-export interface BaseEvent<T = unknown> {
-  id: string;
-  type: EventType;
-  payload: T;
-  timestamp: string;
-}
+// Connection Status
+export const WebSocketStatus = z.enum([
+  'CONNECTING',
+  'CONNECTED',
+  'DISCONNECTED',
+  'ERROR'
+]);
 
-// Trip Events
-export interface TripUpdatedEvent extends BaseEvent<Trip> {
-  type: 'TRIP_UPDATED';
-}
+export type WebSocketStatus = z.infer<typeof WebSocketStatus>;
 
-// Todo Events
-export interface TodoCreatedEvent extends BaseEvent<Todo> {
-  type: 'TODO_CREATED';
-}
+// Metadata schema
+export const EventMetadataSchema = z.object({
+  correlationID: z.string().optional(),
+  causationID: z.string().optional(),
+  source: z.string(),
+  tags: z.record(z.string()).optional()
+});
 
-export interface TodoUpdatedEvent extends BaseEvent<Todo> {
-  type: 'TODO_UPDATED';
-}
+// Base event schema
+export const BaseEventSchema = z.object({
+  id: z.string(),
+  type: ServerEventType,
+  tripId: z.string(),
+  userId: z.string().optional(),
+  timestamp: z.string().datetime(),
+  version: z.number(),
+  metadata: z.object({
+    correlationId: z.string().optional(),
+    causationId: z.string().optional(),
+    source: z.string(),
+    tags: z.record(z.string()).optional()
+  }),
+  payload: z.unknown()
+});
 
-export interface TodoDeletedEvent extends BaseEvent<{ id: string }> {
-  type: 'TODO_DELETED';
-}
+export type ServerEvent = z.infer<typeof BaseEventSchema>;
 
-// User Message Event
-export interface UserMessageEvent extends BaseEvent<{ message: string }> {
-  type: 'USER_MESSAGE';
-}
+// Event schemas for validation
+export const EventSchemas = {
+  connection_ack: BaseEventSchema.extend({
+    type: z.literal('connection_ack'),
+    payload: z.object({
+      sessionId: z.string()
+    })
+  }),
 
-// Connection Events
-export interface ConnectEvent extends BaseEvent<null> {
-  type: 'CONNECT';
-}
+  trip_updated: BaseEventSchema.extend({
+    type: z.literal('trip_updated'),
+    payload: z.object({
+      id: z.string(),
+      name: z.string(),
+      status: z.string(),
+      startDate: z.string().datetime().optional(),
+      endDate: z.string().datetime().optional(),
+      location: z.string().optional(),
+      description: z.string().optional()
+    })
+  }),
 
-export interface DisconnectEvent extends BaseEvent<null> {
-  type: 'DISCONNECT';
-}
+  weather_update: BaseEventSchema.extend({
+    type: z.literal('WEATHER_UPDATED'),
+    payload: z.object({
+      tripId: z.string(),
+      temperature_2m: z.number(),
+      weather_code: z.number(),
+      hourly_forecast: z.array(
+        z.object({
+          timestamp: z.string().datetime(),
+          temperature_2m: z.number(),
+          weather_code: z.number(),
+          precipitation: z.number()
+        })
+      ),
+      timestamp: z.string().datetime()
+    })
+  }),
 
-// Error Event
-export interface ErrorEvent extends BaseEvent<{ code: number; message: string }> {
-  type: 'ERROR';
-}
+  todo: BaseEventSchema.extend({
+    type: z.enum(['TODO_CREATED', 'TODO_UPDATED', 'TODO_DELETED', 'TODO_COMPLETED']),
+    payload: z.object({
+      id: z.string(),
+      text: z.string(),
+      status: z.enum(['INCOMPLETE', 'COMPLETED']),
+      createdAt: z.string().datetime(),
+      completedAt: z.string().datetime().optional(),
+      createdBy: z.string(),
+      assignedTo: z.string().optional()
+    })
+  }),
 
-// Union type of all possible events
-export type WebSocketEvent =
-  | TripUpdatedEvent
-  | TodoCreatedEvent
-  | TodoUpdatedEvent
-  | TodoDeletedEvent
-  | UserMessageEvent
-  | ConnectEvent
-  | DisconnectEvent
-  | ErrorEvent
-  | { type: 'PONG' };
+  error: BaseEventSchema.extend({
+    type: z.literal('error'),
+    payload: z.object({
+      code: z.number(),
+      message: z.string(),
+      details: z.record(z.unknown()).optional()
+    })
+  }),
 
-// Type guard functions
-export const isWebSocketEvent = (event: unknown): event is WebSocketEvent => {
-  if (!event || typeof event !== 'object') return false;
-  
-  const evt = event as BaseEvent;
-  return (
-    typeof evt.id === 'string' &&
-    typeof evt.type === 'string' &&
-    typeof evt.timestamp === 'string' &&
-    evt.payload !== undefined
-  );
+  member: BaseEventSchema.extend({
+    type: z.enum(['MEMBER_ADDED', 'MEMBER_ROLE_UPDATED', 'MEMBER_REMOVED']),
+    payload: z.object({
+      userId: z.string(),
+      role: z.string().optional(),
+      previousRole: z.string().optional()
+    })
+  })
 };
 
-export const isTripEvent = (event: WebSocketEvent): event is TripUpdatedEvent => {
-  return event.type === 'TRIP_UPDATED';
+// Type guards
+export const isServerEvent = (event: unknown): event is ServerEvent => {
+  return BaseEventSchema.safeParse(event).success;
 };
 
-export const isTodoEvent = (event: WebSocketEvent): event is TodoCreatedEvent | TodoUpdatedEvent | TodoDeletedEvent => {
-  return ['TODO_CREATED', 'TODO_UPDATED', 'TODO_DELETED'].includes(event.type);
+export const isTripEvent = (event: ServerEvent): event is z.infer<typeof EventSchemas.trip_updated> => {
+  return event.type === 'trip_updated' && EventSchemas.trip_updated.safeParse(event).success;
 };
 
-// WebSocket Connection States
-export type WebSocketConnectionState = {
-  status: WebSocketStatus;
-  instance?: WebSocket | null;
-  error?: string;
-  lastEventId?: string;
-  reconnectAttempt: number;
-  lastPongTimestamp?: number;
+export const isWeatherEvent = (event: ServerEvent): event is z.infer<typeof EventSchemas.weather_update> => {
+  return event.type === 'WEATHER_UPDATED' && EventSchemas.weather_update.safeParse(event).success;
 };
 
-export type WebSocketStatus = 
-  | 'CONNECTING' 
-  | 'CONNECTED' 
-  | 'DISCONNECTED' 
-  | 'RECONNECTING' 
-  | 'ERROR';
-
-// WebSocket Configuration
-export interface WebSocketConfig {
-  url: string;
-  protocols?: string[];
-  reconnectAttempts?: number;
-  reconnectInterval?: number;
-  pingInterval?: number;
-  pongTimeout?: number;
-}
-
-// WebSocket Message Queue Item
-export interface WebSocketQueueItem {
-  id: string;
-  message: UserMessageEvent;
-  timestamp: number;
-  retries: number;
-}
+export const isTodoEvent = (event: ServerEvent): event is z.infer<typeof EventSchemas.todo> => {
+  return ['TODO_CREATED', 'TODO_UPDATED', 'TODO_DELETED'].includes(event.type) && 
+    EventSchemas.todo.safeParse(event).success;
+};

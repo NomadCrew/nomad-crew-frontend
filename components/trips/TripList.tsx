@@ -19,20 +19,22 @@ interface Props {
 
 const GHOST_CARD: Trip = {
   id: 'ghost-spacer',
-  name: 'adad',
-  description: 'asdasd',
-  destination: 'adasd',
+  name: 'Ghost Spacer',
+  description: 'Spacer for layout',
+  destination: {
+    address: 'Ghost Destination',
+    placeId: 'ghost-place-id'
+  },
   startDate: new Date().toISOString(),
   endDate: new Date().toISOString(),
   status: 'PLANNING',
-  createdBy: 'asdas',
+  createdBy: 'system',
   isGhostCard: true
 };
 
 export function TripList({  onTripPress, style }: Props) {
   const { theme } = useTheme();
-  const { trips, fetchTrips, loading, error, wsConnection } = useTripStore();
-  const connectionStatus = wsConnection?.status;
+  const { trips, fetchTrips, loading, error } = useTripStore();
 
   const sections = useMemo(() => {
     const now = new Date();
@@ -99,7 +101,7 @@ export function TripList({  onTripPress, style }: Props) {
       {trips.length === 0 && (
         <ThemedView style={styles.emptyContainer}>
           <ThemedText
-            variant="bodyLarge"
+            variant="body.large"
             color="content.secondary"
             style={styles.emptyText}
           >

@@ -13,6 +13,10 @@ import { InitialLoadingScreen } from '@/components/InitialLoadingScreen';
 import { supabase } from '@/src/auth/supabaseClient';
 import { useOnboarding } from '@/src/providers/OnboardingProvider';
 import AppInitializer from './AppInitializer';
+import 'react-native-get-random-values'
+if (!global.crypto) {
+  global.crypto = require('react-native-get-random-values');
+}
 
 if (!global.EventSource) {
   // @ts-ignore - React Native SSE polyfill
