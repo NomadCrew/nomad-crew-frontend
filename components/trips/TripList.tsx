@@ -29,7 +29,9 @@ const GHOST_CARD: Trip = {
   endDate: new Date().toISOString(),
   status: 'PLANNING',
   createdBy: 'system',
-  isGhostCard: true
+  isGhostCard: true,
+  createdAt: '',
+  updatedAt: ''
 };
 
 export function TripList({  onTripPress, style }: Props) {
