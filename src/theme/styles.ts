@@ -3,10 +3,22 @@ import type { Theme } from './types';
 
 // Input states interface
 interface InputState {
-  idle: ViewStyle;
-  focus: ViewStyle;
-  error: ViewStyle;
-  disabled: ViewStyle;
+  idle: {
+    container: ViewStyle;
+    text: TextStyle;
+  };
+  focus: {
+    container: ViewStyle;
+    text: TextStyle;
+  };
+  error: {
+    container: ViewStyle;
+    text: TextStyle;
+  };
+  disabled: {
+    container: ViewStyle;
+    text: TextStyle;
+  };
 }
 
 export interface InputStyleProps {
@@ -47,25 +59,43 @@ export const getInputStyles = (theme: Theme): InputStyleProps => {
   // Input states
   const states: InputState = {
     idle: {
-      ...baseInput,
+      container: baseInput,
+      text: {
+        color: theme.colors.content.primary,
+      },
     },
     focus: {
-      ...baseInput,
-      borderColor: theme.colors.primary.main,
-      borderWidth: 2,
-      backgroundColor: theme.colors.surface.variant,
-      ...theme.elevation.textField.focus,
+      container: {
+        ...baseInput,
+        borderColor: theme.colors.primary.main,
+        borderWidth: 2,
+        backgroundColor: theme.colors.surface.variant,
+        ...theme.elevation.textField.focus,
+      },
+      text: {
+        color: theme.colors.content.primary,
+      },
     },
     error: {
-      ...baseInput,
-      borderColor: theme.colors.status.error.border,
-      backgroundColor: theme.colors.status.error.surface,
+      container: {
+        ...baseInput,
+        borderColor: theme.colors.status.error.border,
+        backgroundColor: theme.colors.status.error.surface,
+      },
+      text: {
+        color: theme.colors.status.error.content,
+      },
     },
     disabled: {
-      ...baseInput,
-      backgroundColor: theme.colors.surface.variant,
-      borderColor: theme.colors.border.default,
-      opacity: 0.5,
+      container: {
+        ...baseInput,
+        backgroundColor: theme.colors.surface.variant,
+        borderColor: theme.colors.border.default,
+        opacity: 0.5,
+      },
+      text: {
+        color: theme.colors.content.disabled,
+      },
     },
   };
 
@@ -74,11 +104,8 @@ export const getInputStyles = (theme: Theme): InputStyleProps => {
       gap: theme.spacing.components.input.labelMargin,
       marginBottom: theme.spacing.components.input.marginBottom,
     },
-    input: states.idle,
-    text: {
-      ...theme.typography.input.text,
-      color: theme.colors.content.primary,
-    },
+    input: states.idle.container,
+    text: states.idle.text,
     label: {
       ...theme.typography.input.label,
       color: theme.colors.content.secondary,

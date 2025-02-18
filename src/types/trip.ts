@@ -31,6 +31,17 @@ export interface Trip {
   backgroundImageUrl?: string;
   isGhostCard?: boolean;
   participantCount?: number;
+  invitations?: Array<{
+    email: string;
+    status: 'pending' | 'accepted' | 'expired';
+    token: string;
+    expiresAt: string;
+  }>;
+  members: Array<{
+    userId: string;
+    role: 'owner' | 'admin' | 'member';
+    joinedAt: string;
+  }>;
 }
 
 export type WeatherCondition = 'clear' | 'cloudy' | 'rainy' | 'snowy' | 'stormy';

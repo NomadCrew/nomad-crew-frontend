@@ -43,6 +43,16 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
 
   const connectionStatus = wsConnection?.status;
   
+  // Deduplicate the todos by unique id.
+  const dedupedTodos = React.useMemo(() => {
+    const todoMap = new Map<string, Todo>();
+    todos.forEach(todo => {
+      // Using the todo's id as key ensures only one instance is kept.
+      todoMap.set(todo.id, todo);
+    });
+    return Array.from(todoMap.values());
+  }, [todos]);
+
   // Handle pagination
   const handleLoadMore = React.useCallback(() => {
     if (!loading && hasMore) {
@@ -51,8 +61,7 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
   }, [loading, hasMore, todos.length, tripId, fetchTodos]);
 
   const handleRetry = React.useCallback(() => {
-    fetchTodos(tripId, 0, 20)
-      .catch(console.error);
+    fetchTodos(tripId, 0, 20).catch(console.error);
   }, [tripId, fetchTodos]);
 
   // Initial data load
@@ -69,13 +78,13 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
         const updatedTodo = await updateTodo(item.id, { status: newStatus });
         if (updatedTodo.status === 'COMPLETE') {
           setShowCompletionAnimation(true);
-          // Use onAnimationFinish below to clear the state, or use a timeout as a fallback:
+          // Either use the onAnimationFinish callback or a timeout as fallback:
           setTimeout(() => setShowCompletionAnimation(false), 2000);
         }
-      }}            
+      }}
       onDelete={() => deleteTodo(item.id)}
       disabled={loading}
-      textColor={getColorForUUID(item.id)}
+      textColor={getColorForUUID(item.createdBy)}
     />
   ), [loading, updateTodo, deleteTodo]);
 
@@ -117,7 +126,7 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
 
   return (
     <View style={styles(theme).container}>
-      {/* Add LottieView at the root level */}
+      {/* Completion animation overlay */}
       {showCompletionAnimation && (
         <View style={styles(theme).overlay}>
           <LottieView
@@ -148,7 +157,7 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
       )}
 
       <FlashList
-        data={todos}
+        data={dedupedTodos}
         renderItem={renderItem}
         estimatedItemSize={60}
         onEndReached={handleLoadMore}
@@ -185,9 +194,7 @@ const styles = (theme: Theme) => StyleSheet.create({
     right: 0,
     bottom: 0,
     zIndex: 10,
-    // Optionally a semi-transparent background:
-    // backgroundColor: 'rgba(0,0,0,0.2)',
-  },  
+  },
   loader: {
     padding: theme.spacing.inset.md,
   },

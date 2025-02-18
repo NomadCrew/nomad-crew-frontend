@@ -116,29 +116,43 @@ export const useTodoStore = create<TodoState>((set, get) => ({
   },
 
   handleTodoEvent: (event: ServerEvent) => {
-    if (event.type === 'TODO_CREATED' || event.type === 'TODO_UPDATED' || 
-       event.type === 'TODO_DELETED' || event.type === 'TODO_COMPLETED') {
-      // Prevent duplicate event processing
+    if (
+      event.type === 'TODO_CREATED' ||
+      event.type === 'TODO_UPDATED' ||
+      event.type === 'TODO_DELETED' ||
+      event.type === 'TODO_COMPLETED'
+    ) {
+      // Prevent duplicate processing of the same event/todo
       if (get().processedEvents.has(event.id)) return;
-
-      set(state => {
+      set((state) => {
         const newProcessedEvents = new Set(state.processedEvents);
         newProcessedEvents.add(event.id);
-
         switch (event.type) {
-          case 'TODO_CREATED':
+          case 'TODO_CREATED': {
+            const todo = event.payload as Todo;
+            // Only add if the todo isn't already present
+            const exists = state.todos.some((t) => t.id === todo.id);
+            return {
+              todos: exists ? state.todos : [todo, ...state.todos],
+              total: exists ? state.total : state.total + 1,
+              processedEvents: newProcessedEvents,
+            };
+          }
           case 'TODO_UPDATED':
+          case 'TODO_COMPLETED': {
+            const todo = event.payload as Todo;
+            return {
+              todos: state.todos.map((t) => (t.id === todo.id ? { ...t, ...todo } : t)),
+              processedEvents: newProcessedEvents,
+            };
+          }
           case 'TODO_DELETED': {
             const todo = event.payload as Todo;
             return {
-              todos: event.type === 'TODO_CREATED' ? [todo, ...state.todos] : state.todos.filter(t => t.id !== todo.id),
-              total: event.type === 'TODO_CREATED' ? state.total + 1 : state.total - 1,
-              processedEvents: newProcessedEvents
+              todos: state.todos.filter((t) => t.id !== todo.id),
+              total: state.total - 1,
+              processedEvents: newProcessedEvents,
             };
-          }
-          case 'TODO_COMPLETED': {
-            // Handle TODO_COMPLETED event
-            return { processedEvents: newProcessedEvents };
           }
           default:
             return { processedEvents: newProcessedEvents };

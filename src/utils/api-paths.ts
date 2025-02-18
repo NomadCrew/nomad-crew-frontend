@@ -25,6 +25,9 @@ export const API_PATHS = {
     byId: (id: string) => createApiPath(`trips/${id}`),
     updateStatus: (id: string) => `/v1/trips/${id}/status`,
     ws: (id: string) => `/v1/trips/${id}/ws`,
+    invite: (tripId: string) => createApiPath(`trips/${tripId}/invitations`),
+    invitations: (tripId: string) => createApiPath(`trips/${tripId}/invitations`),
+    acceptInvitation: createApiPath('trips/invitations/accept'),
   },
   todos: {
     create: (tripId: string) => `/v1/trips/${tripId}/todos`,

@@ -10,9 +10,12 @@ import {
   WeatherForecast,
 } from '@/src/types/trip';
 import { API_PATHS } from '@/src/utils/api-paths';
-import { ServerEvent, isTripEvent, isTodoEvent, isWeatherEvent } from '@/src/types/events';
+import { ServerEvent, isTripEvent, isTodoEvent, isWeatherEvent, isMemberInviteEvent } from '@/src/types/events';
 import { useTodoStore } from '@/src/store/useTodoStore';
 import { mapWeatherCode } from '@/src/utils/weather';
+import { apiClient } from '@/src/api/api-client';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuthStore } from '@/src/store/useAuthStore';
 
 interface TripState {
   trips: Trip[];
@@ -25,10 +28,15 @@ interface TripState {
   // Read operations
   fetchTrips: () => Promise<void>;
   getTripById: (id: string) => Trip | undefined;
+  // Member operations
+  inviteMember: (tripId: string, email: string) => Promise<void>;
+  revokeInvitation: (tripId: string, invitationId: string) => Promise<void>;
   // Status operations
   updateTripStatus: (id: string, status: TripStatus) => Promise<void>;
   // WebSocket operations
   handleTripEvent: (event: ServerEvent) => void;
+  acceptInvitation: (token: string) => Promise<void>;
+  checkPendingInvitations: () => Promise<void>;
 }
 
 export const useTripStore = create<TripState>((set, get) => ({
@@ -182,6 +190,68 @@ export const useTripStore = create<TripState>((set, get) => ({
         type: event.type
       });
       useTodoStore.getState().handleTodoEvent(event);
+    } else if (isMemberInviteEvent(event)) {
+      console.debug('[Member] Invitation sent:', {
+        tripId: event.tripId,
+        email: event.payload.inviteeEmail
+      });
+      
+      set(state => ({
+        trips: state.trips.map(trip => 
+          trip.id === event.tripId ? {
+            ...trip,
+            invitations: [
+              ...(trip.invitations || []), 
+              {
+                email: event.payload.inviteeEmail,
+                status: 'pending',
+                token: event.payload.invitationToken,
+                expiresAt: event.payload.expiresAt
+              }
+            ]
+          } : trip
+        )
+      }));
     }
   },
+
+  inviteMember: async (tripId: string, email: string) => {
+    try {
+      await api.post(API_PATHS.trips.invite(tripId), {
+        email
+      });
+    } catch (error) {
+      throw new Error('Failed to send invitation: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  },
+
+  revokeInvitation: async (tripId: string, invitationId: string) => {
+    // Implementation needed
+  },
+
+  acceptInvitation: async (token: string) => {
+    try {
+      const response = await apiClient.getAxiosInstance().post(API_PATHS.trips.acceptInvitation, {
+        token
+      });
+      
+      if (response.data.trip) {
+        set(state => ({
+          trips: [...state.trips, response.data.trip]
+        }));
+      }
+      await AsyncStorage.removeItem('pendingInvitation');
+      return response.data;
+    } catch (error) {
+      console.error('[TripStore] Accept invitation failed:', error);
+      throw error;
+    }
+  },
+
+  checkPendingInvitations: async () => {
+    const token = await AsyncStorage.getItem('pendingInvitation');
+    if (token && useAuthStore.getState().user) {
+      get().acceptInvitation(token);
+    }
+  }
 }));
