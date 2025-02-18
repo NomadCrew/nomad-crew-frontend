@@ -31,7 +31,8 @@ const GHOST_CARD: Trip = {
   createdBy: 'system',
   isGhostCard: true,
   createdAt: '',
-  updatedAt: ''
+  updatedAt: '',
+  members: []
 };
 
 export function TripList({  onTripPress, style }: Props) {

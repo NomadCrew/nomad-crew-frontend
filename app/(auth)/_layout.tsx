@@ -9,6 +9,10 @@ export default function AuthLayout() {
         headerShown: false,
         gestureEnabled: false 
       }} />
+      <Stack.Screen name="invitation" options={{ 
+        headerShown: false,
+        gestureEnabled: false 
+      }} />
     </Stack>
   );
 }

@@ -15,39 +15,71 @@ import { AddTodoModal } from '@/components/todo/AddTodoModal';
 import { useTripStore } from '@/src/store/useTripStore';
 import { WebSocketManager } from '@/src/websocket/WebSocketManager';
 import { useTodoStore } from '@/src/store/useTodoStore';
+import { useAuthStore } from '@/src/store/useAuthStore';
+import { InviteModal } from '@/components/trips/InviteModal';
+import LinearGradient from 'react-native-linear-gradient';
 
-const QuickActions = ({ setShowAddTodo }: { setShowAddTodo: React.Dispatch<React.SetStateAction<boolean>> }) => {
+const QuickActions = ({ setShowAddTodo, setShowInviteModal, trip }) => {
   const { theme } = useTheme();
-  
+
+  const authStore = useAuthStore();
+  const isOwner = trip.createdBy === authStore.user?.id;
+
   const actions = [
     { icon: 'map-marker', label: 'Location', onPress: () => console.log('Location pressed') },
     { icon: 'message-outline', label: 'Chat', onPress: () => console.log('Chat pressed') },
     { icon: 'account-group', label: 'Members', onPress: () => console.log('Members pressed') },
+    ...(isOwner ? [{ 
+      icon: 'account-plus', 
+      label: 'Invite', 
+      onPress: () => setShowInviteModal(true) 
+    }] : []),
     { icon: 'plus', label: 'Add Todo', onPress: () => setShowAddTodo(true) },
   ];
-  
+
   return (
     <Surface style={styles(theme).actionsCard} elevation={0}>
-      <View style={styles(theme).actionButtons}>
-        {actions.map((action) => (
-          <Pressable 
-            key={action.label} 
-            onPress={action.onPress}
-            style={({ pressed }) => [
-              styles(theme).actionItem,
-              { opacity: pressed ? 0.6 : 1 }
-            ]}
-          >
-            <View style={styles(theme).iconContainer}>
-              <IconButton
-                icon={action.icon}
-                size={20}
-                iconColor={theme.colors.content.primary}
-                style={styles(theme).icon}
-              />
-            </View>
-          </Pressable>
-        ))}
+      <View style={styles(theme).fadeContainer}>
+        {/* Left Fade */}
+        <LinearGradient
+          colors={['rgba(0, 0, 0, 0.5)', 'transparent']}
+          style={styles(theme).fadeLeft}
+          pointerEvents="none"
+        />
+        
+        {/* Scrollable Buttons */}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          style={styles(theme).actionButtons}
+        >
+          {actions.map((action) => (
+            <Pressable 
+              key={action.label} 
+              onPress={action.onPress}
+              style={({ pressed }) => [
+                styles(theme).actionItem,
+                { opacity: pressed ? 0.6 : 1 }
+              ]}
+            >
+              <View style={styles(theme).iconContainer}>
+                <IconButton
+                  icon={action.icon}
+                  size={20}
+                  iconColor={theme.colors.content.primary}
+                  style={styles(theme).icon}
+                />
+              </View>
+            </Pressable>
+          ))}
+        </ScrollView>
+
+        {/* Right Fade */}
+        <LinearGradient
+          colors={['transparent', 'rgba(0, 0, 0, 0.5)']}
+          style={styles(theme).fadeRight}
+          pointerEvents="none"
+        />
       </View>
     </Surface>
   );
@@ -82,6 +114,7 @@ export default function TripDetailScreen({ trip }: { trip: Trip }) {
   const { theme } = useTheme();
   const { width: screenWidth } = useWindowDimensions();
   const [showAddTodo, setShowAddTodo] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   const GRID_MARGIN = theme.spacing.layout.screen.padding;
   const GRID_GAP = theme.spacing.layout.section.gap;
@@ -131,7 +164,7 @@ const bentoItems = React.useMemo(
     },
     {
         id: '3',
-        element: <QuickActions setShowAddTodo={setShowAddTodo} />,
+        element: <QuickActions setShowAddTodo={setShowAddTodo} setShowInviteModal={setShowInviteModal} trip={trip} />,
         height: 'short' as const,
         position: 'right' as const,
     },
@@ -199,6 +232,12 @@ useEffect(() => {
         onClose={() => setShowAddTodo(false)}
         tripId={tripId}
       />
+
+      <InviteModal
+        visible={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        tripId={tripId}
+      />
     </View>
   );
 }
@@ -258,20 +297,39 @@ const styles = (theme: Theme) => StyleSheet.create({
     color: theme.colors.content.primary,
     marginBottom: theme.spacing.stack.lg,
   },
+  fadeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.inset.md,
+  },
+  fadeLeft: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 20,
+    zIndex: 1,
+  },
+  fadeRight: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 20,
+    zIndex: 1,
+  },
   actionsCard: {
-    padding: theme.spacing.inset.sm,
-    paddingTop: theme.spacing.inset.lg,
-    height: '100%',
+    paddingVertical: theme.spacing.inset.sm,
     backgroundColor: theme.colors.surface.default,
+    height: '100%',
   },
   actionButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    paddingHorizontal: theme.spacing.inset.sm,
   },
   actionItem: {
     alignItems: 'center',
-    flex: 1,
+    marginHorizontal: theme.spacing.stack.sm,
   },
   iconContainer: {
     width: 36,

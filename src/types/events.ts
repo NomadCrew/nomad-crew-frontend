@@ -16,7 +16,8 @@ export const ServerEventType = z.enum([
   'WEATHER_ALERT',
   'MEMBER_ADDED',
   'MEMBER_ROLE_UPDATED',
-  'MEMBER_REMOVED'
+  'MEMBER_REMOVED',
+  'MEMBER_INVITED',
 ]);
 
 export type ServerEventType = z.infer<typeof ServerEventType>;
@@ -121,11 +122,23 @@ export const EventSchemas = {
   }),
 
   member: BaseEventSchema.extend({
-    type: z.enum(['MEMBER_ADDED', 'MEMBER_ROLE_UPDATED', 'MEMBER_REMOVED']),
+    type: z.enum(['MEMBER_ADDED', 'MEMBER_ROLE_UPDATED', 'MEMBER_REMOVED', 'MEMBER_INVITED']),
     payload: z.object({
-      userId: z.string(),
+      userId: z.string().optional(),
+      inviteeEmail: z.string().email().optional(),
       role: z.string().optional(),
-      previousRole: z.string().optional()
+      previousRole: z.string().optional(),
+      invitationToken: z.string().optional(),
+      expiresAt: z.string().datetime().optional()
+    })
+  }),
+
+  memberInvite: BaseEventSchema.extend({
+    type: z.literal('MEMBER_INVITED'),
+    payload: z.object({
+      inviteeEmail: z.string().email(),
+      invitationToken: z.string(),
+      expiresAt: z.string().datetime()
     })
   })
 };
@@ -147,3 +160,6 @@ export const isTodoEvent = (event: ServerEvent): event is z.infer<typeof EventSc
   return ['TODO_CREATED', 'TODO_UPDATED', 'TODO_DELETED'].includes(event.type) && 
     EventSchemas.todo.safeParse(event).success;
 };
+
+export const isMemberInviteEvent = (event: ServerEvent): event is z.infer<typeof EventSchemas.memberInvite> =>
+  EventSchemas.memberInvite.safeParse(event).success;

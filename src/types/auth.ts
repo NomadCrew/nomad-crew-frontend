@@ -78,3 +78,9 @@ export interface User {
       photo?: string;
     };
   }
+
+declare global {
+  interface URLSearchParams {
+    get(name: string): string | null;
+  }
+}

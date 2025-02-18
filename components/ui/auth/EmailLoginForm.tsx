@@ -6,6 +6,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { getInputStyles, getButtonStyles } from '@/src/theme/styles';
+import { useTripStore } from '@/src/store/useTripStore';
 
 interface EmailLoginFormProps {
   onClose: () => void; // Callback to close the modal or navigate back
@@ -17,6 +18,7 @@ export default function EmailLoginForm({ onClose }: EmailLoginFormProps) {
   const [focusedInput, setFocusedInput] = useState<'email' | 'password' | null>(null);
   const { login, loading, isVerifying } = useAuthStore();
   const { theme } = useTheme();
+  const { checkPendingInvitations } = useTripStore.getState();
 
   const inputStyles = getInputStyles(theme);
   const buttonStyles = getButtonStyles(theme, loading);
@@ -42,6 +44,7 @@ export default function EmailLoginForm({ onClose }: EmailLoginFormProps) {
       }
       
       if (!error) {
+        await checkPendingInvitations();
         onClose();
       }
     } catch (err) {
@@ -58,12 +61,15 @@ export default function EmailLoginForm({ onClose }: EmailLoginFormProps) {
         <ThemedText style={styles(theme).title}>Sign In with Email</ThemedText>
 
         {/* Email Input */}
-        <ThemedView style={styles(theme).inputWrapper}>
+        <ThemedView style={[
+          styles(theme).inputWrapper,
+          inputStyles.states[focusedInput === 'email' ? 'focus' : 'idle'].container
+        ]}>
           <ThemedText>Email</ThemedText>
           <TextInput
             style={[
-              inputStyles.states[focusedInput === 'email' ? 'focus' : 'idle'],
               inputStyles.text,
+              inputStyles.states[focusedInput === 'email' ? 'focus' : 'idle'].text
             ]}
             placeholder="Enter your email"
             placeholderTextColor={theme.colors.content.tertiary}
@@ -78,12 +84,15 @@ export default function EmailLoginForm({ onClose }: EmailLoginFormProps) {
         </ThemedView>
 
         {/* Password Input */}
-        <ThemedView style={styles(theme).inputWrapper}>
+        <ThemedView style={[
+          styles(theme).inputWrapper,
+          inputStyles.states[focusedInput === 'password' ? 'focus' : 'idle'].container
+        ]}>
           <ThemedText>Password</ThemedText>
           <TextInput
             style={[
-              inputStyles.states[focusedInput === 'password' ? 'focus' : 'idle'],
               inputStyles.text,
+              inputStyles.states[focusedInput === 'password' ? 'focus' : 'idle'].text
             ]}
             placeholder="Enter your password"
             placeholderTextColor={theme.colors.content.tertiary}
