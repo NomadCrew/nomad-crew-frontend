@@ -18,6 +18,7 @@ import { useTodoStore } from '@/src/store/useTodoStore';
 import { useAuthStore } from '@/src/store/useAuthStore';
 import { InviteModal } from '@/components/trips/InviteModal';
 import LinearGradient from 'react-native-linear-gradient';
+import { logger } from '@/src/utils/logger';
 
 const QuickActions = ({ setShowAddTodo, setShowInviteModal, trip }) => {
   const { theme } = useTheme();
@@ -179,15 +180,11 @@ const bentoItems = React.useMemo(
 ], [carouselItems, trip]);
 
 
-React.useEffect(() => {
-  console.log('TripDetailScreen mounted with dimensions:', {
+useEffect(() => {
+  logger.debug('TRIP', 'Mounted with dimensions:', {
     screenWidth,
     GRID_MARGIN,
-    GRID_GAP,
-    MAX_WIDTH,
-    CONTENT_WIDTH,
-    CARD_WIDTH,
-    TALL_CARD_HEIGHT,
+    CONTENT_WIDTH
   });
 }, []);
 

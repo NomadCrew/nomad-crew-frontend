@@ -1,6 +1,7 @@
 import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
 import { API_CONFIG } from './env';
 import { ERROR_MESSAGES } from './constants';
+import { logger } from '@/src/utils/logger';
 
 export class BaseApiClient {
   protected api: AxiosInstance;
@@ -23,7 +24,7 @@ export class BaseApiClient {
     this.api.interceptors.request.use(
       (config) => {
         if (__DEV__) {
-          console.log('🌐 API Request:', {
+          logger.debug('API', 'Request initiated:', {
             method: config.method?.toUpperCase(),
             url: config.url,
             data: config.data,
@@ -38,7 +39,7 @@ export class BaseApiClient {
       },
       (error) => {
         if (__DEV__) {
-          console.error('❌ Request Error:', error);
+          logger.error('API', 'Request Error:', error);
         }
         return Promise.reject(error);
       }
@@ -48,7 +49,7 @@ export class BaseApiClient {
     this.api.interceptors.response.use(
       (response) => {
         if (__DEV__) {
-          console.log('✅ API Response:', {
+          logger.debug('API', 'Response received:', {
             status: response.status,
             data: response.data,
           });
@@ -56,20 +57,11 @@ export class BaseApiClient {
         return response;
       },
       (error: AxiosError) => {
-        if (__DEV__) {
-          console.error('❌ Response Error Details:', {
-            message: error.message,
-            response: error.response?.data,
-            status: error.response?.status,
-            headers: error.response?.headers,
-            requestHeaders: {
-              ...error.config?.headers,
-              Authorization: error.config?.headers?.Authorization ? 
-                `Bearer ${(error.config.headers.Authorization as string).split(' ')[1].substring(0, 20)}...` : 
-                undefined
-            }
-          });
-        }
+        logger.error('API', 'Request failed:', {
+          message: error.message,
+          code: error.code,
+          url: error.config?.url
+        });
 
         // Handle network errors
         if (!error.response) {
