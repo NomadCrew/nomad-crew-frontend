@@ -218,7 +218,10 @@ export const useTripStore = create<TripState>((set, get) => ({
   inviteMember: async (tripId: string, email: string) => {
     try {
       await api.post(API_PATHS.trips.invite(tripId), {
-        email
+        data: {
+          email,
+          role: 'MEMBER'
+        }
       });
     } catch (error) {
       throw new Error('Failed to send invitation: ' + (error instanceof Error ? error.message : 'Unknown error'));
