@@ -21,19 +21,27 @@ import LinearGradient from 'react-native-linear-gradient';
 
 const QuickActions = ({ setShowAddTodo, setShowInviteModal, trip }) => {
   const { theme } = useTheme();
-
   const authStore = useAuthStore();
-  const isOwner = trip.createdBy === authStore.user?.id;
+  const userId = authStore.user?.id;
+  const isOwner = trip.createdBy === userId;
+  const isAdmin = trip.members?.some(
+    (member) => member.userId === userId && member.role === 'admin'
+  );
+  const isOwnerOrAdmin = isOwner || isAdmin;
 
   const actions = [
     { icon: 'map-marker', label: 'Location', onPress: () => console.log('Location pressed') },
     { icon: 'message-outline', label: 'Chat', onPress: () => console.log('Chat pressed') },
     { icon: 'account-group', label: 'Members', onPress: () => console.log('Members pressed') },
-    ...(isOwner ? [{ 
-      icon: 'account-plus', 
-      label: 'Invite', 
-      onPress: () => setShowInviteModal(true) 
-    }] : []),
+    ...(isOwnerOrAdmin
+      ? [
+          { 
+            icon: 'account-plus', 
+            label: 'Invite', 
+            onPress: () => setShowInviteModal(true) 
+          }
+        ]
+      : []),
     { icon: 'plus', label: 'Add Todo', onPress: () => setShowAddTodo(true) },
   ];
 
