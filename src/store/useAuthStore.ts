@@ -3,6 +3,7 @@ import { supabase } from '@/src/auth/supabaseClient';
 import type { AuthState, LoginCredentials, RegisterCredentials, User } from '@/src/types/auth';
 import { Session } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { logger } from '@/src/utils/logger';
 
 /**
  * Attempt to recover a session from Supabase.
@@ -37,80 +38,28 @@ export const useAuthStore = create<AuthState>((set, get) => {
      * Called on app start to recover session
      */
     initialize: async () => {
-      const state = get();
-      if (state.loading || state.isInitialized) return;
-
-      set({ loading: true });
       try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
-        if (error) throw error;
-  
-        if (session?.user) {
-          console.log('[AuthStore] Session during initialization:', session);
+        logger.debug('AUTH', 'Initializing auth store');
+        const { data: { session }, error } = await supabase.auth.getSession();
 
-        // Store the token for comparison
-        await AsyncStorage.setItem('tokenAfterReload', session.access_token);
-          const user: User = {
-            id: session.user.id,
-            email: session.user.email ?? '',
-            username: session.user.user_metadata?.username ?? '',
-            firstName: session.user.user_metadata?.firstName,
-            lastName: session.user.user_metadata?.lastName,
-            profilePicture: session.user.user_metadata?.avatar_url,
-          };
-
-          set({
-            user,
-            token: session.access_token,
-            isInitialized: true,
-            loading: false,
-            error: null
-          });
-        } else {
-          // No active session
-          set({
-            user: null,
-            token: null,
-            isInitialized: true,
-            loading: false,
-            error: null
-          });
+        if (error || !session) {
+          logger.debug('AUTH', 'No valid session found');
+          return set({ isInitialized: true });
         }
 
-        supabase.auth.onAuthStateChange((event, session) => {
-          if (session?.user) {
-            const user: User = {
-              id: session.user.id,
-              email: session.user.email ?? '',
-              username: session.user.user_metadata?.username ?? '',
-              firstName: session.user.user_metadata?.firstName,
-              lastName: session.user.user_metadata?.lastName,
-              profilePicture: session.user.user_metadata?.avatar_url,
-            };
-  
-            set({
-              user,
-              token: session.access_token,
-            });
-          } else {
-            set({
-              user: null,
-              token: null,
-            });
-          }
+        logger.debug('AUTH', 'Session restored', {
+          userId: session.user.id,
+          expiresAt: session.expires_at
         });
-      } catch (error: any) {
-        console.error('[AuthStore] Initialization error:', error);
-        set({
-          error: error.message || 'Failed to initialize session',
-          isInitialized: true,
-          loading: false,
-          user: null,
-          token: null
+        set({ 
+          user: session.user,
+          token: session.access_token,
+          isInitialized: true
         });
+
+      } catch (error) {
+        logger.error('AUTH', 'Initialization error:', error);
+        set({ isInitialized: true });
       }
     },
 
