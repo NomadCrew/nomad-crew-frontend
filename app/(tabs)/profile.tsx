@@ -24,8 +24,8 @@ export default function ProfileScreen() {
   // Compute a display name based on available fields.
   const displayName = user
     ? (user.firstName ||
-        user.user_metadata?.full_name ||
-        user.user_metadata?.name ||
+        (user as any).user_metadata?.full_name ||
+        (user as any).user_metadata?.name ||
         user.username ||
         'Guest')
     : 'Guest';
@@ -34,12 +34,12 @@ export default function ProfileScreen() {
   const profileData = user
     ? {
         firstName:
-          user.firstName || user.user_metadata?.name || user.user_metadata?.full_name,
+          user.firstName || (user as any).user_metadata?.name || (user as any).user_metadata?.full_name,
         lastName: user.lastName,
         profilePicture:
           user.profilePicture ||
-          user.user_metadata?.avatar_url ||
-          user.user_metadata?.picture,
+          (user as any).user_metadata?.avatar_url ||
+          (user as any).user_metadata?.picture,
       }
     : {};
 
@@ -148,7 +148,7 @@ const ProfileDetailRow = ({
   return (
     <Pressable style={[styles.detailRow, !isLast && styles.detailRowBorder]} onPress={onPress}>
       <Ionicons
-        name={icon}
+        name={icon as typeof Ionicons['name']}
         size={24}
         color={theme.colors.content.secondary}
         style={styles.detailIcon}
