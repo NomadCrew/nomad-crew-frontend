@@ -88,7 +88,7 @@ export default function TripsScreen() {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter((trip) =>
         trip.name.toLowerCase().includes(query) ||
-        (trip.destination && trip.destination.toLowerCase().includes(query))
+        (trip.destination?.toString()?.toLowerCase().includes(query))
       );
     }
   

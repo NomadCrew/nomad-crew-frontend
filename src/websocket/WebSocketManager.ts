@@ -40,9 +40,9 @@ export class WebSocketManager {
     return WebSocketManager.instance;
   }
 
-  private getWebSocketUrl(tripId: string): string {
+  private getWebSocketUrl(tripId: string, token: string): string {
     const base = API_CONFIG.BASE_URL.replace(/^http/, 'ws');
-    return `${base}/v1/trips/${tripId}/ws?apikey=${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`;
+    return `${base}/v1/trips/${tripId}/ws?apikey=${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}&token=${token}`;
   }
 
   public async connect(tripId: string, callbacks?: ConnectionCallbacks): Promise<void> {
@@ -57,7 +57,7 @@ export class WebSocketManager {
 
       // Create new connection with latest token
       this.connection = new WebSocketConnection({
-        url: this.getWebSocketUrl(tripId),
+        url: this.getWebSocketUrl(tripId, token),
         token,
         tripId,
         userId: user.id,
