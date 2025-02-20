@@ -98,4 +98,8 @@ export class WebSocketConnection {
   public updateCallbacks(callbacks: Partial<ConnectionCallbacks>): void {
     this.callbacks = { ...this.callbacks, ...callbacks };
   }
+
+  public getCallbacks() {
+    return this.callbacks;
+  }
 }
