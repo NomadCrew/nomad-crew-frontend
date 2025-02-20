@@ -1,7 +1,6 @@
 import { WebSocketConnection } from './WebSocketConnection';
 import { WebSocketStatus } from '../types/events';
 import { useAuthStore } from '../store/useAuthStore';
-import { API_PATHS } from '../utils/api-paths';
 import { API_CONFIG } from '../api/env';
 
 type ConnectionCallback = (event: any) => void;
@@ -22,8 +21,17 @@ export class WebSocketManager {
     onStatus: (status) => console.debug('[WS] Status changed', status),
     onError: (error) => console.error('[WS] Connection error', error)
   };
+  private authUnsubscribe?: () => void;
 
-  private constructor() {}
+  private constructor() {
+    // Subscribe to auth changes
+    this.authUnsubscribe = useAuthStore.subscribe((state) => {
+      if (state.token && this.currentTripId) {
+        console.log('[WS] Token updated, reconnecting...');
+        this.reconnectWithNewToken(state.token);
+      }
+    });
+  }
 
   public static getInstance(): WebSocketManager {
     if (!WebSocketManager.instance) {
@@ -44,11 +52,10 @@ export class WebSocketManager {
     }
 
     try {
-      console.log('[WS] Connecting to trip:', tripId);
       const { token, user } = useAuthStore.getState();
-      
       if (!token || !user?.id) throw new Error('Not authenticated');
 
+      // Create new connection with latest token
       this.connection = new WebSocketConnection({
         url: this.getWebSocketUrl(tripId),
         token,
@@ -73,6 +80,26 @@ export class WebSocketManager {
     this.connection?.disconnect();
     this.connection = null;
     this.currentTripId = null;
+    this.authUnsubscribe?.();
+  }
+
+  private async reconnectWithNewToken(newToken: string): Promise<void> {
+    if (!this.currentTripId) return;
+
+    try {
+      const previousTripId = this.currentTripId;
+      this.disconnect();
+      
+      await this.connect(previousTripId, {
+        onMessage: this.connection?.getCallbacks().onMessage,
+        onStatus: this.connection?.getCallbacks().onStatus,
+        onError: this.connection?.getCallbacks().onError
+      });
+      
+      console.log('[WS] Reconnected with new token successfully');
+    } catch (error) {
+      console.error('[WS] Reconnection failed:', error);
+    }
   }
 }
 

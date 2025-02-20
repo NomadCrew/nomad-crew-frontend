@@ -4,6 +4,7 @@ import {
   ImageBackground,
   StyleSheet,
   Pressable,
+  TextStyle,
 } from 'react-native';
 import { ArrowLeft, Bookmark } from 'lucide-react-native';
 import { format } from 'date-fns';
@@ -36,17 +37,17 @@ export const TripHeader = ({
       style={styles(theme).backgroundImage}
       resizeMode="cover"
     >
-      <View style={styles(theme).overlay} />
+      {/* <View style={styles(theme).overlay} /> */}
 
       <View style={styles(theme).container}>
         <View style={styles(theme).topRow}>
           <Pressable onPress={onBack} style={styles(theme).backButton}>
-            <ArrowLeft size={24} color={theme.colors.content.primary} />
+            <ArrowLeft size={24} />
           </Pressable>
 
           {onBookmark && (
             <Pressable onPress={onBookmark} style={styles(theme).iconButton}>
-              <Bookmark size={24} color={theme.colors.content.primary} />
+              <Bookmark size={24} color={theme.colors.content.onImage} />
             </Pressable>
           )}
         </View>
@@ -62,7 +63,6 @@ export const TripHeader = ({
 
           <ThemedText
             variant="body.medium"
-            color="content.secondary"
             style={styles(theme).dateText}
           >
             {startDateString} – {endDateString}
@@ -88,7 +88,7 @@ const styles = (theme: any) =>
     },
     overlay: {
       ...StyleSheet.absoluteFillObject,
-      backgroundColor: 'rgba(0,0,0,0.3)',
+      backgroundColor: 'linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 100%)',
     },
     container: {
       flex: 1,
@@ -103,10 +103,12 @@ const styles = (theme: any) =>
       alignItems: 'center',
       marginBottom: theme.spacing.stack.sm,
     },
-    backButton: {
-      padding: theme.spacing.inset.xs,
-      marginLeft: -theme.spacing.inset.xs,
-    },
+    backButtonIcon: {
+      textShadowColor: 'rgba(0,0,0,0.75)',
+      textShadowOffset: { width: -1, height: 1 },
+      textShadowRadius: 3,
+      color: theme.colors.content.onImage,
+    },    
     iconButton: {
       padding: theme.spacing.inset.xs,
     },
@@ -117,15 +119,19 @@ const styles = (theme: any) =>
     cityName: {
       textAlign: 'right',
       textShadowColor: 'rgba(0,0,0,0.75)',
-      textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 2,
-    },
+      textShadowOffset: { width: 0, height: 2 },
+      textShadowRadius: 4,
+      color: theme.colors.content.onImage,
+      mixBlendMode: 'difference',
+    } as TextStyle,
     dateText: {
       textAlign: 'right',
       textShadowColor: 'rgba(0,0,0,0.75)',
       textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 2,
-    },
+      textShadowRadius: 3,
+      color: theme.colors.content.onImage,
+      backgroundBlendMode: 'difference',
+    } as TextStyle,
     weatherRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -135,6 +141,8 @@ const styles = (theme: any) =>
       marginRight: theme.spacing.stack.md,
       textShadowColor: 'rgba(0,0,0,0.75)',
       textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 2,
-    },
+      textShadowRadius: 3,
+      color: theme.colors.content.onImage,
+      mixBlendMode: 'difference',
+    } as TextStyle,
   });

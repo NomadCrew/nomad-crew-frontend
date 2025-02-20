@@ -78,24 +78,25 @@ export const colorTokens = {
   export const createSemanticColors = (isDark: boolean) => ({
     // Interactive colors
     primary: {
-      main: isDark ? colorTokens.orange[400] : colorTokens.orange[500],
+      main: isDark ? colorTokens.orange[400] : colorTokens.orange[600],
       surface: isDark ? colorTokens.orange[900] : colorTokens.orange[50],
-      border: isDark ? colorTokens.orange[700] : colorTokens.orange[200],
-      hover: isDark ? colorTokens.orange[300] : colorTokens.orange[600],
-      pressed: isDark ? colorTokens.orange[200] : colorTokens.orange[700],
+      border: isDark ? colorTokens.orange[700] : colorTokens.orange[300],
+      hover: isDark ? colorTokens.orange[300] : colorTokens.orange[700],
+      pressed: isDark ? colorTokens.orange[200] : colorTokens.orange[800],
       disabled: isDark ? colorTokens.orange[800] : colorTokens.orange[200],
-      text: isDark ? colorTokens.orange[50] : colorTokens.orange[900],
+      text: isDark ? colorTokens.orange[50] : '#FFFFFF',
       onPrimary: '#FFFFFF', // Add this for text on primary surfaces
     },
   
     // Content
     content: {
-      primary: isDark ? '#FFFFFF' : colorTokens.gray[900],
-      secondary: isDark ? colorTokens.gray[300] : colorTokens.gray[600],
-      tertiary: isDark ? colorTokens.gray[400] : colorTokens.gray[500],
-      disabled: isDark ? colorTokens.gray[600] : colorTokens.gray[400],
+      primary: isDark ? '#F8FAFC' : '#1A1A1A',
+      secondary: isDark ? '#CBD5E1' : '#404040',
+      tertiary: isDark ? '#94A3B8' : '#6B7280',
+      disabled: isDark ? '#475569' : '#D4D4D4',
       onSurface: isDark ? '#FFFFFF' : colorTokens.gray[900],
       onSurfaceVariant: isDark ? colorTokens.gray[300] : colorTokens.gray[600],
+      onImage: '#FFFFFF',
     },
   
     // Surface colors
@@ -106,14 +107,14 @@ export const colorTokens = {
     status: {
       error: {
         surface: isDark ? colorTokens.red[900] : colorTokens.red[50],
-        content: isDark ? colorTokens.red[200] : colorTokens.red[700],
+        content: isDark ? colorTokens.red[300] : colorTokens.red[700],
         background: isDark ? colorTokens.red[800] : colorTokens.red[100],
-        border: isDark ? colorTokens.red[800] : colorTokens.red[300],
+        border: isDark ? colorTokens.red[700] : colorTokens.red[300],
       },
       success: {
-        surface: isDark ? colorTokens.green[800] : colorTokens.green[400],
-        content: isDark ? colorTokens.green[200] : colorTokens.green[700],
-        background: isDark ? colorTokens.green[500] : colorTokens.green[100],
+        surface: isDark ? colorTokens.green[800] : colorTokens.green[50],
+        content: isDark ? colorTokens.green[200] : colorTokens.green[800],
+        background: isDark ? colorTokens.green[700] : colorTokens.green[100],
         border: isDark ? colorTokens.green[800] : colorTokens.green[300],
       },
       planning: {

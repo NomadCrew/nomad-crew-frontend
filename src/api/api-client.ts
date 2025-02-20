@@ -62,29 +62,31 @@ export class ApiClient extends BaseApiClient {
         const originalRequest = error.config;
   
         if (error.response?.status === 401 && !originalRequest._retry) {
+          // Specific check for token expiration
+          const isTokenExpired = error.response.data?.message?.includes('token has expired');
+          
+          if (!isTokenExpired) {
+            useAuthStore.getState().logout();
+            return Promise.reject(error);
+          }
+
           originalRequest._retry = true;
-  
           try {
             const { error: refreshError } = await supabase.auth.refreshSession();
             if (refreshError) {
-              // Token refresh failed, sign out the user
               useAuthStore.getState().logout();
               return Promise.reject(refreshError);
             }
-  
-            // Get the new access token from the store
+
             const token = useAuthStore.getState().token;
             if (token) {
-              // Update the Authorization header and retry the request
               originalRequest.headers.Authorization = `Bearer ${token}`;
               return this.api(originalRequest);
-            } else {
-              // No token available, sign out the user
-              useAuthStore.getState().logout();
-              return Promise.reject(new Error('No access token available'));
             }
+            
+            useAuthStore.getState().logout();
+            return Promise.reject(new Error('No access token available'));
           } catch (refreshError) {
-            // Refresh token request failed
             useAuthStore.getState().logout();
             return Promise.reject(refreshError);
           }

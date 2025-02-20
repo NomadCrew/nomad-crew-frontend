@@ -44,8 +44,8 @@ export const Avatar: React.FC<AvatarProps> = ({
       overflow: 'hidden',
     },
     image: {
-      width: dimension,
-      height: dimension,
+      width: '100%',
+      height: '100%',
     },
     initialsText: {
       color: theme.colors.content.primary,
@@ -54,21 +54,17 @@ export const Avatar: React.FC<AvatarProps> = ({
     },
   });
 
-  if (user?.profilePicture) {
-    return (
-      <View style={[styles.container, style]}>
-        <Image
-          source={{ uri: user.profilePicture }}
-          style={styles.image}
-        //   defaultSource={require('@/assets/images/default-avatar.png')}
-        />
-      </View>
-    );
-  }
+  const imageSource = user?.profilePicture
+    ? { uri: user.profilePicture }
+    : require('@/assets/images/icon.png'); // Fallback image if needed
 
   return (
     <View style={[styles.container, style]}>
-      <ThemedText style={styles.initialsText}>{initials}</ThemedText>
+      <Image
+        source={imageSource}
+        style={styles.image}
+        resizeMode="cover"
+      />
     </View>
   );
 };
