@@ -29,7 +29,7 @@ export const TripHeader = ({
   const startDateString = format(new Date(trip.startDate), 'MMM dd');
   const endDateString = format(new Date(trip.endDate), 'MMM dd');
   const weatherCondition = trip.weatherCondition as WeatherCondition | undefined;
-  const temperature = trip.weatherTemp ?? '-5°C';
+  const temperature = trip.weatherTemp ?? '6°C';
 
   return (
     <ImageBackground
@@ -37,26 +37,30 @@ export const TripHeader = ({
       style={styles(theme).backgroundImage}
       resizeMode="cover"
     >
-      {/* <View style={styles(theme).overlay} /> */}
+      <View style={styles(theme).overlay} />
 
       <View style={styles(theme).container}>
         <View style={styles(theme).topRow}>
-          <Pressable onPress={onBack} style={styles(theme).backButton}>
-            <ArrowLeft size={24} />
+          <Pressable 
+            onPress={onBack} 
+            style={styles(theme).backButton}
+            android_ripple={{ color: 'rgba(255,255,255,0.2)', radius: 20 }}
+          >
+            <ArrowLeft size={24} color={theme.colors.content.onImage} />
           </Pressable>
 
           {onBookmark && (
-            <Pressable onPress={onBookmark} style={styles(theme).iconButton}>
+            <Pressable 
+              onPress={onBookmark} 
+              style={styles(theme).iconButton}
+              android_ripple={{ color: 'rgba(255,255,255,0.2)', radius: 20 }}
+            >
               <Bookmark size={24} color={theme.colors.content.onImage} />
             </Pressable>
           )}
         </View>
 
         <View style={styles(theme).infoContainer}>
-          {/*
-            Using a "display.large" variant for a big city name,
-            or you could use "heading.h1" if you prefer the standard heading scale.
-          */}
           <ThemedText variant="display.large" style={styles(theme).cityName}>
             {trip.name}
           </ThemedText>
@@ -72,7 +76,7 @@ export const TripHeader = ({
             <ThemedText variant="body.medium" style={styles(theme).tempText}>
               {temperature}
             </ThemedText>
-            <WeatherIcon condition={weatherCondition} fallback="clear" />
+            <WeatherIcon condition={weatherCondition} fallback="clear" size={24} color={theme.colors.content.onImage} />
           </View>
         </View>
       </View>
@@ -84,18 +88,19 @@ const styles = (theme: any) =>
   StyleSheet.create({
     backgroundImage: {
       width: '100%',
-      height: 250,
+      height: 270,
     },
     overlay: {
       ...StyleSheet.absoluteFillObject,
-      backgroundColor: 'linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 100%)',
+      backgroundColor: 'rgba(0,0,0,0.3)',
     },
     container: {
       flex: 1,
       position: 'relative',
       paddingHorizontal: theme.spacing.inset.md,
       paddingTop: theme.spacing.inset.xl,
-      paddingBottom: theme.spacing.inset.md,
+      paddingBottom: theme.spacing.inset.lg,
+      justifyContent: 'space-between',
     },
     topRow: {
       flexDirection: 'row',
@@ -103,17 +108,24 @@ const styles = (theme: any) =>
       alignItems: 'center',
       marginBottom: theme.spacing.stack.sm,
     },
-    backButtonIcon: {
-      textShadowColor: 'rgba(0,0,0,0.75)',
-      textShadowOffset: { width: -1, height: 1 },
-      textShadowRadius: 3,
-      color: theme.colors.content.onImage,
-    },    
+    backButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0,0,0,0.3)',
+    },
     iconButton: {
-      padding: theme.spacing.inset.xs,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0,0,0,0.3)',
     },
     infoContainer: {
-      marginTop: theme.spacing.stack.xs,
+      marginTop: theme.spacing.stack.md,
       alignItems: 'flex-end',
     },
     cityName: {
@@ -122,7 +134,7 @@ const styles = (theme: any) =>
       textShadowOffset: { width: 0, height: 2 },
       textShadowRadius: 4,
       color: theme.colors.content.onImage,
-      mixBlendMode: 'difference',
+      fontWeight: 'bold',
     } as TextStyle,
     dateText: {
       textAlign: 'right',
@@ -130,12 +142,17 @@ const styles = (theme: any) =>
       textShadowOffset: { width: 0, height: 1 },
       textShadowRadius: 3,
       color: theme.colors.content.onImage,
-      backgroundBlendMode: 'difference',
+      marginTop: 4,
+      fontSize: 16,
     } as TextStyle,
     weatherRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginTop: theme.spacing.stack.xs,
+      marginTop: theme.spacing.stack.sm,
+      backgroundColor: 'rgba(0,0,0,0.3)',
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderRadius: 20,
     },
     tempText: {
       marginRight: theme.spacing.stack.md,
@@ -143,6 +160,7 @@ const styles = (theme: any) =>
       textShadowOffset: { width: 0, height: 1 },
       textShadowRadius: 3,
       color: theme.colors.content.onImage,
-      mixBlendMode: 'difference',
+      fontSize: 16,
+      fontWeight: '500',
     } as TextStyle,
   });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { router } from 'expo-router';
 import { StyleSheet, TextInput, Pressable, KeyboardAvoidingView, Platform, Alert} from 'react-native';
 import { useAuthStore } from '@/src/store/useAuthStore';
@@ -20,10 +20,61 @@ export default function EmailLoginForm({ onClose }: EmailLoginFormProps) {
   const { theme } = useTheme();
   const { checkPendingInvitations } = useTripStore.getState();
 
-  const inputStyles = getInputStyles(theme);
-  const buttonStyles = getButtonStyles(theme, loading);
+  // Memoize styles to prevent recalculation on every keystroke
+  const inputStyles = useMemo(() => getInputStyles(theme), [theme]);
+  const buttonStyles = useMemo(() => getButtonStyles(theme, loading), [theme, loading]);
+  const componentStyles = useMemo(() => styles(theme), [theme]);
 
-  const handleLogin = async () => {
+  // Memoize input state getters to avoid recalculating on every render
+  const getEmailInputStyle = useMemo(() => [
+    inputStyles.text,
+    inputStyles.states[focusedInput === 'email' ? 'focus' : 'idle'].text
+  ], [inputStyles, focusedInput]);
+
+  const getPasswordInputStyle = useMemo(() => [
+    inputStyles.text,
+    inputStyles.states[focusedInput === 'password' ? 'focus' : 'idle'].text
+  ], [inputStyles, focusedInput]);
+
+  const getEmailContainerStyle = useMemo(() => [
+    componentStyles.inputWrapper,
+    inputStyles.states[focusedInput === 'email' ? 'focus' : 'idle'].container
+  ], [componentStyles.inputWrapper, inputStyles.states, focusedInput]);
+
+  const getPasswordContainerStyle = useMemo(() => [
+    componentStyles.inputWrapper,
+    inputStyles.states[focusedInput === 'password' ? 'focus' : 'idle'].container
+  ], [componentStyles.inputWrapper, inputStyles.states, focusedInput]);
+
+  // Memoize the button style calculation
+  const loginButtonStyle = useMemo(() => [
+    buttonStyles.container,
+    componentStyles.loginButton,
+    (!email.trim() || !password.trim()) && componentStyles.buttonDisabled,
+  ], [buttonStyles.container, componentStyles.loginButton, componentStyles.buttonDisabled, email, password]);
+
+  // Memoize input handlers to prevent recreating on every render
+  const handleEmailChange = useCallback((text: string) => {
+    setEmail(text);
+  }, []);
+
+  const handlePasswordChange = useCallback((text: string) => {
+    setPassword(text);
+  }, []);
+
+  const handleEmailFocus = useCallback(() => {
+    setFocusedInput('email');
+  }, []);
+
+  const handlePasswordFocus = useCallback(() => {
+    setFocusedInput('password');
+  }, []);
+
+  const handleInputBlur = useCallback(() => {
+    setFocusedInput(null);
+  }, []);
+
+  const handleLogin = useCallback(async () => {
     try {
       console.log('[EmailLogin] Attempting login');
       console.log('[EmailLogin] Starting login flow - current isVerifying:', isVerifying);
@@ -50,33 +101,27 @@ export default function EmailLoginForm({ onClose }: EmailLoginFormProps) {
     } catch (err) {
       console.error('[EmailLogin] Login failed:', err);
     }
-  };
+  }, [email, password, login, isVerifying, checkPendingInvitations, onClose]);
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles(theme).container}
+      style={componentStyles.container}
     >
-      <ThemedView style={styles(theme).content}>
-        <ThemedText style={styles(theme).title}>Sign In with Email</ThemedText>
+      <ThemedView style={componentStyles.content}>
+        <ThemedText style={componentStyles.title}>Sign In with Email</ThemedText>
 
         {/* Email Input */}
-        <ThemedView style={[
-          styles(theme).inputWrapper,
-          inputStyles.states[focusedInput === 'email' ? 'focus' : 'idle'].container
-        ]}>
+        <ThemedView style={getEmailContainerStyle}>
           <ThemedText>Email</ThemedText>
           <TextInput
-            style={[
-              inputStyles.text,
-              inputStyles.states[focusedInput === 'email' ? 'focus' : 'idle'].text
-            ]}
+            style={getEmailInputStyle}
             placeholder="Enter your email"
             placeholderTextColor={theme.colors.content.tertiary}
             value={email}
-            onChangeText={setEmail}
-            onFocus={() => setFocusedInput('email')}
-            onBlur={() => setFocusedInput(null)}
+            onChangeText={handleEmailChange}
+            onFocus={handleEmailFocus}
+            onBlur={handleInputBlur}
             autoCapitalize="none"
             keyboardType="email-address"
             autoComplete="email"
@@ -84,22 +129,16 @@ export default function EmailLoginForm({ onClose }: EmailLoginFormProps) {
         </ThemedView>
 
         {/* Password Input */}
-        <ThemedView style={[
-          styles(theme).inputWrapper,
-          inputStyles.states[focusedInput === 'password' ? 'focus' : 'idle'].container
-        ]}>
+        <ThemedView style={getPasswordContainerStyle}>
           <ThemedText>Password</ThemedText>
           <TextInput
-            style={[
-              inputStyles.text,
-              inputStyles.states[focusedInput === 'password' ? 'focus' : 'idle'].text
-            ]}
+            style={getPasswordInputStyle}
             placeholder="Enter your password"
             placeholderTextColor={theme.colors.content.tertiary}
             value={password}
-            onChangeText={setPassword}
-            onFocus={() => setFocusedInput('password')}
-            onBlur={() => setFocusedInput(null)}
+            onChangeText={handlePasswordChange}
+            onFocus={handlePasswordFocus}
+            onBlur={handleInputBlur}
             secureTextEntry
             autoComplete="password"
           />
@@ -107,11 +146,7 @@ export default function EmailLoginForm({ onClose }: EmailLoginFormProps) {
 
         {/* Login Button */}
         <Pressable
-          style={[
-            buttonStyles.container,
-            styles(theme).loginButton,
-            (!email.trim() || !password.trim()) && styles(theme).buttonDisabled,
-          ]}
+          style={loginButtonStyle}
           onPress={handleLogin}
           disabled={loading || !email.trim() || !password.trim()}
         >
@@ -121,8 +156,8 @@ export default function EmailLoginForm({ onClose }: EmailLoginFormProps) {
         </Pressable>
 
         {/* Close Button */}
-        <Pressable style={styles(theme).closeButton} onPress={onClose}>
-          <ThemedText style={styles(theme).closeText}>Cancel</ThemedText>
+        <Pressable style={componentStyles.closeButton} onPress={onClose}>
+          <ThemedText style={componentStyles.closeText}>Cancel</ThemedText>
         </Pressable>
       </ThemedView>
     </KeyboardAvoidingView>

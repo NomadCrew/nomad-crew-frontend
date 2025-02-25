@@ -116,7 +116,10 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
         <Button 
           mode="contained" 
           onPress={onAddTodoPress}
-          style={{ marginTop: 16 }}
+          style={styles(theme).addButton}
+          buttonColor={theme.colors.primary.main}
+          textColor={theme.colors.primary.text}
+          labelStyle={styles(theme).buttonLabel}
         >
           Add Todo
         </Button>
@@ -186,6 +189,7 @@ const styles = (theme: Theme) => StyleSheet.create({
     alignItems: 'center',
     padding: theme.spacing.inset.lg,
     backgroundColor: theme.colors.surface.variant,
+    borderRadius: 24,
   },
   overlay: {
     position: 'absolute',
@@ -208,6 +212,19 @@ const styles = (theme: Theme) => StyleSheet.create({
     ...theme.typography.body.medium,
     color: theme.colors.content.secondary,
     textAlign: 'center',
+    marginBottom: theme.spacing.stack.md,
+  },
+  addButton: {
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 24,
+    elevation: 2,
+    minWidth: 120,
+  },
+  buttonLabel: {
+    ...theme.typography.button.medium,
+    fontSize: 14,
+    letterSpacing: 0.5,
   },
   reconnectingBanner: {
     padding: theme.spacing.inset.sm,

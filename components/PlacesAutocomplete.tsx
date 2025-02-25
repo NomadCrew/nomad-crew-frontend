@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, StyleSheet, Pressable, Platform } from 'react-native';
 import { Text, TextInput, useTheme } from 'react-native-paper';
 import PlacesAutocomplete from 'expo-google-places-autocomplete';
 import type { Place } from 'expo-google-places-autocomplete';
 import type { PlaceDetailsWithFullText } from '@/src/types/places';
+import debounce from 'lodash.debounce';
 
 interface PlacesAutocompleteProps {
     onPlaceSelected: (details: PlaceDetailsWithFullText) => void;
@@ -32,18 +33,33 @@ export default function CustomPlacesAutocomplete({
     PlacesAutocomplete.initPlaces(process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY!);
   }, []);
 
-  const handleSearch = async (text: string) => {
-    setQuery(text);
-    try {
-      const result = await PlacesAutocomplete.findPlaces(text) as PlacesSearchResult;
-      console.log('Places search result:', result);
-      setResults(result.places);
-    } catch (error) {
-      console.error('Places search error:', error);
-    }
-  };
+  // Create a memoized debounced search function that only triggers API calls 
+  // after the user stops typing for 300ms
+  const debouncedSearch = useCallback(
+    debounce(async (text: string) => {
+      try {
+        const result = await PlacesAutocomplete.findPlaces(text) as PlacesSearchResult;
+        console.log('Places search result:', result);
+        setResults(result.places);
+      } catch (error) {
+        console.error('Places search error:', error);
+      }
+    }, 300),
+    []
+  );
 
-  const handleSelect = async (place: Place) => {
+  // Create a memoized handle search function
+  const handleSearch = useCallback((text: string) => {
+    setQuery(text);
+    if (text.trim().length > 2) {
+      debouncedSearch(text);
+    } else {
+      setResults([]);
+    }
+  }, [debouncedSearch]);
+
+  // Create a memoized handle select function
+  const handleSelect = useCallback(async (place: Place) => {
     try {
       // Set the input value to the selected place's full text
       setQuery(place.fullText);
@@ -60,7 +76,23 @@ export default function CustomPlacesAutocomplete({
     } catch (error) {
       console.error('Place details error:', error);
     }
-  };
+  }, [onPlaceSelected]);
+
+  // Memoize the styles based on the theme to prevent recalculation on every render
+  const memoizedStyles = useMemo(() => ({
+    resultsContainer: [
+      styles.resultsContainer, 
+      { backgroundColor: theme.colors.background }
+    ],
+    resultItemPressed: [
+      styles.resultItem,
+      { backgroundColor: theme.colors.surfaceVariant }
+    ],
+    resultItemNormal: [
+      styles.resultItem,
+      { backgroundColor: theme.colors.background }
+    ]
+  }), [theme.colors]);
 
   return (
     <View style={[styles.container, customStyles.container]}>
@@ -80,16 +112,16 @@ export default function CustomPlacesAutocomplete({
       />
 
       {results.length > 0 && (
-        <View style={[styles.resultsContainer, { backgroundColor: theme.colors.background }]}>
+        <View style={memoizedStyles.resultsContainer}>
           {results.map((place, index) => (
             <Pressable
               key={`${place.placeId}-${index}`}
               onPress={() => handleSelect(place)}
-              style={({ pressed }) => [
-                styles.resultItem,
-                { backgroundColor: pressed ? theme.colors.surfaceVariant : theme.colors.background },
-                customStyles.resultItem
-              ]}
+              style={({ pressed }) => 
+                pressed 
+                  ? [memoizedStyles.resultItemPressed, customStyles.resultItem]
+                  : [memoizedStyles.resultItemNormal, customStyles.resultItem]
+              }
             >
               <Text style={{ color: theme.colors.onSurface }}>{place.fullText}</Text>
             </Pressable>
