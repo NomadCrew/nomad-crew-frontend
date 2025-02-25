@@ -9,7 +9,7 @@ import { BentoCarousel } from '@/components/ui/BentoCarousel';
 import { Trip } from '@/src/types/trip';
 import { AddTodoModal } from '@/components/todo/AddTodoModal';
 import { InviteModal } from '@/components/trips/InviteModal';
-import { WebSocketManager } from '@/src/websocket/WebSocketManager';
+import { WebSocketManager, wsManager } from '@/src/websocket/WebSocketManager';
 import { useTripStore } from '@/src/store/useTripStore';
 import { useTodoStore } from '@/src/store/useTodoStore';
 import { TripDetailHeader } from '@/components/trips/TripDetailHeader';
@@ -17,6 +17,7 @@ import { QuickActions } from '@/components/trips/QuickActions';
 import { TripStats } from '@/components/trips/TripStats';
 import { Theme } from '@/src/theme/types';
 import { logger } from '@/src/utils/logger';
+import { StatusBar } from 'expo-status-bar';
 
 interface TripDetailScreenProps {
   trip: Trip;
@@ -96,7 +97,7 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
   }, []);
 
   useEffect(() => {
-    const manager = WebSocketManager.getInstance();
+    const manager = wsManager as WebSocketManager;
     manager.connect(tripId, {
       onMessage: (event) => {
         useTripStore.getState().handleTripEvent(event);
@@ -109,6 +110,7 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
 
   return (
     <View style={styles(theme).container}>
+      <StatusBar style="light" />
       <TripDetailHeader 
         trip={trip} 
         onBack={() => router.back()} 
@@ -121,6 +123,7 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
           styles(theme).contentContainer,
           { maxWidth: containerWidth }
         ]}
+        showsVerticalScrollIndicator={false}
       >
         <BentoGrid items={bentoItems} />
       </ScrollView>
@@ -143,6 +146,7 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
 const styles = (theme: Theme) => StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: theme.colors.background.default,
   },
   scrollContainer: {
     flex: 1,
@@ -151,5 +155,6 @@ const styles = (theme: Theme) => StyleSheet.create({
     flexGrow: 1,
     alignSelf: 'center',
     width: '100%',
+    paddingBottom: theme.spacing.stack.xl,
   },
 });

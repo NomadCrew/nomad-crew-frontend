@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -51,7 +51,8 @@ export default function CreateTripModal({
   );
   const [loading, setLoading] = useState(false);
 
-  const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+  // Memoize the date change handler to prevent recreation on every render
+  const handleDateChange = useCallback((event: DateTimePickerEvent, selectedDate?: Date) => {
     if (Platform.OS === 'android') {
       setShowDatePicker(null);
     }
@@ -63,10 +64,10 @@ export default function CreateTripModal({
       ...prev,
       [dateKey]: selectedDate.toISOString(),
     }));
-  };
+  }, [showDatePicker]);
 
-
-  const validateForm = () => {
+  // Memoize these form-related functions
+  const validateForm = useCallback(() => {
     if (!trip.name.trim()) {
       Alert.alert('Validation Error', 'Please enter a trip name.');
       return false;
@@ -80,9 +81,9 @@ export default function CreateTripModal({
       return false;
     }
     return true;
-  };
+  }, [trip.name, trip.destination?.address, trip.startDate, trip.endDate]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (!validateForm()) return;
   
     setLoading(true);
@@ -95,11 +96,46 @@ export default function CreateTripModal({
     } finally {
       setLoading(false);
     }
-  };
+  }, [trip, validateForm, onSubmit, onClose]);
 
-  const handleDismiss = () => {
+  const handleDismiss = useCallback(() => {
     onClose();
-  };
+  }, [onClose]);
+
+  // Memoize field update handlers to prevent recreation on every render
+  const updateTripName = useCallback((text: string) => {
+    setTrip((prev) => ({ ...prev, name: text }));
+  }, []);
+
+  const updateTripDescription = useCallback((text: string) => {
+    setTrip((prev) => ({ ...prev, description: text }));
+  }, []);
+
+  const handlePlaceSelected = useCallback((details) => {
+    console.log('Setting destination from details:', details);
+    setTrip(prev => ({
+      ...prev,
+      destination: {
+        address: details.formattedAddress || details.name,
+        placeId: details.placeId,
+        coordinates: details.coordinate ? {
+          lat: details.coordinate.latitude,
+          lng: details.coordinate.longitude
+        } : undefined
+      }
+    }));
+  }, []);
+
+  // Memoize the date display to prevent recalculation on every render
+  const formattedStartDate = useMemo(() => 
+    format(new Date(trip.startDate), 'MMM dd, yyyy'), 
+    [trip.startDate]
+  );
+  
+  const formattedEndDate = useMemo(() => 
+    format(new Date(trip.endDate), 'MMM dd, yyyy'),
+    [trip.endDate]
+  );
 
   return (
     <Portal>
@@ -137,27 +173,14 @@ export default function CreateTripModal({
                 mode="outlined"
                 label="Trip Name*"
                 value={trip.name}
-                onChangeText={(text) => setTrip((prev) => ({ ...prev, name: text }))}
+                onChangeText={updateTripName}
                 style={styles.textInput}
               />
 
               {/* Destination */}
               <View style={styles.textInput}>
                 <CustomPlacesAutocomplete
-                  onPlaceSelected={(details) => {
-                    console.log('Setting destination from details:', details);
-                    setTrip(prev => ({
-                      ...prev,
-                      destination: {
-                        address: details.formattedAddress || details.name,
-                        placeId: details.placeId,
-                        coordinates: details.coordinate ? {
-                          lat: details.coordinate.latitude,
-                          lng: details.coordinate.longitude
-                        } : undefined
-                      }
-                    }));
-                  }}
+                  onPlaceSelected={handlePlaceSelected}
                   placeholder="Search Destination*"
                 />
               </View>
@@ -167,7 +190,7 @@ export default function CreateTripModal({
                 mode="outlined"
                 label="Description"
                 value={trip.description}
-                onChangeText={(text) => setTrip((prev) => ({ ...prev, description: text }))}
+                onChangeText={updateTripDescription}
                 multiline
                 numberOfLines={4}
                 style={[styles.textInput, { height: 100 }]}
@@ -184,7 +207,7 @@ export default function CreateTripModal({
                     style={styles.dateDisplay}
                   >
                     <Text style={{ color: theme.colors.onSurface }}>
-                      {format(new Date(trip.startDate), 'MMM dd, yyyy')}
+                      {formattedStartDate}
                     </Text>
                   </Pressable>
                 </View>
@@ -198,7 +221,7 @@ export default function CreateTripModal({
                     style={styles.dateDisplay}
                   >
                     <Text style={{ color: theme.colors.onSurface }}>
-                      {format(new Date(trip.endDate), 'MMM dd, yyyy')}
+                      {formattedEndDate}
                     </Text>
                   </Pressable>
                 </View>

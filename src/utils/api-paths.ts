@@ -31,8 +31,8 @@ export const API_PATHS = {
   },
   todos: {
     create: (tripId: string) => `/v1/trips/${tripId}/todos`,
-    delete: (tripId: string, todoId: string) => `/v1/trips/${tripId}/todos/${todoId}`,
+    delete: (tripId: string, todoID: string) => `/v1/trips/${tripId}/todos/${todoID}`,
     list: (tripId: string) => `/v1/trips/${tripId}/todos`,
-    update: (tripId: string, todoId: string) => `/v1/trips/${tripId}/todos/${todoId}`,
+    update: (tripId: string, todoID: string) => `/v1/trips/${tripId}/todos/${todoID}`,
   },
 } as const;

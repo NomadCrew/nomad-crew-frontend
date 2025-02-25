@@ -1,12 +1,12 @@
 // components/trips/QuickActions.tsx
-import React from 'react';
-import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
-import { Surface, IconButton } from 'react-native-paper';
+import React, { useState } from 'react';
+import { View, StyleSheet, ScrollView, Pressable, Text } from 'react-native';
+import { Surface } from 'react-native-paper';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuthStore } from '@/src/store/useAuthStore';
-import LinearGradient from 'react-native-linear-gradient';
 import { Theme } from '@/src/theme/types';
 import { Trip } from '@/src/types/trip';
+import { ArrowLeft, ArrowRight, MapPin, MessageSquare, Users, UserPlus, Plus } from 'lucide-react-native';
 
 interface QuickActionsProps {
   trip: Trip;
@@ -30,28 +30,58 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   const isOwnerOrAdmin = isOwner || isAdmin;
 
   const actions = [
-    { icon: 'map-marker', label: 'Location', onPress: () => console.log('Location pressed') },
-    { icon: 'message-outline', label: 'Chat', onPress: () => console.log('Chat pressed') },
-    { icon: 'account-group', label: 'Members', onPress: () => console.log('Members pressed') },
+    { 
+      icon: (props) => <MapPin {...props} />, 
+      label: 'Location', 
+      onPress: () => console.log('Location pressed') 
+    },
+    { 
+      icon: (props) => <MessageSquare {...props} />, 
+      label: 'Chat', 
+      onPress: () => console.log('Chat pressed') 
+    },
+    { 
+      icon: (props) => <Users {...props} />, 
+      label: 'Members', 
+      onPress: () => console.log('Members pressed') 
+    },
     ...(isOwnerOrAdmin
-      ? [{ icon: 'account-plus', label: 'Invite', onPress: () => setShowInviteModal(true) }]
+      ? [{ 
+          icon: (props) => <UserPlus {...props} />, 
+          label: 'Invite', 
+          onPress: () => setShowInviteModal(true) 
+        }]
       : []),
-    { icon: 'plus', label: 'Add Todo', onPress: () => setShowAddTodo(true) },
+    { 
+      icon: (props) => <Plus {...props} />, 
+      label: 'Add Todo', 
+      onPress: () => setShowAddTodo(true) 
+    },
   ];
+
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  const handleScroll = (event) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    setCanScrollLeft(contentOffset.x > 0);
+    setCanScrollRight(contentOffset.x < contentSize.width - layoutMeasurement.width);
+  };
 
   return (
     <Surface style={styles(theme).actionsCard} elevation={0}>
       <View style={styles(theme).fadeContainer}>
-        <LinearGradient
-          colors={['rgba(0, 0, 0, 0.5)', 'transparent']}
-          style={styles(theme).fadeLeft}
-          pointerEvents="none"
-        />
+        {canScrollLeft && (
+          <ArrowLeft size={20} color={theme.colors.content.primary} style={styles(theme).arrow} />
+        )}
         
         <ScrollView 
           horizontal 
           showsHorizontalScrollIndicator={false} 
           style={styles(theme).actionButtons}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          contentContainerStyle={styles(theme).scrollContent}
         >
           {actions.map((action) => (
             <Pressable 
@@ -63,22 +93,16 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
               ]}
             >
               <View style={styles(theme).iconContainer}>
-                <IconButton
-                  icon={action.icon}
-                  size={20}
-                  iconColor={theme.colors.content.primary}
-                  style={styles(theme).icon}
-                />
+                {action.icon({ size: 18, color: theme.colors.primary.main })}
               </View>
+              <Text style={styles(theme).actionLabel}>{action.label}</Text>
             </Pressable>
           ))}
         </ScrollView>
 
-        <LinearGradient
-          colors={['transparent', 'rgba(0, 0, 0, 0.5)']}
-          style={styles(theme).fadeRight}
-          pointerEvents="none"
-        />
+        {canScrollRight && (
+          <ArrowRight size={20} color={theme.colors.content.primary} style={styles(theme).arrow} />
+        )}
       </View>
     </Surface>
   );
@@ -86,38 +110,29 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
 
 const styles = (theme: Theme) => StyleSheet.create({
   actionsCard: {
-    paddingVertical: theme.spacing.inset.sm,
-    backgroundColor: theme.colors.surface.default,
     height: '100%',
+    width: '100%',
+    paddingVertical: theme.spacing.inset.sm,
+    backgroundColor: theme.colors.surface.variant,
+    borderRadius: 24,
   },
   fadeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: theme.spacing.inset.md,
   },
-  fadeLeft: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 20,
-    zIndex: 1,
-  },
-  fadeRight: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: 20,
-    zIndex: 1,
-  },
   actionButtons: {
     flexDirection: 'row',
-    paddingHorizontal: theme.spacing.inset.sm,
+    flexGrow: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: theme.spacing.inset.xs,
+    justifyContent: 'space-around',
   },
   actionItem: {
     alignItems: 'center',
-    marginHorizontal: theme.spacing.stack.sm,
+    marginHorizontal: theme.spacing.stack.xs,
+    width: 48,
   },
   iconContainer: {
     width: 36,
@@ -126,10 +141,17 @@ const styles = (theme: Theme) => StyleSheet.create({
     backgroundColor: theme.colors.surface.default,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.content.primary,
+    elevation: 2,
+    marginBottom: theme.spacing.stack.xs
   },
-  icon: {
-    margin: 0,
+  actionLabel: {
+    ...theme.typography.body.small,
+    color: theme.colors.content.secondary,
+    textAlign: 'center',
+    marginTop: 2,
+    fontSize: 11,
+  },
+  arrow: {
+    marginHorizontal: 5,
   },
 });

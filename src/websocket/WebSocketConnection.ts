@@ -1,33 +1,31 @@
-import { 
-  WebSocketStatus, 
-  ServerEventType,
-  isServerEvent,
-  EventSchemas
-} from '@/src/types/events';
-import { logger } from '@/src/utils/logger';
+import { WebSocketStatus, ServerEvent, isServerEvent } from '../types/events';
+import { logger } from '../utils/logger';
 
 interface ConnectionConfig {
   url: string;
   token: string;
+  apiKey: string;
   tripId: string;
   userId: string;
-  onMessage?: (event: any) => void;
+  onMessage?: (event: ServerEvent) => void;
   onStatus?: (status: WebSocketStatus) => void;
-  onError?: (error: any) => void;
+  onError?: (error: Error) => void;
 }
 
 interface ConnectionCallbacks {
-  onMessage?: (event: any) => void;
+  onMessage?: (event: ServerEvent) => void;
   onStatus?: (status: WebSocketStatus) => void;
-  onError?: (error: any) => void;
+  onError?: (error: Error) => void;
 }
 
 export class WebSocketConnection {
   private ws: WebSocket | null = null;
   private status: WebSocketStatus = 'DISCONNECTED';
+  private readonly config: ConnectionConfig;
   private callbacks: ConnectionCallbacks;
 
-  constructor(private config: ConnectionConfig) {
+  constructor(config: ConnectionConfig) {
+    this.config = config;
     this.callbacks = {
       onMessage: config.onMessage,
       onStatus: config.onStatus,
@@ -40,10 +38,9 @@ export class WebSocketConnection {
 
     return new Promise((resolve, reject) => {
       try {
-        const url = new URL(this.config.url);
-        logger.debug('WS', 'Establishing connection to:', url.hostname);
+        logger.debug('WS', 'Establishing connection to:', this.config.url);
         
-        this.ws = new WebSocket(url.toString());
+        this.ws = new WebSocket(this.config.url);
         this.setStatus('CONNECTING');
 
         this.ws.onopen = () => {
@@ -53,7 +50,6 @@ export class WebSocketConnection {
         };
 
         this.ws.onmessage = (event) => {
-          logger.debug('WS', 'Message received');
           try {
             const data = JSON.parse(event.data);
             if (isServerEvent(data)) {
@@ -65,30 +61,33 @@ export class WebSocketConnection {
         };
 
         this.ws.onclose = (event) => {
-          logger.debug('WS', 'Connection closed:', event.reason);
+          logger.debug('WS', 'Connection closed:', event.code, event.reason);
           this.setStatus('DISCONNECTED');
+          if (event.code === 1001 || event.code === 4401) {
+            this.callbacks.onError?.(new Error('Authentication failed'));
+          }
         };
 
         this.ws.onerror = (error) => {
           logger.error('WS', 'Connection error:', error);
+          this.setStatus('ERROR');
           reject(error);
         };
 
       } catch (error) {
         logger.error('WS', 'Connection setup failed:', error);
+        this.setStatus('ERROR');
         reject(error);
       }
     });
   }
 
   public disconnect(): void {
-    this.ws?.close(1000, 'Normal closure');
+    if (this.ws) {
+      this.ws.close(1000, 'Normal closure');
+      this.ws = null;
+    }
     this.setStatus('DISCONNECTED');
-  }
-
-  private setStatus(status: WebSocketStatus): void {
-    this.status = status;
-    this.callbacks.onStatus?.(status);
   }
 
   public isConnected(): boolean {
@@ -99,7 +98,12 @@ export class WebSocketConnection {
     this.callbacks = { ...this.callbacks, ...callbacks };
   }
 
-  public getCallbacks() {
+  public getCallbacks(): ConnectionCallbacks {
     return this.callbacks;
+  }
+
+  private setStatus(status: WebSocketStatus): void {
+    this.status = status;
+    this.callbacks.onStatus?.(status);
   }
 }

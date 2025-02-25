@@ -93,7 +93,7 @@ export const TodoItem = ({
   const { theme } = useTheme();
 
 const containerStyle = useAnimatedStyle(() => ({
-  backgroundColor: theme.colors.background.default,
+  backgroundColor: theme.colors.background.surface[200],
   transform: [{ translateX: translateX.value }],
   position: 'relative',
   overflow: 'hidden',
