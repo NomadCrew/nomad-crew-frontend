@@ -143,7 +143,6 @@ const styles = (theme: any) =>
       textShadowRadius: 3,
       color: theme.colors.content.onImage,
       marginTop: 4,
-      fontSize: 16,
     } as TextStyle,
     weatherRow: {
       flexDirection: 'row',

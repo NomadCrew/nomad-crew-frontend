@@ -72,6 +72,22 @@ export const colorTokens = {
       800: '#92400E',
       900: '#78350F',
     },
+    pastel: {
+      blue: '#E6F2FF',
+      green: '#E6F7F2',
+      lavender: '#F0E6FF',
+      peach: '#FFF0E6',
+      mint: '#E6FFF0',
+      cream: '#FFF9E6',
+      blush: '#FFE6E6',
+      sky: '#E6FAFF',
+      blueDark: '#D1E5F9',
+      creamDark: '#F5ECD6',
+      peachLight: '#FFDACB',
+      peachMedium: '#FFB8A8',
+      peachDark: '#E8A598',
+      coral: '#C99A94',
+    },
   } as const;
   
   // Semantic color system
@@ -101,8 +117,8 @@ export const colorTokens = {
   
     // Surface colors
     surface: {
-      default: isDark ? colorTokens.gray[900] : colorTokens.gray[50],
-      variant: isDark ? colorTokens.gray[800] : '#FFFFFF',
+      default: isDark ? colorTokens.gray[900] : colorTokens.pastel.peachLight,
+      variant: isDark ? colorTokens.gray[800] : colorTokens.pastel.peachMedium,
     },
     status: {
       error: {
@@ -127,12 +143,12 @@ export const colorTokens = {
       },
     },
     border: {
-      default: isDark ? colorTokens.gray[700] : colorTokens.gray[200],
-      strong: isDark ? colorTokens.gray[600] : colorTokens.gray[300],
+      default: isDark ? colorTokens.gray[700] : colorTokens.pastel.peachDark,
+      strong: isDark ? colorTokens.gray[600] : colorTokens.pastel.coral,
     },
     background: {
-      default: isDark ? colorTokens.gray[900] : colorTokens.gray[50],
-      surface: isDark ? colorTokens.gray[800] : '#FFFFFF',
+      default: isDark ? colorTokens.gray[900] : colorTokens.pastel.peachLight,
+      surface: isDark ? colorTokens.gray[800] : colorTokens.pastel.peachMedium,
     },
   });
   
