@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, ActivityIndicator, Pressable } from 'react-native';
 import { Text, Surface, Button } from 'react-native-paper';
 import { FlashList } from '@shopify/flash-list';
 import { useTheme } from '@/src/theme/ThemeProvider';
@@ -10,6 +10,7 @@ import { TodoErrorBoundary } from './TodoErrorBoundary';
 import { Todo } from '@/src/types/todo';
 import { getColorForUUID } from '@/src/utils/uuidToColor';
 import LottieView from 'lottie-react-native';
+import { Plus } from 'lucide-react-native';
 
 interface TodoListProps {
   tripId: string;
@@ -90,7 +91,7 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
 
   if (loading && todos.length === 0) {
     return (
-      <Surface style={styles(theme).centerContainer}>
+      <Surface style={styles(theme).centerContainer} pointerEvents="box-none">
         <ActivityIndicator size="large" color={theme.colors.primary.main} />
       </Surface>
     );
@@ -98,7 +99,7 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
 
   if (error) {
     return (
-      <Surface style={styles(theme).centerContainer}>
+      <Surface style={styles(theme).centerContainer} pointerEvents="box-none">
         <Text style={styles(theme).errorText}>{error}</Text>
         <Button mode="contained" onPress={handleRetry}>
           Retry
@@ -109,21 +110,24 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
 
   if (todos.length === 0) {
     return (
-      <Surface style={styles(theme).centerContainer}>
-        <Text style={styles(theme).emptyText}>
-          No todos yet. Create your first one!
-        </Text>
-        <Button 
-          mode="contained" 
+      <View style={styles(theme).container}>
+        <Surface style={styles(theme).centerContainer} pointerEvents="box-none">
+          <Text style={styles(theme).emptyText}>
+            No todos yet. Create your first one!
+          </Text>
+        </Surface>
+        
+        {/* Add Todo FAB */}
+        <Pressable 
           onPress={onAddTodoPress}
-          style={styles(theme).addButton}
-          buttonColor={theme.colors.primary.main}
-          textColor={theme.colors.primary.text}
-          labelStyle={styles(theme).buttonLabel}
+          style={({ pressed }) => [
+            styles(theme).addTodoFab,
+            { opacity: pressed ? 0.8 : 1 }
+          ]}
         >
-          Add Todo
-        </Button>
-      </Surface>
+          <Plus size={28} color={theme.colors.primary.main} strokeWidth={2.5} />
+        </Pressable>
+      </View>
     );
   }
 
@@ -144,7 +148,7 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
 
       {/* Connection Status Banner */}
       {(connectionStatus === 'CONNECTING' || connectionStatus === 'RECONNECTING') && (
-        <Surface style={styles(theme).connectionBanner}>
+        <Surface style={styles(theme).connectionBanner} pointerEvents="box-none">
           <Text style={styles(theme).connectionText}>
             {connectionStatus === 'CONNECTING' ? 'Connecting...' : 'Reconnecting...'}
           </Text>
@@ -152,7 +156,7 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
       )}
 
       {connectionStatus === 'ERROR' && (
-        <Surface style={[styles(theme).loader, styles(theme).loader]}>
+        <Surface style={[styles(theme).loader, styles(theme).loader]} pointerEvents="box-none">
           <Text style={styles(theme).errorText}>
             Connection error. Please check your internet connection.
           </Text>
@@ -174,6 +178,17 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
           ) : null
         }
       />
+      
+      {/* Add Todo FAB */}
+      <Pressable 
+        onPress={onAddTodoPress}
+        style={({ pressed }) => [
+          styles(theme).addTodoFab,
+          { opacity: pressed ? 0.8 : 1 }
+        ]}
+      >
+        <Plus size={28} color={theme.colors.primary.main} strokeWidth={2.5} />
+      </Pressable>
     </View>
   );
 };
@@ -190,6 +205,13 @@ const styles = (theme: Theme) => StyleSheet.create({
     padding: theme.spacing.inset.lg,
     backgroundColor: theme.colors.surface.variant,
     borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
   },
   overlay: {
     position: 'absolute',
@@ -201,6 +223,13 @@ const styles = (theme: Theme) => StyleSheet.create({
   },
   loader: {
     padding: theme.spacing.inset.md,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
   },
   errorText: {
     ...theme.typography.body.medium,
@@ -232,6 +261,43 @@ const styles = (theme: Theme) => StyleSheet.create({
     marginBottom: theme.spacing.stack.sm,
   },
   reconnectingText: {
+    ...theme.typography.body.small,
+    color: theme.colors.content.primary,
+    textAlign: 'center',
+  },
+  addTodoFab: {
+    position: 'absolute',
+    bottom: theme.spacing.inset.md,
+    right: theme.spacing.inset.md,
+    backgroundColor: theme.colors.surface.main,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: theme.colors.primary.main,
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 0,
+    elevation: 0,
+    zIndex: 5,
+  },
+  connectionBanner: {
+    padding: theme.spacing.inset.sm,
+    backgroundColor: theme.colors.content.secondary,
+    marginBottom: theme.spacing.stack.sm,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
+  connectionText: {
     ...theme.typography.body.small,
     color: theme.colors.content.primary,
     textAlign: 'center',

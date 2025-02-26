@@ -80,7 +80,6 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
       element: (
         <QuickActions 
           trip={trip}
-          setShowAddTodo={setShowAddTodo} 
           setShowInviteModal={setShowInviteModal} 
         />
       ),

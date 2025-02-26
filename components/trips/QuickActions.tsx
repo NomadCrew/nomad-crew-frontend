@@ -1,22 +1,26 @@
 // components/trips/QuickActions.tsx
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Pressable, Text } from 'react-native';
+import { View, StyleSheet, ScrollView, Pressable, Text, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { Surface } from 'react-native-paper';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuthStore } from '@/src/store/useAuthStore';
 import { Theme } from '@/src/theme/types';
 import { Trip } from '@/src/types/trip';
-import { ArrowLeft, ArrowRight, MapPin, MessageSquare, Users, UserPlus, Plus } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, MapPin, MessageSquare, Users, UserPlus } from 'lucide-react-native';
+
+// Define a type for the icon props
+type IconProps = {
+  size: number;
+  color: string;
+};
 
 interface QuickActionsProps {
   trip: Trip;
-  setShowAddTodo: (show: boolean) => void;
   setShowInviteModal: (show: boolean) => void;
 }
 
 export const QuickActions: React.FC<QuickActionsProps> = ({
   trip,
-  setShowAddTodo,
   setShowInviteModal
 }) => {
   const { theme } = useTheme();
@@ -31,38 +35,33 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
 
   const actions = [
     { 
-      icon: (props) => <MapPin {...props} />, 
+      icon: (props: IconProps) => <MapPin {...props} />, 
       label: 'Location', 
       onPress: () => console.log('Location pressed') 
     },
     { 
-      icon: (props) => <MessageSquare {...props} />, 
+      icon: (props: IconProps) => <MessageSquare {...props} />, 
       label: 'Chat', 
       onPress: () => console.log('Chat pressed') 
     },
     { 
-      icon: (props) => <Users {...props} />, 
+      icon: (props: IconProps) => <Users {...props} />, 
       label: 'Members', 
       onPress: () => console.log('Members pressed') 
     },
     ...(isOwnerOrAdmin
       ? [{ 
-          icon: (props) => <UserPlus {...props} />, 
+          icon: (props: IconProps) => <UserPlus {...props} />, 
           label: 'Invite', 
           onPress: () => setShowInviteModal(true) 
         }]
       : []),
-    { 
-      icon: (props) => <Plus {...props} />, 
-      label: 'Add Todo', 
-      onPress: () => setShowAddTodo(true) 
-    },
   ];
 
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
-  const handleScroll = (event) => {
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
     setCanScrollLeft(contentOffset.x > 0);
     setCanScrollRight(contentOffset.x < contentSize.width - layoutMeasurement.width);
@@ -93,7 +92,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
               ]}
             >
               <View style={styles(theme).iconContainer}>
-                {action.icon({ size: 18, color: theme.colors.primary.main })}
+                {action.icon({ size: 19, color: theme.colors.primary.main })}
               </View>
               <Text style={styles(theme).actionLabel}>{action.label}</Text>
             </Pressable>
@@ -119,7 +118,7 @@ const styles = (theme: Theme) => StyleSheet.create({
   fadeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing.inset.md,
+    paddingVertical: theme.spacing.inset.xs,
   },
   actionButtons: {
     flexDirection: 'row',
@@ -132,15 +131,19 @@ const styles = (theme: Theme) => StyleSheet.create({
   actionItem: {
     alignItems: 'center',
     marginHorizontal: theme.spacing.stack.xs,
-    width: 48,
+    width: 50,
   },
   iconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: theme.colors.surface.default,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: 'rgba(0, 0, 0, 0.2)',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.5,
     elevation: 2,
     marginBottom: theme.spacing.stack.xs
   },

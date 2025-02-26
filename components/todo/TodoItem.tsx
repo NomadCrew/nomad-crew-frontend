@@ -14,8 +14,9 @@ import Animated, {
     runOnJS,
     Easing,
     interpolate,
+    interpolateColor,
   } from 'react-native-reanimated';
-  import { Check } from 'lucide-react-native';
+  import { Check, Trash2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { Todo } from '@/src/types/todo';
 import { useTheme } from '@/src/theme/ThemeProvider';
@@ -36,7 +37,8 @@ export const TodoItem = ({
   todo,
   onComplete,
   onDelete,
-  textColor = '#000'
+  textColor = '#000',
+  disabled = false,
 }: TodoItemProps) => {
   const translateX = useSharedValue(0);
   const pressed = useSharedValue(false);
@@ -92,13 +94,35 @@ export const TodoItem = ({
   // Animated styles
   const { theme } = useTheme();
 
-const containerStyle = useAnimatedStyle(() => ({
-  backgroundColor: theme.colors.background.surface[200],
-  transform: [{ translateX: translateX.value }],
-  position: 'relative',
-  overflow: 'hidden',
-  opacity: pressed.value ? 0.9 : 1,
-}));
+const containerStyle = useAnimatedStyle(() => {
+  const swipeProgress = Math.abs(translateX.value) / SWIPE_THRESHOLD;
+  const isSwipingLeft = translateX.value < 0;
+  
+  return {
+    backgroundColor: todo.status === 'COMPLETE' 
+      ? theme.colors.background.surface[50] 
+      : theme.colors.background.surface[100],
+    transform: [{ translateX: translateX.value }],
+    position: 'relative',
+    overflow: 'hidden',
+    opacity: pressed.value ? 0.9 : 1,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+    borderRadius: 12,
+    borderLeftWidth: todo.status === 'COMPLETE' ? 4 : 1,
+    borderLeftColor: todo.status === 'COMPLETE' 
+      ? theme.colors.status.success.background 
+      : 'rgba(0, 0, 0, 0.08)',
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderRightWidth: isSwipingLeft && swipeProgress > 0.5 ? 4 : 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.08)',
+    borderBottomColor: 'rgba(0, 0, 0, 0.08)',
+    borderRightColor: isSwipingLeft && swipeProgress > 0.5 
+      ? theme.colors.status.error.background 
+      : 'rgba(0, 0, 0, 0.08)',
+  };
+});
 
 const textContainerStyle = useAnimatedStyle(() => ({
   opacity: pressed.value ? 0.7 : 1,
@@ -111,10 +135,15 @@ const textStyle = useAnimatedStyle(() => {
   const currentContainerWidth = containerWidth.value;
 
   if (!currentScrolling || currentTextWidth <= currentContainerWidth) {
-    return {};
+    return {
+      textDecorationLine: todo.status === 'COMPLETE' ? 'line-through' : 'none',
+      color: todo.status === 'COMPLETE' ? theme.colors.content.tertiary : textColor,
+    };
   }
 
   return {
+    textDecorationLine: todo.status === 'COMPLETE' ? 'line-through' : 'none',
+    color: todo.status === 'COMPLETE' ? theme.colors.content.tertiary : textColor,
     transform: [
       {
         translateX: withRepeat(
@@ -151,7 +180,27 @@ const progressStyle = useAnimatedStyle(() => {
     width,
     backgroundColor: theme.colors.status.success.background,
     color: theme.colors.status.success.content,
-    opacity: 0.9,
+    opacity: 0.2,
+    borderRadius: 12,
+  };
+});
+
+// Add a delete indicator that appears when swiping left
+const deleteIndicatorStyle = useAnimatedStyle(() => {
+  const opacity = interpolate(
+    translateX.value,
+    [0, -SWIPE_THRESHOLD/2, -SWIPE_THRESHOLD],
+    [0, 0.5, 1]
+  );
+  
+  return {
+    position: 'absolute',
+    right: 16,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    opacity,
   };
 });
 
@@ -170,85 +219,118 @@ const progressStyle = useAnimatedStyle(() => {
 
   return (
     <GestureDetector gesture={Gesture.Race(panGesture, longPressGesture)}>
-    <Animated.View 
-      style={[styles.container, containerStyle]}
-      onLayout={onContainerLayout}
-    >
-      <Animated.View style={progressStyle} />
-      <Animated.View 
-        style={[styles.textContainer, textContainerStyle]}
-        onTouchStart={() => {
-          scrolling.value = true;
-        }}
-        onTouchEnd={() => {
-          scrolling.value = false;
-        }}
-      >
-          <Animated.Text
-            ref={textRef}
-            style={[
-              styles.text,
-              { color: textColor },
-              textStyle
-            ]}
-            onLayout={onTextLayout}
-            numberOfLines={1}
+      <View style={styles.itemWrapper}>
+        <Animated.View 
+          style={[styles.container, containerStyle]}
+          onLayout={onContainerLayout}
+        >
+          <Animated.View style={progressStyle} />
+          <Animated.View 
+            style={[styles.textContainer, textContainerStyle]}
+            onTouchStart={() => {
+              scrolling.value = true;
+            }}
+            onTouchEnd={() => {
+              scrolling.value = false;
+            }}
           >
-            {todo.text}
-          </Animated.Text>
+            <Animated.Text
+              ref={textRef}
+              style={[
+                styles.text,
+                textStyle
+              ]}
+              onLayout={onTextLayout}
+              numberOfLines={1}
+            >
+              {todo.text}
+            </Animated.Text>
+            <Text style={styles.timestamp}>
+              {new Date(todo.createdAt).toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric'
+              })}
+            </Text>
+          </Animated.View>
+          <Animated.View style={styles.statusIndicator}>
+            {todo.status === 'COMPLETE' ? (
+              <View style={styles.checkContainer}>
+                <Check  
+                  size={16} 
+                  color={theme.colors.status.success.content} 
+                />
+              </View>
+            ) : (
+              <View style={[
+                styles.dot, 
+                { borderColor: theme.colors.status.planning.background }
+              ]} />
+            )}
+          </Animated.View>
         </Animated.View>
-        <Animated.View style={styles.statusIndicator}>
-          {todo.status === 'COMPLETE' ? (
-            <Check  
-              size={16} 
-              color={theme.colors.status.success.background} 
-            />
-          ) : (
-            <View style={[
-              styles.dot, 
-              { backgroundColor: theme.colors.status.planning.background }
-            ]} />
-          )}
+        
+        {/* Delete indicator */}
+        <Animated.View style={deleteIndicatorStyle}>
+          <Trash2 size={20} color={theme.colors.status.error.background} />
         </Animated.View>
-      </Animated.View>
+      </View>
     </GestureDetector>
   );
 };
 
 const styles = StyleSheet.create({
+  itemWrapper: {
+    position: 'relative',
+    marginVertical: 6,
+  },
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    marginVertical: 4,
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.41,
-    elevation: 2,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
   },
   textContainer: {
     flex: 1,
     overflow: 'hidden',
+    paddingVertical: 2,
   },
   text: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '500',
+    letterSpacing: 0.2,
+  },
+  timestamp: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 4,
   },
   statusIndicator: {
-    marginLeft: 8,
-    width: 12,
-    height: 12,
+    marginLeft: 12,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#4CAF50',
     justifyContent: 'center',
     alignItems: 'center',
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2,
+    backgroundColor: 'transparent',
   },
 });
