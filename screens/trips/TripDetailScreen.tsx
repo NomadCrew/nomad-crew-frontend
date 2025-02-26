@@ -30,6 +30,12 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
   const [showAddTodo, setShowAddTodo] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
 
+  // Debug trip data
+  useEffect(() => {
+    console.log('TripDetailScreen - Trip:', trip);
+    console.log('TripDetailScreen - Trip members:', trip.members);
+  }, [trip]);
+
   // Calculate responsive dimensions
   const GRID_MARGIN = theme.spacing.layout.screen.padding;
   const GRID_GAP = theme.spacing.layout.section.gap;
@@ -56,37 +62,42 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
     },
   ];
 
-  const bentoItems = React.useMemo(() => [
-    {
-      id: 'carousel',
-      element: (
-        <BentoCarousel
-          items={carouselItems}
-          width={CARD_WIDTH}
-          height={TALL_CARD_HEIGHT}
-        />
-      ),
-      height: 'tall' as const,
-      position: 'left' as const,
-    },
-    {
-      id: '2',
-      element: <TripStats />,
-      height: 'normal' as const,
-      position: 'right' as const,
-    },
-    {
-      id: '3',
-      element: (
-        <QuickActions 
-          trip={trip}
-          setShowInviteModal={setShowInviteModal} 
-        />
-      ),
-      height: 'short' as const,
-      position: 'right' as const,
-    },
-  ], [carouselItems, trip, CARD_WIDTH, TALL_CARD_HEIGHT]);
+  const bentoItems = React.useMemo(() => {
+    console.log('Creating bento items with trip:', trip);
+    console.log('Trip members for QuickActions:', trip.members);
+    
+    return [
+      {
+        id: 'carousel',
+        element: (
+          <BentoCarousel
+            items={carouselItems}
+            width={CARD_WIDTH}
+            height={TALL_CARD_HEIGHT}
+          />
+        ),
+        height: 'tall' as const,
+        position: 'left' as const,
+      },
+      {
+        id: '2',
+        element: <TripStats />,
+        height: 'normal' as const,
+        position: 'right' as const,
+      },
+      {
+        id: '3',
+        element: (
+          <QuickActions 
+            trip={trip}
+            setShowInviteModal={setShowInviteModal} 
+          />
+        ),
+        height: 'short' as const,
+        position: 'right' as const,
+      },
+    ];
+  }, [carouselItems, trip, CARD_WIDTH, TALL_CARD_HEIGHT, setShowInviteModal]);
 
   useEffect(() => {
     logger.debug('TRIP', 'Mounted with dimensions:', {

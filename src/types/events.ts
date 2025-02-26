@@ -163,3 +163,7 @@ export const isTodoEvent = (event: ServerEvent): event is z.infer<typeof EventSc
 
 export const isMemberInviteEvent = (event: ServerEvent): event is z.infer<typeof EventSchemas.memberInvite> =>
   EventSchemas.memberInvite.safeParse(event).success;
+
+export const isMemberEvent = (event: ServerEvent): event is z.infer<typeof EventSchemas.member> =>
+  ['MEMBER_ADDED', 'MEMBER_ROLE_UPDATED', 'MEMBER_REMOVED'].includes(event.type) &&
+  EventSchemas.member.safeParse(event).success;
