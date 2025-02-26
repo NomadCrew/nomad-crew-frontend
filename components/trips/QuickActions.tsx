@@ -1,5 +1,5 @@
 // components/trips/QuickActions.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Pressable, Text, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { Surface } from 'react-native-paper';
 import { useTheme } from '@/src/theme/ThemeProvider';
@@ -7,6 +7,7 @@ import { useAuthStore } from '@/src/store/useAuthStore';
 import { Theme } from '@/src/theme/types';
 import { Trip } from '@/src/types/trip';
 import { ArrowLeft, ArrowRight, MapPin, MessageSquare, Users, UserPlus } from 'lucide-react-native';
+import { MemberManagementModal } from './MemberManagementModal';
 
 // Define a type for the icon props
 type IconProps = {
@@ -26,9 +27,17 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   const { theme } = useTheme();
   const authStore = useAuthStore();
   const userId = authStore.user?.id;
+  const [showMemberModal, setShowMemberModal] = useState(false);
+  
+  useEffect(() => {
+    console.log('QuickActions - Trip:', trip);
+    console.log('QuickActions - Trip members:', trip.members);
+    console.log('QuickActions - Current user ID:', userId);
+  }, [trip, userId]);
   
   const isOwner = trip.createdBy === userId;
-  const isAdmin = trip.members?.some(
+  const members = trip.members || [];
+  const isAdmin = members.some(
     (member) => member.userId === userId && member.role === 'admin'
   );
   const isOwnerOrAdmin = isOwner || isAdmin;
@@ -47,7 +56,27 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
     { 
       icon: (props: IconProps) => <Users {...props} />, 
       label: 'Members', 
-      onPress: () => console.log('Members pressed') 
+      onPress: () => {
+        console.log('Opening member modal with trip:', trip);
+        console.log('Trip members before opening modal:', trip.members);
+        console.log('Trip creator:', trip.createdBy);
+        console.log('Current user is owner:', isOwner);
+        
+        // Ensure the trip has the creator as a member if members array is empty
+        const tripWithMembers = {
+          ...trip,
+          members: trip.members && trip.members.length > 0 
+            ? trip.members 
+            : [{ 
+                userId: trip.createdBy, 
+                role: 'owner', 
+                joinedAt: trip.createdAt 
+              }]
+        };
+        
+        console.log('Opening modal with trip:', tripWithMembers);
+        setShowMemberModal(true);
+      } 
     },
     ...(isOwnerOrAdmin
       ? [{ 
@@ -68,42 +97,81 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   };
 
   return (
-    <Surface style={styles(theme).actionsCard} elevation={0}>
-      <View style={styles(theme).fadeContainer}>
-        {canScrollLeft && (
-          <ArrowLeft size={20} color={theme.colors.content.primary} style={styles(theme).arrow} />
-        )}
-        
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false} 
-          style={styles(theme).actionButtons}
-          onScroll={handleScroll}
-          scrollEventThrottle={16}
-          contentContainerStyle={styles(theme).scrollContent}
-        >
-          {actions.map((action) => (
-            <Pressable 
-              key={action.label} 
-              onPress={action.onPress}
-              style={({ pressed }) => [
-                styles(theme).actionItem,
-                { opacity: pressed ? 0.6 : 1 }
-              ]}
-            >
-              <View style={styles(theme).iconContainer}>
-                {action.icon({ size: 19, color: theme.colors.primary.main })}
-              </View>
-              <Text style={styles(theme).actionLabel}>{action.label}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+    <>
+      <Surface style={styles(theme).actionsCard} elevation={0}>
+        <View style={styles(theme).fadeContainer}>
+          {canScrollLeft && (
+            <ArrowLeft size={20} color={theme.colors.content.primary} style={styles(theme).arrow} />
+          )}
+          
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            style={styles(theme).actionButtons}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            contentContainerStyle={styles(theme).scrollContent}
+          >
+            {actions.map((action) => (
+              <Pressable 
+                key={action.label} 
+                onPress={action.onPress}
+                style={({ pressed }) => [
+                  styles(theme).actionItem,
+                  { opacity: pressed ? 0.6 : 1 }
+                ]}
+              >
+                <View style={styles(theme).iconContainer}>
+                  {action.icon({ size: 19, color: theme.colors.primary.main })}
+                </View>
+                <Text style={styles(theme).actionLabel}>{action.label}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
 
-        {canScrollRight && (
-          <ArrowRight size={20} color={theme.colors.content.primary} style={styles(theme).arrow} />
-        )}
-      </View>
-    </Surface>
+          {canScrollRight && (
+            <ArrowRight size={20} color={theme.colors.content.primary} style={styles(theme).arrow} />
+          )}
+        </View>
+      </Surface>
+
+      <MemberManagementModal
+        visible={showMemberModal}
+        onClose={() => setShowMemberModal(false)}
+        trip={(() => {
+          // Create a copy of the trip to avoid modifying the original
+          const tripCopy = { ...trip };
+          
+          // Ensure members array exists
+          if (!tripCopy.members) {
+            tripCopy.members = [];
+          }
+          
+          // Ensure creator is in members array with owner role
+          const creatorExists = tripCopy.members.some(member => member.userId === trip.createdBy);
+          if (!creatorExists) {
+            tripCopy.members.push({ 
+              userId: trip.createdBy, 
+              role: 'owner', 
+              joinedAt: trip.createdAt 
+            });
+          }
+          
+          // Ensure current user is in members array if they're not already
+          if (userId && !tripCopy.members.some(member => member.userId === userId)) {
+            // Determine the role based on whether they're the creator
+            const role = userId === trip.createdBy ? 'owner' : 'member';
+            tripCopy.members.push({
+              userId: userId,
+              role: role,
+              joinedAt: new Date().toISOString()
+            });
+          }
+          
+          return tripCopy;
+        })()}
+      />
+    </>
   );
 };
 

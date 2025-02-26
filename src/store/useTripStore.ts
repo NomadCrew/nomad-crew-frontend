@@ -10,7 +10,7 @@ import {
   WeatherForecast,
 } from '@/src/types/trip';
 import { API_PATHS } from '@/src/utils/api-paths';
-import { ServerEvent, isTripEvent, isTodoEvent, isWeatherEvent, isMemberInviteEvent } from '@/src/types/events';
+import { ServerEvent, isTripEvent, isTodoEvent, isWeatherEvent, isMemberInviteEvent, isMemberEvent } from '@/src/types/events';
 import { useTodoStore } from '@/src/store/useTodoStore';
 import { mapWeatherCode } from '@/src/utils/weather';
 import { apiClient } from '@/src/api/api-client';
@@ -29,8 +29,10 @@ interface TripState {
   fetchTrips: () => Promise<void>;
   getTripById: (id: string) => Trip | undefined;
   // Member operations
-  inviteMember: (tripId: string, email: string) => Promise<void>;
+  inviteMember: (tripId: string, email: string, role?: 'owner' | 'admin' | 'member') => Promise<void>;
   revokeInvitation: (tripId: string, invitationId: string) => Promise<void>;
+  updateMemberRole: (tripId: string, userId: string, role: 'owner' | 'admin' | 'member') => Promise<void>;
+  removeMember: (tripId: string, userId: string) => Promise<void>;
   // Status operations
   updateTripStatus: (id: string, status: TripStatus) => Promise<void>;
   // WebSocket operations
@@ -47,6 +49,14 @@ export const useTripStore = create<TripState>((set, get) => ({
   createTrip: async (tripData: CreateTripInput) => {
     set({ loading: true, error: null });
     try {
+      const currentUser = useAuthStore.getState().user;
+      if (!currentUser) {
+        throw new Error('User must be logged in to create a trip');
+      }
+
+      console.log('createTrip - Current user:', currentUser);
+      console.log('createTrip - Trip data:', tripData);
+
       const response = await api.post<Trip>(API_PATHS.trips.create, {
         ...tripData,
         destination: {
@@ -56,11 +66,30 @@ export const useTripStore = create<TripState>((set, get) => ({
         },
         status: 'PLANNING' as TripStatus,
       });
+      
+      console.log('createTrip - Response data:', response.data);
+      console.log('createTrip - Response members:', response.data.members);
+      
+      // Ensure the trip has the creator as a member with owner role
+      const tripWithOwner = {
+        ...response.data,
+        members: [
+          {
+            userId: currentUser.id,
+            role: 'owner',
+            joinedAt: new Date().toISOString()
+          }
+        ]
+      };
+      
+      console.log('createTrip - Trip with owner:', tripWithOwner);
+      console.log('createTrip - Members after adding owner:', tripWithOwner.members);
+      
       set(state => ({
-        trips: [...state.trips, response.data],
+        trips: [...state.trips, tripWithOwner],
         loading: false,
       }));
-      return response.data;
+      return tripWithOwner;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to create trip';
       set({ error: errorMessage, loading: false });
@@ -89,8 +118,53 @@ export const useTripStore = create<TripState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const response = await api.get<Trip[]>(API_PATHS.trips.list);
+      const currentUser = useAuthStore.getState().user;
+      
+      console.log('fetchTrips - Raw response data:', response.data);
+      
+      // Ensure each trip has at least the creator as a member with owner role
+      const tripsWithMembers = response.data.map(trip => {
+        console.log(`Processing trip ${trip.id} - Current members:`, trip.members);
+        
+        if (!trip.members || trip.members.length === 0) {
+          console.log(`Trip ${trip.id} has no members, adding creator as owner`);
+          return {
+            ...trip,
+            members: [
+              {
+                userId: trip.createdBy,
+                role: 'owner',
+                joinedAt: trip.createdAt
+              }
+            ]
+          };
+        }
+        
+        // Check if creator is already in members list
+        const creatorExists = trip.members.some(member => member.userId === trip.createdBy);
+        if (!creatorExists) {
+          console.log(`Trip ${trip.id} doesn't have creator in members, adding creator as owner`);
+          return {
+            ...trip,
+            members: [
+              ...trip.members,
+              {
+                userId: trip.createdBy,
+                role: 'owner',
+                joinedAt: trip.createdAt
+              }
+            ]
+          };
+        }
+        
+        console.log(`Trip ${trip.id} already has members:`, trip.members);
+        return trip;
+      });
+      
+      console.log('fetchTrips - Processed trips with members:', tripsWithMembers);
+      
       set({ 
-        trips: response.data || [],
+        trips: tripsWithMembers || [],
         loading: false,
       });
     } catch (error) {
@@ -116,7 +190,52 @@ export const useTripStore = create<TripState>((set, get) => ({
   },
 
   getTripById: (id) => {
-    return get().trips.find(trip => trip.id === id);
+    const trip = get().trips.find(trip => trip.id === id);
+    console.log(`getTripById - Looking for trip with ID: ${id}`);
+    console.log('getTripById - All trips:', get().trips);
+    console.log('getTripById - Found trip:', trip);
+    
+    if (trip) {
+      console.log('getTripById - Trip members:', trip.members);
+      
+      // Ensure the trip has members and the creator is included
+      if (!trip.members || trip.members.length === 0) {
+        console.log('getTripById - Trip has no members, adding creator as owner');
+        const tripWithCreator = {
+          ...trip,
+          members: [
+            {
+              userId: trip.createdBy,
+              role: 'owner',
+              joinedAt: trip.createdAt
+            }
+          ]
+        };
+        console.log('getTripById - Updated trip with creator as member:', tripWithCreator);
+        return tripWithCreator;
+      }
+      
+      // Check if creator is already in members list
+      const creatorExists = trip.members.some(member => member.userId === trip.createdBy);
+      if (!creatorExists) {
+        console.log('getTripById - Trip doesn\'t have creator in members, adding creator as owner');
+        const tripWithCreator = {
+          ...trip,
+          members: [
+            ...trip.members,
+            {
+              userId: trip.createdBy,
+              role: 'owner',
+              joinedAt: trip.createdAt
+            }
+          ]
+        };
+        console.log('getTripById - Updated trip with creator as member:', tripWithCreator);
+        return tripWithCreator;
+      }
+    }
+    
+    return trip;
   },
 
   updateTripStatus: async (id: string, status: TripStatus) => {
@@ -212,15 +331,60 @@ export const useTripStore = create<TripState>((set, get) => ({
           } : trip
         )
       }));
+    } else if (isMemberEvent(event)) {
+      console.debug('[Member] Member event received:', {
+        tripId: event.tripId,
+        type: event.type
+      });
+      
+      if (event.type === 'MEMBER_ADDED') {
+        set(state => ({
+          trips: state.trips.map(trip => 
+            trip.id === event.tripId ? {
+              ...trip,
+              members: [
+                ...(trip.members || []),
+                {
+                  userId: event.payload.userId!,
+                  role: event.payload.role as 'owner' | 'admin' | 'member',
+                  joinedAt: new Date().toISOString()
+                }
+              ]
+            } : trip
+          )
+        }));
+      } else if (event.type === 'MEMBER_ROLE_UPDATED') {
+        set(state => ({
+          trips: state.trips.map(trip => 
+            trip.id === event.tripId ? {
+              ...trip,
+              members: trip.members?.map(member => 
+                member.userId === event.payload.userId 
+                  ? { ...member, role: event.payload.role as 'owner' | 'admin' | 'member' } 
+                  : member
+              ) || []
+            } : trip
+          )
+        }));
+      } else if (event.type === 'MEMBER_REMOVED') {
+        set(state => ({
+          trips: state.trips.map(trip => 
+            trip.id === event.tripId ? {
+              ...trip,
+              members: trip.members?.filter(member => member.userId !== event.payload.userId) || []
+            } : trip
+          )
+        }));
+      }
     }
   },
 
-  inviteMember: async (tripId: string, email: string) => {
+  inviteMember: async (tripId: string, email: string, role = 'member') => {
     try {
       await api.post(API_PATHS.trips.invite(tripId), {
         data: {
           email,
-          role: 'MEMBER'
+          role: role.toUpperCase()
         }
       });
     } catch (error) {
@@ -229,7 +393,60 @@ export const useTripStore = create<TripState>((set, get) => ({
   },
 
   revokeInvitation: async (tripId: string, invitationId: string) => {
-    // Implementation needed
+    try {
+      await api.delete(`${API_PATHS.trips.invitations(tripId)}/${invitationId}`);
+      
+      set(state => ({
+        trips: state.trips.map(trip => 
+          trip.id === tripId ? {
+            ...trip,
+            invitations: trip.invitations?.filter(inv => inv.token !== invitationId) || []
+          } : trip
+        )
+      }));
+    } catch (error) {
+      throw new Error('Failed to revoke invitation: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  },
+
+  updateMemberRole: async (tripId: string, userId: string, role: 'owner' | 'admin' | 'member') => {
+    try {
+      await api.patch(`${API_PATHS.trips.byId(tripId)}/members/${userId}`, {
+        role: role.toUpperCase()
+      });
+      
+      // Optimistically update the UI
+      set(state => ({
+        trips: state.trips.map(trip => 
+          trip.id === tripId ? {
+            ...trip,
+            members: trip.members?.map(member => 
+              member.userId === userId ? { ...member, role } : member
+            ) || []
+          } : trip
+        )
+      }));
+    } catch (error) {
+      throw new Error('Failed to update member role: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  },
+
+  removeMember: async (tripId: string, userId: string) => {
+    try {
+      await api.delete(`${API_PATHS.trips.byId(tripId)}/members/${userId}`);
+      
+      // Optimistically update the UI
+      set(state => ({
+        trips: state.trips.map(trip => 
+          trip.id === tripId ? {
+            ...trip,
+            members: trip.members?.filter(member => member.userId !== userId) || []
+          } : trip
+        )
+      }));
+    } catch (error) {
+      throw new Error('Failed to remove member: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
   },
 
   acceptInvitation: async (token: string) => {
@@ -238,9 +455,27 @@ export const useTripStore = create<TripState>((set, get) => ({
         token
       });
       
-      if (response.data.trip) {
+      const currentUser = useAuthStore.getState().user;
+      
+      if (response.data.trip && currentUser) {
+        // Make sure the user is added to the members list
+        const tripWithMember = {
+          ...response.data.trip,
+          members: [
+            ...(response.data.trip.members || []),
+            // Only add the current user if they're not already in the members list
+            ...(!response.data.trip.members?.some(m => m.userId === currentUser.id) 
+              ? [{
+                  userId: currentUser.id,
+                  role: 'member', // Default role for invited members
+                  joinedAt: new Date().toISOString()
+                }] 
+              : [])
+          ]
+        };
+        
         set(state => ({
-          trips: [...state.trips, response.data.trip]
+          trips: [...state.trips, tripWithMember]
         }));
       }
       await AsyncStorage.removeItem('pendingInvitation');

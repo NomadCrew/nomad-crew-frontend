@@ -37,7 +37,7 @@ export interface Trip {
     token: string;
     expiresAt: string;
   }>;
-  members: Array<{
+  members?: Array<{
     userId: string;
     role: 'owner' | 'admin' | 'member';
     joinedAt: string;
