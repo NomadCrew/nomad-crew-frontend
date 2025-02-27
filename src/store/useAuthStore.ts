@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { supabase } from '@/src/auth/supabaseClient';
-import type { AuthState, LoginCredentials, RegisterCredentials, User } from '@/src/types/auth';
+import type { AuthState, LoginCredentials, RegisterCredentials, User, AuthStatus } from '@/src/types/auth';
 import { Session } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { logger } from '@/src/utils/logger';
 
 /**
  * Attempt to recover a session from Supabase.
@@ -32,95 +33,59 @@ export const useAuthStore = create<AuthState>((set, get) => {
     isInitialized: false,
     isFirstTime: false,
     isVerifying: false,
+    status: 'unauthenticated' as AuthStatus,
+    refreshToken: null,
 
     /**
      * Called on app start to recover session
      */
     initialize: async () => {
-      const state = get();
-      if (state.loading || state.isInitialized) return;
-
-      set({ loading: true });
       try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
-        if (error) throw error;
-  
-        if (session?.user) {
-          console.log('[AuthStore] Session during initialization:', session);
+        logger.debug('AUTH', 'Initializing auth store');
+        const { data: { session }, error } = await supabase.auth.getSession();
 
-        // Store the token for comparison
-        await AsyncStorage.setItem('tokenAfterReload', session.access_token);
-          const user: User = {
+        if (error || !session) {
+          logger.debug('AUTH', 'No valid session found');
+          return set({ isInitialized: true });
+        }
+
+        logger.debug('AUTH', 'Session restored', {
+          userId: session.user.id,
+          expiresAt: session.expires_at
+        });
+        set({ 
+          user: {
             id: session.user.id,
             email: session.user.email ?? '',
             username: session.user.user_metadata?.username ?? '',
             firstName: session.user.user_metadata?.firstName,
             lastName: session.user.user_metadata?.lastName,
             profilePicture: session.user.user_metadata?.avatar_url,
-          };
-
-          set({
-            user,
-            token: session.access_token,
-            isInitialized: true,
-            loading: false,
-            error: null
-          });
-        } else {
-          // No active session
-          set({
-            user: null,
-            token: null,
-            isInitialized: true,
-            loading: false,
-            error: null
-          });
-        }
-
-        supabase.auth.onAuthStateChange((event, session) => {
-          if (session?.user) {
-            const user: User = {
-              id: session.user.id,
-              email: session.user.email ?? '',
-              username: session.user.user_metadata?.username ?? '',
-              firstName: session.user.user_metadata?.firstName,
-              lastName: session.user.user_metadata?.lastName,
-              profilePicture: session.user.user_metadata?.avatar_url,
-            };
-  
-            set({
-              user,
-              token: session.access_token,
-            });
-          } else {
-            set({
-              user: null,
-              token: null,
-            });
-          }
+          },
+          token: session.access_token,
+          refreshToken: session.refresh_token,
+          isInitialized: true
         });
-      } catch (error: any) {
-        console.error('[AuthStore] Initialization error:', error);
-        set({
-          error: error.message || 'Failed to initialize session',
-          isInitialized: true,
-          loading: false,
-          user: null,
-          token: null
-        });
+
+      } catch (error) {
+        logger.error('AUTH', 'Initialization error:', error);
+        set({ isInitialized: true });
       }
     },
 
     refreshSession: async () => {
       try {
+        logger.debug('AUTH', 'Refreshing session');
         const { data, error } = await supabase.auth.refreshSession();
         if (error) throw error;
     
         const { session } = data;
         if (session) {
+          logger.debug('AUTH', 'Session refreshed successfully', {
+            userId: session.user.id,
+            expiresAt: session.expires_at
+          });
+          
           const user: User = {
             id: session.user.id,
             email: session.user.email ?? '',
@@ -133,14 +98,14 @@ export const useAuthStore = create<AuthState>((set, get) => {
           set({
             user,
             token: session.access_token,
+            refreshToken: session.refresh_token,
           });
     
-          return session.access_token;
         } else {
           throw new Error('Failed to refresh session');
         }
       } catch (error: any) {
-        console.error('[AuthStore] Refresh session error:', error);
+        logger.error('AUTH', 'Refresh session error:', error);
         throw error;
       }
     },
@@ -212,6 +177,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         set({
           user,
           token: data.session.access_token,
+          refreshToken: data.session.refresh_token,
           error: null,
           loading: false,
           isVerifying: false,
@@ -251,10 +217,10 @@ export const useAuthStore = create<AuthState>((set, get) => {
         }
     
         // Log the session and token
-        console.log('[AuthStore] Session after Google sign-in:', data.session);
-    
-        // Store the token temporarily for comparison
-        await AsyncStorage.setItem('tokenAfterSignIn', data.session.access_token);
+        logger.debug('AUTH', 'Session after Google sign-in:', {
+          userId: data.session.user.id,
+          expiresAt: data.session.expires_at
+        });
     
         // Build user from session
         const user: User = {
@@ -269,15 +235,17 @@ export const useAuthStore = create<AuthState>((set, get) => {
         set({
           user,
           token: data.session.access_token,
+          refreshToken: data.session.refresh_token,
           loading: false,
           error: null,
           isVerifying: false
         });
-        console.log('[AuthStore] Token stored after Google sign-in:', data.session.access_token.substring(0, 20) + '...');
-
-        await supabase.auth.refreshSession();
+        logger.debug('AUTH', 'Authentication successful', {
+          accessToken: data.session.access_token.substring(0, 10) + '...',
+          refreshToken: data.session.refresh_token ? data.session.refresh_token.substring(0, 10) + '...' : 'none'
+        });
       } catch (error: any) {
-        console.error('[AuthStore] Google sign-in error:', error);
+        logger.error('AUTH', 'Google sign-in error:', error);
         set({
           error: error.message || 'Google sign-in failed',
           loading: false

@@ -20,15 +20,13 @@ export default function AuthButton({ onPress }: AuthButtonProps) {
       const userInfo = await GoogleSignin.signIn();
       await handleGoogleSignInSuccess(userInfo);
       } catch (error: any) {
-      console.log('Google Sign-In Error Details:', error); // Detailed error log
+      // Handle Google Sign-In errors
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-        console.log('Sign in cancelled');
+        // Sign in cancelled
       } else if (error.code === statusCodes.IN_PROGRESS) {
-        console.log('Sign in in progress');
+        // Sign in in progress
       } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        console.error('Play services not available');
-      } else {
-        console.error('Google Sign-In Error:', error);
+        // Play services not available
       }
     }
   };

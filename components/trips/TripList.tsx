@@ -15,6 +15,7 @@ interface TripSection {
 interface Props {
   onTripPress?: (trip: Trip) => void;
   style?: ViewStyle;
+  trips?: Trip[];
 }
 
 const GHOST_CARD: Trip = {
@@ -29,12 +30,17 @@ const GHOST_CARD: Trip = {
   endDate: new Date().toISOString(),
   status: 'PLANNING',
   createdBy: 'system',
-  isGhostCard: true
+  isGhostCard: true,
+  createdAt: '',
+  updatedAt: '',
+  members: []
 };
 
-export function TripList({  onTripPress, style }: Props) {
+export function TripList({ onTripPress, style, trips: propTrips }: Props) {
   const { theme } = useTheme();
-  const { trips, fetchTrips, loading, error } = useTripStore();
+  const { trips: storeTrips } = useTripStore();
+  
+  const trips = propTrips || storeTrips;
 
   const sections = useMemo(() => {
     const now = new Date();

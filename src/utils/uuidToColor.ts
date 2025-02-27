@@ -10,21 +10,40 @@ const existingColors = new Set<string>([
   '#D97706', '#B45309', '#92400E', '#78350F'
 ]);
 
-export const getColorForUUID = (uuid: string): string => {
-  const hash = uuid.split('').reduce((acc, char) => 
-    char.charCodeAt(0) + (acc << 6) + (acc << 16) - acc, 0);
-  
-  let color = '#';
-  const baseColor = (hash & 0x00FFFFFF).toString(16).toUpperCase();
-  color += '00000'.substring(0, 6 - baseColor.length) + baseColor;
+const calculateLuminance = (color: string): number => {
+  const rgb = color.slice(1).match(/.{2}/g)?.map(hex => parseInt(hex, 16) / 255) || [];
+  const [r, g, b] = rgb.map(c =>
+    c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+  );
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
 
-  // Ensure color doesn't match existing colors
+const getContrastRatio = (color1: string, color2: string): number => {
+  const lum1 = calculateLuminance(color1);
+  const lum2 = calculateLuminance(color2);
+  return (Math.max(lum1, lum2) + 0.05) / (Math.min(lum1, lum2) + 0.05);
+};
+
+export const getColorForUUID = (uuid: string, backgroundColor: string = "#121212"): string => {
+  const hash = uuid.split('').reduce((acc, char) => 
+    char.charCodeAt(0) + (acc << 6) + (acc << 16) - acc, 
+    0
+  );
+
+  let color = "#";
+  const baseColor = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+  color += "00000".substring(0, 6 - baseColor.length) + baseColor;
+
+  // Ensure the generated color meets contrast requirements
   let attempts = 0;
-  while(existingColors.has(color) && attempts < 100) {
-    const shifted = (parseInt(color.slice(1), 16) + 0x1F1F1F) % 0xFFFFFF;
-    color = '#' + shifted.toString(16).padStart(6, '0').toUpperCase();
+  while (
+    (existingColors.has(color) || getContrastRatio(color, backgroundColor) < 4.5) &&
+    attempts < 100
+  ) {
+    const shifted = (parseInt(color.slice(1), 16) + 0x1f1f1f) % 0xffffff;
+    color = "#" + shifted.toString(16).padStart(6, "0").toUpperCase();
     attempts++;
   }
 
   return color;
-}; 
+};

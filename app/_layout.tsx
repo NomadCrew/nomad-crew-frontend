@@ -38,11 +38,7 @@ function RouteGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const debugSession = async () => {
       const { data: { session }, error } = await supabase.auth.getSession();
-      console.log('[Auth Debug] Initial session check:', {
-        hasSession: !!session,
-        hasAccessToken: !!session?.access_token,
-        error: error?.message,
-      });
+      // Session check completed
     };
     debugSession();
   }, []);
@@ -64,16 +60,6 @@ function RouteGuard({ children }: { children: React.ReactNode }) {
     } else if (token && (inAuthGroup || inOnboardingGroup)) {
       targetRoute = '/(tabs)';
     }
-
-    console.log('Navigation State:', {
-      currentSegment,
-      isFirstTime,
-      hasToken: !!token,
-      isVerifying,
-      inAuthGroup,
-      inOnboardingGroup,
-      targetRoute
-    });
 
     if (targetRoute && targetRoute !== lastNavigationRef.current) {
       navigationTimeoutRef.current = setTimeout(() => {
@@ -108,12 +94,25 @@ function RootLayoutNav() {
             <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
             <Stack.Screen name="(auth)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            {/* Add this new Stack.Screen */}
             <Stack.Screen 
               name="trip/[id]" 
               options={{ 
                 headerShown: false,
                 presentation: 'card'
+              }} 
+            />
+            <Stack.Screen 
+              name="invite/[id]" 
+              options={{ 
+                headerShown: false,
+                presentation: 'transparentModal'
+              }} 
+            />
+            <Stack.Screen 
+              name="invitation" 
+              options={{ 
+                headerShown: false,
+                presentation: 'transparentModal'
               }} 
             />
           </Stack>

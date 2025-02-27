@@ -1,35 +1,18 @@
 import React, { useState } from 'react';
-import { StyleSheet, Pressable, View, Text, Platform, ViewStyle, ImageBackground } from 'react-native';
+import { StyleSheet, Pressable, View, Text, Platform, ViewStyle, ImageBackground, StyleProp } from 'react-native';
 import { differenceInDays, formatDistanceToNow, isAfter, isBefore, format } from 'date-fns';
 import { CalendarClock, Users, MapPin, Clock } from 'lucide-react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
+import type { Theme } from '@/src/theme/types';
 import { TripStatusBadge } from './TripStatusBadge';
 import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { TripStatus } from '@/src/types/trip';
+import { Trip } from '@/src/types/trip';
 
 interface TripCardProps {
-  trip: {
-    id: string;
-    name: string;
-    description?: string;
-    destination: {
-      address: string;
-      placeId: string;
-      coordinates?: {
-        lat: number;
-        lng: number;
-      };
-    };
-    startDate: string;
-    endDate: string;
-    participantCount?: number;
-    status: TripStatus;
-    isGhostCard?: boolean;
-    backgroundImageUrl?: string;
-  };
+  trip: Trip;
   onPress?: () => void;
   expanded?: boolean;
-  style?: StyleSheet.StyleProp<ViewStyle>;
+  style?: StyleProp<ViewStyle>;
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);

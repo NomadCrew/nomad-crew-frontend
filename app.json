@@ -15,7 +15,8 @@
         "usesNonExemptEncryption": false
       },
       "associatedDomains": [
-        "applinks:nomadcrew.uk"
+        "applinks:nomadcrew.uk",
+        "applinks:*.nomadcrew.uk"
       ]
     },
     "android": {
@@ -48,6 +49,23 @@
             "BROWSABLE",
             "DEFAULT"
           ]
+        },
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "nomadcrew",
+              "host": "invite",
+              "pathPrefix": "/accept"
+            },
+            {
+              "scheme": "https",
+              "host": "nomadcrew.uk",
+              "pathPrefix": "/invite/accept"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
         }
       ]
     },
