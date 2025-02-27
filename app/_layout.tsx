@@ -108,12 +108,25 @@ function RootLayoutNav() {
             <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
             <Stack.Screen name="(auth)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            {/* Add this new Stack.Screen */}
             <Stack.Screen 
               name="trip/[id]" 
               options={{ 
                 headerShown: false,
                 presentation: 'card'
+              }} 
+            />
+            <Stack.Screen 
+              name="invite/[id]" 
+              options={{ 
+                headerShown: false,
+                presentation: 'transparentModal'
+              }} 
+            />
+            <Stack.Screen 
+              name="invitation" 
+              options={{ 
+                headerShown: false,
+                presentation: 'transparentModal'
               }} 
             />
           </Stack>
