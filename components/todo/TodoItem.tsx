@@ -22,6 +22,19 @@ import { Todo } from '@/src/types/todo';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import LottieView from 'lottie-react-native';
 
+// Constants
+const SWIPE_THRESHOLD = 80;
+const DELETE_DURATION = 1200;
+
+// Common styles
+const NO_SHADOW = {
+  shadowColor: 'transparent',
+  shadowOffset: { width: 0, height: 0 },
+  shadowOpacity: 0,
+  shadowRadius: 0,
+  elevation: 0,
+};
+
 interface TodoItemProps {
   todo: Todo;
   onComplete: () => Promise<Todo>;
@@ -29,9 +42,6 @@ interface TodoItemProps {
   textColor?: string;
   disabled?: boolean;
 }
-
-const SWIPE_THRESHOLD = 80;
-const DELETE_DURATION = 1200;
 
 export const TodoItem = ({
   todo,
@@ -290,11 +300,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(0, 0, 0, 0.08)',
-    shadowColor: 'transparent',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0,
+    ...NO_SHADOW,
   },
   textContainer: {
     flex: 1,
