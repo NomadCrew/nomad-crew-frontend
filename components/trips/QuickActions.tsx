@@ -5,8 +5,9 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuthStore } from '@/src/store/useAuthStore';
 import { Theme } from '@/src/theme/types';
 import { Trip } from '@/src/types/trip';
-import { ArrowLeft, ArrowRight, MapPin, MessageSquare, Users, UserPlus } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, MapPin, MessageSquare, Users, UserPlus, Activity } from 'lucide-react-native';
 import { MemberManagementModal } from './MemberManagementModal';
+import { TripStatusUpdateModal } from './TripStatusUpdateModal';
 
 // Define a type for the icon props
 type IconProps = {
@@ -27,6 +28,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   const authStore = useAuthStore();
   const userId = authStore.user?.id;
   const [showMemberModal, setShowMemberModal] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
   
   useEffect(() => {
     console.log('QuickActions - Trip:', trip);
@@ -120,6 +122,13 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
           icon: (props: IconProps) => <UserPlus {...props} />, 
           label: 'Invite', 
           onPress: () => setShowInviteModal(true) 
+        }]
+      : []),
+    ...(isOwner
+      ? [{ 
+          icon: (props: IconProps) => <Activity {...props} />, 
+          label: 'Status', 
+          onPress: () => setShowStatusModal(true) 
         }]
       : []),
   ];
@@ -235,6 +244,12 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
           
           return tripCopy;
         })()}
+      />
+
+      <TripStatusUpdateModal
+        visible={showStatusModal}
+        onClose={() => setShowStatusModal(false)}
+        trip={trip}
       />
     </>
   );
