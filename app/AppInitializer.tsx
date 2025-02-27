@@ -50,59 +50,40 @@ export default function AppInitializer({ children }: { children: React.ReactNode
 
   const handleDeepLink = (event: { url: string }) => {
     const { url } = event;
-    console.log('Deep link received:', url);
 
     // Parse the URL
     const parsedUrl = Linking.parse(url);
-    console.log('Parsed URL:', parsedUrl);
     
-    // Add more detailed logging
-    console.log('Deep link details:', {
-      fullUrl: url,
-      scheme: parsedUrl.scheme,
-      hostname: parsedUrl.hostname,
-      path: parsedUrl.path,
-      queryParams: parsedUrl.queryParams,
-    });
-
     let token = null;
 
     // Case 1: Custom scheme with token in query params
     if (parsedUrl.hostname === 'invite' && parsedUrl.path === 'accept' && parsedUrl.queryParams?.token) {
       token = parsedUrl.queryParams.token;
-      console.log('Case 1: Token from query params:', token);
     } 
     // Case 2: Custom scheme with token in path
     else if (parsedUrl.hostname === 'invite' && parsedUrl.path?.startsWith('accept/')) {
       token = parsedUrl.path.replace('accept/', '');
-      console.log('Case 2: Token from path segment:', token);
     }
     // Case 3: Web URL with token in path
     else if (url.includes('/invite/accept/')) {
       token = url.split('/invite/accept/').pop();
-      console.log('Case 3: Token from web URL path:', token);
     }
     // Case 4: Web URL with different format
     else if (parsedUrl.hostname === 'nomadcrew.uk' && parsedUrl.path?.includes('/invite/accept')) {
       // Try to extract token from the end of the path
       const pathParts = parsedUrl.path.split('/');
       token = pathParts[pathParts.length - 1];
-      console.log('Case 4: Token from web URL path parts:', token);
     }
 
     if (token) {
-      console.log('Navigating to invitation screen with token:', token);
       router.replace({
         pathname: "/invitation",
         params: { token }
       });
-    } else {
-      console.log('Unhandled deep link format or no token found');
     }
   };
 
   if (!fontsLoaded || fontError) {
-    console.log('Waiting for fonts or initialization');
     return null;
   }
 

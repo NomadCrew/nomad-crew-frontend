@@ -39,10 +39,9 @@ export default function CustomPlacesAutocomplete({
     debounce(async (text: string) => {
       try {
         const result = await PlacesAutocomplete.findPlaces(text) as PlacesSearchResult;
-        console.log('Places search result:', result);
         setResults(result.places);
       } catch (error) {
-        console.error('Places search error:', error);
+        // Error handling for places search
       }
     }, 300),
     []
@@ -66,15 +65,13 @@ export default function CustomPlacesAutocomplete({
       // Clear results immediately for better UX
       setResults([]);
       const details = await PlacesAutocomplete.placeDetails(place.placeId);
-      // Log in handleSelect before calling onPlaceSelected:
-      console.log('Full details object:', JSON.stringify(details, null, 2));
       onPlaceSelected({
         ...details,
         formattedAddress: details.formattedAddress || place.fullText,
         fullText: place.fullText
       } as PlaceDetailsWithFullText);
     } catch (error) {
-      console.error('Place details error:', error);
+      // Error handling for place details
     }
   }, [onPlaceSelected]);
 

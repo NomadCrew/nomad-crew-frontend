@@ -54,9 +54,6 @@ export const useTripStore = create<TripState>((set, get) => ({
         throw new Error('User must be logged in to create a trip');
       }
 
-      console.log('createTrip - Current user:', currentUser);
-      console.log('createTrip - Trip data:', tripData);
-
       const response = await api.post<Trip>(API_PATHS.trips.create, {
         ...tripData,
         destination: {
@@ -66,9 +63,6 @@ export const useTripStore = create<TripState>((set, get) => ({
         },
         status: 'PLANNING' as TripStatus,
       });
-      
-      console.log('createTrip - Response data:', response.data);
-      console.log('createTrip - Response members:', response.data.members);
       
       // Get the best available name for the user
       const userName = getUserDisplayName(currentUser);
@@ -85,9 +79,6 @@ export const useTripStore = create<TripState>((set, get) => ({
           }
         ]
       } as Trip;
-      
-      console.log('createTrip - Trip with owner:', tripWithOwner);
-      console.log('createTrip - Members after adding owner:', tripWithOwner.members);
       
       set(state => ({
         trips: [...state.trips, tripWithOwner],
@@ -124,15 +115,9 @@ export const useTripStore = create<TripState>((set, get) => ({
       const response = await api.get<Trip[]>(API_PATHS.trips.list);
       const currentUser = useAuthStore.getState().user;
       
-      console.log('fetchTrips - Raw response data:', response.data);
-      
       // Ensure each trip has at least the creator as a member with owner role
       const tripsWithMembers = response.data.map(trip => {
-        console.log(`Processing trip ${trip.id} - Current members:`, trip.members);
-        
         if (!trip.members || trip.members.length === 0) {
-          console.log(`Trip ${trip.id} has no members, adding creator as owner`);
-          
           // Get creator name if it's the current user
           const creatorName = currentUser && currentUser.id === trip.createdBy
             ? getUserDisplayName(currentUser)
@@ -154,8 +139,6 @@ export const useTripStore = create<TripState>((set, get) => ({
         // Check if creator is already in members list
         const creatorExists = trip.members.some(member => member.userId === trip.createdBy);
         if (!creatorExists) {
-          console.log(`Trip ${trip.id} doesn't have creator in members, adding creator as owner`);
-          
           // Get creator name if it's the current user
           const creatorName = currentUser && currentUser.id === trip.createdBy
             ? getUserDisplayName(currentUser)
@@ -201,11 +184,8 @@ export const useTripStore = create<TripState>((set, get) => ({
           } as Trip;
         }
         
-        console.log(`Trip ${trip.id} already has members:`, trip.members);
         return trip;
       });
-      
-      console.log('fetchTrips - Processed trips with members:', tripsWithMembers);
       
       set({ 
         trips: tripsWithMembers || [] as Trip[],
@@ -235,17 +215,10 @@ export const useTripStore = create<TripState>((set, get) => ({
 
   getTripById: (id) => {
     const trip = get().trips.find(trip => trip.id === id);
-    console.log(`getTripById - Looking for trip with ID: ${id}`);
-    console.log('getTripById - All trips:', get().trips);
-    console.log('getTripById - Found trip:', trip);
     
     if (trip) {
-      console.log('getTripById - Trip members:', trip.members);
-      
       // Ensure the trip has members and the creator is included
       if (!trip.members || trip.members.length === 0) {
-        console.log('getTripById - Trip has no members, adding creator as owner');
-        
         // Try to get creator's user info if available
         const currentUser = useAuthStore.getState().user;
         const creatorName = currentUser && currentUser.id === trip.createdBy
@@ -263,15 +236,12 @@ export const useTripStore = create<TripState>((set, get) => ({
             }
           ]
         } as Trip;
-        console.log('getTripById - Updated trip with creator as member:', tripWithCreator);
         return tripWithCreator;
       }
       
       // Check if creator is already in members list
       const creatorExists = trip.members.some(member => member.userId === trip.createdBy);
       if (!creatorExists) {
-        console.log('getTripById - Trip doesn\'t have creator in members, adding creator as owner');
-        
         // Try to get creator's user info if available
         const currentUser = useAuthStore.getState().user;
         const creatorName = currentUser && currentUser.id === trip.createdBy
@@ -290,7 +260,6 @@ export const useTripStore = create<TripState>((set, get) => ({
             }
           ]
         } as Trip;
-        console.log('getTripById - Updated trip with creator as member:', tripWithCreator);
         return tripWithCreator;
       }
     }
@@ -321,14 +290,6 @@ export const useTripStore = create<TripState>((set, get) => ({
 
   handleTripEvent: (event: ServerEvent) => {
     if (isWeatherEvent(event)) {
-      console.debug('[Weather] Update received:', {
-        tripId: event.tripId,
-        temp: event.payload.temperature_2m,
-        code: event.payload.weather_code,
-        forecasts: event.payload.hourly_forecast.length,
-        timestamp: event.payload.timestamp
-      });
-
       const weatherForecast: WeatherForecast[] = event.payload.hourly_forecast.map(hour => ({
         time: hour.timestamp,
         temperature: hour.temperature_2m,
@@ -347,34 +308,21 @@ export const useTripStore = create<TripState>((set, get) => ({
         )
       }));
     } else if (isTripEvent(event)) {
-         console.debug('[Trip] Update received:', {
-          tripId: event.tripId,
-          type: event.type
-         });
-         set(state => ({
-          trips: state.trips.map(trip =>
-           trip.id === event.tripId ? {
-            ...trip,
-            name: event.payload.name,
-            description: event.payload.description,
-            startDate: event.payload.startDate ?? trip.startDate,
-            endDate: event.payload.endDate ?? trip.endDate,
-            status: event.payload.status as TripStatus
-           } as Trip : trip
-         )
-         }));
+      set(state => ({
+        trips: state.trips.map(trip =>
+          trip.id === event.tripId ? {
+            ...trip,
+            name: event.payload.name,
+            description: event.payload.description,
+            startDate: event.payload.startDate ?? trip.startDate,
+            endDate: event.payload.endDate ?? trip.endDate,
+            status: event.payload.status as TripStatus
+          } as Trip : trip
+        )
+      }));
     } else if (isTodoEvent(event)) {
-      console.debug('[Todo] Forwarding event:', {
-        tripId: event.tripId,
-        type: event.type
-      });
       useTodoStore.getState().handleTodoEvent(event);
     } else if (isMemberInviteEvent(event)) {
-      console.debug('[Member] Invitation sent:', {
-        tripId: event.tripId,
-        email: event.payload.inviteeEmail
-      });
-      
       set(state => ({
         trips: state.trips.map(trip => 
           trip.id === event.tripId ? {
@@ -392,11 +340,6 @@ export const useTripStore = create<TripState>((set, get) => ({
         )
       }));
     } else if (isMemberEvent(event)) {
-      console.debug('[Member] Member event received:', {
-        tripId: event.tripId,
-        type: event.type
-      });
-      
       if (event.type === 'MEMBER_ADDED') {
         // Try to get user info if it's the current user
         const currentUser = useAuthStore.getState().user;
@@ -550,7 +493,6 @@ export const useTripStore = create<TripState>((set, get) => ({
       await AsyncStorage.removeItem('pendingInvitation');
       return response.data;
     } catch (error) {
-      console.error('[TripStore] Accept invitation failed:', error);
       throw error;
     }
   },
