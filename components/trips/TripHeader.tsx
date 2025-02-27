@@ -13,6 +13,7 @@ import { ThemedText } from '@/components/ThemedText';
 import type { Trip } from '@/src/types/trip';
 import { WeatherIcon } from '../ui/WeatherIcon';
 import { WeatherCondition } from '@/src/utils/weather';
+import { TripStatusBadge } from './TripStatusBadge';
 
 interface TripHeaderProps {
   trip: Trip;
@@ -72,11 +73,17 @@ export const TripHeader = ({
             {startDateString} – {endDateString}
           </ThemedText>
 
-          <View style={styles(theme).weatherRow}>
-            <ThemedText variant="body.medium" style={styles(theme).tempText}>
-              {temperature}
-            </ThemedText>
-            <WeatherIcon condition={weatherCondition} fallback="clear" size={24} color={theme.colors.content.onImage} />
+          <View style={styles(theme).statusAndWeatherContainer}>
+            <View style={styles(theme).statusContainer}>
+              <TripStatusBadge status={trip.status} size="medium" />
+            </View>
+            
+            <View style={styles(theme).weatherRow}>
+              <ThemedText variant="body.medium" style={styles(theme).tempText}>
+                {temperature}
+              </ThemedText>
+              <WeatherIcon condition={weatherCondition} fallback="clear" size={24} color={theme.colors.content.onImage} />
+            </View>
           </View>
         </View>
       </View>
@@ -144,10 +151,21 @@ const styles = (theme: any) =>
       color: theme.colors.content.onImage,
       marginTop: 4,
     } as TextStyle,
-    weatherRow: {
+    statusAndWeatherContainer: {
       flexDirection: 'row',
       alignItems: 'center',
       marginTop: theme.spacing.stack.sm,
+      gap: theme.spacing.stack.sm,
+    },
+    statusContainer: {
+      backgroundColor: 'rgba(0,0,0,0.3)',
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderRadius: 20,
+    },
+    weatherRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
       backgroundColor: 'rgba(0,0,0,0.3)',
       paddingVertical: 8,
       paddingHorizontal: 12,
