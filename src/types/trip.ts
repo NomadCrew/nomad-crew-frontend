@@ -39,6 +39,7 @@ export interface Trip {
   }>;
   members?: Array<{
     userId: string;
+    name?: string;
     role: 'owner' | 'admin' | 'member';
     joinedAt: string;
   }>;
