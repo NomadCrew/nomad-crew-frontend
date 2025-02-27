@@ -25,9 +25,23 @@ export default function VerifyEmailScreen() {
       });
   
       // Deep link listener
-      const handleDeepLink = ({ url }: { url: string }) => {
-        if (url.includes('verify')) {
-          router.replace('/(auth)/login');
+      const handleDeepLink = async ({ url }: { url: string }) => {
+        const params = new URLSearchParams(url.split('#')[1]);
+        const type = params.get('type');
+        if (type === 'email' && url.includes('verify')) {
+          const token = params.get('token_hash');
+          if (token) {
+            const { error } = await supabase.auth.verifyOtp({
+              token_hash: token,
+              type: 'email'
+            });
+            if (!error) {
+              const { data: { user } } = await supabase.auth.getUser();
+              if (user?.email_confirmed_at) {
+                router.replace('/(auth)/login');
+              }
+            }
+          }
         }
       };
       Linking.addEventListener('url', handleDeepLink);

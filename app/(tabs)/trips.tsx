@@ -50,8 +50,6 @@ export default function TripsScreen() {
   useEffect(() => {
     if (isInitialized && token) {
       fetchTrips();
-    } else {
-      console.log('Auth not initialized or token not available yet.');
     }
   }, [fetchTrips, token, isInitialized]);
   
@@ -88,7 +86,7 @@ export default function TripsScreen() {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter((trip) =>
         trip.name.toLowerCase().includes(query) ||
-        (trip.destination && trip.destination.toLowerCase().includes(query))
+        (trip.destination?.toString()?.toLowerCase().includes(query))
       );
     }
   
@@ -115,11 +113,6 @@ export default function TripsScreen() {
     }
   }, [trips, activeTab, searchQuery]);
 
-  useEffect(() => {
-    console.log('All trips:', trips);
-    console.log('Filtered trips:', filteredTrips);
-  }, [trips, filteredTrips]);
-
   const handleTripPress = (trip: Trip) => {
     router.push({
       pathname: '/trip/[id]',
@@ -132,7 +125,7 @@ export default function TripsScreen() {
     try {
       await fetchTrips();
     } catch (error) {
-      console.error('Failed to refresh trips:', error);
+      // Failed to refresh trips
     } finally {
       setIsRefreshing(false);
     }
@@ -157,7 +150,7 @@ export default function TripsScreen() {
       });
       setCreateModalVisible(false);
     } catch (error) {
-      console.error('Failed to create trip:', error);
+      // Failed to create trip
       // Optionally, show an error message to the user
     }
   };

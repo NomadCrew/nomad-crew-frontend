@@ -35,7 +35,6 @@ export default function PermissionsScreen() {
         location: status === 'granted'
       }));
     } catch (error) {
-      console.error('Failed to request location permission:', error);
       setPermissions(prev => ({
         ...prev,
         location: false
@@ -51,7 +50,6 @@ export default function PermissionsScreen() {
         notifications: status === 'granted'
       }));
     } catch (error) {
-      console.error('Failed to request notification permission:', error);
       setPermissions(prev => ({
         ...prev,
         notifications: false

@@ -12,12 +12,6 @@ export default function AuthErrorBoundary({ children }) {
   const initAttempted = useRef(false);
 
   useEffect(() => {
-    console.log('[AuthErrorBoundary] Checking initialization state', {
-      isInitialized,
-      loading,
-      hasError: !!error
-    });
-
     // Only attempt initialization once
     if (!isInitialized && !loading && !initAttempted.current) {
       startInitialization();
@@ -31,23 +25,19 @@ export default function AuthErrorBoundary({ children }) {
   }, [isInitialized, loading]);
 
   const startInitialization = async () => {
-    console.log('[AuthErrorBoundary] Starting initialization');
     setError(null);
     initAttempted.current = true;
 
     // Set timeout for initialization
     initTimer.current = setTimeout(() => {
       if (!isInitialized) {
-        console.log('[AuthErrorBoundary] Initialization timed out');
         setError(new Error('Initialization timed out'));
       }
     }, MAX_INIT_TIME);
 
     try {
       await initialize();
-      console.log('[AuthErrorBoundary] Initialization complete');
     } catch (err) {
-      console.error('[AuthErrorBoundary] Initialization failed:', err);
       setError(err instanceof Error ? err : new Error('Unknown error'));
     } finally {
       if (initTimer.current) {

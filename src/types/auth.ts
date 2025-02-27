@@ -22,11 +22,7 @@ export interface User {
     password: string;
   }
   
-  export enum AuthStatus {
-    IDLE = 'idle',
-    SIGNED_OUT = 'signOut',
-    SIGNED_IN = 'signIn'
-  }
+  export type AuthStatus = 'unauthenticated' | 'authenticated' | 'verifying';
   
   export interface AuthState {
     user: User | null;
@@ -43,7 +39,8 @@ export interface User {
     initialize: () => Promise<void>;
     setFirstTimeDone: () => Promise<void>;
     handleGoogleSignInSuccess: (response: GoogleSignInResponse) => Promise<void>;
-    refreshToken: () => Promise<void>;
+    refreshToken: string | null;
+    refreshSession: () => Promise<void>;
   }
   
   export interface AuthTokens {
@@ -78,3 +75,9 @@ export interface User {
       photo?: string;
     };
   }
+
+declare global {
+  interface URLSearchParams {
+    get(name: string): string | null;
+  }
+}
