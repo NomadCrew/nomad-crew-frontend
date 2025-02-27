@@ -1,4 +1,3 @@
-// components/trips/QuickActions.tsx
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Pressable, Text, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { Surface } from 'react-native-paper';
@@ -42,6 +41,37 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   );
   const isOwnerOrAdmin = isOwner || isAdmin;
 
+  // Helper function to get the best available display name for a user
+  const getUserDisplayName = (user: any): string => {
+    if (!user) return 'Trip Member';
+    
+    if (user.firstName && user.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    } else if (user.firstName) {
+      return user.firstName;
+    } else if (user.lastName) {
+      return user.lastName;
+    } else if (user.username && user.username.trim() !== '') {
+      return user.username;
+    } else if (user.email) {
+      // Extract name from email (e.g., john.doe@example.com -> John Doe)
+      const emailName = user.email.split('@')[0];
+      if (emailName.includes('.')) {
+        return emailName.split('.')
+          .map((part: string) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(' ');
+      } else if (emailName.includes('_')) {
+        return emailName.split('_')
+          .map((part: string) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(' ');
+      }
+      // Just capitalize the email name if no separator
+      return emailName.charAt(0).toUpperCase() + emailName.slice(1);
+    }
+    // Fallback to a generic name
+    return 'Trip Member';
+  };
+
   const actions = [
     { 
       icon: (props: IconProps) => <MapPin {...props} />, 
@@ -62,13 +92,20 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
         console.log('Trip creator:', trip.createdBy);
         console.log('Current user is owner:', isOwner);
         
+        // Get current user info
+        const currentUser = authStore.user;
+        const creatorName = currentUser && currentUser.id === trip.createdBy
+          ? getUserDisplayName(currentUser)
+          : undefined;
+        
         // Ensure the trip has the creator as a member if members array is empty
         const tripWithMembers = {
           ...trip,
           members: trip.members && trip.members.length > 0 
             ? trip.members 
             : [{ 
-                userId: trip.createdBy, 
+                userId: trip.createdBy,
+                name: creatorName,
                 role: 'owner', 
                 joinedAt: trip.createdAt 
               }]
@@ -150,8 +187,14 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
           // Ensure creator is in members array with owner role
           const creatorExists = tripCopy.members.some(member => member.userId === trip.createdBy);
           if (!creatorExists) {
+            const currentUser = authStore.user;
+            const creatorName = currentUser && currentUser.id === trip.createdBy
+              ? getUserDisplayName(currentUser)
+              : undefined;
+              
             tripCopy.members.push({ 
               userId: trip.createdBy, 
+              name: creatorName,
               role: 'owner', 
               joinedAt: trip.createdAt 
             });
@@ -161,12 +204,34 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
           if (userId && !tripCopy.members.some(member => member.userId === userId)) {
             // Determine the role based on whether they're the creator
             const role = userId === trip.createdBy ? 'owner' : 'member';
+            const currentUser = authStore.user;
+            
             tripCopy.members.push({
               userId: userId,
+              name: currentUser ? getUserDisplayName(currentUser) : undefined,
               role: role,
               joinedAt: new Date().toISOString()
             });
           }
+          
+          // Make sure all members have names
+          tripCopy.members = tripCopy.members.map(member => {
+            if (!member.name) {
+              // If member is current user, use their info
+              if (member.userId === userId && authStore.user) {
+                return {
+                  ...member,
+                  name: getUserDisplayName(authStore.user)
+                };
+              }
+              // For other members without names, add a placeholder
+              return {
+                ...member,
+                name: `Member ${member.userId.substring(0, 4)}`
+              };
+            }
+            return member;
+          });
           
           return tripCopy;
         })()}

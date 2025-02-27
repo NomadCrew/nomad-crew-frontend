@@ -70,12 +70,16 @@ export const useTripStore = create<TripState>((set, get) => ({
       console.log('createTrip - Response data:', response.data);
       console.log('createTrip - Response members:', response.data.members);
       
+      // Get the best available name for the user
+      const userName = getUserDisplayName(currentUser);
+      
       // Ensure the trip has the creator as a member with owner role
       const tripWithOwner = {
         ...response.data,
         members: [
           {
             userId: currentUser.id,
+            name: userName,
             role: 'owner',
             joinedAt: new Date().toISOString()
           }
@@ -128,11 +132,18 @@ export const useTripStore = create<TripState>((set, get) => ({
         
         if (!trip.members || trip.members.length === 0) {
           console.log(`Trip ${trip.id} has no members, adding creator as owner`);
+          
+          // Get creator name if it's the current user
+          const creatorName = currentUser && currentUser.id === trip.createdBy
+            ? getUserDisplayName(currentUser)
+            : undefined;
+            
           return {
             ...trip,
             members: [
               {
                 userId: trip.createdBy,
+                name: creatorName,
                 role: 'owner',
                 joinedAt: trip.createdAt
               }
@@ -144,16 +155,49 @@ export const useTripStore = create<TripState>((set, get) => ({
         const creatorExists = trip.members.some(member => member.userId === trip.createdBy);
         if (!creatorExists) {
           console.log(`Trip ${trip.id} doesn't have creator in members, adding creator as owner`);
+          
+          // Get creator name if it's the current user
+          const creatorName = currentUser && currentUser.id === trip.createdBy
+            ? getUserDisplayName(currentUser)
+            : undefined;
+            
           return {
             ...trip,
             members: [
               ...trip.members,
               {
                 userId: trip.createdBy,
+                name: creatorName,
                 role: 'owner',
                 joinedAt: trip.createdAt
               }
             ]
+          };
+        }
+        
+        // Make sure all members have names
+        if (trip.members) {
+          const updatedMembers = trip.members.map(member => {
+            // If member is current user and doesn't have a name, add it
+            if (currentUser && member.userId === currentUser.id && !member.name) {
+              return {
+                ...member,
+                name: getUserDisplayName(currentUser)
+              };
+            }
+            // For other members without names, add a placeholder
+            if (!member.name) {
+              return {
+                ...member,
+                name: `Member ${member.userId.substring(0, 4)}`
+              };
+            }
+            return member;
+          });
+          
+          return {
+            ...trip,
+            members: updatedMembers
           };
         }
         
@@ -201,11 +245,19 @@ export const useTripStore = create<TripState>((set, get) => ({
       // Ensure the trip has members and the creator is included
       if (!trip.members || trip.members.length === 0) {
         console.log('getTripById - Trip has no members, adding creator as owner');
+        
+        // Try to get creator's user info if available
+        const currentUser = useAuthStore.getState().user;
+        const creatorName = currentUser && currentUser.id === trip.createdBy
+          ? getUserDisplayName(currentUser)
+          : undefined;
+          
         const tripWithCreator = {
           ...trip,
           members: [
             {
               userId: trip.createdBy,
+              name: creatorName,
               role: 'owner',
               joinedAt: trip.createdAt
             }
@@ -219,12 +271,20 @@ export const useTripStore = create<TripState>((set, get) => ({
       const creatorExists = trip.members.some(member => member.userId === trip.createdBy);
       if (!creatorExists) {
         console.log('getTripById - Trip doesn\'t have creator in members, adding creator as owner');
+        
+        // Try to get creator's user info if available
+        const currentUser = useAuthStore.getState().user;
+        const creatorName = currentUser && currentUser.id === trip.createdBy
+          ? getUserDisplayName(currentUser)
+          : undefined;
+          
         const tripWithCreator = {
           ...trip,
           members: [
             ...trip.members,
             {
               userId: trip.createdBy,
+              name: creatorName,
               role: 'owner',
               joinedAt: trip.createdAt
             }
@@ -338,6 +398,13 @@ export const useTripStore = create<TripState>((set, get) => ({
       });
       
       if (event.type === 'MEMBER_ADDED') {
+        // Try to get user info if it's the current user
+        const currentUser = useAuthStore.getState().user;
+        const isCurrentUser = currentUser && currentUser.id === event.payload.userId;
+        const memberName = isCurrentUser
+          ? getUserDisplayName(currentUser)
+          : event.payload.name; // Use name from payload if provided
+          
         set(state => ({
           trips: state.trips.map(trip => 
             trip.id === event.tripId ? {
@@ -346,6 +413,7 @@ export const useTripStore = create<TripState>((set, get) => ({
                 ...(trip.members || []),
                 {
                   userId: event.payload.userId!,
+                  name: memberName,
                   role: event.payload.role as 'owner' | 'admin' | 'member',
                   joinedAt: new Date().toISOString()
                 }
@@ -467,6 +535,7 @@ export const useTripStore = create<TripState>((set, get) => ({
             ...(!response.data.trip.members?.some(m => m.userId === currentUser.id) 
               ? [{
                   userId: currentUser.id,
+                  name: getUserDisplayName(currentUser),
                   role: 'member', // Default role for invited members
                   joinedAt: new Date().toISOString()
                 }] 
@@ -493,3 +562,32 @@ export const useTripStore = create<TripState>((set, get) => ({
     }
   }
 }));
+
+// Helper function to get the best available display name for a user
+function getUserDisplayName(user: any): string {
+  if (user.firstName && user.lastName) {
+    return `${user.firstName} ${user.lastName}`;
+  } else if (user.firstName) {
+    return user.firstName;
+  } else if (user.lastName) {
+    return user.lastName;
+  } else if (user.username && user.username.trim() !== '') {
+    return user.username;
+  } else if (user.email) {
+    // Extract name from email (e.g., john.doe@example.com -> John Doe)
+    const emailName = user.email.split('@')[0];
+    if (emailName.includes('.')) {
+      return emailName.split('.')
+        .map((part: string) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ');
+    } else if (emailName.includes('_')) {
+      return emailName.split('_')
+        .map((part: string) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ');
+    }
+    // Just capitalize the email name if no separator
+    return emailName.charAt(0).toUpperCase() + emailName.slice(1);
+  }
+  // Fallback to a generic name
+  return 'Trip Member';
+}
