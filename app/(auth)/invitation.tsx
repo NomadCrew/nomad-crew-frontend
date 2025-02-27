@@ -39,7 +39,6 @@ export default function InvitationScreen() {
         let decodedToken: InvitationToken;
         try {
           decodedToken = jwtDecode(token);
-          console.log('Decoded invitation token:', decodedToken);
           
           // Check if token is expired
           if (decodedToken.exp && decodedToken.exp * 1000 < Date.now()) {
@@ -50,14 +49,14 @@ export default function InvitationScreen() {
           
           // Check if token has required fields
           if (!decodedToken.tripId) {
-            console.warn('Token missing tripId:', decodedToken);
+            // Token missing tripId
           }
           
           if (!decodedToken.invitationId) {
-            console.warn('Token missing invitationId:', decodedToken);
+            // Token missing invitationId
           }
         } catch (decodeError) {
-          console.error('Failed to decode token:', decodeError);
+          // Failed to decode token
         }
 
         // For logged-in users: accept invitation directly
@@ -76,7 +75,6 @@ export default function InvitationScreen() {
           }, 1500);
         }
       } catch (error) {
-        console.error('Invitation handling failed:', error);
         setStatus('error');
         setErrorMessage(error instanceof Error ? error.message : 'Failed to process invitation');
       }

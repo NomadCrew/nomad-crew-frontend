@@ -41,36 +41,7 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
   // Debug trip data when modal becomes visible
   useEffect(() => {
     if (visible) {
-      console.log('MemberManagementModal opened with trip:', trip);
-      console.log('Trip members:', trip.members);
-      console.log('Current user:', user);
-      
-      // Additional detailed logging
-      if (trip.members && trip.members.length > 0) {
-        console.log('Member IDs in trip:', trip.members.map(m => m.userId));
-        if (user) {
-          console.log('Current user ID:', user.id);
-          console.log('Is current user in members list?', trip.members.some(m => m.userId === user.id));
-          
-          const currentUserMember = trip.members.find(m => m.userId === user.id);
-          if (currentUserMember) {
-            console.log('Current user member details:', currentUserMember);
-          } else {
-            console.log('Current user is NOT in the members list');
-          }
-        } else {
-          console.log('No current user available');
-        }
-        
-        // Log member names
-        console.log('Member names:', trip.members.map(m => ({
-          userId: m.userId,
-          name: m.name || 'No name',
-          role: m.role
-        })));
-      } else {
-        console.log('No members in trip');
-      }
+      // Additional detailed logging removed
     }
   }, [visible, trip, user]);
 
@@ -115,8 +86,6 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
     // Ensure creator is in the list with owner role
     const creatorExists = membersList.some(member => member.userId === trip.createdBy);
     if (!creatorExists && trip.createdBy) {
-      console.log('Adding creator to members list with owner role');
-      
       // Get creator name if it's the current user
       const creatorName = user && user.id === trip.createdBy
         ? getUserDisplayName(user)
@@ -132,7 +101,6 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
     
     // Ensure current user is in the list if they're not already
     if (user && !membersList.some(member => member.userId === user.id)) {
-      console.log('Adding current user to members list');
       // Determine the role based on whether they're the creator
       const role = user.id === trip.createdBy ? 'owner' : 'member';
       membersList.push({
@@ -154,7 +122,6 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
       }
     });
     
-    console.log('Final members list:', membersList);
     return membersList;
   }, [trip.members, trip.createdBy, trip.createdAt, user]);
 
@@ -246,13 +213,17 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
 
   // Render member item
   const renderMemberItem = ({ item }: { item: TripMember }) => {
-    console.log('Rendering member item:', item);
     const isCurrentUser = item.userId === user?.id;
-    const memberRole = item.role;
-    const isCreator = trip.createdBy === item.userId;
+    const isCreator = item.userId === trip.createdBy;
+    const memberRole = item.role || 'member';
     
-    console.log(`Member ${item.userId}: isCurrentUser=${isCurrentUser}, role=${memberRole}, isCreator=${isCreator}, name=${item.name}`);
-    
+    // Get role icon
+    const RoleIcon = memberRole === 'owner' 
+      ? Crown 
+      : memberRole === 'admin' 
+        ? Shield 
+        : User;
+
     // Owner can manage everyone except themselves
     // Admin can manage members but not other admins or owners
     const canManageThisMember = 
@@ -321,7 +292,7 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
                 <Menu.Item
                   onPress={() => handleRoleChange(item.userId, 'owner')}
                   title="Make Owner"
-                  leadingIcon={({size, color}) => <Crown size={size} color={color} />}
+                  leadingIcon={({size, color}) => <RoleIcon size={size} color={color} />}
                   disabled={loading}
                 />
               )}
@@ -329,7 +300,7 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
                 <Menu.Item
                   onPress={() => handleRoleChange(item.userId, 'admin')}
                   title="Make Admin"
-                  leadingIcon={({size, color}) => <Shield size={size} color={color} />}
+                  leadingIcon={({size, color}) => <RoleIcon size={size} color={color} />}
                   disabled={loading}
                 />
               )}
@@ -337,7 +308,7 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
                 <Menu.Item
                   onPress={() => handleRoleChange(item.userId, 'member')}
                   title="Make Member"
-                  leadingIcon={({size, color}) => <User size={size} color={color} />}
+                  leadingIcon={({size, color}) => <RoleIcon size={size} color={color} />}
                   disabled={loading}
                 />
               )}
@@ -373,7 +344,7 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
         <IconButton
           {...props}
           icon="close"
-          onPress={() => console.log('Cancel invitation')}
+          onPress={() => {}}
         />
       )}
     />

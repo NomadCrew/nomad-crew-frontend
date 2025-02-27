@@ -30,12 +30,6 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   const [showMemberModal, setShowMemberModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   
-  useEffect(() => {
-    console.log('QuickActions - Trip:', trip);
-    console.log('QuickActions - Trip members:', trip.members);
-    console.log('QuickActions - Current user ID:', userId);
-  }, [trip, userId]);
-  
   const isOwner = trip.createdBy === userId;
   const members = trip.members || [];
   const isAdmin = members.some(
@@ -78,22 +72,17 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
     { 
       icon: (props: IconProps) => <MapPin {...props} />, 
       label: 'Location', 
-      onPress: () => console.log('Location pressed') 
+      onPress: () => {} 
     },
     { 
       icon: (props: IconProps) => <MessageSquare {...props} />, 
       label: 'Chat', 
-      onPress: () => console.log('Chat pressed') 
+      onPress: () => {} 
     },
     { 
       icon: (props: IconProps) => <Users {...props} />, 
       label: 'Members', 
       onPress: () => {
-        console.log('Opening member modal with trip:', trip);
-        console.log('Trip members before opening modal:', trip.members);
-        console.log('Trip creator:', trip.createdBy);
-        console.log('Current user is owner:', isOwner);
-        
         // Get current user info
         const currentUser = authStore.user;
         const creatorName = currentUser && currentUser.id === trip.createdBy
@@ -113,7 +102,6 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
               }]
         };
         
-        console.log('Opening modal with trip:', tripWithMembers);
         setShowMemberModal(true);
       } 
     },

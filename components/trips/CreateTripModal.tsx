@@ -88,7 +88,6 @@ export default function CreateTripModal({
   
     setLoading(true);
     try {
-      console.log('Submitting trip with destination:', trip.destination);
       await onSubmit(trip);
       onClose();
     } catch (error) {
@@ -112,7 +111,6 @@ export default function CreateTripModal({
   }, []);
 
   const handlePlaceSelected = useCallback((details) => {
-    console.log('Setting destination from details:', details);
     setTrip(prev => ({
       ...prev,
       destination: {

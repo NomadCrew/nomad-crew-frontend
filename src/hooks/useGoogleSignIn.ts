@@ -22,16 +22,14 @@ export function useGoogleSignIn() {
     try {
       await GoogleSignin.hasPlayServices();
       const userInfo = await GoogleSignin.signIn();
-      console.log('Google Sign-In userInfo:', userInfo);
       await handleGoogleSignInSuccess(userInfo);
     } catch (error: any) {
-      console.error('Google Sign-In Error:', error);
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-        console.log('Sign in cancelled');
+        // Sign in cancelled
       } else if (error.code === statusCodes.IN_PROGRESS) {
-        console.log('Sign in in progress');
+        // Sign in in progress
       } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        console.error('Play services not available');
+        // Play services not available
       }
     }
   };

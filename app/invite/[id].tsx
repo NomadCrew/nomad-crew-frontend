@@ -16,7 +16,6 @@ export default function InviteRedirect() {
 
     if (typeof id === 'string') {
       const token = extractToken(id);
-      console.log('Extracted invitation token:', token);
       
       // Redirect to the invitation screen with the token
       router.replace({

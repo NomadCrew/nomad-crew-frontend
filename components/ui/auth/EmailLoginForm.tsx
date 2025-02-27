@@ -76,8 +76,6 @@ export default function EmailLoginForm({ onClose }: EmailLoginFormProps) {
 
   const handleLogin = useCallback(async () => {
     try {
-      console.log('[EmailLogin] Attempting login');
-      console.log('[EmailLogin] Starting login flow - current isVerifying:', isVerifying);
       await login({ email, password });
       const { error } = useAuthStore.getState();
       
@@ -99,7 +97,7 @@ export default function EmailLoginForm({ onClose }: EmailLoginFormProps) {
         onClose();
       }
     } catch (err) {
-      console.error('[EmailLogin] Login failed:', err);
+      // Login failed
     }
   }, [email, password, login, isVerifying, checkPendingInvitations, onClose]);
 

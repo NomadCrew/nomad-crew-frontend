@@ -38,11 +38,7 @@ function RouteGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const debugSession = async () => {
       const { data: { session }, error } = await supabase.auth.getSession();
-      console.log('[Auth Debug] Initial session check:', {
-        hasSession: !!session,
-        hasAccessToken: !!session?.access_token,
-        error: error?.message,
-      });
+      // Session check completed
     };
     debugSession();
   }, []);
@@ -64,16 +60,6 @@ function RouteGuard({ children }: { children: React.ReactNode }) {
     } else if (token && (inAuthGroup || inOnboardingGroup)) {
       targetRoute = '/(tabs)';
     }
-
-    console.log('Navigation State:', {
-      currentSegment,
-      isFirstTime,
-      hasToken: !!token,
-      isVerifying,
-      inAuthGroup,
-      inOnboardingGroup,
-      targetRoute
-    });
 
     if (targetRoute && targetRoute !== lastNavigationRef.current) {
       navigationTimeoutRef.current = setTimeout(() => {
