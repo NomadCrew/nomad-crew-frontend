@@ -29,7 +29,7 @@ interface TripState {
   fetchTrips: () => Promise<void>;
   getTripById: (id: string) => Trip | undefined;
   // Member operations
-  inviteMember: (tripId: string, email: string, role?: 'owner' | 'admin' | 'member') => Promise<void>;
+  inviteMember: (tripId: string, email: string, role: 'owner' | 'admin' | 'member') => Promise<void>;
   revokeInvitation: (tripId: string, invitationId: string) => Promise<void>;
   updateMemberRole: (tripId: string, userId: string, role: 'owner' | 'admin' | 'member') => Promise<void>;
   removeMember: (tripId: string, userId: string) => Promise<void>;
@@ -80,11 +80,11 @@ export const useTripStore = create<TripState>((set, get) => ({
           {
             userId: currentUser.id,
             name: userName,
-            role: 'owner',
+            role: 'owner' as 'owner' | 'admin' | 'member',
             joinedAt: new Date().toISOString()
           }
         ]
-      };
+      } as Trip;
       
       console.log('createTrip - Trip with owner:', tripWithOwner);
       console.log('createTrip - Members after adding owner:', tripWithOwner.members);
@@ -144,11 +144,11 @@ export const useTripStore = create<TripState>((set, get) => ({
               {
                 userId: trip.createdBy,
                 name: creatorName,
-                role: 'owner',
+                role: 'owner' as 'owner' | 'admin' | 'member',
                 joinedAt: trip.createdAt
               }
             ]
-          };
+          } as Trip;
         }
         
         // Check if creator is already in members list
@@ -168,11 +168,11 @@ export const useTripStore = create<TripState>((set, get) => ({
               {
                 userId: trip.createdBy,
                 name: creatorName,
-                role: 'owner',
+                role: 'owner' as 'owner' | 'admin' | 'member',
                 joinedAt: trip.createdAt
               }
             ]
-          };
+          } as Trip;
         }
         
         // Make sure all members have names
@@ -198,7 +198,7 @@ export const useTripStore = create<TripState>((set, get) => ({
           return {
             ...trip,
             members: updatedMembers
-          };
+          } as Trip;
         }
         
         console.log(`Trip ${trip.id} already has members:`, trip.members);
@@ -208,7 +208,7 @@ export const useTripStore = create<TripState>((set, get) => ({
       console.log('fetchTrips - Processed trips with members:', tripsWithMembers);
       
       set({ 
-        trips: tripsWithMembers || [],
+        trips: tripsWithMembers || [] as Trip[],
         loading: false,
       });
     } catch (error) {
@@ -258,11 +258,11 @@ export const useTripStore = create<TripState>((set, get) => ({
             {
               userId: trip.createdBy,
               name: creatorName,
-              role: 'owner',
+              role: 'owner' as 'owner' | 'admin' | 'member',
               joinedAt: trip.createdAt
             }
           ]
-        };
+        } as Trip;
         console.log('getTripById - Updated trip with creator as member:', tripWithCreator);
         return tripWithCreator;
       }
@@ -285,11 +285,11 @@ export const useTripStore = create<TripState>((set, get) => ({
             {
               userId: trip.createdBy,
               name: creatorName,
-              role: 'owner',
+              role: 'owner' as 'owner' | 'admin' | 'member',
               joinedAt: trip.createdAt
             }
           ]
-        };
+        } as Trip;
         console.log('getTripById - Updated trip with creator as member:', tripWithCreator);
         return tripWithCreator;
       }
@@ -343,7 +343,7 @@ export const useTripStore = create<TripState>((set, get) => ({
             weatherCondition: mapWeatherCode(event.payload.weather_code),
             weatherForecast,
             lastUpdated: event.payload.timestamp
-          } : trip
+          } as Trip : trip
         )
       }));
     } else if (isTripEvent(event)) {
@@ -360,8 +360,8 @@ export const useTripStore = create<TripState>((set, get) => ({
             startDate: event.payload.startDate ?? trip.startDate,
             endDate: event.payload.endDate ?? trip.endDate,
             status: event.payload.status as TripStatus
-           } : trip
-          )
+           } as Trip : trip
+         )
          }));
     } else if (isTodoEvent(event)) {
       console.debug('[Todo] Forwarding event:', {
@@ -388,7 +388,7 @@ export const useTripStore = create<TripState>((set, get) => ({
                 expiresAt: event.payload.expiresAt
               }
             ]
-          } : trip
+          } as Trip : trip
         )
       }));
     } else if (isMemberEvent(event)) {
@@ -403,7 +403,7 @@ export const useTripStore = create<TripState>((set, get) => ({
         const isCurrentUser = currentUser && currentUser.id === event.payload.userId;
         const memberName = isCurrentUser
           ? getUserDisplayName(currentUser)
-          : event.payload.name; // Use name from payload if provided
+          : event.payload.userId ? `Member ${event.payload.userId.substring(0, 4)}` : 'New Member'; // Use a fallback name since payload doesn't have name
           
         set(state => ({
           trips: state.trips.map(trip => 
@@ -414,11 +414,11 @@ export const useTripStore = create<TripState>((set, get) => ({
                 {
                   userId: event.payload.userId!,
                   name: memberName,
-                  role: event.payload.role as 'owner' | 'admin' | 'member',
+                  role: (event.payload.role || 'member') as 'owner' | 'admin' | 'member',
                   joinedAt: new Date().toISOString()
                 }
               ]
-            } : trip
+            } as Trip : trip
           )
         }));
       } else if (event.type === 'MEMBER_ROLE_UPDATED') {
@@ -431,7 +431,7 @@ export const useTripStore = create<TripState>((set, get) => ({
                   ? { ...member, role: event.payload.role as 'owner' | 'admin' | 'member' } 
                   : member
               ) || []
-            } : trip
+            } as Trip : trip
           )
         }));
       } else if (event.type === 'MEMBER_REMOVED') {
@@ -440,20 +440,20 @@ export const useTripStore = create<TripState>((set, get) => ({
             trip.id === event.tripId ? {
               ...trip,
               members: trip.members?.filter(member => member.userId !== event.payload.userId) || []
-            } : trip
+            } as Trip : trip
           )
         }));
       }
     }
   },
 
-  inviteMember: async (tripId: string, email: string, role = 'member') => {
+  inviteMember: async (tripId: string, email: string, role: 'owner' | 'admin' | 'member') => {
     try {
+      // Default to 'member' role if not specified
+      const memberRole = role || 'member';
       await api.post(API_PATHS.trips.invite(tripId), {
-        data: {
-          email,
-          role: role.toUpperCase()
-        }
+        email,
+        role: memberRole.toUpperCase()
       });
     } catch (error) {
       throw new Error('Failed to send invitation: ' + (error instanceof Error ? error.message : 'Unknown error'));
@@ -469,7 +469,7 @@ export const useTripStore = create<TripState>((set, get) => ({
           trip.id === tripId ? {
             ...trip,
             invitations: trip.invitations?.filter(inv => inv.token !== invitationId) || []
-          } : trip
+          } as Trip : trip
         )
       }));
     } catch (error) {
@@ -491,7 +491,7 @@ export const useTripStore = create<TripState>((set, get) => ({
             members: trip.members?.map(member => 
               member.userId === userId ? { ...member, role } : member
             ) || []
-          } : trip
+          } as Trip : trip
         )
       }));
     } catch (error) {
@@ -509,7 +509,7 @@ export const useTripStore = create<TripState>((set, get) => ({
           trip.id === tripId ? {
             ...trip,
             members: trip.members?.filter(member => member.userId !== userId) || []
-          } : trip
+          } as Trip : trip
         )
       }));
     } catch (error) {
@@ -532,16 +532,16 @@ export const useTripStore = create<TripState>((set, get) => ({
           members: [
             ...(response.data.trip.members || []),
             // Only add the current user if they're not already in the members list
-            ...(!response.data.trip.members?.some(m => m.userId === currentUser.id) 
+            ...(!response.data.trip.members?.some((m: { userId: string }) => m.userId === currentUser.id) 
               ? [{
                   userId: currentUser.id,
                   name: getUserDisplayName(currentUser),
-                  role: 'member', // Default role for invited members
+                  role: 'member' as 'owner' | 'admin' | 'member', // Default role for invited members
                   joinedAt: new Date().toISOString()
                 }] 
               : [])
           ]
-        };
+        } as Trip;
         
         set(state => ({
           trips: [...state.trips, tripWithMember]
