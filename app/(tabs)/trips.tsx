@@ -211,6 +211,16 @@ export default function TripsScreen() {
         ))}
       </ThemedView>
 
+      {/* Debug Button for Map Test */}
+      <TouchableOpacity
+        style={styles(theme).debugButton}
+        onPress={() => router.push('/map-test')}
+      >
+        <Text style={styles(theme).debugButtonText}>
+          Open Map Test Screen
+        </Text>
+      </TouchableOpacity>
+
       {/* Trip List */}
       <ScrollView
         style={[
@@ -363,5 +373,19 @@ const styles = (theme: Theme, screenWidth?: number) =>
     },
     listContentContainer: {
       flexGrow: 1,
+    },
+    debugButton: {
+      position: 'absolute',
+      bottom: theme.spacing.layout.section.padding + 120,
+      right: theme.spacing.layout.section.padding,
+      backgroundColor: theme.colors.primary.main,
+      padding: theme.spacing.inline.sm,
+      borderRadius: theme.spacing.inset.sm,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    debugButtonText: {
+      ...theme.typography.button.medium,
+      color: theme.colors.primary.onPrimary,
     },
   });

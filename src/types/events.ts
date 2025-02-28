@@ -18,6 +18,8 @@ export const ServerEventType = z.enum([
   'MEMBER_ROLE_UPDATED',
   'MEMBER_REMOVED',
   'MEMBER_INVITED',
+  'LOCATION_UPDATED',
+  'LOCATION_SHARING_CHANGED',
 ]);
 
 export type ServerEventType = z.infer<typeof ServerEventType>;
@@ -140,6 +142,21 @@ export const EventSchemas = {
       invitationToken: z.string(),
       expiresAt: z.string().datetime()
     })
+  }),
+
+  location: BaseEventSchema.extend({
+    type: z.enum(['LOCATION_UPDATED', 'LOCATION_SHARING_CHANGED']),
+    payload: z.object({
+      userId: z.string(),
+      name: z.string().optional(),
+      location: z.object({
+        latitude: z.number(),
+        longitude: z.number(),
+        accuracy: z.number().optional(),
+        timestamp: z.number()
+      }),
+      isSharingEnabled: z.boolean().optional()
+    })
   })
 };
 
@@ -167,3 +184,7 @@ export const isMemberInviteEvent = (event: ServerEvent): event is z.infer<typeof
 export const isMemberEvent = (event: ServerEvent): event is z.infer<typeof EventSchemas.member> =>
   ['MEMBER_ADDED', 'MEMBER_ROLE_UPDATED', 'MEMBER_REMOVED'].includes(event.type) &&
   EventSchemas.member.safeParse(event).success;
+
+export const isLocationEvent = (event: ServerEvent): event is z.infer<typeof EventSchemas.location> =>
+  ['LOCATION_UPDATED', 'LOCATION_SHARING_CHANGED'].includes(event.type) &&
+  EventSchemas.location.safeParse(event).success;

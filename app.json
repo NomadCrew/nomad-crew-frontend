@@ -12,7 +12,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.nomadcrew.app",
       "config": {
-        "usesNonExemptEncryption": false
+        "usesNonExemptEncryption": false,
+        "googleMapsApiKey": "${process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY}"
       },
       "associatedDomains": [
         "applinks:nomadcrew.uk",
@@ -25,6 +26,11 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.nomadcrew.app",
+      "config": {
+        "googleMaps": {
+          "apiKey": "${process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY}"
+        }
+      },
       "intentFilters": [
         {
           "action": "VIEW",
