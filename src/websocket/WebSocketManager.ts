@@ -1,9 +1,10 @@
 import { WebSocketConnection } from './WebSocketConnection';
-import { WebSocketStatus, ServerEvent } from '../types/events';
+import { WebSocketStatus, ServerEvent, isLocationEvent } from '../types/events';
 import { useAuthStore } from '../store/useAuthStore';
 import { API_CONFIG } from '../api/env';
 import { jwtDecode } from 'jwt-decode';
 import { logger } from '../utils/logger';
+import { useLocationStore } from '../store/useLocationStore';
 
 interface ConnectionCallbacks {
   onMessage?: (event: ServerEvent) => void;
@@ -68,13 +69,27 @@ export class WebSocketManager {
         throw new Error('Missing Supabase API key');
       }
 
+      // Create a wrapper for the onMessage callback to handle location events
+      const wrappedCallbacks = {
+        ...callbacks,
+        onMessage: (event: ServerEvent) => {
+          // Handle location events
+          if (isLocationEvent(event)) {
+            this.handleLocationEvent(event, tripId);
+          }
+          
+          // Pass the event to the original callback
+          callbacks?.onMessage?.(event);
+        }
+      };
+
       this.connection = new WebSocketConnection({
         url: this.getWebSocketUrl(tripId, token, apiKey),
         token,
         apiKey,
         tripId,
         userId: user.id,
-        ...callbacks,
+        ...wrappedCallbacks,
         onError: (error) => {
           callbacks?.onError?.(error);
           if (error.message === 'Authentication failed') {
@@ -92,6 +107,31 @@ export class WebSocketManager {
     } catch (error) {
       logger.error('WS', 'Connection failed:', error);
       await this.handleConnectionError(tripId, callbacks);
+    }
+  }
+
+  private handleLocationEvent(event: ServerEvent, tripId: string): void {
+    if (event.type === 'LOCATION_UPDATED' && event.payload) {
+      const { userId, name, location } = event.payload as any;
+      
+      if (userId && location) {
+        useLocationStore.getState().updateMemberLocation(tripId, {
+          userId,
+          name,
+          location: {
+            latitude: location.latitude,
+            longitude: location.longitude,
+            accuracy: location.accuracy,
+            timestamp: location.timestamp
+          }
+        });
+      }
+    } else if (event.type === 'LOCATION_SHARING_CHANGED' && event.payload) {
+      // Handle location sharing status changes if needed
+      const { userId, isSharingEnabled } = event.payload as any;
+      
+      // You might want to update UI or take other actions based on this event
+      logger.debug('WS', `User ${userId} ${isSharingEnabled ? 'enabled' : 'disabled'} location sharing`);
     }
   }
 

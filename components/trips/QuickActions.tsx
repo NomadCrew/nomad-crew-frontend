@@ -8,6 +8,7 @@ import { Trip } from '@/src/types/trip';
 import { ArrowLeft, ArrowRight, MapPin, MessageSquare, Users, UserPlus, Activity } from 'lucide-react-native';
 import { MemberManagementModal } from './MemberManagementModal';
 import { TripStatusUpdateModal } from './TripStatusUpdateModal';
+import { GroupLiveMapModal } from '@/components/location/GroupLiveMapModal';
 
 // Define a type for the icon props
 type IconProps = {
@@ -29,6 +30,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   const userId = authStore.user?.id;
   const [showMemberModal, setShowMemberModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
   
   const isOwner = trip.createdBy === userId;
   const members = trip.members || [];
@@ -72,7 +74,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
     { 
       icon: (props: IconProps) => <MapPin {...props} />, 
       label: 'Location', 
-      onPress: () => {} 
+      onPress: () => setShowLocationModal(true) 
     },
     { 
       icon: (props: IconProps) => <MessageSquare {...props} />, 
@@ -237,6 +239,12 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
       <TripStatusUpdateModal
         visible={showStatusModal}
         onClose={() => setShowStatusModal(false)}
+        trip={trip}
+      />
+
+      <GroupLiveMapModal
+        visible={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
         trip={trip}
       />
     </>
