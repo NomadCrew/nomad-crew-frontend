@@ -2,10 +2,11 @@ import React, { createContext, useContext } from 'react';
 import { useColorScheme } from 'react-native';
 import { createTheme } from './create-theme';
 import type { Theme, ThemeMode } from './types';
+import { extendTheme } from './theme-compatibility';
 
-// Theme context type
+// Theme context type with extended theme
 interface ThemeContextType {
-  theme: Theme;
+  theme: ReturnType<typeof extendTheme>;
   mode: 'light' | 'dark' | 'system';
   setMode: (mode: 'light' | 'dark' | 'system') => void;
   toggleColorScheme: () => void;
@@ -25,8 +26,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return mode === 'dark';
   }, [mode, systemColorScheme]);
 
-  // Use the main createTheme function instead
-  const theme = React.useMemo(() => createTheme({ isDark }), [isDark]);
+  // Create the base theme and then extend it with our compatibility layer
+  const baseTheme = React.useMemo(() => createTheme({ isDark }), [isDark]);
+  const theme = React.useMemo(() => extendTheme(baseTheme), [baseTheme]);
 
   const toggleColorScheme = React.useCallback(() => {
     setMode(prev => prev === 'dark' ? 'light' : 'dark');

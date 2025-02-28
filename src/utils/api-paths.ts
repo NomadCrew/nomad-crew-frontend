@@ -35,4 +35,10 @@ export const API_PATHS = {
     list: (tripId: string) => createApiPath(`trips/${tripId}/todos`),
     update: (tripId: string, todoID: string) => createApiPath(`trips/${tripId}/todos/${todoID}`),
   },
+  // Add location endpoints
+  location: {
+    update: createApiPath('location/update'),
+    byTrip: (tripId: string) => createApiPath(`trips/${tripId}/locations`),
+    preferences: createApiPath('location/preferences'),
+  },
 } as const;
