@@ -12,6 +12,7 @@ import { InviteModal } from '@/components/trips/InviteModal';
 import { WebSocketManager, wsManager } from '@/src/websocket/WebSocketManager';
 import { useTripStore } from '@/src/store/useTripStore';
 import { useTodoStore } from '@/src/store/useTodoStore';
+import { useLocationStore } from '@/src/store/useLocationStore';
 import { TripDetailHeader } from '@/components/trips/TripDetailHeader';
 import { QuickActions } from '@/components/trips/QuickActions';
 import { TripStats } from '@/components/trips/TripStats';
@@ -29,6 +30,7 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
   const { width: screenWidth } = useWindowDimensions();
   const [showAddTodo, setShowAddTodo] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const { isLocationSharingEnabled, startLocationTracking, stopLocationTracking } = useLocationStore();
 
   // Calculate responsive dimensions
   const GRID_MARGIN = theme.spacing.layout.screen.padding;
@@ -99,8 +101,25 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
       }
     });
 
-    return () => manager.disconnect();
-  }, [tripId]);
+    // Start location tracking if location sharing is enabled
+    if (isLocationSharingEnabled) {
+      startLocationTracking(tripId);
+    }
+
+    return () => {
+      manager.disconnect();
+      stopLocationTracking();
+    };
+  }, [tripId, isLocationSharingEnabled]);
+
+  // Effect to handle changes in location sharing preference
+  useEffect(() => {
+    if (isLocationSharingEnabled) {
+      startLocationTracking(tripId);
+    } else {
+      stopLocationTracking();
+    }
+  }, [isLocationSharingEnabled, tripId]);
 
   return (
     <View style={styles(theme).container}>
