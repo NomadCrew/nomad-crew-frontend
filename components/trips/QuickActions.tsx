@@ -19,11 +19,13 @@ type IconProps = {
 interface QuickActionsProps {
   trip: Trip;
   setShowInviteModal: (show: boolean) => void;
+  onChatPress: () => void;
 }
 
 export const QuickActions: React.FC<QuickActionsProps> = ({
   trip,
-  setShowInviteModal
+  setShowInviteModal,
+  onChatPress,
 }) => {
   const { theme } = useTheme();
   const authStore = useAuthStore();
@@ -79,7 +81,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
     { 
       icon: (props: IconProps) => <MessageSquare {...props} />, 
       label: 'Chat', 
-      onPress: () => {} 
+      onPress: () => onChatPress() 
     },
     { 
       icon: (props: IconProps) => <Users {...props} />, 
