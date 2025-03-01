@@ -60,7 +60,9 @@ export class BaseApiClient {
         logger.error('API', 'Request failed:', {
           message: error.message,
           code: error.code,
-          url: error.config?.url
+          url: error.config?.url,
+          status: error.response?.status,
+          data: error.response?.data
         });
 
         // Handle network errors
@@ -70,6 +72,13 @@ export class BaseApiClient {
 
         // Handle other status codes
         switch (error.response.status) {
+          case 400:
+            // Extract error message from response if available
+            const badRequestMessage = 
+              (error.response.data as { message?: string; error?: string })?.message || 
+              (error.response.data as { message?: string; error?: string })?.error || 
+              'Bad request: The server could not process your request';
+            return Promise.reject(new Error(badRequestMessage));
           case 403:
             return Promise.reject(new Error(ERROR_MESSAGES.FORBIDDEN));
           case 404:

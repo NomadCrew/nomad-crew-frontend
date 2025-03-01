@@ -41,4 +41,13 @@ export const API_PATHS = {
     byTrip: (tripId: string) => createApiPath(`trips/${tripId}/locations`),
     preferences: createApiPath('location/preferences'),
   },
+  // Add chat endpoints
+  chats: {
+    groups: createApiPath('chats/groups'),
+    groupById: (groupId: string) => createApiPath(`chats/groups/${groupId}`),
+    messages: (groupId: string) => createApiPath(`chats/groups/${groupId}/messages`),
+    members: (groupId: string) => createApiPath(`chats/groups/${groupId}/members`),
+    ws: (groupId: string) => createApiPath(`chats/groups/${groupId}/ws`),
+    read: (groupId: string) => createApiPath(`chats/groups/${groupId}/read`),
+  },
 } as const;

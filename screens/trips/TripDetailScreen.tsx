@@ -15,10 +15,13 @@ import { useTodoStore } from '@/src/store/useTodoStore';
 import { useLocationStore } from '@/src/store/useLocationStore';
 import { TripDetailHeader } from '@/components/trips/TripDetailHeader';
 import { QuickActions } from '@/components/trips/QuickActions';
-import { TripStats } from '@/components/trips/TripStats';
 import { Theme } from '@/src/theme/types';
 import { logger } from '@/src/utils/logger';
 import { StatusBar } from 'expo-status-bar';
+import { ChatModal } from '@/components/chat/ChatModal';
+import { useChatStore } from '@/src/store/useChatStore';
+import { ChatWebSocketManager } from '@/src/websocket/ChatWebSocketManager';
+import { SwipeableStatsChat } from '@/components/trips/SwipeableStatsChat';
 
 interface TripDetailScreenProps {
   trip: Trip;
@@ -30,6 +33,7 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
   const { width: screenWidth } = useWindowDimensions();
   const [showAddTodo, setShowAddTodo] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showChatModal, setShowChatModal] = useState(false);
   const { isLocationSharingEnabled, startLocationTracking, stopLocationTracking } = useLocationStore();
 
   // Calculate responsive dimensions
@@ -73,24 +77,32 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
         position: 'left' as const,
       },
       {
-        id: '2',
-        element: <TripStats />,
+        id: 'swipeable-stats-chat',
+        element: (
+          <SwipeableStatsChat
+            tripId={tripId}
+            onChatPress={() => setShowChatModal(true)}
+            width={CARD_WIDTH}
+            height={BASE_CARD_HEIGHT}
+          />
+        ),
         height: 'normal' as const,
         position: 'right' as const,
       },
       {
-        id: '3',
+        id: 'quick-actions',
         element: (
           <QuickActions 
             trip={trip}
-            setShowInviteModal={setShowInviteModal} 
+            setShowInviteModal={setShowInviteModal}
+            onChatPress={() => setShowChatModal(true)}
           />
         ),
         height: 'short' as const,
         position: 'right' as const,
       },
     ];
-  }, [carouselItems, trip, CARD_WIDTH, TALL_CARD_HEIGHT, setShowInviteModal]);
+  }, [carouselItems, trip, tripId, CARD_WIDTH, TALL_CARD_HEIGHT, BASE_CARD_HEIGHT, setShowInviteModal, setShowChatModal]);
 
   useEffect(() => {
     const manager = wsManager as WebSocketManager;
@@ -101,6 +113,9 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
       }
     });
 
+    // Initialize chat WebSocket manager
+    const chatManager = ChatWebSocketManager.getInstance();
+    
     // Start location tracking if location sharing is enabled
     if (isLocationSharingEnabled) {
       startLocationTracking(tripId);
@@ -108,6 +123,7 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
 
     return () => {
       manager.disconnect();
+      chatManager.disconnect(); // Disconnect chat WebSocket
       stopLocationTracking();
     };
   }, [tripId, isLocationSharingEnabled]);
@@ -120,6 +136,12 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
       stopLocationTracking();
     }
   }, [isLocationSharingEnabled, tripId]);
+
+  // Effect to handle chat events
+  useEffect(() => {
+    // Fetch chat groups when the component mounts
+    useChatStore.getState().fetchChatGroups();
+  }, []);
 
   return (
     <View style={styles(theme).container}>
@@ -150,6 +172,12 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
       <InviteModal
         visible={showInviteModal}
         onClose={() => setShowInviteModal(false)}
+        tripId={tripId}
+      />
+
+      <ChatModal
+        visible={showChatModal}
+        onClose={() => setShowChatModal(false)}
         tripId={tripId}
       />
     </View>
