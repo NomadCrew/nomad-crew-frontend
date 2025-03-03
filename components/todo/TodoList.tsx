@@ -11,6 +11,7 @@ import { Todo } from '@/src/types/todo';
 import { getColorForUUID } from '@/src/utils/uuidToColor';
 import LottieView from 'lottie-react-native';
 import { Plus } from 'lucide-react-native';
+import { logger } from '@/src/utils/logger';
 
 interface TodoListProps {
   tripId: string;
@@ -62,7 +63,7 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
   }, [loading, hasMore, todos.length, tripId, fetchTodos]);
 
   const handleRetry = React.useCallback(() => {
-    fetchTodos(tripId, 0, 20).catch(console.error);
+    fetchTodos(tripId, 0, 20).catch(error => logger.error('TODO', 'Failed to fetch todos:', error));
   }, [tripId, fetchTodos]);
 
   // Initial data load

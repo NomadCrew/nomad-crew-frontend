@@ -4,6 +4,7 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { Typography } from '@/src/theme/foundations/typography';
 import { SemanticColors } from '@/src/theme/foundations/colors';
 import { createStyles, useThemedStyles } from '@/src/theme/utils';
+import { logger } from '@/src/utils/logger';
 
 // Helper type to create dot notation paths for nested objects
 type DotNotation<T, D extends number = 2, P extends string = ''> =
@@ -68,7 +69,7 @@ export function ThemedText({
         return categoryStyles[size as keyof typeof categoryStyles];
       }
     } catch (error) {
-      console.warn(`Invalid typography variant: ${variant}`);
+      logger.warn('UI', `Invalid typography variant: ${variant}`);
     }
     
     // Fallback to body.medium if variant is invalid
@@ -88,7 +89,7 @@ export function ThemedText({
         return colorCategory[shade as keyof typeof colorCategory];
       }
     } catch (error) {
-      console.warn(`Invalid color variant: ${color}`);
+      logger.warn('UI', `Invalid color variant: ${color}`);
     }
 
     return theme.colors.content.primary;

@@ -144,7 +144,11 @@ export default function TripsScreen() {
       await createTrip({
         name: tripData.name,
         description: tripData.description,
-        destination: tripData.destination,
+        destination: {
+          address: tripData.destination.address,
+          placeId: tripData.destination.placeId || "",
+          coordinates: tripData.destination.coordinates,
+        },
         startDate: new Date(tripData.startDate),
         endDate: new Date(tripData.endDate),
       });
@@ -161,7 +165,8 @@ export default function TripsScreen() {
       <ThemedView style={styles(theme, screenWidth).header}>
         {/* Header Title */}
         <Avatar 
-            user={useAuthStore.getState().user}
+            source={useAuthStore.getState().user?.profilePicture}
+            initials={useAuthStore.getState().user?.username?.substring(0, 2) || ""}
             size="md"
             style={styles(theme).avatar}
           />
@@ -211,21 +216,11 @@ export default function TripsScreen() {
         ))}
       </ThemedView>
 
-      {/* Debug Button for Map Test */}
-      <TouchableOpacity
-        style={styles(theme).debugButton}
-        onPress={() => router.push('/map-test')}
-      >
-        <Text style={styles(theme).debugButtonText}>
-          Open Map Test Screen
-        </Text>
-      </TouchableOpacity>
-
       {/* Trip List */}
       <ScrollView
         style={[
           styles(theme).listContainer,
-          { flex: 1 }  // Ensure it takes up available space
+          { flex: 1 }
         ]}
         contentContainerStyle={[
           styles(theme).listContentContainer,
@@ -374,18 +369,18 @@ const styles = (theme: Theme, screenWidth?: number) =>
     listContentContainer: {
       flexGrow: 1,
     },
-    debugButton: {
-      position: 'absolute',
-      bottom: theme.spacing.layout.section.padding + 120,
-      right: theme.spacing.layout.section.padding,
-      backgroundColor: theme.colors.primary.main,
-      padding: theme.spacing.inline.sm,
-      borderRadius: theme.spacing.inset.sm,
+    avatar: {
+      marginRight: theme.spacing.inline.sm,
+    },
+    emptyContainer: {
+      flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
+      padding: theme.spacing.layout.section.padding,
     },
-    debugButtonText: {
-      ...theme.typography.button.medium,
-      color: '#FFFFFF',
+    emptyText: {
+      ...theme.typography.body.large,
+      color: theme.colors.content.secondary,
+      textAlign: 'center',
     },
   });

@@ -148,7 +148,55 @@ export class WebSocketManager {
     logger.debug('WS', 'Received chat event type:', event.type);
     logger.debug('WS', 'Raw event data:', JSON.stringify(event, null, 2));
     
-    // Map the new event types to the old ones expected by the chat store
+    // Special handling for CHAT_MESSAGE_SEND events (not in the ServerEventType enum)
+    // Use type assertion to handle custom event type
+    const eventType = event.type as string;
+    if (eventType === 'CHAT_MESSAGE_SEND') {
+      logger.debug('WS', 'Handling CHAT_MESSAGE_SEND event as MESSAGE_SENT');
+      
+      try {
+        const payload = event.payload as {
+          messageId: string;
+          tripId: string;
+          content: string;
+          user: {
+            id: string;
+            name: string;
+            avatar?: string;
+          };
+          timestamp: string;
+        };
+        
+        const mappedEvent = {
+          id: event.id,
+          type: 'MESSAGE_SENT',
+          tripId: payload.tripId,
+          userId: event.userId || payload.user.id,
+          timestamp: event.timestamp || payload.timestamp,
+          payload: {
+            message: {
+              id: payload.messageId,
+              content: payload.content,
+              sender: {
+                id: payload.user.id,
+                name: payload.user.name,
+                avatar: payload.user.avatar
+              },
+              createdAt: payload.timestamp
+            }
+          }
+        };
+        
+        logger.debug('WS', 'Created MESSAGE_SENT event from CHAT_MESSAGE_SEND with message ID:', payload.messageId);
+        useChatStore.getState().handleChatEvent(mappedEvent);
+        return;
+      } catch (error) {
+        logger.error('WS', 'Error handling CHAT_MESSAGE_SEND event:', error);
+        return;
+      }
+    }
+    
+    // Map the new event types to the ones expected by the chat store
     let mappedEvent;
     
     switch (event.type) {
@@ -156,7 +204,7 @@ export class WebSocketManager {
         {
           const payload = event.payload as {
             messageId: string;
-            groupId: string;
+            tripId: string;
             content: string;
             user: {
               id: string;
@@ -166,10 +214,12 @@ export class WebSocketManager {
             timestamp: string;
           };
           
+          logger.debug('WS', 'Mapping CHAT_MESSAGE_SENT event to MESSAGE_SENT');
+          
           mappedEvent = {
             id: event.id,
             type: 'MESSAGE_SENT',
-            groupId: payload.groupId,
+            tripId: payload.tripId,
             userId: event.userId,
             timestamp: event.timestamp,
             payload: {
@@ -185,6 +235,8 @@ export class WebSocketManager {
               }
             }
           };
+          
+          logger.debug('WS', 'Created MESSAGE_SENT event with message ID:', payload.messageId);
         }
         break;
         
@@ -192,14 +244,14 @@ export class WebSocketManager {
         {
           const payload = event.payload as {
             messageId: string;
-            groupId: string;
+            tripId: string;
             content: string;
           };
           
           mappedEvent = {
             id: event.id,
             type: 'MESSAGE_EDITED',
-            groupId: payload.groupId,
+            tripId: payload.tripId,
             userId: event.userId,
             timestamp: event.timestamp,
             payload: {
@@ -214,13 +266,13 @@ export class WebSocketManager {
         {
           const payload = event.payload as {
             messageId: string;
-            groupId: string;
+            tripId: string;
           };
           
           mappedEvent = {
             id: event.id,
             type: 'MESSAGE_DELETED',
-            groupId: payload.groupId,
+            tripId: payload.tripId,
             userId: event.userId,
             timestamp: event.timestamp,
             payload: {
@@ -234,7 +286,7 @@ export class WebSocketManager {
         {
           const payload = event.payload as {
             messageId: string;
-            groupId: string;
+            tripId: string;
             reaction: string;
             user: {
               id: string;
@@ -246,7 +298,7 @@ export class WebSocketManager {
           mappedEvent = {
             id: event.id,
             type: 'REACTION_ADDED',
-            groupId: payload.groupId,
+            tripId: payload.tripId,
             userId: event.userId,
             timestamp: event.timestamp,
             payload: {
@@ -262,7 +314,7 @@ export class WebSocketManager {
         {
           const payload = event.payload as {
             messageId: string;
-            groupId: string;
+            tripId: string;
             reaction: string;
             user: {
               id: string;
@@ -274,7 +326,7 @@ export class WebSocketManager {
           mappedEvent = {
             id: event.id,
             type: 'REACTION_REMOVED',
-            groupId: payload.groupId,
+            tripId: payload.tripId,
             userId: event.userId,
             timestamp: event.timestamp,
             payload: {
@@ -290,7 +342,7 @@ export class WebSocketManager {
         {
           const payload = event.payload as {
             messageId: string;
-            groupId: string;
+            tripId: string;
             user: {
               id: string;
               name: string;
@@ -301,7 +353,7 @@ export class WebSocketManager {
           mappedEvent = {
             id: event.id,
             type: 'MESSAGE_READ',
-            groupId: payload.groupId,
+            tripId: payload.tripId,
             userId: event.userId,
             timestamp: event.timestamp,
             payload: {
@@ -315,7 +367,7 @@ export class WebSocketManager {
       case 'CHAT_TYPING_STATUS':
         {
           const payload = event.payload as {
-            groupId: string;
+            tripId: string;
             userId: string;
             isTyping: boolean;
             username: string;
@@ -324,7 +376,7 @@ export class WebSocketManager {
           mappedEvent = {
             id: event.id,
             type: 'TYPING_STATUS',
-            groupId: payload.groupId,
+            tripId: payload.tripId,
             userId: event.userId,
             timestamp: event.timestamp,
             payload: {
@@ -390,21 +442,44 @@ export class WebSocketManager {
   }
 
   public send(type: string, payload: any): boolean {
-    if (!this.connection || !this.isConnected() || !this.currentTripId) {
+    logger.debug('WS', `send method called with type: ${type}`);
+    
+    if (!this.connection) {
+      logger.error('WS', 'Cannot send message, no connection object');
+      return false;
+    }
+    
+    if (!this.isConnected()) {
       logger.error('WS', 'Cannot send message, not connected');
       return false;
     }
     
+    if (!this.currentTripId) {
+      logger.error('WS', 'Cannot send message, no current trip ID');
+      return false;
+    }
+    
     try {
+      const userId = useAuthStore.getState().user?.id;
+      if (!userId) {
+        logger.error('WS', 'Cannot send message, no user ID');
+        return false;
+      }
+      
       const message = {
         type,
         tripId: this.currentTripId,
-        userId: useAuthStore.getState().user?.id,
+        userId,
         payload
       };
       
-      logger.debug('WS', `Sending message of type ${type}`);
-      return this.connection.send(message);
+      logger.debug('WS', `Sending message of type ${type} to trip ${this.currentTripId}`);
+      logger.debug('WS', 'Message payload:', JSON.stringify(payload, null, 2));
+      
+      const result = this.connection.send(message);
+      logger.debug('WS', `Message send result: ${result ? 'success' : 'failure'}`);
+      
+      return result;
     } catch (error) {
       logger.error('WS', 'Error sending message:', error);
       return false;
@@ -412,16 +487,18 @@ export class WebSocketManager {
   }
 
   public isConnected(): boolean {
-    return this.connection?.isConnected() || false;
+    const connected = this.connection?.isConnected() || false;
+    logger.debug('WS', `WebSocketManager.isConnected() called, result: ${connected}`);
+    return connected;
   }
 
   /**
    * Send typing status to the server
-   * @param groupId The chat group ID
+   * @param tripId The trip ID
    * @param isTyping Whether the user is typing or not
    * @returns True if the message was sent, false otherwise
    */
-  public sendTypingStatus(groupId: string, isTyping: boolean): boolean {
+  public sendTypingStatus(tripId: string, isTyping: boolean): boolean {
     if (!this.connection || !this.isConnected()) {
       logger.warn('WS', 'Cannot send typing status: not connected');
       return false;
@@ -434,7 +511,7 @@ export class WebSocketManager {
     }
 
     return this.send('CHAT_TYPING_STATUS', {
-      groupId,
+      tripId,
       isTyping,
       user: {
         id: user.id,

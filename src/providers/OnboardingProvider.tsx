@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { logger } from '@/src/utils/logger';
 
 interface OnboardingContextProps {
   isFirstTime: boolean;
@@ -19,7 +20,7 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
         setIsFirstTime(!firstLaunch);
         setIsInitialized(true);
       } catch (error) {
-        console.error('Failed to check first launch:', error);
+        logger.error('UI', 'Failed to check first launch:', error);
         setIsInitialized(true);
       }
     };
@@ -33,7 +34,7 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
       setIsFirstTime(false);
       await AsyncStorage.setItem('isFirstLaunch', 'false');
     } catch (error) {
-      console.error('Failed to save first launch state:', error);
+      logger.error('UI', 'Failed to save first launch state:', error);
       // Consider whether to revert state or notify user
     }
   };

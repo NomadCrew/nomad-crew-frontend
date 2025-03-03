@@ -13,32 +13,34 @@ export default function ChatRoute() {
   const tripId = params.tripId;
   const { width } = useWindowDimensions();
   const { theme } = useTheme();
-  const { fetchChatGroups } = useChatStore();
+  const { fetchMessages, initializeStore } = useChatStore();
   
   // Log the tripId for debugging
   useEffect(() => {
-    console.log('Chat Route - tripId from params:', tripId);
-    logger.debug('Chat Route', 'Mounted with tripId:', tripId);
+    logger.debug('TRIP', 'Chat Route mounted with tripId:', tripId);
   }, [tripId]);
   
   const handleBack = () => {
     router.back();
   };
   
+  // Initialize store with persisted data
   useEffect(() => {
-    // Ensure tripId is a string before using it
-    if (typeof tripId === 'string') {
-      console.log('Fetching chat groups for tripId:', tripId);
-      // Prefetch chat groups when the component mounts
-      fetchChatGroups(tripId).catch(error => {
-        console.error('Failed to fetch chat groups:', error);
-      });
-    }
-  }, [tripId, fetchChatGroups]);
+    const loadPersistedData = async () => {
+      try {
+        await initializeStore();
+        logger.debug('Chat Route', 'Initialized store with persisted data');
+      } catch (error) {
+        logger.error('Chat Route', 'Failed to initialize store with persisted data:', error);
+      }
+    };
+    
+    loadPersistedData();
+  }, [initializeStore]);
   
   // If no tripId is provided, show an error message
   if (!tripId) {
-    console.error('No tripId provided to chat route');
+    logger.error('TRIP', 'No tripId provided to chat route');
     return (
       <View style={[styles.container, { backgroundColor: theme?.colors?.background?.default || '#FFFFFF' }]}>
         <StatusBar style={theme?.dark ? 'light' : 'dark'} />
