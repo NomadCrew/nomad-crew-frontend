@@ -19,8 +19,9 @@ import { StatusBar } from 'expo-status-bar';
 import { useChatStore } from '@/src/store/useChatStore';
 import { TripStats } from '@/components/trips/TripStats';
 import { useThemedStyles } from '@/src/theme/utils';
-import { LocationModal } from '@/components/trips/LocationModal';
 import { isChatEvent } from '@/src/types/events';
+import { ChatCard } from '@/components/chat/ChatCard';
+import { logger } from '@/src/utils/logger';
 
 interface TripDetailScreenProps {
   trip: Trip;
@@ -33,7 +34,7 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
   const [showAddTodo, setShowAddTodo] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const { isLocationSharingEnabled, startLocationTracking, stopLocationTracking } = useLocationStore();
-  const [showLocationModal, setShowLocationModal] = useState(false);
+  const { connectToChat, disconnectFromChat, fetchMessages } = useChatStore();
 
   const styles = useThemedStyles((theme) => {
     // Safely access theme properties with fallbacks
@@ -112,34 +113,51 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
           <QuickActions 
             trip={trip}
             setShowInviteModal={setShowInviteModal}
+            onLocationPress={() => router.push(`/location/${tripId}`)}
             onChatPress={() => {
-              console.log('Navigating to chat with tripId:', tripId);
               router.push(`/chat/${tripId}`);
             }}
-            onLocationPress={() => setShowLocationModal(true)}
           />
         ),
         height: 'short' as const,
         position: 'right' as const,
       },
     ];
-  }, [carouselItems, trip, tripId, CARD_WIDTH, TALL_CARD_HEIGHT, BASE_CARD_HEIGHT, setShowInviteModal, setShowLocationModal]);
+  }, [carouselItems, trip, tripId, CARD_WIDTH, TALL_CARD_HEIGHT, BASE_CARD_HEIGHT, setShowInviteModal]);
 
   useEffect(() => {
+    // Set up WebSocket connection for the entire trip experience
+    logger.info('Trip Detail Screen', `Setting up WebSocket connection for trip ${tripId}`);
     const manager = WebSocketManager.getInstance();
+    
+    // Check if already connected
+    const isConnectedBefore = manager.isConnected();
+    logger.info('Trip Detail Screen', `WebSocket connection status before connect: ${isConnectedBefore ? 'connected' : 'disconnected'}`);
+    
+    // Connect to WebSocket and set up event handlers for all trip-related features
     manager.connect(tripId, {
       onMessage: (event) => {
+        // Handle all types of events at the trip level
         useTripStore.getState().handleTripEvent(event);
         useTodoStore.getState().handleTodoEvent(event);
-        // Add chat event handling
+        
+        // Handle chat events
         if (isChatEvent(event)) {
           useChatStore.getState().handleChatEvent(event);
         }
       }
+    }).then(() => {
+      const isConnectedAfter = manager.isConnected();
+      logger.info('Trip Detail Screen', `WebSocket connection status after connect: ${isConnectedAfter ? 'connected' : 'disconnected'}`);
+    }).catch(error => {
+      logger.error('Trip Detail Screen', `Failed to connect to WebSocket for trip ${tripId}:`, error);
     });
     
-    // Fetch chat groups for this trip
-    useChatStore.getState().fetchChatGroups(tripId);
+    // Initialize chat data for this trip
+    connectToChat(tripId);
+    
+    // Fetch messages for this trip
+    fetchMessages(tripId);
     
     // Start location tracking if location sharing is enabled
     if (isLocationSharingEnabled) {
@@ -147,10 +165,11 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
     }
 
     return () => {
+      logger.info('Trip Detail Screen', `Cleaning up WebSocket connection for trip ${tripId}`);
       manager.disconnect();
       stopLocationTracking();
     };
-  }, [tripId, isLocationSharingEnabled]);
+  }, [tripId, isLocationSharingEnabled, connectToChat, fetchMessages]);
 
   // Effect to handle changes in location sharing preference
   useEffect(() => {
@@ -160,12 +179,6 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
       stopLocationTracking();
     }
   }, [isLocationSharingEnabled, tripId]);
-
-  // Effect to handle chat events
-  useEffect(() => {
-    // Fetch chat groups when the component mounts
-    useChatStore.getState().fetchChatGroups(tripId);
-  }, [tripId]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -198,14 +211,6 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
         onClose={() => setShowInviteModal(false)}
         tripId={tripId}
       />
-
-      {/* Location sharing modal */}
-      {showLocationModal && (
-        <LocationModal
-          tripId={tripId}
-          onClose={() => setShowLocationModal(false)}
-        />
-      )}
     </SafeAreaView>
   );
 }

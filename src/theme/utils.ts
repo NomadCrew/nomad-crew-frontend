@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import { useTheme } from './ThemeProvider';
+import { logger } from '../utils/logger';
 
 /**
  * Creates a styles object using the theme
@@ -71,7 +72,7 @@ export function useThemedStyles<T extends Record<string, any>>(
     try {
       return stylesFn(safeTheme);
     } catch (error) {
-      console.warn('Error creating styles:', error);
+      logger.warn('UI', 'Error creating styles:', error);
       // Return an empty object if there's an error
       return {} as T;
     }

@@ -21,7 +21,7 @@ const recoverSession = async () => {
       return session;
     }
   } catch (error) {
-    console.error('[AuthStore] Session recovery failed:', error);
+    logger.error('AUTH', 'Session recovery failed:', error);
   }
   return null;
 };
@@ -317,7 +317,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         });
     
       } catch (error: any) {
-        console.error('[AuthStore] Login failed:', error);
+        logger.error('AUTH', 'Login failed:', error);
         set({
           error: error.message || 'Login failed',
           loading: false,

@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, ViewStyle, TextStyle } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { TripStatus } from '@/src/types/trip';
 import type { Theme } from '@/src/theme/types';
+import { logger } from '@/src/utils/logger';
 
 interface TripStatusBadgeProps {
     status: TripStatus;
@@ -31,7 +32,7 @@ export const TripStatusBadge: React.FC<TripStatusBadgeProps> = ({
             case 'CANCELLED':
                 return { content: theme.colors.status.error.content, background: theme.colors.status.error.background };
             default:
-                console.warn(`Unexpected TripStatus: ${status}`);
+                logger.warn('TRIP', `Unexpected TripStatus: ${status}`);
                 return { content: theme.colors.content.secondary, background: theme.colors.primary.hover };
         }
     };

@@ -1,107 +1,99 @@
 import { z } from 'zod';
 
 // API Response Types
-export interface ChatGroupResponse {
+export interface ChatMessage {
   id: string;
   trip_id: string;
-  name: string;
-  description: string;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ChatUser {
-  id: string;
-  email: string;
-  username: string;
-  firstName: string | null;
-  lastName: string | null;
-  profilePicture: string | null;
-}
-
-export interface ChatMessage {
-  message: {
+  content: string;
+  sender: {
     id: string;
-    group_id: string;
-    user_id: string;
-    content: string;
-    created_at: string;
-    updated_at: string;
-    is_edited: boolean;
-    is_deleted: boolean;
+    name: string;
+    avatar?: string;
   };
-  user: ChatUser;
+  created_at: string;
+  updated_at?: string;
 }
 
-export interface PaginationInfo {
-  total: number;
-  limit: number;
-  offset: number;
-}
-
-export interface ChatMessagesResponse {
+export interface GetChatMessagesResponse {
   messages: ChatMessage[];
-  pagination: PaginationInfo;
+  pagination: {
+    next_cursor?: string;
+    has_more: boolean;
+  };
 }
 
-export interface ChatMembersResponse {
-  users: ChatUser[];
+export interface SendMessageRequest {
+  content: string;
+  temp_id?: string;
+}
+
+export interface SendMessageResponse {
+  message: ChatMessage;
+}
+
+export interface UpdateLastReadRequest {
+  message_id: string;
+}
+
+export interface UpdateLastReadResponse {
+  success: boolean;
 }
 
 // WebSocket Event Types
 export type ChatWebSocketEvent = 
   | { type: 'chat_message_created'; data: ChatMessage }
   | { type: 'chat_message_updated'; data: ChatMessage }
-  | { type: 'chat_message_deleted'; data: { id: string; group_id: string } }
-  | { type: 'chat_typing_status'; data: { user_id: string; group_id: string; is_typing: boolean; username: string } };
+  | { type: 'chat_message_deleted'; data: { id: string; trip_id: string } }
+  | { type: 'chat_typing_status'; data: { user_id: string; trip_id: string; is_typing: boolean; username: string } };
 
-// Request Types
-export interface CreateChatGroupRequest {
-  trip_id: string;
+// Client-side Types
+export type MessageStatus = 'sending' | 'sent' | 'error';
+
+export interface ChatMessageWithStatus {
+  message: ChatMessage;
+  status: MessageStatus;
+  error?: string;
+}
+
+export interface PaginationInfo {
+  nextCursor?: string;
+}
+
+export interface ChatUser {
+  id: string;
   name: string;
-  description: string;
-}
-
-export interface UpdateReadStatusRequest {
-  message_id: string;
-}
-
-// Local State Types
-export interface ChatGroup extends ChatGroupResponse {
-  unreadCount?: number;
-  lastMessage?: ChatMessage;
+  avatar?: string;
 }
 
 export interface ChatState {
-  // Chat groups
-  groups: ChatGroup[];
-  selectedGroupId: string | null;
-  isLoadingGroups: boolean;
-  
   // Messages
-  messagesByGroupId: Record<string, ChatMessage[]>;
+  messagesByTripId: Record<string, ChatMessageWithStatus[]>;
   isLoadingMessages: boolean;
   hasMoreMessages: Record<string, boolean>;
   messagePagination: Record<string, PaginationInfo>;
-  
-  // Members
-  membersByGroupId: Record<string, ChatUser[]>;
-  isLoadingMembers: boolean;
   
   // Typing indicators
   typingUsers: Record<string, { userId: string; name: string; timestamp: number }[]>;
   
   // Error states
   errors: Record<string, string | null>;
+  error: string | null;
+  
+  // Loading states
+  isLoading: boolean;
+  isSending: boolean;
   
   // Cache
   userCache: Record<string, ChatUser>;
-}
-
-// Message Status
-export type MessageStatus = 'sending' | 'sent' | 'error';
-export interface MessageWithStatus extends ChatMessage {
-  status?: MessageStatus;
-  retryCount?: number;
+  
+  // Actions
+  initializeStore: () => Promise<void>;
+  connectToChat: (tripId: string) => Promise<void>;
+  disconnectFromChat: (tripId: string) => void;
+  fetchMessages: (tripId: string, refresh?: boolean) => Promise<void>;
+  fetchMoreMessages: (tripId: string) => Promise<void>;
+  sendMessage: (params: { tripId: string; content: string }) => Promise<void>;
+  markAsRead: (tripId: string, messageId: string) => Promise<void>;
+  handleChatEvent: (event: ServerEvent) => void;
+  setTypingStatus: (tripId: string, isTyping: boolean) => Promise<void>;
 } 

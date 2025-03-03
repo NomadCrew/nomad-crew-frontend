@@ -230,7 +230,9 @@ export class WebSocketConnection {
   }
 
   public isConnected(): boolean {
-    return this.status === 'CONNECTED';
+    const connected = this.status === 'CONNECTED';
+    logger.debug('WS', `WebSocketConnection.isConnected() called, status: ${this.status}, result: ${connected}`);
+    return connected;
   }
 
   public updateCallbacks(callbacks: Partial<ConnectionCallbacks>): void {
@@ -247,17 +249,27 @@ export class WebSocketConnection {
    * @returns True if the message was sent, false otherwise
    */
   public send(data: any): boolean {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      logger.error('WS', 'Cannot send message, connection not open');
+    logger.debug('WS', 'WebSocketConnection.send called');
+    
+    if (!this.ws) {
+      logger.error('WS', 'Cannot send message, WebSocket is null');
+      return false;
+    }
+    
+    if (this.ws.readyState !== WebSocket.OPEN) {
+      logger.error('WS', `Cannot send message, connection not open. Current state: ${this.ws.readyState}`);
       return false;
     }
     
     try {
       const message = typeof data === 'string' ? data : JSON.stringify(data);
+      logger.debug('WS', `Sending message: ${message.substring(0, 100)}${message.length > 100 ? '...' : ''}`);
+      
       this.ws.send(message);
       
       // Update last message time when sending a message
       this.lastMessageTime = Date.now();
+      logger.debug('WS', 'Message sent successfully');
       
       return true;
     } catch (error) {

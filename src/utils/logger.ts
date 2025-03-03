@@ -9,6 +9,9 @@ export const logger = {
   log: (module: LogModule, ...args: unknown[]) => {
     console.log(`[${module}]`, ...args);
   },
+  info: (module: LogModule | string, ...args: unknown[]) => {
+    console.info(`[${module}]`, ...args);
+  },
   error: (module: LogModule, ...args: unknown[]) => {
     console.error(`[${module}]`, ...args);
   },

@@ -1,5 +1,5 @@
-import React from 'react';
-import { GroupLiveMapModal } from '@/components/location/GroupLiveMapModal';
+import React, { useEffect } from 'react';
+import { router } from 'expo-router';
 import { useTripStore } from '@/src/store/useTripStore';
 
 interface LocationModalProps {
@@ -7,24 +7,20 @@ interface LocationModalProps {
   onClose: () => void;
 }
 
+// This component is kept for backward compatibility
+// It now redirects to the standalone location screen
 export const LocationModal: React.FC<LocationModalProps> = ({
   tripId,
   onClose,
 }) => {
-  // Get the trip from the store
-  const { trips } = useTripStore();
-  const trip = trips.find(t => t.id === tripId);
+  useEffect(() => {
+    // Navigate to the standalone location screen
+    router.push(`/location/${tripId}`);
+    
+    // Call onClose to clean up any modal state in the parent component
+    onClose();
+  }, [tripId, onClose]);
   
-  if (!trip) {
-    console.error('Trip not found for LocationModal:', tripId);
-    return null;
-  }
-  
-  return (
-    <GroupLiveMapModal
-      visible={true}
-      onClose={onClose}
-      trip={trip}
-    />
-  );
+  // Return null as we're just redirecting
+  return null;
 }; 

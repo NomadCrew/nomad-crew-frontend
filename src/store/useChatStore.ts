@@ -1,716 +1,520 @@
 import { create } from 'zustand';
-import { 
-  ChatState, 
-  ChatGroup, 
-  ChatMessage, 
-  ChatUser,
-  ChatWebSocketEvent,
-  MessageStatus,
-  MessageWithStatus,
-  PaginationInfo
-} from '@/src/types/chat';
-import { ServerEvent } from '@/src/types/events';
-import { api } from '@/src/api/api-client';
+import { ChatState, ChatMessageWithStatus, ChatUser, PaginationInfo } from '@/src/types/chat';
+import { chatService } from '@/src/services/chatService';
+import { useAuthStore } from './useAuthStore';
 import { logger } from '@/src/utils/logger';
-import { useAuthStore } from '@/src/store/useAuthStore';
+import { ServerEvent } from '@/src/types/events';
 import { WebSocketManager } from '@/src/websocket/WebSocketManager';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { api } from '@/src/api/api-client';
 import { API_PATHS } from '@/src/utils/api-paths';
+import { v4 as uuidv4 } from 'uuid';
+import { useEffect } from 'react';
 
-const MESSAGES_PER_PAGE = 20;
+// Constants
+const MESSAGES_STORAGE_KEY = 'nomad_crew_chat_messages';
+const TYPING_TIMEOUT = 5000; // 5 seconds
+
+// Helper functions for persistence
+const persistMessages = async (messagesByTripId: Record<string, ChatMessageWithStatus[]>) => {
+  try {
+    await AsyncStorage.setItem(MESSAGES_STORAGE_KEY, JSON.stringify(messagesByTripId));
+  } catch (error) {
+    logger.error('[ChatStore] Failed to persist messages:', error);
+  }
+};
+
+const loadPersistedMessages = async (): Promise<{ messagesByTripId: Record<string, ChatMessageWithStatus[]> }> => {
+  try {
+    const storedData = await AsyncStorage.getItem(MESSAGES_STORAGE_KEY);
+    if (storedData) {
+      return { messagesByTripId: JSON.parse(storedData) };
+    }
+  } catch (error) {
+    logger.error('[ChatStore] Failed to load persisted messages:', error);
+  }
+  return { messagesByTripId: {} };
+};
 
 export const useChatStore = create<ChatState>((set, get) => ({
   // Initial state
-  groups: [],
-  selectedGroupId: null,
-  isLoadingGroups: false,
-  messagesByGroupId: {},
+  messagesByTripId: {},
   isLoadingMessages: false,
   hasMoreMessages: {},
   messagePagination: {},
-  membersByGroupId: {},
-  isLoadingMembers: false,
   typingUsers: {},
   errors: {},
   userCache: {},
+  isSending: false,
+  isLoading: false,
+  error: null,
+
+  // Initialize store with persisted data
+  initializeStore: async () => {
+    const { messagesByTripId } = await loadPersistedMessages();
+    set({ messagesByTripId });
+  },
+
+  // Connect to chat WebSocket
+  connectToChat: async (tripId: string) => {
+    try {
+      logger.debug('[ChatStore] Initializing chat for trip:', tripId);
+      // No need to connect to WebSocket here as it's managed at the trip level
+      // Just initialize any chat-specific state
+    } catch (error) {
+      logger.error('[ChatStore] Failed to initialize chat:', error);
+      set({ error: 'Failed to initialize chat' });
+    }
+  },
+
+  // Disconnect from chat WebSocket
+  disconnectFromChat: (tripId: string) => {
+    try {
+      logger.debug('[ChatStore] Cleaning up chat for trip:', tripId);
+      // No need to disconnect from WebSocket here as it's managed at the trip level
+      // Just clean up any chat-specific state
+    } catch (error) {
+      logger.error('[ChatStore] Error cleaning up chat:', error);
+    }
+  },
 
   // Actions
-  fetchChatGroups: async (tripId?: string) => {
-    set({ isLoadingGroups: true, errors: { ...get().errors, groups: null } });
+  fetchMessages: async (tripId: string, refresh = false) => {
+    set({ isLoadingMessages: true, isLoading: true, errors: { ...get().errors, messages: null }, error: null });
     try {
-      const url = tripId 
-        ? `${API_PATHS.chats.groups}?tripID=${tripId}`
-        : API_PATHS.chats.groups;
-      const response = await api.get(url);
-      const rawGroups = response.data.groups;
-      if (rawGroups === null || rawGroups === undefined) {
-        logger.warn('[ChatStore] Groups API returned null/undefined instead of empty array:', {
-          tripId,
-          response: response.data
-        });
-      }
-      const groups = (rawGroups || []).map((group: any) => ({
-        ...group,
-        unreadCount: 0, // Will be updated when fetching messages
-      }));
-      set({ groups, isLoadingGroups: false });
-    } catch (error) {
-      set({ 
-        isLoadingGroups: false, 
-        errors: { ...get().errors, groups: 'Failed to fetch chat groups' }
-      });
-      throw error;
-    }
-  },
-
-  selectChatGroup: (groupId: string) => {
-    set({ selectedGroupId: groupId });
-    const { fetchMessages, fetchGroupMembers } = get();
-    fetchMessages(groupId);
-    fetchGroupMembers(groupId);
-  },
-
-  fetchMessages: async (groupId: string, refresh = false) => {
-    set({ 
-      isLoadingMessages: true, 
-      errors: { ...get().errors, messages: null }
-    });
-
-    try {
-      const pagination = get().messagePagination[groupId] || { offset: 0, limit: MESSAGES_PER_PAGE };
-      if (refresh) {
-        pagination.offset = 0;
-      }
-
-      const response = await api.get(
-        `${API_PATHS.chats.messages(groupId)}?limit=${pagination.limit}&offset=${pagination.offset}`
-      );
-
-      const { messages: rawMessages, pagination: newPagination } = response.data;
-      if (rawMessages === null || rawMessages === undefined) {
-        logger.warn('[ChatStore] Messages API returned null/undefined instead of empty array:', {
-          groupId,
-          pagination,
-          response: response.data
-        });
-      }
-      const messages = rawMessages || [];
-
-      // Update user cache
-      const userCache = { ...get().userCache };
-      messages.forEach((msg: ChatMessage) => {
-        userCache[msg.user.id] = msg.user;
-      });
-
-      set(state => ({
-        messagesByGroupId: {
-          ...state.messagesByGroupId,
-          [groupId]: refresh 
-            ? messages 
-            : [...(state.messagesByGroupId[groupId] || []), ...messages]
-        },
-        hasMoreMessages: {
-          ...state.hasMoreMessages,
-          [groupId]: messages.length === pagination.limit
-        },
-        messagePagination: {
-          ...state.messagePagination,
-          [groupId]: newPagination
-        },
-        isLoadingMessages: false,
-        userCache
-      }));
-    } catch (error) {
-      set({ 
-        isLoadingMessages: false,
-        errors: { ...get().errors, messages: 'Failed to fetch messages' }
-      });
-      throw error;
-    }
-  },
-
-  fetchMoreMessages: async (groupId: string) => {
-    const { hasMoreMessages, messagePagination, isLoadingMessages } = get();
-    
-    if (!hasMoreMessages[groupId] || isLoadingMessages) return;
-
-    const pagination = messagePagination[groupId];
-    if (!pagination) return;
-
-    set({ isLoadingMessages: true });
-    
-    try {
-      const response = await api.get(
-        `${API_PATHS.chats.messages(groupId)}?limit=${pagination.limit}&offset=${pagination.offset + pagination.limit}`
-      );
-
-      const { messages: rawMessages, pagination: newPagination } = response.data;
-      const messages = rawMessages || []; // Convert null to empty array
-
-      // Update user cache
-      const userCache = { ...get().userCache };
-      messages.forEach((msg: ChatMessage) => {
-        userCache[msg.user.id] = msg.user;
-      });
-
-      set(state => ({
-        messagesByGroupId: {
-          ...state.messagesByGroupId,
-          [groupId]: [...(state.messagesByGroupId[groupId] || []), ...messages]
-        },
-        hasMoreMessages: {
-          ...state.hasMoreMessages,
-          [groupId]: messages.length === pagination.limit
-        },
-        messagePagination: {
-          ...state.messagePagination,
-          [groupId]: newPagination
-        },
-        isLoadingMessages: false,
-        userCache
-      }));
-    } catch (error) {
-      set({ 
-        isLoadingMessages: false,
-        errors: { ...get().errors, messages: 'Failed to fetch more messages' }
-      });
-      throw error;
-    }
-  },
-
-  fetchGroupMembers: async (groupId: string) => {
-    set({
-      isLoadingMembers: true,
-      errors: { ...get().errors, members: null }
-    });
-
-    try {
-      const response = await api.get(API_PATHS.chats.members(groupId));
-      const rawUsers = response.data;
+      // Get pagination info
+      const limit = 20;
+      const cursor = refresh ? undefined : get().messagePagination[tripId]?.nextCursor;
       
-      // Only warn if the response is null or undefined, not if it's an array
-      if (rawUsers === null || rawUsers === undefined) {
-        logger.warn('[ChatStore] Members API returned null/undefined instead of empty array:', {
-          groupId,
-          response: response.data
-        });
-      }
-      const users = Array.isArray(rawUsers) ? rawUsers : [];
-
-      // Update user cache
-      const userCache = { ...get().userCache };
-      users.forEach((user: ChatUser) => {
-        userCache[user.id] = user;
-      });
-
-      set(state => ({
-        membersByGroupId: {
-          ...state.membersByGroupId,
-          [groupId]: users
-        },
-        isLoadingMembers: false,
-        userCache
+      // Fetch messages from API
+      const response = await chatService.getChatMessages(tripId, limit, cursor);
+      
+      // Process messages
+      const messages = response.messages.map(message => ({
+        message,
+        status: 'sent' as const
       }));
-    } catch (error) {
-      set({ 
-        isLoadingMembers: false,
-        errors: { ...get().errors, members: 'Failed to fetch members' }
+      
+      // Update state
+      const existingMessages = refresh ? [] : get().messagesByTripId[tripId] || [];
+      const updatedMessages = refresh ? messages : [...existingMessages, ...messages];
+      
+      // Remove duplicates (by message ID)
+      const uniqueMessages = updatedMessages.filter((message, index, self) => 
+        index === self.findIndex(m => m.message.id === message.message.id)
+      );
+      
+      // Sort messages by creation date (newest first)
+      uniqueMessages.sort((a, b) => 
+        new Date(b.message.created_at).getTime() - new Date(a.message.created_at).getTime()
+      );
+      
+      // Update state
+      set(state => ({
+        messagesByTripId: {
+          ...state.messagesByTripId,
+          [tripId]: uniqueMessages
+        },
+        hasMoreMessages: {
+          ...state.hasMoreMessages,
+          [tripId]: response.pagination?.has_more || false
+        },
+        messagePagination: {
+          ...state.messagePagination,
+          [tripId]: {
+            nextCursor: response.pagination?.next_cursor
+          }
+        },
+        isLoadingMessages: false,
+        isLoading: false
+      }));
+      
+      // Persist messages
+      persistMessages({
+        ...get().messagesByTripId,
+        [tripId]: uniqueMessages
       });
-      throw error;
+      
+    } catch (error) {
+      logger.error('[ChatStore] Failed to fetch messages:', error);
+      set({ 
+        isLoadingMessages: false, 
+        isLoading: false,
+        errors: { ...get().errors, messages: 'Failed to fetch messages' },
+        error: 'Failed to fetch messages'
+      });
     }
   },
 
-  sendMessage: async (groupId: string, content: string) => {
-    const user = useAuthStore.getState().user;
-    if (!user) throw new Error('User not authenticated');
+  // Add a stub for fetchChatGroups to maintain backward compatibility
+  fetchChatGroups: (tripId: string) => {
+    logger.debug('[ChatStore] fetchChatGroups called (deprecated)');
+    // This is a no-op function to maintain backward compatibility
+    // Since we've simplified the chat experience by eliminating separate chat groups
+    // Each trip now functions as a chat group by default
+    return Promise.resolve();
+  },
 
-    // Create optimistic message
-    const optimisticMessage: MessageWithStatus = {
+  fetchMoreMessages: async (tripId: string) => {
+    // Only fetch more if we have more to fetch and we're not already loading
+    if (!get().hasMoreMessages[tripId] || get().isLoadingMessages) {
+      return;
+    }
+    
+    await get().fetchMessages(tripId, false);
+  },
+
+  sendMessage: async ({ tripId, content }: { tripId: string; content: string }) => {
+    logger.info('[ChatStore]', `sendMessage called with tripId: ${tripId} and content: ${content.substring(0, 20)}${content.length > 20 ? '...' : ''}`);
+    
+    if (!tripId) {
+      logger.error('[ChatStore]', 'Cannot send message: tripId is undefined');
+      return;
+    }
+    
+    // Check if user is logged in
+    const { user } = useAuthStore.getState();
+    if (!user) {
+      logger.error('[ChatStore]', 'Cannot send message: user not logged in');
+      return;
+    }
+    
+    // Set sending state
+    set({ isSending: true });
+    
+    // Create an optimistic message
+    const optimisticId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    logger.debug('[ChatStore]', `Creating optimistic message with ID: ${optimisticId}`);
+    
+    const optimisticMessage: ChatMessageWithStatus = {
       message: {
-        id: `temp-${Date.now()}`,
-        group_id: groupId,
-        user_id: user.id,
+        id: optimisticId,
         content,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        is_edited: false,
-        is_deleted: false
-      },
-      user: get().userCache[user.id] || {
-        id: user.id,
-        email: user.email || '',
-        username: user.username || '',
-        firstName: user.firstName || null,
-        lastName: user.lastName || null,
-        profilePicture: user.profilePicture || null
+        sender: {
+          id: user.id,
+          name: user.username || user.firstName || 'You',
+          avatar: user.profilePicture
+        },
+        createdAt: new Date().toISOString()
       },
       status: 'sending'
     };
-
-    // Add optimistic message to state
+    
+    // Add the optimistic message to the state
+    const existingMessages = get().messagesByTripId[tripId] || [];
+    const updatedMessages = [optimisticMessage, ...existingMessages];
+    
+    logger.debug('[ChatStore]', `Adding optimistic message to state. Total messages: ${updatedMessages.length}`);
+    
     set(state => ({
-      messagesByGroupId: {
-        ...state.messagesByGroupId,
-        [groupId]: [optimisticMessage, ...(state.messagesByGroupId[groupId] || [])]
+      messagesByTripId: {
+        ...state.messagesByTripId,
+        [tripId]: updatedMessages
       }
     }));
+    
+    // Persist the updated messages
+    persistMessages({
+      ...get().messagesByTripId,
+      [tripId]: updatedMessages
+    });
 
     try {
       // Get the WebSocket manager instance
-      const { WebSocketManager } = require('@/src/websocket/WebSocketManager');
       const wsManager = WebSocketManager.getInstance();
+      
+      logger.debug('[ChatStore]', `WebSocket manager instance obtained, connected: ${wsManager.isConnected()}`);
       
       // Check if WebSocket is connected
       if (!wsManager.isConnected()) {
-        logger.warn('[ChatStore] WebSocket not connected, attempting to connect');
+        logger.warn('[ChatStore]', 'WebSocket not connected, attempting to connect');
         // Try to connect to the WebSocket
-        const tripId = get().groups.find(g => g.id === groupId)?.trip_id;
-        if (!tripId) {
-          throw new Error('Cannot find trip ID for this chat group');
-        }
         await wsManager.connect(tripId);
+        logger.debug('[ChatStore]', `WebSocket connection attempt completed, connected: ${wsManager.isConnected()}`);
       }
       
       // Send the message via WebSocket
-      const success = wsManager.send('CHAT_MESSAGE_SEND', {
-        groupId,
+      logger.info('[ChatStore]', 'Sending message via WebSocket');
+      
+      // Create the message payload with all required fields
+      const messagePayload = {
+        tripId,
         content,
-        messageId: optimisticMessage.message.id
-      });
+        messageId: optimisticId,
+        user: {
+          id: user.id,
+          name: user.username || user.firstName || 'You',
+          avatar: user.profilePicture
+        },
+        timestamp: new Date().toISOString()
+      };
+      
+      // Log the exact payload being sent
+      logger.debug('[ChatStore]', 'Message payload:', JSON.stringify(messagePayload, null, 2));
+      
+      // Send the message with the correct event type
+      const success = wsManager.send('CHAT_MESSAGE_SEND', messagePayload);
       
       if (!success) {
+        logger.error('[ChatStore]', 'Failed to send message via WebSocket');
         throw new Error('Failed to send message via WebSocket');
       }
       
-      // Update the message status to 'sent'
+      logger.info('[ChatStore]', 'Message sent successfully via WebSocket');
+      
+      // Update the message status to 'sent' immediately to ensure UI shows the message
+      const updatedMessagesWithSentStatus = get().messagesByTripId[tripId]?.map(msg => 
+        msg.message.id === optimisticId 
+          ? { ...msg, status: 'sent' as const }
+          : msg
+      ) || [];
+      
       set(state => ({
-        messagesByGroupId: {
-          ...state.messagesByGroupId,
-          [groupId]: state.messagesByGroupId[groupId]?.map(msg => 
-            msg.message.id === optimisticMessage.message.id 
-              ? { ...msg, status: 'sent' as MessageStatus }
-              : msg
-          ) || []
-        }
+        messagesByTripId: {
+          ...state.messagesByTripId,
+          [tripId]: updatedMessagesWithSentStatus
+        },
+        isSending: false
       }));
+      
+      // Persist the updated messages with sent status
+      persistMessages({
+        ...get().messagesByTripId,
+        [tripId]: updatedMessagesWithSentStatus
+      });
       
       // Note: The actual message with server-generated ID will be received via WebSocket
       // and handled by the handleChatEvent function
       
     } catch (error) {
       logger.error('[ChatStore] Failed to send message:', error);
-      // Mark message as failed
+      
+      // Update the message status to 'error'
+      const updatedMessagesWithError = get().messagesByTripId[tripId]?.map(msg => 
+        msg.message.id === optimisticMessage.message.id 
+          ? { ...msg, status: 'error' as const, error: 'Failed to send message' }
+          : msg
+      ) || [];
+      
       set(state => ({
-        messagesByGroupId: {
-          ...state.messagesByGroupId,
-          [groupId]: state.messagesByGroupId[groupId]?.map(msg => 
-            msg.message.id === optimisticMessage.message.id 
-              ? { ...msg, status: 'error' as MessageStatus }
-              : msg
-          ) || []
-        }
+        messagesByTripId: {
+          ...state.messagesByTripId,
+          [tripId]: updatedMessagesWithError
+        },
+        isSending: false
       }));
-      throw error;
+      
+      // Persist the updated messages with error status
+      persistMessages({
+        ...get().messagesByTripId,
+        [tripId]: updatedMessagesWithError
+      });
     }
   },
 
-  markAsRead: async (groupId: string, messageId: string) => {
+  markAsRead: async (tripId: string, messageId: string) => {
     try {
-      // Check if messageId is valid before making the API call
-      if (!messageId) {
-        logger.warn('[ChatStore] Attempted to mark messages as read with invalid messageId:', { groupId, messageId });
-        return;
-      }
-      
-      // Skip API call for temporary message IDs but still update local state
-      if (messageId.startsWith('temp-')) {
-        logger.debug('[ChatStore] Skipping mark as read API call for temporary message ID:', messageId);
-        // Update local unread count
-        set(state => ({
-          groups: state.groups.map(group =>
-            group.id === groupId ? { ...group, unreadCount: 0 } : group
-          )
-        }));
-        return;
-      }
-      
-      await api.put(API_PATHS.chats.read(groupId), { message_id: messageId });
-      
-      // Update local unread count
-      set(state => ({
-        groups: state.groups.map(group =>
-          group.id === groupId ? { ...group, unreadCount: 0 } : group
-        )
-      }));
+      await chatService.updateLastRead(tripId, { message_id: messageId });
     } catch (error) {
-      logger.error('[Failed to mark messages as read:]', error);
+      logger.error('[ChatStore] Failed to mark message as read:', error);
     }
   },
 
   handleChatEvent: (event: ServerEvent) => {
-    if (!event || !event.type) {
-      logger.warn('[ChatStore] Received invalid WebSocket event:', { event });
-      return;
-    }
-
-    logger.debug('[ChatStore] Handling chat event:', { type: event.type });
-    logger.debug('[ChatStore] Event payload:', JSON.stringify(event.payload, null, 2));
-
+    logger.debug('[ChatStore] Handling chat event:', event.type);
+    
     switch (event.type) {
-      case 'CHAT_MESSAGE_SENT': {
-        const payload = event.payload as {
-          messageId: string;
-          groupId: string;
-          content: string;
-          user: {
-            id: string;
-            name: string;
-            avatar?: string;
-          };
-          timestamp: string;
-        };
+      case 'MESSAGE_SENT': {
+        const { tripId } = event;
+        const { message } = event.payload;
         
-        // Log the payload to debug
-        logger.debug('[ChatStore] CHAT_MESSAGE_SENT payload:', JSON.stringify(payload, null, 2));
-        
-        if (!payload?.groupId || !payload?.messageId) {
-          logger.warn('[ChatStore] Received CHAT_MESSAGE_SENT event with invalid payload:', { payload });
-          return;
-        }
-
-        // Check if user object exists
-        if (!payload.user) {
-          logger.error('[ChatStore] Missing user object in CHAT_MESSAGE_SENT payload');
-          return;
-        }
-
-        // Check if user.id exists
-        if (!payload.user.id) {
-          logger.error('[ChatStore] Missing user.id in CHAT_MESSAGE_SENT payload');
-          return;
-        }
-
-        // Format the message to match our expected structure
-        const message: ChatMessage = {
-          message: {
-            id: payload.messageId,
-            group_id: payload.groupId,
-            user_id: payload.user.id,
-            content: payload.content,
-            created_at: payload.timestamp,
-            updated_at: payload.timestamp,
-            is_edited: false,
-            is_deleted: false
-          },
-          user: {
-            id: payload.user.id,
-            email: '', // We don't have this from the event
-            username: payload.user.name,
-            firstName: null,
-            lastName: null,
-            profilePicture: payload.user.avatar || null
-          }
-        };
-
-        // Log the formatted message
-        logger.debug('[ChatStore] Formatted message:', JSON.stringify(message, null, 2));
-
-        // Check if this is a message we sent (replace our optimistic message)
-        const messages = get().messagesByGroupId[payload.groupId] || [];
-        logger.debug('[ChatStore] Existing messages count:', messages.length);
-        const isOurMessage = messages.some(msg => 
-          msg.status === 'sending' || msg.status === 'sent'
+        // Check if we already have this message (by ID or by temporary ID)
+        const existingMessages = get().messagesByTripId[tripId] || [];
+        const messageExists = existingMessages.some(
+          msg => msg.message.id === message.id
         );
-
-        set(state => {
-          // If it's our message, replace the optimistic one
-          if (isOurMessage) {
-            return {
-              messagesByGroupId: {
-                ...state.messagesByGroupId,
-                [payload.groupId]: messages.map(msg => 
-                  (msg.status === 'sending' || msg.status === 'sent') ? message : msg
-                )
-              },
-              userCache: {
-                ...state.userCache,
-                [payload.user.id]: message.user
-              }
-            };
-          } 
-          // Otherwise, add it as a new message
-          else {
-            return {
-              messagesByGroupId: {
-                ...state.messagesByGroupId,
-                [payload.groupId]: [
-                  message,
-                  ...(state.messagesByGroupId[payload.groupId] || [])
-                ]
-              },
-              userCache: {
-                ...state.userCache,
-                [payload.user.id]: message.user
-              }
-            };
-          }
-        });
-        break;
-      }
-      
-      case 'CHAT_MESSAGE_EDITED': {
-        const payload = event.payload as {
-          messageId: string;
-          groupId: string;
-          content: string;
-          user?: {
-            id: string;
-            name: string;
-            avatar?: string;
-          };
-          timestamp?: string;
-        };
         
-        if (!payload?.groupId || !payload?.messageId) {
-          logger.warn('[ChatStore] Received CHAT_MESSAGE_EDITED event with invalid payload:', { payload });
-          return;
-        }
-
-        set(state => {
-          const messages = state.messagesByGroupId[payload.groupId] || [];
-          const updatedMessages = messages.map(msg => {
-            if (msg.message.id === payload.messageId) {
-              return {
-                ...msg,
-                message: {
-                  ...msg.message,
-                  content: payload.content,
-                  updated_at: payload.timestamp || new Date().toISOString(),
-                  is_edited: true
-                }
-              };
+        if (messageExists) {
+          // If we already have this message, update it
+          const updatedMessages = existingMessages.map(msg => 
+            msg.message.id === message.id 
+              ? { message, status: 'sent' as const }
+              : msg
+          );
+          
+          set(state => ({
+            messagesByTripId: {
+              ...state.messagesByTripId,
+              [tripId]: updatedMessages
             }
-            return msg;
+          }));
+          
+          // Persist the updated messages
+          persistMessages({
+            ...get().messagesByTripId,
+            [tripId]: updatedMessages
           });
-
-          return {
-            messagesByGroupId: {
-              ...state.messagesByGroupId,
-              [payload.groupId]: updatedMessages
-            }
+        } else {
+          // If we don't have this message, add it
+          const newMessage: ChatMessageWithStatus = {
+            message,
+            status: 'sent'
           };
-        });
-        break;
-      }
-      
-      case 'CHAT_MESSAGE_DELETED': {
-        const payload = event.payload as {
-          messageId: string;
-          groupId: string;
-        };
-        
-        if (!payload?.groupId || !payload?.messageId) {
-          logger.warn('[ChatStore] Received CHAT_MESSAGE_DELETED event with invalid payload:', { payload });
-          return;
-        }
-
-        set(state => ({
-          messagesByGroupId: {
-            ...state.messagesByGroupId,
-            [payload.groupId]: (state.messagesByGroupId[payload.groupId] || [])
-              .filter(msg => msg.message.id !== payload.messageId)
-          }
-        }));
-        break;
-      }
-      
-      case 'CHAT_TYPING_STATUS': {
-        const payload = event.payload as {
-          groupId: string;
-          isTyping: boolean;
-          user: {
-            id: string;
-            name: string;
-            avatar?: string;
-          };
-        };
-        
-        if (!payload?.groupId || !payload?.user?.id) {
-          logger.warn('[ChatStore] Received CHAT_TYPING_STATUS event with invalid payload:', { payload });
-          return;
-        }
-
-        const { user, groupId, isTyping } = payload;
-        
-        set(state => {
-          const currentTypingUsers = state.typingUsers[groupId] || [];
           
-          if (isTyping) {
-            // Add user to typing list if not already there
-            if (!currentTypingUsers.some(u => u.userId === user.id)) {
-              return {
-                typingUsers: {
-                  ...state.typingUsers,
-                  [groupId]: [
-                    ...currentTypingUsers,
-                    { userId: user.id, name: user.name, timestamp: Date.now() }
-                  ]
-                }
-              };
-            }
-            
-            // Update timestamp for existing typing user
-            return {
-              typingUsers: {
-                ...state.typingUsers,
-                [groupId]: currentTypingUsers.map(u => 
-                  u.userId === user.id ? { ...u, timestamp: Date.now() } : u
-                )
-              }
-            };
-          } else {
-            // Remove user from typing list
-            return {
-              typingUsers: {
-                ...state.typingUsers,
-                [groupId]: currentTypingUsers.filter(u => u.userId !== user.id)
-              }
-            };
-          }
-        });
-        break;
-      }
-      
-      // Handle legacy event types for backward compatibility
-      case 'chat_message_created': {
-        const { data: message } = event as any;
-        if (!message?.message?.group_id) {
-          logger.warn('[ChatStore] Received chat_message_created event with invalid message data:', { message });
-          return;
-        }
-
-        set(state => ({
-          messagesByGroupId: {
-            ...state.messagesByGroupId,
-            [message.message.group_id]: [
-              message,
-              ...(state.messagesByGroupId[message.message.group_id] || [])
-            ]
-          },
-          userCache: message.user ? {
-            ...state.userCache,
-            [message.user.id]: message.user
-          } : state.userCache
-        }));
-        break;
-      }
-      
-      case 'chat_message_updated': {
-        const { data: message } = event as any;
-        if (!message?.message?.group_id) {
-          logger.warn('[ChatStore] Received chat_message_updated event with invalid message data:', { message });
-          return;
-        }
-
-        set(state => ({
-          messagesByGroupId: {
-            ...state.messagesByGroupId,
-            [message.message.group_id]: (state.messagesByGroupId[message.message.group_id] || [])
-              .map(msg => msg.message.id === message.message.id ? message : msg)
-          }
-        }));
-        break;
-      }
-      
-      case 'chat_message_deleted': {
-        const { data } = event as any;
-        if (!data?.group_id || !data?.id) {
-          logger.warn('[ChatStore] Received chat_message_deleted event with invalid data:', { data });
-          return;
-        }
-
-        set(state => ({
-          messagesByGroupId: {
-            ...state.messagesByGroupId,
-            [data.group_id]: (state.messagesByGroupId[data.group_id] || [])
-              .filter(msg => msg.message.id !== data.id)
-          }
-        }));
-        break;
-      }
-      
-      case 'chat_typing_status': {
-        const { data } = event as any;
-        if (!data?.group_id || !data?.user_id) {
-          logger.warn('[ChatStore] Received chat_typing_status event with invalid data:', { data });
-          return;
-        }
-
-        const { user_id, group_id, is_typing, username } = data;
-        
-        set(state => {
-          const currentTypingUsers = state.typingUsers[group_id] || [];
+          const updatedMessages = [newMessage, ...existingMessages];
           
-          if (is_typing) {
-            // Add user to typing list if not already there
-            if (!currentTypingUsers.some(u => u.userId === user_id)) {
-              return {
-                typingUsers: {
-                  ...state.typingUsers,
-                  [group_id]: [
-                    ...currentTypingUsers,
-                    { userId: user_id, name: username, timestamp: Date.now() }
-                  ]
-                }
-              };
+          set(state => ({
+            messagesByTripId: {
+              ...state.messagesByTripId,
+              [tripId]: updatedMessages
             }
-            
-            // Update timestamp for existing typing user
-            return {
-              typingUsers: {
-                ...state.typingUsers,
-                [group_id]: currentTypingUsers.map(u => 
-                  u.userId === user_id ? { ...u, timestamp: Date.now() } : u
-                )
+          }));
+          
+          // Persist the updated messages
+          persistMessages({
+            ...get().messagesByTripId,
+            [tripId]: updatedMessages
+          });
+        }
+        break;
+      }
+      
+      case 'MESSAGE_EDITED': {
+        const { tripId } = event;
+        const { messageId, content } = event.payload;
+        
+        // Update the message content
+        const existingMessages = get().messagesByTripId[tripId] || [];
+        const updatedMessages = existingMessages.map(msg => 
+          msg.message.id === messageId 
+            ? { 
+                ...msg, 
+                message: { 
+                  ...msg.message, 
+                  content,
+                  updated_at: new Date().toISOString()
+                } 
               }
-            };
-          } else {
-            // Remove user from typing list
-            return {
-              typingUsers: {
-                ...state.typingUsers,
-                [group_id]: currentTypingUsers.filter(u => u.userId !== user_id)
-              }
-            };
+            : msg
+        );
+        
+        set(state => ({
+          messagesByTripId: {
+            ...state.messagesByTripId,
+            [tripId]: updatedMessages
           }
+        }));
+        
+        // Persist the updated messages
+        persistMessages({
+          ...get().messagesByTripId,
+          [tripId]: updatedMessages
         });
+        break;
+      }
+      
+      case 'MESSAGE_DELETED': {
+        const { tripId } = event;
+        const { messageId } = event.payload;
+        
+        // Remove the message
+        const existingMessages = get().messagesByTripId[tripId] || [];
+        const updatedMessages = existingMessages.filter(
+          msg => msg.message.id !== messageId
+        );
+        
+        set(state => ({
+          messagesByTripId: {
+            ...state.messagesByTripId,
+            [tripId]: updatedMessages
+          }
+        }));
+        
+        // Persist the updated messages
+        persistMessages({
+          ...get().messagesByTripId,
+          [tripId]: updatedMessages
+        });
+        break;
+      }
+      
+      case 'TYPING_STATUS': {
+        const { tripId } = event;
+        const { userId, isTyping, username } = event.payload;
+        
+        // Get current typing users for this group
+        const currentTypingUsers = get().typingUsers[tripId] || [];
+        
+        if (isTyping) {
+          // Add user to typing users if not already there
+          const userIndex = currentTypingUsers.findIndex(u => u.userId === userId);
+          
+          if (userIndex === -1) {
+            // User not in typing list, add them
+            const updatedTypingUsers = [
+              ...currentTypingUsers,
+              { userId, name: username, timestamp: Date.now() }
+            ];
+            
+            set(state => ({
+              typingUsers: {
+                ...state.typingUsers,
+                [tripId]: updatedTypingUsers
+              }
+            }));
+          } else {
+            // User already in typing list, update timestamp
+            const updatedTypingUsers = [...currentTypingUsers];
+            updatedTypingUsers[userIndex] = {
+              ...updatedTypingUsers[userIndex],
+              timestamp: Date.now()
+            };
+            
+            set(state => ({
+              typingUsers: {
+                ...state.typingUsers,
+                [tripId]: updatedTypingUsers
+              }
+            }));
+          }
+        } else {
+          // Remove user from typing users
+          const updatedTypingUsers = currentTypingUsers.filter(
+            u => u.userId !== userId
+          );
+          
+          set(state => ({
+            typingUsers: {
+              ...state.typingUsers,
+              [tripId]: updatedTypingUsers
+            }
+          }));
+        }
+        break;
+      }
+      
+      case 'MESSAGE_READ': {
+        // We don't need to update the UI for read receipts in this simplified version
         break;
       }
       
       default:
-        logger.debug('[ChatStore] Unhandled chat event type:', event.type);
+        logger.warn('[ChatStore] Unknown chat event type:', event.type);
     }
   },
 
-  /**
-   * Set the typing status for the current user in a chat group
-   */
-  setTypingStatus: async (groupId: string, isTyping: boolean) => {
-    if (!groupId) return;
-    
+  setTypingStatus: async (tripId: string, isTyping: boolean) => {
     try {
-      // Get the current user
-      const currentUser = useAuthStore.getState().user;
-      if (!currentUser) return;
-      
-      // Use the WebSocket manager to send typing status
       const wsManager = WebSocketManager.getInstance();
-      await wsManager.sendTypingStatus(groupId, isTyping);
       
-      // Note: We don't update local state here because the WebSocket
-      // will broadcast the typing status to all users including the sender,
-      // and we'll handle it in the WebSocket event handler
+      if (!wsManager.isConnected()) {
+        logger.warn('[ChatStore] WebSocket not connected, cannot send typing status');
+        return;
+      }
+      
+      wsManager.sendTypingStatus(tripId, isTyping);
     } catch (error) {
-      logger.error('ChatStore', 'Failed to set typing status:', error);
+      logger.error('[ChatStore] Failed to send typing status:', error);
     }
   }
 })); 

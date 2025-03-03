@@ -2,6 +2,8 @@
  * Utility functions for handling JWT tokens
  */
 
+import { logger } from './logger';
+
 /**
  * Parse a JWT token to extract its payload
  * @param token The JWT token to parse
@@ -16,7 +18,7 @@ export function parseJwt(token: string | null): any | null {
     const jsonPayload = decodeURIComponent(
       atob(base64)
         .split('')
-        .map(c => {
+        .map(function(c) {
           return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
         })
         .join('')
@@ -24,7 +26,7 @@ export function parseJwt(token: string | null): any | null {
     
     return JSON.parse(jsonPayload);
   } catch (error) {
-    console.error('Failed to parse JWT token:', error);
+    logger.error('AUTH', 'Failed to parse JWT token:', error);
     return null;
   }
 }

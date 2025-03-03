@@ -1,111 +1,148 @@
-import React from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { ChatMessage as ChatMessageType } from '@/src/types/chat';
+import { ChatMessageWithStatus } from '@/src/types/chat';
 import { useAuthStore } from '@/src/store/useAuthStore';
 import { formatRelativeTime } from '@/src/utils/dateUtils';
 import { Theme } from '@/src/theme/types';
+import { logger } from '@/src/utils/logger';
 
 interface ChatMessageProps {
-  message: ChatMessageType;
+  messageWithStatus: ChatMessageWithStatus;
   showAvatar?: boolean;
 }
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({ 
-  message, 
+  messageWithStatus, 
   showAvatar = true 
 }) => {
   const { theme } = useTheme();
   const { user } = useAuthStore();
   
-  // Add detailed logging to debug the TypeError
-  console.log('ChatMessage rendering with message:', JSON.stringify({
-    messageId: message?.message?.id,
-    userId: message?.user?.id,
-    content: message?.message?.content,
-    hasMessage: !!message?.message,
-    hasUser: !!message?.user
-  }));
+  // Log when the message component renders
+  useEffect(() => {
+    if (messageWithStatus?.message?.id) {
+      logger.debug(
+        'UI', 
+        `Rendering message ${messageWithStatus.message.id.substring(0, 8)}... ` +
+        `from ${messageWithStatus.message.sender?.name || 'Unknown'}, ` +
+        `content: "${messageWithStatus.message.content?.substring(0, 20)}${messageWithStatus.message.content?.length > 20 ? '...' : ''}", ` +
+        `status: ${messageWithStatus.status}`
+      );
+    }
+  }, [messageWithStatus]);
   
-  if (!message?.message || !message?.user) {
-    console.warn('Invalid message or missing user data:', JSON.stringify(message));
+  // Validate message data before rendering
+  if (!messageWithStatus || !messageWithStatus.message) {
+    logger.warn('UI', 'Invalid message data:', JSON.stringify(messageWithStatus, null, 2));
     return null;
   }
   
-  const isCurrentUser = user?.id === message.user.id;
+  const { message, status } = messageWithStatus;
+  
+  // Additional validation for message content
+  if (!message.content) {
+    logger.warn('UI', `Message ${message.id} has no content`);
+  }
+  
+  // Check for created_at field
+  if (!message.created_at) {
+    logger.warn('UI', `Message ${message.id} has no timestamp (created_at)`);
+  }
+  
+  const isCurrentUser = user?.id === message.sender.id;
+  
+  // Get user display name
+  const getUserDisplayName = useCallback(() => {
+    return message.sender.name || 'Unknown User';
+  }, [message.sender.name]);
+  
+  // Get user initial for avatar
+  const getUserInitial = useCallback(() => {
+    const name = message.sender.name || '';
+    return name.charAt(0).toUpperCase();
+  }, [message.sender.name]);
+  
+  // Log message status for debugging
+  useEffect(() => {
+    if (message.id) {
+      logger.debug(
+        'UI', 
+        `Message ${message.id.substring(0, 8)}... status: ${status}`
+      );
+    }
+  }, [message.id, status]);
   
   return (
     <View style={[
-      styles(theme).container,
+      styles(theme).messageContainer,
       isCurrentUser ? styles(theme).currentUserContainer : styles(theme).otherUserContainer
     ]}>
+      {/* Avatar (only for other users) */}
       {!isCurrentUser && showAvatar && (
         <View style={styles(theme).avatarContainer}>
-          {message.user.profilePicture ? (
+          {message.sender.avatar ? (
             <Image 
-              source={{ uri: message.user.profilePicture }} 
+              source={{ uri: message.sender.avatar }} 
               style={styles(theme).avatar} 
+              onError={() => {
+                logger.warn('UI', `Failed to load avatar for user ${message.sender.id}`);
+              }}
             />
           ) : (
-            <View style={[
-              styles(theme).avatarPlaceholder,
-              { backgroundColor: theme.colors.primary.main }
-            ]}>
-              <Text style={styles(theme).avatarInitial}>
-                {message.user.username.charAt(0).toUpperCase()}
-              </Text>
+            <View style={styles(theme).avatarPlaceholder}>
+              <Text style={styles(theme).avatarInitial}>{getUserInitial()}</Text>
             </View>
           )}
         </View>
       )}
       
+      {/* Message content */}
       <View style={[
-        styles(theme).messageContainer,
-        isCurrentUser ? styles(theme).currentUserMessage : styles(theme).otherUserMessage
+        styles(theme).bubble,
+        isCurrentUser ? styles(theme).currentUserBubble : styles(theme).otherUserBubble
       ]}>
+        {/* Sender name (only for other users) */}
         {!isCurrentUser && (
-          <Text style={styles(theme).senderName}>
-            {message.user.username}
+          <Text style={styles(theme).senderName}>{getUserDisplayName()}</Text>
+        )}
+        
+        {/* Message text */}
+        <Text style={styles(theme).messageText}>{message.content}</Text>
+        
+        {/* Timestamp and status */}
+        <View style={styles(theme).metaContainer}>
+          <Text style={styles(theme).timestamp}>
+            {message.created_at ? formatRelativeTime(new Date(message.created_at)) : 'Just now'}
           </Text>
-        )}
-        
-        <Text style={[
-          styles(theme).messageText,
-          isCurrentUser ? styles(theme).currentUserText : styles(theme).otherUserText
-        ]}>
-          {message.message.content}
-        </Text>
-        
-        <Text style={styles(theme).timestamp}>
-          {formatRelativeTime(new Date(message.message.created_at))}
-        </Text>
-        
-        {isCurrentUser && message.status && (
-          <View style={styles(theme).statusContainer}>
-            {message.status === 'sent' && (
-              <Text style={styles(theme).statusText}>Sent</Text>
-            )}
-            {message.status === 'delivered' && (
-              <Text style={styles(theme).statusText}>Delivered</Text>
-            )}
-            {message.status === 'read' && (
-              <Text style={[styles(theme).statusText, { color: theme.colors.status.success.content }]}>Read</Text>
-            )}
-            {message.status === 'failed' && (
-              <Text style={[styles(theme).statusText, { color: theme.colors.status.error.content }]}>Failed</Text>
-            )}
-          </View>
-        )}
+          
+          {/* Status indicator for current user's messages */}
+          {isCurrentUser && (
+            <Text style={[
+              styles(theme).status,
+              status === 'error' && styles(theme).errorStatus
+            ]}>
+              {status === 'sending' ? 'Sending...' : 
+               status === 'sent' ? 'Sent' : 
+               status === 'error' ? 'Failed' : ''}
+            </Text>
+          )}
+        </View>
       </View>
+      
+      {/* Spacer for current user (to align with avatar) */}
+      {isCurrentUser && showAvatar && (
+        <View style={styles(theme).avatarSpacer} />
+      )}
     </View>
   );
 };
 
 const styles = (theme: Theme) => StyleSheet.create({
-  container: {
+  messageContainer: {
     flexDirection: 'row',
-    marginVertical: theme.spacing.stack.xs,
-    paddingHorizontal: theme.spacing.layout.section.padding,
+    marginBottom: 16,
+    maxWidth: '100%',
   },
   currentUserContainer: {
     justifyContent: 'flex-end',
@@ -114,7 +151,7 @@ const styles = (theme: Theme) => StyleSheet.create({
     justifyContent: 'flex-start',
   },
   avatarContainer: {
-    marginRight: theme.spacing.stack.xs,
+    marginRight: 8,
     alignSelf: 'flex-end',
   },
   avatar: {
@@ -126,58 +163,58 @@ const styles = (theme: Theme) => StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
+    backgroundColor: theme.colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarInitial: {
     color: '#FFFFFF',
-    fontSize: theme.typography.size.sm,
+    fontSize: 16,
     fontWeight: 'bold',
   },
-  messageContainer: {
-    maxWidth: '70%',
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.stack.sm,
-    marginBottom: theme.spacing.stack.xs,
+  bubble: {
+    padding: 12,
+    borderRadius: 16,
+    maxWidth: '80%',
   },
-  currentUserMessage: {
+  currentUserBubble: {
     backgroundColor: theme.colors.primary.main,
-    borderBottomRightRadius: 0,
+    borderBottomRightRadius: 4,
   },
-  otherUserMessage: {
+  otherUserBubble: {
     backgroundColor: theme.colors.background.surface,
-    borderBottomLeftRadius: 0,
+    borderBottomLeftRadius: 4,
   },
   senderName: {
-    fontSize: theme.typography.size.xs,
+    fontSize: 12,
     fontWeight: 'bold',
-    marginBottom: theme.spacing.stack.xxs,
+    marginBottom: 4,
     color: theme.colors.content.secondary,
   },
   messageText: {
-    fontSize: theme.typography.size.sm,
-    lineHeight: theme.typography.lineHeights?.normal || 1.5,
-  },
-  currentUserText: {
-    color: '#FFFFFF',
-  },
-  otherUserText: {
+    fontSize: 16,
     color: theme.colors.content.primary,
   },
   timestamp: {
-    fontSize: theme.typography.size.xs,
+    fontSize: 10,
+    marginTop: 4,
     color: theme.colors.content.tertiary,
-    alignSelf: 'flex-end',
-    marginTop: theme.spacing.stack.xxs,
   },
-  statusContainer: {
+  metaContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    marginTop: theme.spacing.stack.xxs,
+    justifyContent: 'space-between',
+    marginTop: 4,
   },
-  statusText: {
-    fontSize: theme.typography.size.xs,
+  status: {
+    fontSize: 10,
     color: theme.colors.content.tertiary,
+  },
+  avatarSpacer: {
+    width: 32,
+    marginLeft: 8,
+  },
+  errorStatus: {
+    color: '#FF3B30',
   },
 }); 

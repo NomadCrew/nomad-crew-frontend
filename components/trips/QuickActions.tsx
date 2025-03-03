@@ -5,10 +5,9 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuthStore } from '@/src/store/useAuthStore';
 import { Theme } from '@/src/theme/types';
 import { Trip } from '@/src/types/trip';
-import { ArrowLeft, ArrowRight, MapPin, MessageSquare, Users, UserPlus, Activity } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, MapPin, Users, UserPlus, Activity, MessageSquare } from 'lucide-react-native';
 import { MemberManagementModal } from './MemberManagementModal';
 import { TripStatusUpdateModal } from './TripStatusUpdateModal';
-import { GroupLiveMapModal } from '@/components/location/GroupLiveMapModal';
 
 // Define a type for the icon props
 type IconProps = {
@@ -19,22 +18,21 @@ type IconProps = {
 interface QuickActionsProps {
   trip?: Trip;
   setShowInviteModal?: (show: boolean) => void;
-  onChatPress: () => void;
   onLocationPress?: () => void;
+  onChatPress?: () => void;
 }
 
 export const QuickActions: React.FC<QuickActionsProps> = ({
   trip,
   setShowInviteModal,
-  onChatPress,
   onLocationPress,
+  onChatPress,
 }) => {
   const { theme } = useTheme();
   const authStore = useAuthStore();
   const userId = authStore.user?.id;
   const [showMemberModal, setShowMemberModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
-  const [showLocationModal, setShowLocationModal] = useState(false);
   
   const isOwner = trip?.createdBy === userId;
   const members = trip?.members || [];
@@ -78,13 +76,15 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
     { 
       icon: (props: IconProps) => <MapPin {...props} />, 
       label: 'Location', 
-      onPress: () => onLocationPress ? onLocationPress() : setShowLocationModal(true) 
+      onPress: () => onLocationPress && onLocationPress()
     },
-    { 
-      icon: (props: IconProps) => <MessageSquare {...props} />, 
-      label: 'Chat', 
-      onPress: () => onChatPress() 
-    },
+    ...(trip && onChatPress ? [
+      { 
+        icon: (props: IconProps) => <MessageSquare {...props} />, 
+        label: 'Chat', 
+        onPress: () => onChatPress && onChatPress()
+      }
+    ] : []),
     ...(trip ? [
       { 
         icon: (props: IconProps) => <Users {...props} />, 
@@ -247,12 +247,6 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
           <TripStatusUpdateModal
             visible={showStatusModal}
             onClose={() => setShowStatusModal(false)}
-            trip={trip}
-          />
-
-          <GroupLiveMapModal
-            visible={showLocationModal}
-            onClose={() => setShowLocationModal(false)}
             trip={trip}
           />
         </>

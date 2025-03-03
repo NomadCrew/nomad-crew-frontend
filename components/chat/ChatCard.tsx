@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useChatStore } from '@/src/store/useChatStore';
@@ -17,258 +17,190 @@ interface ChatCardProps {
 export const ChatCard: React.FC<ChatCardProps> = ({ 
   tripId, 
   onPress,
-  minimized = false 
+  minimized = false
 }) => {
   const { theme } = useTheme();
-  const { groups, fetchChatGroups } = useChatStore();
+  const { messagesByTripId } = useChatStore();
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [lastMessage, setLastMessage] = useState<{
+    content: string;
+    sender: { name: string };
+    created_at: string;
+  } | null>(null);
+  const [lastMessageTime, setLastMessageTime] = useState('');
   
-  // Use our new useThemedStyles hook
+  // Get theme colors
+  const primaryColor = theme.colors.primary.main;
+  const backgroundColor = theme.colors.background.surface;
+  const textColor = theme.colors.content.primary;
+  const secondaryTextColor = theme.colors.content.secondary;
+  const tertiaryTextColor = theme.colors.content.tertiary;
+  
+  // Get styles using themed styles hook
   const styles = useThemedStyles((theme) => {
-    // Safely access theme properties with fallbacks
-    const primaryColor = theme?.colors?.primary?.main || '#F46315';
-    const textPrimary = theme?.colors?.content?.primary || '#1A1A1A';
-    const textSecondary = theme?.colors?.content?.secondary || '#6B7280';
-    const textTertiary = theme?.colors?.content?.tertiary || '#9CA3AF';
-    const surfaceDefault = theme?.colors?.surface?.default || '#FFFFFF';
-    const borderDefault = theme?.colors?.border?.default || '#E5E7EB';
-    const errorContent = theme?.colors?.status?.error?.content || '#DC2626';
-    
-    const typographySizeXs = theme?.typography?.size?.xs || 12;
-    const typographySizeSm = theme?.typography?.size?.sm || 14;
-    const typographySizeLg = theme?.typography?.size?.lg || 18;
-    
-    const borderRadiusMd = theme?.borderRadius?.md || 8;
-    
-    const spacingStackXs = theme?.spacing?.stack?.xs || 8;
-    const spacingStackSm = theme?.spacing?.stack?.sm || 12;
-    const spacingStackMd = theme?.spacing?.stack?.md || 16;
-    
-    return {
+    return StyleSheet.create({
       container: {
-        flex: 1,
-        backgroundColor: surfaceDefault,
-        borderRadius: borderRadiusMd,
-        padding: spacingStackMd,
+        backgroundColor: backgroundColor,
+        borderRadius: theme.borderRadius.md,
+        overflow: 'hidden',
+        marginBottom: theme.spacing.stack.md,
+        borderWidth: 1,
+        borderColor: theme.colors.border.default,
       },
       minimizedContainer: {
-        padding: spacingStackSm,
-        position: 'relative',
+        marginBottom: theme.spacing.stack.sm,
       },
       header: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: spacingStackSm,
+        justifyContent: 'space-between',
+        padding: theme.spacing.stack.sm,
+        borderBottomWidth: 1,
+        borderBottomColor: theme.colors.border.default,
       },
       titleContainer: {
         flexDirection: 'row',
         alignItems: 'center',
       },
       title: {
-        fontSize: typographySizeLg,
+        fontSize: theme.typography.size.md,
         fontWeight: 'bold',
-        color: textPrimary,
-        marginLeft: spacingStackXs,
+        color: textColor,
+        marginLeft: theme.spacing.stack.xs,
       },
       badge: {
-        minWidth: 20,
-        height: 20,
-        borderRadius: 10,
-        backgroundColor: errorContent,
-        justifyContent: 'center',
-        alignItems: 'center',
+        backgroundColor: primaryColor,
+        borderRadius: 12,
         paddingHorizontal: 6,
-      },
-      minimizedBadge: {
-        position: 'absolute',
-        top: 8,
-        right: 8,
-        minWidth: 20,
-        height: 20,
-        borderRadius: 10,
-        backgroundColor: errorContent,
-        justifyContent: 'center',
+        paddingVertical: 2,
+        minWidth: 24,
         alignItems: 'center',
-        paddingHorizontal: 6,
       },
       badgeText: {
         color: '#FFFFFF',
-        fontSize: typographySizeXs,
+        fontSize: theme.typography.size.xs,
         fontWeight: 'bold',
       },
       content: {
-        flex: 1,
-        marginBottom: spacingStackMd,
+        padding: theme.spacing.stack.sm,
       },
       minimizedContent: {
-        marginBottom: 0,
+        padding: theme.spacing.stack.xs,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
       },
       messageContainer: {
-        marginBottom: spacingStackXs,
+        flex: 1,
+        flexDirection: 'row',
+        flexWrap: 'wrap',
       },
       sender: {
-        fontSize: typographySizeSm,
         fontWeight: 'bold',
-        color: textPrimary,
-        marginBottom: 2,
-      },
-      message: {
-        fontSize: typographySizeSm,
-        color: textSecondary,
-      },
-      time: {
-        fontSize: typographySizeXs,
-        color: textTertiary,
-        alignSelf: 'flex-end',
-      },
-      emptyText: {
-        fontSize: typographySizeSm,
-        color: textSecondary,
-        fontStyle: 'italic',
-        textAlign: 'center',
-      },
-      footer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderTopWidth: 1,
-        borderTopColor: borderDefault,
-        paddingTop: spacingStackSm,
-      },
-      groupCount: {
-        fontSize: typographySizeXs,
-        color: textTertiary,
-      },
-      viewButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-      },
-      viewButtonText: {
-        fontSize: typographySizeSm,
-        color: primaryColor,
-        fontWeight: 'bold',
+        color: textColor,
         marginRight: 4,
       },
-    };
+      message: {
+        color: secondaryTextColor,
+        flex: 1,
+      },
+      time: {
+        fontSize: theme.typography.size.xs,
+        color: tertiaryTextColor,
+        marginTop: minimized ? 0 : theme.spacing.stack.xs,
+        marginLeft: minimized ? theme.spacing.stack.xs : 0,
+      },
+      emptyText: {
+        color: secondaryTextColor,
+        fontStyle: 'italic',
+      },
+    });
   });
   
-  // Safely access theme colors with fallbacks
-  const primaryColor = theme?.colors?.primary?.main || '#F46315'; // Fallback to orange
-  
-  // Fetch chat groups on mount with the tripId
+  // Update last message and unread count when messages change
   useEffect(() => {
-    if (tripId) {
-      fetchChatGroups(tripId);
-    }
-  }, [fetchChatGroups, tripId]);
-  
-  // Filter groups by tripId and find the default group
-  const tripGroups = groups?.filter(group => group.tripId === tripId) || [];
-  const defaultGroup = tripGroups.find(group => group.isDefault);
-  
-  // Calculate total unread messages for this trip
-  const unreadCount = tripGroups.reduce((total, group) => total + (group.unreadCount || 0), 0);
-  
-  // Get the most recent message
-  const mostRecentGroup = tripGroups.reduce((mostRecent, group) => {
-    if (!mostRecent || !mostRecent.lastMessageAt) return group;
-    if (!group.lastMessageAt) return mostRecent;
+    const messages = messagesByTripId[tripId] || [];
     
-    return new Date(group.lastMessageAt) > new Date(mostRecent.lastMessageAt)
-      ? group
-      : mostRecent;
-  }, null as any);
-  
-  const lastMessage = mostRecentGroup?.lastMessage;
-  const lastMessageTime = mostRecentGroup?.lastMessageAt 
-    ? formatRelativeTime(new Date(mostRecentGroup.lastMessageAt))
-    : '';
+    // Set last message
+    if (messages.length > 0) {
+      const lastMsg = messages[0];
+      setLastMessage({
+        content: lastMsg.message.content,
+        sender: {
+          name: lastMsg.message.sender.name
+        },
+        created_at: lastMsg.message.created_at
+      });
+      
+      // Format relative time
+      setLastMessageTime(formatRelativeTime(new Date(lastMsg.message.created_at)));
+    } else {
+      setLastMessage(null);
+      setLastMessageTime('');
+    }
+    
+    // Calculate unread count (this is a placeholder - actual implementation would depend on read receipts)
+    // For now, we'll just show a badge if there are any messages
+    setUnreadCount(messages.length > 0 ? 1 : 0);
+  }, [messagesByTripId, tripId]);
   
   return (
-    <View style={[
-      styles.container,
-      minimized && styles.minimizedContainer
-    ]}>
-      {!minimized && (
-        <View style={styles.header}>
-          <View style={styles.titleContainer}>
-            <MessageSquare 
-              size={20} 
-              color={primaryColor} 
-            />
-            <Text style={styles.title}>
-              Trip Chat
-            </Text>
-          </View>
-          
-          {unreadCount > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </Text>
-            </View>
-          )}
-        </View>
-      )}
-      
+    <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
       <View style={[
-        styles.content,
-        minimized && styles.minimizedContent
+        styles.container,
+        minimized && styles.minimizedContainer
       ]}>
-        {lastMessage ? (
-          <>
-            <View style={styles.messageContainer}>
-              <Text style={styles.sender} numberOfLines={1}>
-                {lastMessage.sender.name}:
-              </Text>
-              <Text 
-                style={styles.message}
-                numberOfLines={minimized ? 1 : 2}
-              >
-                {lastMessage.content}
+        {!minimized && (
+          <View style={styles.header}>
+            <View style={styles.titleContainer}>
+              <MessageSquare 
+                size={20} 
+                color={primaryColor} 
+              />
+              <Text style={styles.title}>
+                Trip Chat
               </Text>
             </View>
             
-            <Text style={styles.time}>
-              {lastMessageTime}
-            </Text>
-          </>
-        ) : (
-          <Text style={styles.emptyText}>
-            No messages yet. Start the conversation!
-          </Text>
+            {unreadCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Text>
+              </View>
+            )}
+          </View>
         )}
-      </View>
-      
-      {!minimized && (
-        <View style={styles.footer}>
-          <Text style={styles.groupCount}>
-            {tripGroups.length} {tripGroups.length === 1 ? 'chat' : 'chats'}
-          </Text>
-          
-          <TouchableOpacity 
-            style={styles.viewButton}
-            onPress={onPress}
-          >
-            <Text style={styles.viewButtonText}>
-              View All
+        
+        <View style={[
+          styles.content,
+          minimized && styles.minimizedContent
+        ]}>
+          {lastMessage ? (
+            <>
+              <View style={styles.messageContainer}>
+                <Text style={styles.sender} numberOfLines={1}>
+                  {lastMessage.sender.name}:
+                </Text>
+                <Text 
+                  style={styles.message}
+                  numberOfLines={minimized ? 1 : 2}
+                >
+                  {lastMessage.content}
+                </Text>
+              </View>
+              
+              <Text style={styles.time}>
+                {lastMessageTime}
+              </Text>
+            </>
+          ) : (
+            <Text style={styles.emptyText}>
+              No messages yet. Start the conversation!
             </Text>
-            <Ionicons 
-              name="chevron-forward" 
-              size={16} 
-              color={primaryColor} 
-            />
-          </TouchableOpacity>
+          )}
         </View>
-      )}
-      
-      {unreadCount > 0 && minimized && (
-        <View style={styles.minimizedBadge}>
-          <Text style={styles.badgeText}>
-            {unreadCount > 99 ? '99+' : unreadCount}
-          </Text>
-        </View>
-      )}
-    </View>
+      </View>
+    </TouchableOpacity>
   );
 }; 
