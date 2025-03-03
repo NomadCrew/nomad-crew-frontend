@@ -1,72 +1,142 @@
-import React, { useMemo } from 'react';
-import { Image, View, StyleSheet } from 'react-native';
-import { ThemedText } from '@/components/ThemedText';
-import { useTheme } from '@/src/theme/ThemeProvider';
-import type { User } from '@/src/types/auth';
+import React from 'react';
+import { View, Image, Text, StyleSheet, ViewProps, StyleProp, ViewStyle, TextStyle, ImageStyle } from 'react-native';
+import { useThemedStyles } from '@/src/theme/utils';
 
 export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+export type AvatarVariant = 'circle' | 'rounded' | 'square';
 
-const AVATAR_SIZES: Record<AvatarSize, number> = {
-  xs: 24,
-  sm: 32,
-  md: 40,
-  lg: 48,
-  xl: 56,
-};
-
-interface AvatarProps {
-  user?: Pick<User, 'firstName' | 'lastName' | 'profilePicture'>;
+export interface AvatarProps extends ViewProps {
+  /**
+   * The size of the avatar
+   */
   size?: AvatarSize;
-  style?: any;
+  
+  /**
+   * The shape of the avatar
+   */
+  variant?: AvatarVariant;
+  
+  /**
+   * The source of the avatar image
+   */
+  source?: string;
+  
+  /**
+   * The initials to display when no image is available
+   */
+  initials?: string;
+  
+  /**
+   * The background color for the avatar when displaying initials
+   */
+  backgroundColor?: string;
+  
+  /**
+   * Additional styles for the avatar container
+   */
+  style?: StyleProp<ViewStyle>;
+  
+  /**
+   * Additional styles for the avatar image
+   */
+  imageStyle?: StyleProp<ImageStyle>;
+  
+  /**
+   * Additional styles for the avatar text
+   */
+  textStyle?: StyleProp<TextStyle>;
 }
 
-export const Avatar: React.FC<AvatarProps> = ({ 
-  user, 
+/**
+ * Avatar component for displaying user profile images or initials
+ */
+export function Avatar({
   size = 'md',
-  style 
-}) => {
-  const { theme } = useTheme();
-  const dimension = AVATAR_SIZES[size];
-
-  const initials = useMemo(() => {
-    if (!user?.firstName && !user?.lastName) return '?';
-    return `${(user.firstName?.[0] || '').toUpperCase()}${(user.lastName?.[0] || '').toUpperCase()}`;
-  }, [user?.firstName, user?.lastName]);
-
-  const styles = StyleSheet.create({
-    container: {
-      width: dimension,
-      height: dimension,
-      borderRadius: dimension / 2,
-      backgroundColor: theme.colors.surface.variant,
-      justifyContent: 'center',
-      alignItems: 'center',
-      overflow: 'hidden',
-    },
-    image: {
-      width: '100%',
-      height: '100%',
-    },
-    initialsText: {
-      color: theme.colors.content.primary,
-      fontSize: dimension * 0.4,
-      fontWeight: '600',
-    },
+  variant = 'circle',
+  source,
+  initials,
+  backgroundColor,
+  style,
+  imageStyle,
+  textStyle,
+  ...rest
+}: AvatarProps) {
+  const styles = useThemedStyles((theme) => {
+    // Safely access theme properties with fallbacks
+    const primaryColor = theme?.colors?.primary?.main || '#F46315';
+    
+    // Size mappings
+    const sizeMap = {
+      xs: 24,
+      sm: 32,
+      md: 40,
+      lg: 48,
+      xl: 64,
+    };
+    
+    // Font size mappings based on avatar size
+    const fontSizeMap = {
+      xs: theme?.typography?.size?.xs || 12,
+      sm: theme?.typography?.size?.sm || 14,
+      md: theme?.typography?.size?.md || 16,
+      lg: theme?.typography?.size?.lg || 18,
+      xl: theme?.typography?.size?.xl || 20,
+    };
+    
+    // Border radius mappings based on variant and size
+    const getBorderRadius = () => {
+      const dimension = sizeMap[size];
+      
+      switch (variant) {
+        case 'circle':
+          return dimension / 2;
+        case 'rounded':
+          return dimension / 4;
+        case 'square':
+          return 0;
+        default:
+          return dimension / 2;
+      }
+    };
+    
+    return {
+      container: {
+        width: sizeMap[size],
+        height: sizeMap[size],
+        borderRadius: getBorderRadius(),
+        backgroundColor: backgroundColor || primaryColor,
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'hidden',
+      },
+      image: {
+        width: '100%',
+        height: '100%',
+      },
+      text: {
+        color: '#FFFFFF',
+        fontSize: fontSizeMap[size],
+        fontWeight: '600',
+        textAlign: 'center',
+      },
+    };
   });
-
-  const imageSource = user?.profilePicture
-    ? { uri: user.profilePicture }
-    : require('@/assets/images/icon.png'); // Fallback image if needed
-
+  
   return (
-    <View style={[styles.container, style]}>
-      <Image
-        source={imageSource}
-        style={styles.image}
-        resizeMode="cover"
-      />
+    <View style={[styles.container, style]} {...rest}>
+      {source ? (
+        <Image
+          source={{ uri: source }}
+          style={[styles.image, imageStyle]}
+          resizeMode="cover"
+        />
+      ) : (
+        <Text style={[styles.text, textStyle]}>
+          {initials?.substring(0, 2).toUpperCase() || ''}
+        </Text>
+      )}
     </View>
   );
-};
+}
 
-export default Avatar;
+export default React.memo(Avatar);

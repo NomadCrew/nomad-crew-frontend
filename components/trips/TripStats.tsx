@@ -1,28 +1,73 @@
 // components/trips/TripStats.tsx
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View } from 'react-native';
 import { Surface, Text } from 'react-native-paper';
-import { useTheme } from '@/src/theme/ThemeProvider';
-import { Theme } from '@/src/theme/types';
 import { CalendarClock } from 'lucide-react-native';
+import { useThemedStyles } from '@/src/theme/utils';
 
 export const TripStats: React.FC = () => {
-  const { theme } = useTheme();
+  // Use our new useThemedStyles hook
+  const styles = useThemedStyles((theme) => {
+    // Safely access theme properties with fallbacks
+    const textPrimary = theme?.colors?.content?.primary || '#1A1A1A';
+    const textSecondary = theme?.colors?.content?.secondary || '#6B7280';
+    const surfaceVariant = theme?.colors?.surface?.variant || '#F3F4F6';
+    const spacingInsetLg = theme?.spacing?.inset?.lg || 24;
+    const spacingStackMd = theme?.spacing?.stack?.md || 16;
+    const spacingStackSm = theme?.spacing?.stack?.sm || 12;
+    const typographyHeadingH3 = theme?.typography?.heading?.h3 || { fontSize: 18, fontWeight: '600' };
+    
+    return {
+      statsCard: {
+        height: '100%',
+        width: '100%',
+        padding: spacingInsetLg,
+        backgroundColor: surfaceVariant,
+        borderRadius: 24,
+        flex: 1,
+      },
+      statsTitle: {
+        ...(typographyHeadingH3 || {}),
+        color: textPrimary,
+        marginBottom: spacingStackMd,
+        fontWeight: '600',
+      },
+      statsContent: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+      },
+      comingSoonContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+      },
+      icon: {
+        marginBottom: spacingStackSm,
+        opacity: 0.6,
+      },
+      comingSoon: {
+        color: textSecondary,
+        textAlign: 'center',
+        opacity: 0.8,
+        letterSpacing: 0.25,
+      },
+    };
+  });
   
   return (
-    <Surface style={styles(theme).statsCard} elevation={0}>
+    <Surface style={styles.statsCard} elevation={0}>
       <Text 
         variant="headlineSmall" 
-        style={styles(theme).statsTitle}
+        style={styles.statsTitle}
       >
         Trip Stats
       </Text>
-      <View style={styles(theme).statsContent}>
-        <View style={styles(theme).comingSoonContainer}>
-          <CalendarClock size={32} color={theme.colors.content.secondary} style={styles(theme).icon} />
+      <View style={styles.statsContent}>
+        <View style={styles.comingSoonContainer}>
+          <CalendarClock size={32} color={styles.comingSoon.color} style={styles.icon} />
           <Text 
             variant="titleLarge" 
-            style={styles(theme).comingSoon}
+            style={styles.comingSoon}
           >
             Coming soon
           </Text>
@@ -31,39 +76,3 @@ export const TripStats: React.FC = () => {
     </Surface>
   );
 };
-
-const styles = (theme: Theme) => StyleSheet.create({
-  statsCard: {
-    height: '100%',
-    width: '100%',
-    padding: theme.spacing.inset.lg,
-    backgroundColor: theme.colors.surface.variant,
-    borderRadius: 24,
-    flex: 1,
-  },
-  statsTitle: {
-    ...theme.typography.heading.h3,
-    color: theme.colors.content.primary,
-    marginBottom: theme.spacing.stack.md,
-    fontWeight: '600',
-  },
-  statsContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  comingSoonContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  icon: {
-    marginBottom: theme.spacing.stack.sm,
-    opacity: 0.6,
-  },
-  comingSoon: {
-    color: theme.colors.content.secondary,
-    textAlign: 'center',
-    opacity: 0.8,
-    letterSpacing: 0.25,
-  },
-});

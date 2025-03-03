@@ -3,6 +3,7 @@ import { Text, TextProps } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { Typography } from '@/src/theme/foundations/typography';
 import { SemanticColors } from '@/src/theme/foundations/colors';
+import { createStyles, useThemedStyles } from '@/src/theme/utils';
 
 // Helper type to create dot notation paths for nested objects
 type DotNotation<T, D extends number = 2, P extends string = ''> =
@@ -45,7 +46,16 @@ export function ThemedText({
 }: ThemedTextProps) {
   const { theme } = useTheme();
 
-  const getTypographyStyle = () => {
+  // Use our new utility to create styles
+  const styles = useThemedStyles(() => ({
+    text: {
+      ...getTypographyStyle(),
+      color: getTextColor(),
+      ...(minTouchSize ? { minHeight: minTouchSize, minWidth: minTouchSize } : {}),
+    }
+  }));
+
+  function getTypographyStyle() {
     try {
       const [category, size] = variant.split('.');
       const categoryKey = category as keyof typeof theme.typography;
@@ -63,9 +73,9 @@ export function ThemedText({
     
     // Fallback to body.medium if variant is invalid
     return theme.typography.body.medium;
-  };
+  }
 
-  const getTextColor = () => {
+  function getTextColor() {
     try {
       const [category, shade] = color.split('.');
       const categoryKey = category as keyof typeof theme.colors;
@@ -82,24 +92,16 @@ export function ThemedText({
     }
 
     return theme.colors.content.primary;
-  };
+  }
 
   return (
     <Text 
-      style={[
-        getTypographyStyle(),
-        { color: getTextColor() },
-        minTouchSize
-          ? { minHeight: minTouchSize, minWidth: minTouchSize }
-          : undefined,
-        style,
-      ]}
+      style={[styles.text, style]}
       accessibilityRole={accessibilityRole || (isHeading ? 'header' : 'text')}
       {...rest}
     >
       {children}
     </Text>
-
   );
 }
 

@@ -269,7 +269,7 @@ export default function TripsScreen() {
         <Ionicons
           name="add-outline"
           size={24}
-          color={theme.colors.primary.onPrimary}
+          color="#FFFFFF"
         />
       </TouchableOpacity>
 
@@ -386,6 +386,6 @@ const styles = (theme: Theme, screenWidth?: number) =>
     },
     debugButtonText: {
       ...theme.typography.button.medium,
-      color: theme.colors.primary.onPrimary,
+      color: '#FFFFFF',
     },
   });

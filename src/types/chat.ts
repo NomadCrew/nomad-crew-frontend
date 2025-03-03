@@ -1,140 +1,107 @@
 import { z } from 'zod';
 
-// Chat Group Types
-export interface ChatGroup {
+// API Response Types
+export interface ChatGroupResponse {
   id: string;
+  trip_id: string;
   name: string;
-  tripId: string;
-  createdAt: string;
-  updatedAt: string;
-  isDefault: boolean;
-  lastMessageAt?: string;
-  lastMessage?: {
-    id: string;
-    content: string;
-    sender: {
-      id: string;
-      name: string;
-    };
-    createdAt: string;
-  };
-  unreadCount?: number;
+  description: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChatUser {
+  id: string;
+  email: string;
+  username: string;
+  firstName: string | null;
+  lastName: string | null;
+  profilePicture: string | null;
 }
 
 export interface ChatMessage {
-  id: string;
-  groupId: string;
-  content: string;
-  createdAt: string;
-  sender: {
+  message: {
     id: string;
-    name: string;
-    avatar?: string;
+    group_id: string;
+    user_id: string;
+    content: string;
+    created_at: string;
+    updated_at: string;
+    is_edited: boolean;
+    is_deleted: boolean;
   };
-  attachments?: ChatAttachment[];
-  status: 'sent' | 'delivered' | 'read' | 'failed';
+  user: ChatUser;
 }
 
-export interface ChatAttachment {
-  id: string;
-  type: 'image' | 'file' | 'location';
-  url: string;
-  thumbnailUrl?: string;
-  name?: string;
-  size?: number;
-  metadata?: Record<string, any>;
+export interface PaginationInfo {
+  total: number;
+  limit: number;
+  offset: number;
 }
 
-export interface ChatMember {
-  userId: string;
-  name: string;
-  avatar?: string;
-  role: 'owner' | 'admin' | 'member';
-  joinedAt: string;
-  lastReadMessageId?: string;
-  lastReadAt?: string;
-}
-
-// Request/Response Types
-export interface GetChatGroupsResponse {
-  groups: ChatGroup[];
-}
-
-export interface GetChatMessagesResponse {
+export interface ChatMessagesResponse {
   messages: ChatMessage[];
-  hasMore: boolean;
-  nextCursor?: string;
+  pagination: PaginationInfo;
 }
 
-export interface GetChatMembersResponse {
-  members: ChatMember[];
-}
-
-export interface SendMessageRequest {
-  content: string;
-  attachments?: {
-    type: 'image' | 'file' | 'location';
-    url?: string;
-    metadata?: Record<string, any>;
-  }[];
-}
-
-export interface SendMessageResponse {
-  message: ChatMessage;
-}
-
-export interface UpdateLastReadRequest {
-  messageId: string;
-}
-
-export interface UpdateLastReadResponse {
-  success: boolean;
-  lastReadAt: string;
-}
-
-export interface UpdateChatGroupRequest {
-  name?: string;
-}
-
-export interface UpdateChatGroupResponse {
-  group: ChatGroup;
+export interface ChatMembersResponse {
+  users: ChatUser[];
 }
 
 // WebSocket Event Types
-export const ChatEventType = z.enum([
-  'MESSAGE_SENT',
-  'MESSAGE_DELIVERED',
-  'MESSAGE_READ',
-  'GROUP_UPDATED',
-  'GROUP_DELETED',
-  'MEMBER_JOINED',
-  'MEMBER_LEFT',
-  'TYPING_STARTED',
-  'TYPING_STOPPED'
-]);
+export type ChatWebSocketEvent = 
+  | { type: 'chat_message_created'; data: ChatMessage }
+  | { type: 'chat_message_updated'; data: ChatMessage }
+  | { type: 'chat_message_deleted'; data: { id: string; group_id: string } }
+  | { type: 'chat_typing_status'; data: { user_id: string; group_id: string; is_typing: boolean; username: string } };
 
-export type ChatEventType = z.infer<typeof ChatEventType>;
+// Request Types
+export interface CreateChatGroupRequest {
+  trip_id: string;
+  name: string;
+  description: string;
+}
 
-export const ChatEventSchema = z.object({
-  id: z.string(),
-  type: ChatEventType,
-  groupId: z.string(),
-  userId: z.string().optional(),
-  timestamp: z.string().datetime(),
-  payload: z.unknown()
-});
+export interface UpdateReadStatusRequest {
+  message_id: string;
+}
 
-export type ChatEvent = z.infer<typeof ChatEventSchema>;
+// Local State Types
+export interface ChatGroup extends ChatGroupResponse {
+  unreadCount?: number;
+  lastMessage?: ChatMessage;
+}
 
-// Type guards
-export const isChatEvent = (event: unknown): event is ChatEvent => {
-  return ChatEventSchema.safeParse(event).success;
-};
+export interface ChatState {
+  // Chat groups
+  groups: ChatGroup[];
+  selectedGroupId: string | null;
+  isLoadingGroups: boolean;
+  
+  // Messages
+  messagesByGroupId: Record<string, ChatMessage[]>;
+  isLoadingMessages: boolean;
+  hasMoreMessages: Record<string, boolean>;
+  messagePagination: Record<string, PaginationInfo>;
+  
+  // Members
+  membersByGroupId: Record<string, ChatUser[]>;
+  isLoadingMembers: boolean;
+  
+  // Typing indicators
+  typingUsers: Record<string, { userId: string; name: string; timestamp: number }[]>;
+  
+  // Error states
+  errors: Record<string, string | null>;
+  
+  // Cache
+  userCache: Record<string, ChatUser>;
+}
 
-export const isMessageEvent = (event: ChatEvent): boolean => {
-  return ['MESSAGE_SENT', 'MESSAGE_DELIVERED', 'MESSAGE_READ'].includes(event.type);
-};
-
-export const isTypingEvent = (event: ChatEvent): boolean => {
-  return ['TYPING_STARTED', 'TYPING_STOPPED'].includes(event.type);
-}; 
+// Message Status
+export type MessageStatus = 'sending' | 'sent' | 'error';
+export interface MessageWithStatus extends ChatMessage {
+  status?: MessageStatus;
+  retryCount?: number;
+} 

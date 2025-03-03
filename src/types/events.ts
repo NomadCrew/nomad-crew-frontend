@@ -20,6 +20,14 @@ export const ServerEventType = z.enum([
   'MEMBER_INVITED',
   'LOCATION_UPDATED',
   'LOCATION_SHARING_CHANGED',
+  // New chat event types
+  'CHAT_MESSAGE_SENT',
+  'CHAT_MESSAGE_EDITED',
+  'CHAT_MESSAGE_DELETED',
+  'CHAT_REACTION_ADDED',
+  'CHAT_REACTION_REMOVED',
+  'CHAT_READ_RECEIPT',
+  'CHAT_TYPING_STATUS'
 ]);
 
 export type ServerEventType = z.infer<typeof ServerEventType>;
@@ -157,6 +165,49 @@ export const EventSchemas = {
       }),
       isSharingEnabled: z.boolean().optional()
     })
+  }),
+
+  // Chat event schemas
+  chatMessage: BaseEventSchema.extend({
+    type: z.enum(['CHAT_MESSAGE_SENT', 'CHAT_MESSAGE_EDITED', 'CHAT_MESSAGE_DELETED']),
+    payload: z.object({
+      messageId: z.string(),
+      groupId: z.string(),
+      content: z.string().optional(),
+      user: z.object({
+        id: z.string(),
+        name: z.string(),
+        avatar: z.string().optional()
+      }),
+      timestamp: z.string().datetime()
+    })
+  }),
+
+  chatReaction: BaseEventSchema.extend({
+    type: z.enum(['CHAT_REACTION_ADDED', 'CHAT_REACTION_REMOVED']),
+    payload: z.object({
+      messageId: z.string(),
+      groupId: z.string(),
+      reaction: z.string(),
+      user: z.object({
+        id: z.string(),
+        name: z.string(),
+        avatar: z.string().optional()
+      })
+    })
+  }),
+
+  chatReadReceipt: BaseEventSchema.extend({
+    type: z.literal('CHAT_READ_RECEIPT'),
+    payload: z.object({
+      groupId: z.string(),
+      messageId: z.string(),
+      user: z.object({
+        id: z.string(),
+        name: z.string(),
+        avatar: z.string().optional()
+      })
+    })
   })
 };
 
@@ -188,3 +239,15 @@ export const isMemberEvent = (event: ServerEvent): event is z.infer<typeof Event
 export const isLocationEvent = (event: ServerEvent): event is z.infer<typeof EventSchemas.location> =>
   ['LOCATION_UPDATED', 'LOCATION_SHARING_CHANGED'].includes(event.type) &&
   EventSchemas.location.safeParse(event).success;
+
+// Chat event type guard
+export const isChatEvent = (event: ServerEvent): boolean => {
+  return [
+    'CHAT_MESSAGE_SENT',
+    'CHAT_MESSAGE_EDITED',
+    'CHAT_MESSAGE_DELETED',
+    'CHAT_REACTION_ADDED',
+    'CHAT_REACTION_REMOVED',
+    'CHAT_READ_RECEIPT'
+  ].includes(event.type);
+};

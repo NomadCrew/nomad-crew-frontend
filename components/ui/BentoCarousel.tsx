@@ -14,9 +14,15 @@ interface BentoCarouselProps {
   items: CarouselItem[];
   width: number;
   height: number;
+  onProgressChange?: (offsetProgress: number) => void;
 }
 
-export const BentoCarousel = ({ items, width, height }: BentoCarouselProps) => {
+export const BentoCarousel = ({ 
+  items, 
+  width, 
+  height, 
+  onProgressChange 
+}: BentoCarouselProps) => {
   const [currentIndex, setCurrentIndex] = React.useState(0);
 
   const renderItem = React.useCallback(({ item, animationValue }: { 
@@ -39,9 +45,12 @@ export const BentoCarousel = ({ items, width, height }: BentoCarouselProps) => {
     height,
   }), [width, height]);
 
-  const onProgressChange = React.useCallback((offsetProgress: number) => {
+  const handleProgressChange = React.useCallback((offsetProgress: number) => {
     runOnJS(setCurrentIndex)(Math.round(offsetProgress));
-  }, []);
+    if (onProgressChange) {
+      runOnJS(onProgressChange)(offsetProgress);
+    }
+  }, [onProgressChange]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -69,7 +78,7 @@ export const BentoCarousel = ({ items, width, height }: BentoCarouselProps) => {
             activeOffsetX: [-10, 10],
             failOffsetY: [-5, 5],
           }}
-          onProgressChange={onProgressChange}
+          onProgressChange={handleProgressChange}
           defaultIndex={0}
         />
       </View>

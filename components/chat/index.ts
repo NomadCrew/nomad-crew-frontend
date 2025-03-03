@@ -5,5 +5,4 @@ export * from './ChatGroupItem';
 export * from './ChatGroupList';
 export * from './ChatInput';
 export * from './ChatList';
-export * from './ChatMessage';
-export * from './ChatModal'; 
+export * from './ChatMessage'; 
