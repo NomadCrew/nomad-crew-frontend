@@ -486,39 +486,51 @@ export class WebSocketManager {
     }
   }
 
+  // Simplified method to send chat messages
+  public sendChatMessage(tripId: string, content: string, messageId: string): boolean {
+    const user = useAuthStore.getState().user;
+    if (!user) {
+      logger.error('WS', 'Cannot send chat message, user not logged in');
+      return false;
+    }
+
+    const messagePayload = {
+      tripId,
+      content,
+      messageId,
+      user: {
+        id: user.id,
+        name: user.username || user.firstName || 'You',
+        avatar: user.profilePicture
+      },
+      timestamp: new Date().toISOString()
+    };
+
+    return this.send('CHAT_MESSAGE_SEND', messagePayload);
+  }
+
+  // Simplified method to send typing status
+  public sendTypingStatus(tripId: string, isTyping: boolean): boolean {
+    const user = useAuthStore.getState().user;
+    if (!user) {
+      logger.error('WS', 'Cannot send typing status, user not logged in');
+      return false;
+    }
+
+    const typingPayload = {
+      tripId,
+      isTyping,
+      userId: user.id,
+      username: user.username || user.firstName || 'You'
+    };
+
+    return this.send('TYPING_STATUS', typingPayload);
+  }
+
   public isConnected(): boolean {
     const connected = this.connection?.isConnected() || false;
     logger.debug('WS', `WebSocketManager.isConnected() called, result: ${connected}`);
     return connected;
-  }
-
-  /**
-   * Send typing status to the server
-   * @param tripId The trip ID
-   * @param isTyping Whether the user is typing or not
-   * @returns True if the message was sent, false otherwise
-   */
-  public sendTypingStatus(tripId: string, isTyping: boolean): boolean {
-    if (!this.connection || !this.isConnected()) {
-      logger.warn('WS', 'Cannot send typing status: not connected');
-      return false;
-    }
-
-    const { user } = useAuthStore.getState();
-    if (!user) {
-      logger.warn('WS', 'Cannot send typing status: no user');
-      return false;
-    }
-
-    return this.send('CHAT_TYPING_STATUS', {
-      tripId,
-      isTyping,
-      user: {
-        id: user.id,
-        name: user.username || user.firstName || 'User',
-        avatar: user.profilePicture
-      }
-    });
   }
 }
 
