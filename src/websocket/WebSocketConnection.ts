@@ -27,6 +27,12 @@ export class WebSocketConnection {
   private connectionAttempts = 0;
   private readonly MAX_CONNECTION_ATTEMPTS = 5;
   private isManualDisconnect = false;
+  
+  // Connection health monitoring
+  private lastMessageTime = 0;
+  private healthCheckTimer: NodeJS.Timeout | null = null;
+  private readonly HEALTH_CHECK_INTERVAL = 15000; // Check every 15 seconds
+  private readonly CONNECTION_STALE_THRESHOLD = 60000; // 60 seconds with no messages
 
   constructor(config: ConnectionConfig) {
     this.config = config;
@@ -38,11 +44,8 @@ export class WebSocketConnection {
   }
 
   public async connect(): Promise<void> {
-    // Clear any existing reconnect timer
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
+    // Clear any existing timers
+    this.clearTimers();
 
     // Reset manual disconnect flag
     this.isManualDisconnect = false;
@@ -87,14 +90,27 @@ export class WebSocketConnection {
           clearTimeout(connectionTimeout);
           this.connectionAttempts = 0;
           this.setStatus('CONNECTED');
+          
+          // Initialize last message time
+          this.lastMessageTime = Date.now();
+          
+          // Start connection health monitoring
+          this.startHealthMonitoring();
+          
           resolve();
         };
 
         this.ws.onmessage = (event) => {
+          // Update last message time on any message (including pongs)
+          this.lastMessageTime = Date.now();
+          
           try {
-            const data = JSON.parse(event.data);
-            if (isServerEvent(data)) {
-              this.callbacks.onMessage?.(data);
+            // Only process data messages (not ping/pong frames)
+            if (typeof event.data === 'string') {
+              const data = JSON.parse(event.data);
+              if (isServerEvent(data)) {
+                this.callbacks.onMessage?.(data);
+              }
             }
           } catch (error) {
             logger.error('WS', 'Message parse error:', error);
@@ -105,6 +121,9 @@ export class WebSocketConnection {
           clearTimeout(connectionTimeout);
           logger.debug('WS', 'Connection closed:', event.code, event.reason);
           this.setStatus('DISCONNECTED');
+          
+          // Clear health monitoring
+          this.clearTimers();
           
           if (this.isManualDisconnect) {
             // Don't attempt to reconnect if this was a manual disconnect
@@ -134,10 +153,53 @@ export class WebSocketConnection {
     });
   }
 
+  private startHealthMonitoring(): void {
+    // Clear any existing health check timer
+    if (this.healthCheckTimer) {
+      clearInterval(this.healthCheckTimer);
+    }
+    
+    // Start health check interval
+    this.healthCheckTimer = setInterval(() => {
+      this.checkConnectionHealth();
+    }, this.HEALTH_CHECK_INTERVAL);
+  }
+  
+  private checkConnectionHealth(): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      return;
+    }
+    
+    const connectionAge = Date.now() - this.lastMessageTime;
+    
+    // If no messages received for too long, connection might be stale
+    if (connectionAge > this.CONNECTION_STALE_THRESHOLD) {
+      logger.warn('WS', 'Connection appears stale, reconnecting...');
+      
+      // Close the connection and let the reconnect logic handle it
+      this.ws.close();
+    }
+  }
+  
+  private clearTimers(): void {
+    // Clear reconnect timer
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    
+    // Clear health check timer
+    if (this.healthCheckTimer) {
+      clearInterval(this.healthCheckTimer);
+      this.healthCheckTimer = null;
+    }
+  }
+
   private handleReconnect(): void {
     this.connectionAttempts++;
     
     if (this.connectionAttempts <= this.MAX_CONNECTION_ATTEMPTS) {
+      // Implement exponential backoff for reconnection
       const delay = Math.min(1000 * Math.pow(2, this.connectionAttempts - 1), 30000);
       logger.debug('WS', `Scheduling reconnection in ${delay}ms (attempt ${this.connectionAttempts}/${this.MAX_CONNECTION_ATTEMPTS})`);
       
@@ -154,11 +216,8 @@ export class WebSocketConnection {
   }
 
   public disconnect(): void {
-    // Clear any reconnect timer
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
+    // Clear all timers
+    this.clearTimers();
 
     // Set flag to prevent auto-reconnect
     this.isManualDisconnect = true;
@@ -196,6 +255,10 @@ export class WebSocketConnection {
     try {
       const message = typeof data === 'string' ? data : JSON.stringify(data);
       this.ws.send(message);
+      
+      // Update last message time when sending a message
+      this.lastMessageTime = Date.now();
+      
       return true;
     } catch (error) {
       logger.error('WS', 'Error sending message:', error);
