@@ -1,6 +1,6 @@
 // screens/trips/TripDetailScreen.tsx
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, ScrollView, useWindowDimensions, SafeAreaView } from 'react-native';
+import { View, ScrollView, useWindowDimensions, SafeAreaView, StyleSheet, ViewStyle } from 'react-native';
 import { router } from 'expo-router';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { BentoGrid } from '@/components/ui/BentoGrid';
@@ -46,16 +46,16 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
       container: {
         flex: 1,
         backgroundColor: backgroundDefault,
-      },
+      } as ViewStyle,
       scrollContainer: {
         flex: 1,
-      },
+      } as ViewStyle,
       contentContainer: {
         flexGrow: 1,
         alignSelf: 'center',
         width: '100%',
         paddingBottom: spacingStackXl,
-      },
+      } as ViewStyle,
     };
   });
 
@@ -148,9 +148,9 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
       }
     }).then(() => {
       const isConnectedAfter = manager.isConnected();
-      logger.info('Trip Detail Screen', `WebSocket connection status after connect: ${isConnectedAfter ? 'connected' : 'disconnected'}`);
+      logger.info('UI', `WebSocket connection status after connect: ${isConnectedAfter ? 'connected' : 'disconnected'}`);
     }).catch(error => {
-      logger.error('Trip Detail Screen', `Failed to connect to WebSocket for trip ${tripId}:`, error);
+      logger.error('UI', `Failed to connect to WebSocket for trip ${tripId}:`, error);
     });
     
     // Initialize chat data for this trip

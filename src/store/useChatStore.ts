@@ -20,7 +20,7 @@ const persistMessages = async (messagesByTripId: Record<string, ChatMessageWithS
   try {
     await AsyncStorage.setItem(MESSAGES_STORAGE_KEY, JSON.stringify(messagesByTripId));
   } catch (error) {
-    logger.error('[ChatStore] Failed to persist messages:', error);
+    logger.error('ChatStore', 'Failed to persist messages:', error);
   }
 };
 
@@ -31,7 +31,7 @@ const loadPersistedMessages = async (): Promise<{ messagesByTripId: Record<strin
       return { messagesByTripId: JSON.parse(storedData) };
     }
   } catch (error) {
-    logger.error('[ChatStore] Failed to load persisted messages:', error);
+    logger.error('ChatStore', 'Failed to load persisted messages:', error);
   }
   return { messagesByTripId: {} };
 };
@@ -51,37 +51,75 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   // Initialize store with persisted data
   initializeStore: async () => {
-    const { messagesByTripId } = await loadPersistedMessages();
-    set({ messagesByTripId });
+    try {
+      logger.debug('ChatStore', 'Initializing store with persisted data');
+      const { messagesByTripId } = await loadPersistedMessages();
+      set({ messagesByTripId });
+      logger.debug('ChatStore', 'Store initialized successfully');
+    } catch (error) {
+      logger.error('ChatStore', 'Failed to initialize store:', error);
+      set({ error: 'Failed to initialize chat store' });
+    }
   },
 
   // Connect to chat WebSocket
   connectToChat: async (tripId: string) => {
     try {
-      logger.debug('[ChatStore] Initializing chat for trip:', tripId);
-      // No need to connect to WebSocket here as it's managed at the trip level
-      // Just initialize any chat-specific state
+      logger.debug('ChatStore', 'Connecting to chat for trip:', tripId);
+      
+      // Clear any previous errors
+      set({ error: null });
+      
+      // Get the WebSocket manager instance
+      const wsManager = WebSocketManager.getInstance();
+      
+      // Set up callbacks for WebSocket events
+      const callbacks = {
+        onMessage: (event: ServerEvent) => {
+          get().handleChatEvent(event);
+        },
+        onError: (error: Error) => {
+          logger.error('ChatStore', 'WebSocket error:', error);
+          set({ error: `WebSocket error: ${error.message}` });
+        }
+      };
+      
+      // Connect to WebSocket
+      await wsManager.connect(tripId, callbacks);
+      logger.debug('ChatStore', 'Connected to chat WebSocket for trip:', tripId);
+      
+      // Initialize store if not already initialized
+      if (Object.keys(get().messagesByTripId).length === 0) {
+        await get().initializeStore();
+      }
     } catch (error) {
-      logger.error('[ChatStore] Failed to initialize chat:', error);
-      set({ error: 'Failed to initialize chat' });
+      logger.error('ChatStore', 'Failed to connect to chat:', error);
+      set({ error: `Failed to connect to chat: ${error instanceof Error ? error.message : 'Unknown error'}` });
     }
   },
 
   // Disconnect from chat WebSocket
   disconnectFromChat: (tripId: string) => {
     try {
-      logger.debug('[ChatStore] Cleaning up chat for trip:', tripId);
-      // No need to disconnect from WebSocket here as it's managed at the trip level
-      // Just clean up any chat-specific state
+      logger.debug('ChatStore', 'Disconnecting from chat for trip:', tripId);
+      
+      // Get the WebSocket manager instance
+      const wsManager = WebSocketManager.getInstance();
+      
+      // Disconnect from WebSocket
+      wsManager.disconnect();
+      logger.debug('ChatStore', 'Disconnected from chat WebSocket for trip:', tripId);
     } catch (error) {
-      logger.error('[ChatStore] Error cleaning up chat:', error);
+      logger.error('ChatStore', 'Error disconnecting from chat:', error);
     }
   },
 
-  // Actions
+  // Fetch messages
   fetchMessages: async (tripId: string, refresh = false) => {
-    set({ isLoadingMessages: true, isLoading: true, errors: { ...get().errors, messages: null }, error: null });
     try {
+      logger.debug('ChatStore', 'Fetching messages for trip:', tripId);
+      set({ isLoadingMessages: true, isLoading: true, error: null });
+      
       // Get pagination info
       const limit = 20;
       const cursor = refresh ? undefined : get().messagePagination[tripId]?.nextCursor;
@@ -126,7 +164,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
           }
         },
         isLoadingMessages: false,
-        isLoading: false
+        isLoading: false,
+        error: null
       }));
       
       // Persist messages
@@ -135,67 +174,63 @@ export const useChatStore = create<ChatState>((set, get) => ({
         [tripId]: uniqueMessages
       });
       
+      logger.debug('ChatStore', 'Successfully fetched messages for trip:', tripId);
     } catch (error) {
-      logger.error('[ChatStore] Failed to fetch messages:', error);
+      logger.error('ChatStore', 'Failed to fetch messages:', error);
       set({ 
         isLoadingMessages: false, 
-        isLoading: false,
-        errors: { ...get().errors, messages: 'Failed to fetch messages' },
-        error: 'Failed to fetch messages'
+        isLoading: false, 
+        error: `Failed to fetch messages: ${error instanceof Error ? error.message : 'Unknown error'}`
       });
     }
   },
 
-  // Add a stub for fetchChatGroups to maintain backward compatibility
-  fetchChatGroups: (tripId: string) => {
-    logger.debug('[ChatStore] fetchChatGroups called (deprecated)');
-    // This is a no-op function to maintain backward compatibility
-    // Since we've simplified the chat experience by eliminating separate chat groups
-    // Each trip now functions as a chat group by default
-    return Promise.resolve();
-  },
-
+  // Fetch more messages (pagination)
   fetchMoreMessages: async (tripId: string) => {
-    // Only fetch more if we have more to fetch and we're not already loading
-    if (!get().hasMoreMessages[tripId] || get().isLoadingMessages) {
+    const { hasMoreMessages, isLoadingMessages } = get();
+    
+    // Don't fetch if already loading or no more messages
+    if (isLoadingMessages || !hasMoreMessages[tripId]) {
       return;
     }
     
-    await get().fetchMessages(tripId, false);
+    await get().fetchMessages(tripId);
   },
 
+  // Send a message
   sendMessage: async ({ tripId, content }: { tripId: string; content: string }) => {
-    logger.info('[ChatStore]', `sendMessage called with tripId: ${tripId} and content: ${content.substring(0, 20)}${content.length > 20 ? '...' : ''}`);
+    logger.debug('ChatStore', 'Sending message for trip:', tripId);
     
     if (!tripId) {
-      logger.error('[ChatStore]', 'Cannot send message: tripId is undefined');
+      logger.error('ChatStore', 'Cannot send message: tripId is undefined');
       return;
     }
     
     // Check if user is logged in
     const { user } = useAuthStore.getState();
     if (!user) {
-      logger.error('[ChatStore]', 'Cannot send message: user not logged in');
+      logger.error('ChatStore', 'Cannot send message: user not logged in');
+      set({ error: 'Cannot send message: You are not logged in' });
       return;
     }
     
     // Set sending state
     set({ isSending: true });
     
-    // Create an optimistic message
-    const optimisticId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-    logger.debug('[ChatStore]', `Creating optimistic message with ID: ${optimisticId}`);
+    // Create an optimistic message with a temporary ID
+    const optimisticId = uuidv4();
     
     const optimisticMessage: ChatMessageWithStatus = {
       message: {
         id: optimisticId,
+        trip_id: tripId,
         content,
         sender: {
           id: user.id,
           name: user.username || user.firstName || 'You',
           avatar: user.profilePicture
         },
-        createdAt: new Date().toISOString()
+        created_at: new Date().toISOString()
       },
       status: 'sending'
     };
@@ -203,8 +238,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
     // Add the optimistic message to the state
     const existingMessages = get().messagesByTripId[tripId] || [];
     const updatedMessages = [optimisticMessage, ...existingMessages];
-    
-    logger.debug('[ChatStore]', `Adding optimistic message to state. Total messages: ${updatedMessages.length}`);
     
     set(state => ({
       messagesByTripId: {
@@ -223,46 +256,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // Get the WebSocket manager instance
       const wsManager = WebSocketManager.getInstance();
       
-      logger.debug('[ChatStore]', `WebSocket manager instance obtained, connected: ${wsManager.isConnected()}`);
-      
       // Check if WebSocket is connected
       if (!wsManager.isConnected()) {
-        logger.warn('[ChatStore]', 'WebSocket not connected, attempting to connect');
+        logger.warn('ChatStore', 'WebSocket not connected, attempting to connect');
         // Try to connect to the WebSocket
-        await wsManager.connect(tripId);
-        logger.debug('[ChatStore]', `WebSocket connection attempt completed, connected: ${wsManager.isConnected()}`);
+        await wsManager.connect(tripId, {
+          onMessage: (event) => get().handleChatEvent(event)
+        });
       }
       
       // Send the message via WebSocket
-      logger.info('[ChatStore]', 'Sending message via WebSocket');
-      
-      // Create the message payload with all required fields
-      const messagePayload = {
-        tripId,
-        content,
-        messageId: optimisticId,
-        user: {
-          id: user.id,
-          name: user.username || user.firstName || 'You',
-          avatar: user.profilePicture
-        },
-        timestamp: new Date().toISOString()
-      };
-      
-      // Log the exact payload being sent
-      logger.debug('[ChatStore]', 'Message payload:', JSON.stringify(messagePayload, null, 2));
-      
-      // Send the message with the correct event type
-      const success = wsManager.send('CHAT_MESSAGE_SEND', messagePayload);
+      const success = wsManager.sendChatMessage(tripId, content, optimisticId);
       
       if (!success) {
-        logger.error('[ChatStore]', 'Failed to send message via WebSocket');
         throw new Error('Failed to send message via WebSocket');
       }
       
-      logger.info('[ChatStore]', 'Message sent successfully via WebSocket');
-      
-      // Update the message status to 'sent' immediately to ensure UI shows the message
+      // Update the message status to 'sent'
       const updatedMessagesWithSentStatus = get().messagesByTripId[tripId]?.map(msg => 
         msg.message.id === optimisticId 
           ? { ...msg, status: 'sent' as const }
@@ -274,7 +284,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
           ...state.messagesByTripId,
           [tripId]: updatedMessagesWithSentStatus
         },
-        isSending: false
+        isSending: false,
+        error: null
       }));
       
       // Persist the updated messages with sent status
@@ -283,15 +294,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
         [tripId]: updatedMessagesWithSentStatus
       });
       
-      // Note: The actual message with server-generated ID will be received via WebSocket
-      // and handled by the handleChatEvent function
-      
     } catch (error) {
-      logger.error('[ChatStore] Failed to send message:', error);
+      logger.error('ChatStore', 'Failed to send message:', error);
       
       // Update the message status to 'error'
       const updatedMessagesWithError = get().messagesByTripId[tripId]?.map(msg => 
-        msg.message.id === optimisticMessage.message.id 
+        msg.message.id === optimisticId 
           ? { ...msg, status: 'error' as const, error: 'Failed to send message' }
           : msg
       ) || [];
@@ -301,7 +309,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
           ...state.messagesByTripId,
           [tripId]: updatedMessagesWithError
         },
-        isSending: false
+        isSending: false,
+        error: `Failed to send message: ${error instanceof Error ? error.message : 'Unknown error'}`
       }));
       
       // Persist the updated messages with error status
@@ -312,23 +321,31 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
+  // Mark a message as read
   markAsRead: async (tripId: string, messageId: string) => {
     try {
       await chatService.updateLastRead(tripId, { message_id: messageId });
     } catch (error) {
-      logger.error('[ChatStore] Failed to mark message as read:', error);
+      logger.error('ChatStore', 'Failed to mark message as read:', error);
     }
   },
 
+  // Handle chat events from WebSocket
   handleChatEvent: (event: ServerEvent) => {
-    logger.debug('[ChatStore] Handling chat event:', event.type);
+    logger.debug('ChatStore', 'Handling chat event:', event.type);
     
     switch (event.type) {
+      case 'CHAT_MESSAGE_SENT':
       case 'MESSAGE_SENT': {
         const { tripId } = event;
         const { message } = event.payload;
         
-        // Check if we already have this message (by ID or by temporary ID)
+        if (!message || !tripId) {
+          logger.warn('ChatStore', 'Invalid message event payload:', event);
+          return;
+        }
+        
+        // Check if we already have this message (by ID)
         const existingMessages = get().messagesByTripId[tripId] || [];
         const messageExists = existingMessages.some(
           msg => msg.message.id === message.id
@@ -379,70 +396,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
         break;
       }
       
-      case 'MESSAGE_EDITED': {
-        const { tripId } = event;
-        const { messageId, content } = event.payload;
-        
-        // Update the message content
-        const existingMessages = get().messagesByTripId[tripId] || [];
-        const updatedMessages = existingMessages.map(msg => 
-          msg.message.id === messageId 
-            ? { 
-                ...msg, 
-                message: { 
-                  ...msg.message, 
-                  content,
-                  updated_at: new Date().toISOString()
-                } 
-              }
-            : msg
-        );
-        
-        set(state => ({
-          messagesByTripId: {
-            ...state.messagesByTripId,
-            [tripId]: updatedMessages
-          }
-        }));
-        
-        // Persist the updated messages
-        persistMessages({
-          ...get().messagesByTripId,
-          [tripId]: updatedMessages
-        });
-        break;
-      }
-      
-      case 'MESSAGE_DELETED': {
-        const { tripId } = event;
-        const { messageId } = event.payload;
-        
-        // Remove the message
-        const existingMessages = get().messagesByTripId[tripId] || [];
-        const updatedMessages = existingMessages.filter(
-          msg => msg.message.id !== messageId
-        );
-        
-        set(state => ({
-          messagesByTripId: {
-            ...state.messagesByTripId,
-            [tripId]: updatedMessages
-          }
-        }));
-        
-        // Persist the updated messages
-        persistMessages({
-          ...get().messagesByTripId,
-          [tripId]: updatedMessages
-        });
-        break;
-      }
-      
       case 'TYPING_STATUS': {
         const { tripId } = event;
         const { userId, isTyping, username } = event.payload;
         
-        // Get current typing users for this group
+        if (!userId || !tripId) {
+          logger.warn('ChatStore', 'Invalid typing status event payload:', event);
+          return;
+        }
+        
+        // Get current typing users for this trip
         const currentTypingUsers = get().typingUsers[tripId] || [];
         
         if (isTyping) {
@@ -499,22 +462,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
       
       default:
-        logger.warn('[ChatStore] Unknown chat event type:', event.type);
+        logger.warn('ChatStore', 'Unknown chat event type:', event.type);
     }
   },
 
+  // Set typing status
   setTypingStatus: async (tripId: string, isTyping: boolean) => {
     try {
       const wsManager = WebSocketManager.getInstance();
       
       if (!wsManager.isConnected()) {
-        logger.warn('[ChatStore] WebSocket not connected, cannot send typing status');
+        logger.warn('ChatStore', 'WebSocket not connected, cannot send typing status');
         return;
       }
       
       wsManager.sendTypingStatus(tripId, isTyping);
     } catch (error) {
-      logger.error('[ChatStore] Failed to send typing status:', error);
+      logger.error('ChatStore', 'Failed to send typing status:', error);
     }
   }
 })); 

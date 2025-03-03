@@ -1,4 +1,4 @@
-type LogModule = 'API' | 'WS' | 'AUTH' | 'TRIP' | 'TODO' | 'WEATHER' | 'UI';
+type LogModule = 'API' | 'WS' | 'AUTH' | 'TRIP' | 'TODO' | 'WEATHER' | 'UI' | 'ChatStore';
 
 export const logger = {
   debug: (module: LogModule, ...args: unknown[]) => {

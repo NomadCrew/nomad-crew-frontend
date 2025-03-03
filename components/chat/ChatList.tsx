@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useMemo } from 'react';
 import { View, FlatList, StyleSheet, ActivityIndicator, Text } from 'react-native';
 import { ChatMessage } from './ChatMessage';
 import { ChatMessageWithStatus } from '@/src/types/chat';
@@ -26,43 +26,35 @@ export const ChatList: React.FC<ChatListProps> = ({
   isRefreshing = false,
   typingUsers = []
 }) => {
-  logger.debug('Chat List', `Rendering ChatList with ${messages.length} messages`);
+  logger.debug('UI', `Rendering ChatList with ${messages.length} messages`);
   
   const { theme } = useTheme();
   const { user } = useAuth();
   const flatListRef = useRef<FlatList>(null);
   
+  // Filter out typing indicators older than 5 seconds and from the current user
+  const activeTypingUsers = useMemo(() => {
+    const now = Date.now();
+    return typingUsers.filter(
+      typingUser => now - typingUser.timestamp < 5000 && typingUser.userId !== user?.id
+    );
+  }, [typingUsers, user?.id]);
+  
   // Log when the component mounts and when messages change
   useEffect(() => {
-    logger.debug('Chat List', 'ChatList component mounted');
+    logger.debug('UI', 'ChatList component mounted');
     
     return () => {
-      logger.debug('Chat List', 'ChatList component unmounted');
+      logger.debug('UI', 'ChatList component unmounted');
     };
   }, []);
   
   // Log when messages change
   useEffect(() => {
     if (messages.length > 0) {
-      logger.debug('Chat List', `Messages updated, now displaying ${messages.length} messages`);
-      
-      // Log the most recent message for debugging
-      const mostRecent = messages[0];
-      if (mostRecent && mostRecent.message) {
-        logger.debug(
-          'Chat List', 
-          `Most recent message: ID=${mostRecent.message.id}, ` +
-          `Sender=${mostRecent.message.sender?.name || 'Unknown'}, ` +
-          `Status=${mostRecent.status}`
-        );
-      }
+      logger.debug('UI', `Messages updated, now displaying ${messages.length} messages`);
     }
-  }, [messages]);
-  
-  // Log loading state changes
-  useEffect(() => {
-    logger.debug('Chat List', `Loading state changed to: ${isLoading ? 'loading' : 'not loading'}`);
-  }, [isLoading]);
+  }, [messages.length]);
   
   const styles = useThemedStyles((theme) => {
     return StyleSheet.create({
@@ -106,7 +98,7 @@ export const ChatList: React.FC<ChatListProps> = ({
   const renderItem = useCallback(({ item, index }: { item: ChatMessageWithStatus; index: number }) => {
     // Validate message data
     if (!item.message || !item.message.sender) {
-      logger.warn('Chat List', 'Invalid message data:', JSON.stringify(item, null, 2));
+      logger.warn('UI', 'Invalid message data:', JSON.stringify(item, null, 2));
       return null;
     }
     
@@ -126,7 +118,6 @@ export const ChatList: React.FC<ChatListProps> = ({
   const renderFooter = useCallback(() => {
     if (!isLoading) return null;
     
-    logger.debug('Chat List', 'Rendering loading indicator in footer');
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="small" color={theme.colors.primary.main} />
@@ -135,73 +126,71 @@ export const ChatList: React.FC<ChatListProps> = ({
   }, [isLoading, styles, theme.colors.primary.main]);
 
   const renderTypingIndicator = useCallback(() => {
-    // Filter out typing indicators older than 5 seconds
-    const now = Date.now();
-    const recentTypingUsers = typingUsers.filter(
-      user => now - user.timestamp < 5000 && user.userId !== user?.id
-    );
-    
-    if (recentTypingUsers.length === 0) {
+    if (activeTypingUsers.length === 0) {
       return null;
     }
     
     let typingText = '';
-    if (recentTypingUsers.length === 1) {
-      typingText = `${recentTypingUsers[0].name} is typing...`;
-    } else if (recentTypingUsers.length === 2) {
-      typingText = `${recentTypingUsers[0].name} and ${recentTypingUsers[1].name} are typing...`;
+    if (activeTypingUsers.length === 1) {
+      typingText = `${activeTypingUsers[0].name} is typing...`;
+    } else if (activeTypingUsers.length === 2) {
+      typingText = `${activeTypingUsers[0].name} and ${activeTypingUsers[1].name} are typing...`;
     } else {
       typingText = 'Several people are typing...';
     }
     
-    logger.debug('Chat List', `Showing typing indicator: ${typingText}`);
     return (
       <View style={styles.typingContainer}>
         <Text style={styles.typingText}>{typingText}</Text>
       </View>
     );
-  }, [typingUsers, styles, user?.id]);
+  }, [activeTypingUsers, styles]);
 
   const handleLoadMore = useCallback(() => {
     if (hasMore && !isLoading && onLoadMore) {
-      logger.info('Chat List', 'End of list reached, loading more messages');
+      logger.info('UI', 'End of list reached, loading more messages');
       onLoadMore();
     }
   }, [hasMore, isLoading, onLoadMore]);
 
   const handleRefresh = useCallback(() => {
     if (onRefresh) {
-      logger.info('Chat List', 'Manual refresh triggered by user');
+      logger.info('UI', 'Manual refresh triggered by user');
       onRefresh();
     }
   }, [onRefresh]);
 
-  if (messages.length === 0 && !isLoading) {
-    logger.debug('Chat List', 'No messages to display, showing empty state');
+  // Render empty state if no messages
+  const renderEmptyComponent = useCallback(() => {
+    if (isLoading) return null;
+    
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>
-          No messages yet. Start the conversation!
-        </Text>
+        <Text style={styles.emptyText}>No messages yet. Start the conversation!</Text>
       </View>
     );
-  }
+  }, [isLoading, styles]);
 
   return (
     <View style={styles.container}>
+      {renderTypingIndicator()}
       <FlatList
         ref={flatListRef}
         data={messages}
         renderItem={renderItem}
         keyExtractor={(item) => item.message.id}
         contentContainerStyle={styles.messageList}
-        inverted
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5}
         ListFooterComponent={renderFooter}
-        ListHeaderComponent={renderTypingIndicator}
-        refreshing={isRefreshing}
+        ListEmptyComponent={renderEmptyComponent}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.3}
         onRefresh={handleRefresh}
+        refreshing={isRefreshing}
+        inverted
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        initialNumToRender={15}
       />
     </View>
   );
