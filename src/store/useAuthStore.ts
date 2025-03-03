@@ -4,9 +4,9 @@ import type { AuthState, LoginCredentials, RegisterCredentials, User, AuthStatus
 import { Session } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logger } from '@/src/utils/logger';
-import { api } from '@/src/api/api-client';
-import { API_PATHS } from '@/src/utils/api-paths';
+import { authApi } from '@/src/api/auth-api';
 import { ERROR_CODES, ERROR_MESSAGES } from '@/src/api/constants';
+import { registerAuthHandlers } from '@/src/api/api-client';
 
 /**
  * Attempt to recover a session from Supabase.
@@ -28,7 +28,7 @@ const recoverSession = async () => {
 
 export const useAuthStore = create<AuthState>((set, get) => {
   // State for user, token, loading, etc.
-  return {
+  const store = {
     user: null,
     token: null,
     loading: false,
@@ -122,11 +122,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         try {
           logger.debug('AUTH', 'Attempting to refresh token using backend endpoint');
           
-          const response = await api.post(API_PATHS.auth.refresh, {
-            refresh_token: refreshToken
-          });
-          
-          const { access_token, refresh_token, expires_in } = response.data;
+          const { access_token, refresh_token, expires_in } = await authApi.refreshToken(refreshToken);
           
           if (!access_token || !refresh_token) {
             throw new Error('Invalid response from refresh endpoint');
@@ -450,4 +446,15 @@ export const useAuthStore = create<AuthState>((set, get) => {
       set({ isFirstTime: false });
     }
   };
+
+  // Register auth handlers with the API client
+  registerAuthHandlers({
+    getToken: () => get().token,
+    getRefreshToken: () => get().refreshToken,
+    isInitialized: () => get().isInitialized,
+    refreshSession: async () => await get().refreshSession(),
+    logout: () => get().logout(),
+  });
+
+  return store;
 });

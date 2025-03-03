@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, SafeAreaView, Platform, Text } from 'react-native';
+import { View, StyleSheet, SafeAreaView, Platform, Text, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useChatStore } from '@/src/store/useChatStore';
 import { useAuthStore } from '@/src/store/useAuthStore';
@@ -7,15 +7,18 @@ import { ChatList } from '@/components/chat/ChatList';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { ChatGroupList } from '@/components/chat/ChatGroupList';
 import { ChatAuthError } from '@/components/chat/ChatAuthError';
-import { chatWsManager } from '@/src/websocket/ChatWebSocketManager';
+import { WebSocketManager } from '@/src/websocket/WebSocketManager';
 import { Theme } from '@/src/theme/types';
 import { StatusBar } from 'expo-status-bar';
+import { Ionicons } from '@expo/vector-icons';
+import { logger } from '@/src/utils/logger';
 
 interface ChatScreenProps {
   tripId: string;
+  onBack?: () => void;
 }
 
-export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId }) => {
+export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId, onBack }) => {
   const { theme } = useTheme();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [authError, setAuthError] = useState(false);
@@ -31,24 +34,20 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId }) => {
     messagesByGroupId,
     isLoadingMessages,
     hasMoreMessages,
-    typingUsers,
     fetchChatGroups,
     selectChatGroup,
     fetchMessages,
     fetchMoreMessages,
     sendMessage,
-    markAsRead,
-    handleChatEvent,
-    setTypingStatus
+    markAsRead
   } = useChatStore();
   
   // Filter groups by tripId
-  const tripGroups = groups.filter(group => group.tripId === tripId);
+  const tripGroups = groups.filter(group => group.trip_id === tripId);
   
   // Get messages for the selected group
   const messages = selectedGroupId ? messagesByGroupId[selectedGroupId] || [] : [];
   const hasMore = selectedGroupId ? hasMoreMessages[selectedGroupId] || false : false;
-  const currentTypingUsers = selectedGroupId ? typingUsers[selectedGroupId] || [] : [];
   
   // Check for authentication before fetching
   useEffect(() => {
@@ -63,7 +62,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId }) => {
   useEffect(() => {
     const loadGroups = async () => {
       try {
-        await fetchChatGroups();
+        await fetchChatGroups(tripId);
       } catch (error) {
         // If we get an error fetching groups, check if it's auth related
         if (!token) {
@@ -75,46 +74,49 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId }) => {
     if (!authError) {
       loadGroups();
     }
-  }, [fetchChatGroups, authError, token]);
+  }, [fetchChatGroups, authError, token, tripId]);
   
   // Select the first group if none is selected
   useEffect(() => {
     if (tripGroups.length > 0 && !selectedGroupId) {
-      // Find the default group first
-      const defaultGroup = tripGroups.find(group => group.isDefault);
-      
-      if (defaultGroup) {
-        selectChatGroup(defaultGroup.id);
-      } else if (tripGroups[0]) {
-        selectChatGroup(tripGroups[0].id);
-      }
+      selectChatGroup(tripGroups[0].id);
     }
   }, [tripGroups, selectedGroupId, selectChatGroup]);
   
   // Connect to WebSocket when a group is selected
   useEffect(() => {
-    if (selectedGroupId) {
-      chatWsManager.connect(selectedGroupId, {
-        onMessage: handleChatEvent,
-        onError: (error) => {
-          console.error('Chat WebSocket error:', error);
-          // Check if it's an auth error
-          if (error.message === 'Authentication failed') {
-            setAuthError(true);
-          }
-        }
-      });
+    let isActive = true;
+    let wsManager: WebSocketManager | null = null;
+    
+    const connectToWebSocket = async () => {
+      if (!tripId || !isActive) return;
       
-      // Mark messages as read when selecting a group
-      if (messages.length > 0) {
-        markAsRead(selectedGroupId, messages[0].id);
+      try {
+        logger.debug('Chat Screen', `Ensuring WebSocket connection for trip ${tripId}`);
+        
+        // Use the trip WebSocket manager
+        wsManager = WebSocketManager.getInstance();
+        await wsManager.connect(tripId);
+        
+        // Mark messages as read when selecting a group
+        if (isActive && selectedGroupId && messages.length > 0 && messages[0]?.message?.id) {
+          markAsRead(selectedGroupId, messages[0].message.id);
+        }
+      } catch (error) {
+        logger.error('Chat Screen', 'Failed to connect to WebSocket:', error);
       }
-    }
+    };
+    
+    connectToWebSocket();
     
     return () => {
-      chatWsManager.disconnect();
+      isActive = false;
+      if (wsManager) {
+        wsManager.disconnect();
+        wsManager = null;
+      }
     };
-  }, [selectedGroupId, handleChatEvent, messages, markAsRead]);
+  }, [tripId]); // Only reconnect when tripId changes
   
   // Handle refreshing the messages
   const handleRefresh = async () => {
@@ -128,15 +130,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId }) => {
   // Handle sending a message
   const handleSendMessage = (content: string) => {
     if (!selectedGroupId) return;
-    
     sendMessage(selectedGroupId, content);
-  };
-  
-  // Handle typing status change
-  const handleTypingStatusChange = (isTyping: boolean) => {
-    if (!selectedGroupId) return;
-    
-    setTypingStatus(selectedGroupId, isTyping);
   };
   
   // Handle retry after auth error
@@ -144,7 +138,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId }) => {
     try {
       await useAuthStore.getState().refreshSession();
       setAuthError(false);
-      fetchChatGroups();
+      fetchChatGroups(tripId);
     } catch (error) {
       console.error('Failed to refresh authentication:', error);
     }
@@ -164,13 +158,28 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId }) => {
     <SafeAreaView style={styles(theme).container}>
       <StatusBar style={theme.dark ? 'light' : 'dark'} />
       <View style={styles(theme).content}>
+        {onBack && Platform.OS !== 'web' && (
+          <View style={styles(theme).mobileHeader}>
+            <TouchableOpacity 
+              style={styles(theme).backButton} 
+              onPress={onBack}
+            >
+              <Ionicons 
+                name="arrow-back" 
+                size={24} 
+                color={theme.colors.content.primary} 
+              />
+              <Text style={styles(theme).headerTitle}>Back</Text>
+            </TouchableOpacity>
+          </View>
+        )}
         <View style={styles(theme).sidebar}>
           <ChatGroupList
             groups={tripGroups}
             selectedGroupId={selectedGroupId}
             isLoading={isLoadingGroups}
             onSelectGroup={selectChatGroup}
-            onRefresh={fetchChatGroups}
+            onRefresh={() => fetchChatGroups(tripId)}
             isRefreshing={isRefreshing}
           />
         </View>
@@ -184,11 +193,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId }) => {
                 onLoadMore={() => fetchMoreMessages(selectedGroupId)}
                 onRefresh={handleRefresh}
                 isRefreshing={isRefreshing}
-                typingUsers={currentTypingUsers}
               />
               <ChatInput
                 onSend={handleSendMessage}
-                onTypingStatusChange={handleTypingStatusChange}
+                disabled={!selectedGroupId}
               />
             </>
           ) : (
@@ -213,15 +221,40 @@ const styles = (theme: Theme) => StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
   },
+  mobileHeader: {
+    display: Platform.OS === 'web' ? 'none' : 'flex',
+    height: 50,
+    width: '100%',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    zIndex: 10,
+    backgroundColor: theme.colors.background.default,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border.default,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    marginLeft: 8,
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: theme.colors.content.primary,
+  },
   sidebar: {
     width: 300,
     borderRightWidth: 1,
     borderRightColor: theme.colors.border.default,
-    // Hide on mobile
     display: Platform.OS === 'web' ? 'flex' : 'none',
   },
   chatArea: {
     flex: 1,
+    paddingTop: Platform.OS === 'web' ? 0 : 50,
   },
   emptyState: {
     flex: 1,

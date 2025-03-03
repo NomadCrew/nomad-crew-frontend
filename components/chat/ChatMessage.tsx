@@ -18,7 +18,21 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   const { theme } = useTheme();
   const { user } = useAuthStore();
   
-  const isCurrentUser = user?.id === message.sender.id;
+  // Add detailed logging to debug the TypeError
+  console.log('ChatMessage rendering with message:', JSON.stringify({
+    messageId: message?.message?.id,
+    userId: message?.user?.id,
+    content: message?.message?.content,
+    hasMessage: !!message?.message,
+    hasUser: !!message?.user
+  }));
+  
+  if (!message?.message || !message?.user) {
+    console.warn('Invalid message or missing user data:', JSON.stringify(message));
+    return null;
+  }
+  
+  const isCurrentUser = user?.id === message.user.id;
   
   return (
     <View style={[
@@ -27,9 +41,9 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     ]}>
       {!isCurrentUser && showAvatar && (
         <View style={styles(theme).avatarContainer}>
-          {message.sender.avatar ? (
+          {message.user.profilePicture ? (
             <Image 
-              source={{ uri: message.sender.avatar }} 
+              source={{ uri: message.user.profilePicture }} 
               style={styles(theme).avatar} 
             />
           ) : (
@@ -38,7 +52,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               { backgroundColor: theme.colors.primary.main }
             ]}>
               <Text style={styles(theme).avatarInitial}>
-                {message.sender.name.charAt(0).toUpperCase()}
+                {message.user.username.charAt(0).toUpperCase()}
               </Text>
             </View>
           )}
@@ -51,7 +65,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
       ]}>
         {!isCurrentUser && (
           <Text style={styles(theme).senderName}>
-            {message.sender.name}
+            {message.user.username}
           </Text>
         )}
         
@@ -59,14 +73,14 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
           styles(theme).messageText,
           isCurrentUser ? styles(theme).currentUserText : styles(theme).otherUserText
         ]}>
-          {message.content}
+          {message.message.content}
         </Text>
         
         <Text style={styles(theme).timestamp}>
-          {formatRelativeTime(new Date(message.createdAt))}
+          {formatRelativeTime(new Date(message.message.created_at))}
         </Text>
         
-        {isCurrentUser && (
+        {isCurrentUser && message.status && (
           <View style={styles(theme).statusContainer}>
             {message.status === 'sent' && (
               <Text style={styles(theme).statusText}>Sent</Text>
@@ -116,7 +130,7 @@ const styles = (theme: Theme) => StyleSheet.create({
     alignItems: 'center',
   },
   avatarInitial: {
-    color: theme.colors.primary.onPrimary,
+    color: '#FFFFFF',
     fontSize: theme.typography.size.sm,
     fontWeight: 'bold',
   },
@@ -142,10 +156,10 @@ const styles = (theme: Theme) => StyleSheet.create({
   },
   messageText: {
     fontSize: theme.typography.size.sm,
-    lineHeight: theme.typography.lineHeights.md,
+    lineHeight: theme.typography.lineHeights?.normal || 1.5,
   },
   currentUserText: {
-    color: theme.colors.primary.onPrimary,
+    color: '#FFFFFF',
   },
   otherUserText: {
     color: theme.colors.content.primary,

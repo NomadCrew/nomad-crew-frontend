@@ -42,9 +42,18 @@ export const ChatList: React.FC<ChatListProps> = ({
   }, [messages.length]);
 
   const renderItem = ({ item, index }: { item: ChatMessageType; index: number }) => {
+    // Add detailed logging to debug the TypeError
+    console.log('ChatList renderItem:', JSON.stringify({
+      itemId: item?.message?.id,
+      hasItem: !!item,
+      hasMessage: !!item?.message,
+      hasSender: !!item?.user,
+      index
+    }));
+    
     // Determine if we should show the avatar based on the next message
     const showAvatar = index === messages.length - 1 || 
-      messages[index + 1].sender.id !== item.sender.id;
+      messages[index + 1]?.user?.id !== item?.user?.id;
     
     return <ChatMessage message={item} showAvatar={showAvatar} />;
   };
@@ -117,7 +126,7 @@ export const ChatList: React.FC<ChatListProps> = ({
           ref={flatListRef}
           data={messages}
           renderItem={renderItem}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item?.message?.id || `fallback-${Math.random().toString(36).substr(2, 9)}`}
           inverted
           contentContainerStyle={styles(theme).listContent}
           onEndReached={handleLoadMore}

@@ -23,6 +23,10 @@ export class WebSocketConnection {
   private status: WebSocketStatus = 'DISCONNECTED';
   private readonly config: ConnectionConfig;
   private callbacks: ConnectionCallbacks;
+  private reconnectTimer: NodeJS.Timeout | null = null;
+  private connectionAttempts = 0;
+  private readonly MAX_CONNECTION_ATTEMPTS = 5;
+  private isManualDisconnect = false;
 
   constructor(config: ConnectionConfig) {
     this.config = config;
@@ -34,7 +38,32 @@ export class WebSocketConnection {
   }
 
   public async connect(): Promise<void> {
-    if (this.ws?.readyState === WebSocket.OPEN) return;
+    // Clear any existing reconnect timer
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+
+    // Reset manual disconnect flag
+    this.isManualDisconnect = false;
+
+    // If already connected, don't try to connect again
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      logger.debug('WS', 'Already connected, not reconnecting');
+      return;
+    }
+
+    // If connecting, wait for it to complete or fail
+    if (this.ws?.readyState === WebSocket.CONNECTING) {
+      logger.debug('WS', 'Connection already in progress');
+      return;
+    }
+
+    // Close any existing connection
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
 
     return new Promise((resolve, reject) => {
       try {
@@ -43,8 +72,20 @@ export class WebSocketConnection {
         this.ws = new WebSocket(this.config.url);
         this.setStatus('CONNECTING');
 
+        // Set a connection timeout
+        const connectionTimeout = setTimeout(() => {
+          if (this.ws?.readyState !== WebSocket.OPEN) {
+            logger.error('WS', 'Connection timeout');
+            this.ws?.close();
+            this.setStatus('ERROR');
+            reject(new Error('Connection timeout'));
+          }
+        }, 10000); // 10 second timeout
+
         this.ws.onopen = () => {
           logger.debug('WS', 'Connection established');
+          clearTimeout(connectionTimeout);
+          this.connectionAttempts = 0;
           this.setStatus('CONNECTED');
           resolve();
         };
@@ -61,14 +102,25 @@ export class WebSocketConnection {
         };
 
         this.ws.onclose = (event) => {
+          clearTimeout(connectionTimeout);
           logger.debug('WS', 'Connection closed:', event.code, event.reason);
           this.setStatus('DISCONNECTED');
+          
+          if (this.isManualDisconnect) {
+            // Don't attempt to reconnect if this was a manual disconnect
+            return;
+          }
+
           if (event.code === 1001 || event.code === 4401) {
             this.callbacks.onError?.(new Error('Authentication failed'));
+          } else if (event.code !== 1000) {
+            // Only attempt to reconnect for abnormal closures
+            this.handleReconnect();
           }
         };
 
         this.ws.onerror = (error) => {
+          clearTimeout(connectionTimeout);
           logger.error('WS', 'Connection error:', error);
           this.setStatus('ERROR');
           reject(error);
@@ -82,7 +134,35 @@ export class WebSocketConnection {
     });
   }
 
+  private handleReconnect(): void {
+    this.connectionAttempts++;
+    
+    if (this.connectionAttempts <= this.MAX_CONNECTION_ATTEMPTS) {
+      const delay = Math.min(1000 * Math.pow(2, this.connectionAttempts - 1), 30000);
+      logger.debug('WS', `Scheduling reconnection in ${delay}ms (attempt ${this.connectionAttempts}/${this.MAX_CONNECTION_ATTEMPTS})`);
+      
+      this.reconnectTimer = setTimeout(() => {
+        logger.debug('WS', `Attempting reconnection (${this.connectionAttempts}/${this.MAX_CONNECTION_ATTEMPTS})`);
+        this.connect().catch(error => {
+          logger.error('WS', 'Reconnection failed:', error);
+        });
+      }, delay);
+    } else {
+      logger.error('WS', 'Max reconnection attempts reached');
+      this.callbacks.onError?.(new Error('Max reconnection attempts reached'));
+    }
+  }
+
   public disconnect(): void {
+    // Clear any reconnect timer
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+
+    // Set flag to prevent auto-reconnect
+    this.isManualDisconnect = true;
+    
     if (this.ws) {
       this.ws.close(1000, 'Normal closure');
       this.ws = null;
@@ -100,6 +180,27 @@ export class WebSocketConnection {
 
   public getCallbacks(): ConnectionCallbacks {
     return this.callbacks;
+  }
+  
+  /**
+   * Send a message through the WebSocket connection
+   * @param data The data to send
+   * @returns True if the message was sent, false otherwise
+   */
+  public send(data: any): boolean {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      logger.error('WS', 'Cannot send message, connection not open');
+      return false;
+    }
+    
+    try {
+      const message = typeof data === 'string' ? data : JSON.stringify(data);
+      this.ws.send(message);
+      return true;
+    } catch (error) {
+      logger.error('WS', 'Error sending message:', error);
+      return false;
+    }
   }
 
   private setStatus(status: WebSocketStatus): void {

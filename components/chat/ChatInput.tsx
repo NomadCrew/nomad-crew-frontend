@@ -1,10 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   View, 
   TextInput, 
   StyleSheet, 
   TouchableOpacity, 
-  Keyboard,
   Platform,
   KeyboardAvoidingView
 } from 'react-native';
@@ -13,68 +12,25 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { Theme } from '@/src/theme/types';
 
 interface ChatInputProps {
-  onSendMessage: (message: string) => void;
-  onTypingStatusChange?: (isTyping: boolean) => void;
+  onSend: (content: string) => void;
   disabled?: boolean;
   placeholder?: string;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
-  onSendMessage,
-  onTypingStatusChange,
+  onSend,
   disabled = false,
   placeholder = 'Type a message...'
 }) => {
   const { theme } = useTheme();
   const [message, setMessage] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
   const inputRef = useRef<TextInput>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Handle typing status changes
-  useEffect(() => {
-    if (onTypingStatusChange) {
-      onTypingStatusChange(isTyping);
-    }
-    
-    return () => {
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-    };
-  }, [isTyping, onTypingStatusChange]);
-
-  const handleTextChange = (text: string) => {
-    setMessage(text);
-    
-    // Handle typing status
-    if (text.length > 0 && !isTyping) {
-      setIsTyping(true);
-    }
-    
-    // Reset typing timeout
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-    
-    // Set a timeout to clear typing status after 2 seconds of inactivity
-    typingTimeoutRef.current = setTimeout(() => {
-      if (isTyping) {
-        setIsTyping(false);
-      }
-    }, 2000);
-  };
 
   const handleSendMessage = () => {
     if (message.trim() === '' || disabled) return;
     
-    onSendMessage(message.trim());
+    onSend(message.trim());
     setMessage('');
-    setIsTyping(false);
-    
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
     
     // Focus the input after sending
     if (inputRef.current) {
@@ -93,7 +49,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             ref={inputRef}
             style={styles(theme).input}
             value={message}
-            onChangeText={handleTextChange}
+            onChangeText={setMessage}
             placeholder={placeholder}
             placeholderTextColor={theme.colors.content.tertiary}
             multiline
@@ -117,7 +73,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               color={
                 !message.trim() || disabled
                   ? theme.colors.content.tertiary
-                  : theme.colors.primary.onPrimary
+                  : '#FFFFFF'
               }
             />
           </TouchableOpacity>

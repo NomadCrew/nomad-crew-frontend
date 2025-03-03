@@ -21,6 +21,7 @@ interface TripState {
   trips: Trip[];
   loading: boolean;
   error: string | null;
+  selectedTrip: Trip | null;
   // Core operations
   createTrip: (input: CreateTripInput) => Promise<Trip>;
   updateTrip: (id: string, input: UpdateTripInput) => Promise<Trip>;
@@ -28,6 +29,7 @@ interface TripState {
   // Read operations
   fetchTrips: () => Promise<void>;
   getTripById: (id: string) => Trip | undefined;
+  setSelectedTrip: (trip: Trip | null) => void;
   // Member operations
   inviteMember: (tripId: string, email: string, role: 'owner' | 'admin' | 'member') => Promise<void>;
   revokeInvitation: (tripId: string, invitationId: string) => Promise<void>;
@@ -45,6 +47,11 @@ export const useTripStore = create<TripState>((set, get) => ({
   trips: [],
   loading: false,
   error: null,
+  selectedTrip: null,
+
+  setSelectedTrip: (trip: Trip | null) => {
+    set({ selectedTrip: trip });
+  },
 
   createTrip: async (tripData: CreateTripInput) => {
     set({ loading: true, error: null });

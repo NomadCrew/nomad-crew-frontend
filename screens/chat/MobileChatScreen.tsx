@@ -7,10 +7,13 @@ import { ChatList } from '@/components/chat/ChatList';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { ChatGroupList } from '@/components/chat/ChatGroupList';
 import { ChatAuthError } from '@/components/chat/ChatAuthError';
-import { chatWsManager } from '@/src/websocket/ChatWebSocketManager';
+import { WebSocketManager } from '@/src/websocket/WebSocketManager';
 import { Theme } from '@/src/theme/types';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { useThemedStyles } from '@/src/theme/utils';
+import { logger } from '@/src/utils/logger';
+import { useTripStore } from '@/src/store/useTripStore';
 
 interface MobileChatScreenProps {
   tripId: string;
@@ -48,13 +51,109 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({
     setTypingStatus
   } = useChatStore();
   
+  // Log the tripId for debugging
+  useEffect(() => {
+    logger.debug('MobileChatScreen', 'Mounted with tripId:', tripId);
+    
+    // Set the selected trip in the trip store
+    const trip = useTripStore.getState().getTripById(tripId);
+    if (trip) {
+      useTripStore.getState().setSelectedTrip(trip);
+    }
+
+    // Cleanup when unmounting
+    return () => {
+      useTripStore.getState().setSelectedTrip(null);
+    };
+  }, [tripId]);
+  
+  const styles = useThemedStyles((theme) => {
+    // Safely access theme properties with fallbacks
+    const textPrimary = theme?.colors?.content?.primary || '#1A1A1A';
+    const textSecondary = theme?.colors?.content?.secondary || '#6B7280';
+    const backgroundDefault = theme?.colors?.background?.default || '#FFFFFF';
+    const backgroundCard = theme?.colors?.background?.card || '#FFFFFF';
+    const borderDefault = theme?.colors?.border?.default || '#E5E7EB';
+    const spacingSectionPadding = theme?.spacing?.layout?.section?.padding || 16;
+    const spacingStackSm = theme?.spacing?.stack?.sm || 12;
+    const spacingStackXs = theme?.spacing?.stack?.xs || 8;
+    const typographySizeLg = theme?.typography?.size?.lg || 18;
+    const typographySizeMd = theme?.typography?.size?.md || 16;
+    const isDark = theme?.dark || false;
+    
+    return {
+      container: {
+        flex: 1,
+        backgroundColor: backgroundDefault,
+      },
+      header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: spacingSectionPadding,
+        paddingVertical: spacingStackSm,
+        borderBottomWidth: 1,
+        borderBottomColor: borderDefault,
+        backgroundColor: backgroundCard,
+      },
+      backButton: {
+        marginRight: spacingStackSm,
+        padding: spacingStackXs,
+      },
+      groupButton: {
+        padding: spacingStackXs,
+      },
+      headerTitle: {
+        fontSize: typographySizeLg,
+        fontWeight: 'bold',
+        color: textPrimary,
+      },
+      content: {
+        flex: 1,
+      },
+      groupListContainer: {
+        maxHeight: 300,
+        borderBottomWidth: 1,
+        borderBottomColor: borderDefault,
+      },
+      chatContainer: {
+        flex: 1,
+      },
+      emptyState: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+      },
+      emptyStateText: {
+        color: textSecondary,
+        marginBottom: spacingStackSm,
+      },
+      emptyStateButton: {
+        padding: spacingStackSm,
+        backgroundColor: backgroundCard,
+        borderWidth: 1,
+        borderColor: borderDefault,
+        borderRadius: spacingStackSm,
+      },
+      emptyStateButtonText: {
+        fontSize: typographySizeMd,
+        fontWeight: 'bold',
+        color: textPrimary,
+      },
+      statusBarStyle: isDark ? 'light' : 'dark',
+    };
+  });
+  
   // Filter groups by tripId
   const tripGroups = groups.filter(group => group.tripId === tripId);
   
   // Get messages for the selected group
   const messages = selectedGroupId ? messagesByGroupId[selectedGroupId] || [] : [];
   const hasMore = selectedGroupId ? hasMoreMessages[selectedGroupId] || false : false;
-  const currentTypingUsers = selectedGroupId ? typingUsers[selectedGroupId] || [] : [];
+  
+  // Safely access typingUsers with a null check
+  const currentTypingUsers = selectedGroupId && typingUsers && typingUsers[selectedGroupId] 
+    ? typingUsers[selectedGroupId] 
+    : [];
   
   // Get the selected group
   const selectedGroup = selectedGroupId 
@@ -74,7 +173,7 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({
   useEffect(() => {
     const loadGroups = async () => {
       try {
-        await fetchChatGroups();
+        await fetchChatGroups(tripId);
       } catch (error) {
         // If we get an error fetching groups, check if it's auth related
         if (!token) {
@@ -86,7 +185,7 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({
     if (!authError) {
       loadGroups();
     }
-  }, [fetchChatGroups, authError, token]);
+  }, [fetchChatGroups, authError, token, tripId]);
   
   // Select the first group if none is selected
   useEffect(() => {
@@ -104,28 +203,36 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({
   
   // Connect to WebSocket when a group is selected
   useEffect(() => {
-    if (selectedGroupId) {
-      chatWsManager.connect(selectedGroupId, {
-        onMessage: handleChatEvent,
-        onError: (error) => {
-          console.error('Chat WebSocket error:', error);
-          // Check if it's an auth error
-          if (error.message === 'Authentication failed') {
-            setAuthError(true);
-          }
-        }
-      });
+    let isActive = true;
+    
+    const connectToWebSocket = async () => {
+      if (!selectedGroupId || !isActive) return;
       
-      // Mark messages as read when selecting a group
-      if (messages.length > 0) {
-        markAsRead(selectedGroupId, messages[0].id);
+      try {
+        // Use the trip WebSocket manager instead of the chat WebSocket manager
+        const wsManager = WebSocketManager.getInstance();
+        await wsManager.connect(tripId);
+        
+        // Mark messages as read when selecting a group
+        if (isActive && messages.length > 0 && messages[0]?.message?.id) {
+          markAsRead(selectedGroupId, messages[0].message.id);
+        }
+      } catch (error) {
+        console.error('Failed to connect to WebSocket:', error);
+        if (isActive && error.message === 'Authentication failed') {
+          setAuthError(true);
+        }
       }
-    }
+    };
+    
+    connectToWebSocket();
     
     return () => {
-      chatWsManager.disconnect();
+      isActive = false;
+      // Don't disconnect from the trip websocket when leaving the chat screen
+      // It will be managed by the trip detail screen
     };
-  }, [selectedGroupId, handleChatEvent, messages, markAsRead]);
+  }, [selectedGroupId, messages, markAsRead, tripId]);
   
   // Handle refreshing the messages
   const handleRefresh = async () => {
@@ -166,7 +273,7 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({
     try {
       await useAuthStore.getState().refreshSession();
       setAuthError(false);
-      fetchChatGroups();
+      fetchChatGroups(tripId);
     } catch (error) {
       console.error('Failed to refresh authentication:', error);
     }
@@ -175,159 +282,92 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({
   // If there's an auth error, show the error component
   if (authError) {
     return (
-      <SafeAreaView style={styles(theme).container}>
-        <StatusBar style={theme.dark ? 'light' : 'dark'} />
-        <View style={styles(theme).header}>
-          {onBack && (
-            <TouchableOpacity onPress={onBack} style={styles(theme).backButton}>
-              <Ionicons name="arrow-back" size={24} color={theme.colors.text.primary} />
-            </TouchableOpacity>
-          )}
-          <Text style={styles(theme).headerTitle}>Chat</Text>
-        </View>
+      <SafeAreaView style={styles.container}>
+        <StatusBar style={styles.statusBarStyle} />
         <ChatAuthError onRetry={handleAuthRetry} />
       </SafeAreaView>
     );
   }
   
   return (
-    <SafeAreaView style={styles(theme).container}>
-      <StatusBar style={theme.dark ? 'light' : 'dark'} />
-      
-      {/* Header with back button and group name */}
-      <View style={styles(theme).header}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar style={styles.statusBarStyle} />
+      <View style={styles.header}>
         {onBack && (
-          <TouchableOpacity onPress={onBack} style={styles(theme).backButton}>
-            <Ionicons name="arrow-back" size={24} color={theme.colors.text.primary} />
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={onBack}
+          >
+            <Ionicons 
+              name="arrow-back" 
+              size={24} 
+              color={theme?.colors?.content?.primary || '#1A1A1A'} 
+            />
           </TouchableOpacity>
         )}
-        <Text style={styles(theme).headerTitle}>
+        <Text style={styles.headerTitle}>
           {selectedGroup ? selectedGroup.name : 'Chat'}
         </Text>
-        <TouchableOpacity onPress={toggleGroupList} style={styles(theme).groupButton}>
+        <TouchableOpacity 
+          style={styles.groupButton} 
+          onPress={toggleGroupList}
+        >
           <Ionicons 
-            name={showGroupList ? "close" : "list"} 
+            name="people" 
             size={24} 
-            color={theme.colors.text.primary} 
+            color={theme?.colors?.content?.primary || '#1A1A1A'} 
           />
         </TouchableOpacity>
       </View>
       
-      {/* Main content area */}
-      <View style={styles(theme).content}>
-        {/* Slide-in group list */}
-        {showGroupList && (
-          <View style={styles(theme).groupListContainer}>
-            <ChatGroupList
-              groups={tripGroups}
-              selectedGroupId={selectedGroupId}
-              isLoading={isLoadingGroups}
-              onSelectGroup={handleSelectGroup}
-              onRefresh={fetchChatGroups}
+      {showGroupList && (
+        <View style={styles.groupListContainer}>
+          <ChatGroupList
+            groups={tripGroups}
+            selectedGroupId={selectedGroupId}
+            isLoading={isLoadingGroups}
+            onSelectGroup={handleSelectGroup}
+            onRefresh={() => fetchChatGroups(tripId)}
+            isRefreshing={isRefreshing}
+          />
+        </View>
+      )}
+      
+      <View style={styles.chatContainer}>
+        {selectedGroupId ? (
+          <>
+            <ChatList
+              messages={messages}
+              isLoading={isLoadingMessages}
+              hasMore={hasMore}
+              onLoadMore={() => fetchMoreMessages(selectedGroupId)}
+              onRefresh={handleRefresh}
               isRefreshing={isRefreshing}
+              typingUsers={currentTypingUsers}
             />
+            <ChatInput
+              onSend={handleSendMessage}
+              onTypingStatusChange={handleTypingStatusChange}
+            />
+          </>
+        ) : (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>
+              Select a chat group to start messaging
+            </Text>
+            {tripGroups.length > 0 && (
+              <TouchableOpacity 
+                style={styles.emptyStateButton}
+                onPress={toggleGroupList}
+              >
+                <Text style={styles.emptyStateButtonText}>
+                  Show Chat Groups
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
-        
-        {/* Chat messages and input */}
-        <View style={styles(theme).chatContainer}>
-          {selectedGroupId ? (
-            <>
-              <ChatList
-                messages={messages}
-                isLoading={isLoadingMessages}
-                hasMore={hasMore}
-                onLoadMore={() => fetchMoreMessages(selectedGroupId)}
-                onRefresh={handleRefresh}
-                isRefreshing={isRefreshing}
-                typingUsers={currentTypingUsers}
-              />
-              <ChatInput
-                onSend={handleSendMessage}
-                onTypingStatusChange={handleTypingStatusChange}
-              />
-            </>
-          ) : (
-            <View style={styles(theme).emptyState}>
-              <Text style={styles(theme).emptyStateText}>
-                {tripGroups.length > 0 
-                  ? 'Select a chat to start messaging' 
-                  : 'No chat groups available for this trip'}
-              </Text>
-              {tripGroups.length > 0 && (
-                <TouchableOpacity 
-                  style={styles(theme).emptyStateButton}
-                  onPress={toggleGroupList}
-                >
-                  <Text style={styles(theme).emptyStateButtonText}>
-                    Show Chat Groups
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
-        </View>
       </View>
     </SafeAreaView>
   );
-};
-
-const styles = (theme: Theme) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background.default,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.layout.section.padding,
-    paddingVertical: theme.spacing.stack.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border.default,
-    backgroundColor: theme.colors.background.card,
-  },
-  backButton: {
-    marginRight: theme.spacing.stack.sm,
-    padding: theme.spacing.stack.xs,
-  },
-  groupButton: {
-    padding: theme.spacing.stack.xs,
-  },
-  headerTitle: {
-    fontSize: theme.typography.size.lg,
-    fontWeight: 'bold',
-    color: theme.colors.text.primary,
-  },
-  content: {
-    flex: 1,
-  },
-  groupListContainer: {
-    maxHeight: 300,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border.default,
-  },
-  chatContainer: {
-    flex: 1,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyStateText: {
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.stack.sm,
-  },
-  emptyStateButton: {
-    padding: theme.spacing.stack.sm,
-    backgroundColor: theme.colors.background.card,
-    borderWidth: 1,
-    borderColor: theme.colors.border.default,
-    borderRadius: theme.spacing.stack.sm,
-  },
-  emptyStateButtonText: {
-    fontSize: theme.typography.size.md,
-    fontWeight: 'bold',
-    color: theme.colors.text.primary,
-  },
-}); 
+}; 

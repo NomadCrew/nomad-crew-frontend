@@ -6,6 +6,9 @@ export const logger = {
       console.debug(`[${module}]`, ...args);
     }
   },
+  log: (module: LogModule, ...args: unknown[]) => {
+    console.log(`[${module}]`, ...args);
+  },
   error: (module: LogModule, ...args: unknown[]) => {
     console.error(`[${module}]`, ...args);
   },

@@ -1,6 +1,6 @@
 // screens/trips/TripDetailScreen.tsx
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import { View, ScrollView, useWindowDimensions, SafeAreaView } from 'react-native';
 import { router } from 'expo-router';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { BentoGrid } from '@/components/ui/BentoGrid';
@@ -9,19 +9,18 @@ import { BentoCarousel } from '@/components/ui/BentoCarousel';
 import { Trip } from '@/src/types/trip';
 import { AddTodoModal } from '@/components/todo/AddTodoModal';
 import { InviteModal } from '@/components/trips/InviteModal';
-import { WebSocketManager, wsManager } from '@/src/websocket/WebSocketManager';
+import { WebSocketManager } from '@/src/websocket/WebSocketManager';
 import { useTripStore } from '@/src/store/useTripStore';
 import { useTodoStore } from '@/src/store/useTodoStore';
 import { useLocationStore } from '@/src/store/useLocationStore';
 import { TripDetailHeader } from '@/components/trips/TripDetailHeader';
 import { QuickActions } from '@/components/trips/QuickActions';
-import { Theme } from '@/src/theme/types';
-import { logger } from '@/src/utils/logger';
 import { StatusBar } from 'expo-status-bar';
-import { ChatModal } from '@/components/chat/ChatModal';
 import { useChatStore } from '@/src/store/useChatStore';
-import { ChatWebSocketManager } from '@/src/websocket/ChatWebSocketManager';
-import { SwipeableStatsChat } from '@/components/trips/SwipeableStatsChat';
+import { TripStats } from '@/components/trips/TripStats';
+import { useThemedStyles } from '@/src/theme/utils';
+import { LocationModal } from '@/components/trips/LocationModal';
+import { isChatEvent } from '@/src/types/events';
 
 interface TripDetailScreenProps {
   trip: Trip;
@@ -33,8 +32,31 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
   const { width: screenWidth } = useWindowDimensions();
   const [showAddTodo, setShowAddTodo] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const [showChatModal, setShowChatModal] = useState(false);
   const { isLocationSharingEnabled, startLocationTracking, stopLocationTracking } = useLocationStore();
+  const [showLocationModal, setShowLocationModal] = useState(false);
+
+  const styles = useThemedStyles((theme) => {
+    // Safely access theme properties with fallbacks
+    const backgroundDefault = theme?.colors?.background?.default || '#FFFFFF';
+    const spacingStackXl = theme?.spacing?.stack?.xl || 40;
+    const breakpointDesktop = theme?.breakpoints?.desktop || 1024;
+    
+    return {
+      container: {
+        flex: 1,
+        backgroundColor: backgroundDefault,
+      },
+      scrollContainer: {
+        flex: 1,
+      },
+      contentContainer: {
+        flexGrow: 1,
+        alignSelf: 'center',
+        width: '100%',
+        paddingBottom: spacingStackXl,
+      },
+    };
+  });
 
   // Calculate responsive dimensions
   const GRID_MARGIN = theme.spacing.layout.screen.padding;
@@ -77,14 +99,9 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
         position: 'left' as const,
       },
       {
-        id: 'swipeable-stats-chat',
+        id: 'trip-stats',
         element: (
-          <SwipeableStatsChat
-            tripId={tripId}
-            onChatPress={() => setShowChatModal(true)}
-            width={CARD_WIDTH}
-            height={BASE_CARD_HEIGHT}
-          />
+          <TripStats />
         ),
         height: 'normal' as const,
         position: 'right' as const,
@@ -95,26 +112,34 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
           <QuickActions 
             trip={trip}
             setShowInviteModal={setShowInviteModal}
-            onChatPress={() => setShowChatModal(true)}
+            onChatPress={() => {
+              console.log('Navigating to chat with tripId:', tripId);
+              router.push(`/chat/${tripId}`);
+            }}
+            onLocationPress={() => setShowLocationModal(true)}
           />
         ),
         height: 'short' as const,
         position: 'right' as const,
       },
     ];
-  }, [carouselItems, trip, tripId, CARD_WIDTH, TALL_CARD_HEIGHT, BASE_CARD_HEIGHT, setShowInviteModal, setShowChatModal]);
+  }, [carouselItems, trip, tripId, CARD_WIDTH, TALL_CARD_HEIGHT, BASE_CARD_HEIGHT, setShowInviteModal, setShowLocationModal]);
 
   useEffect(() => {
-    const manager = wsManager as WebSocketManager;
+    const manager = WebSocketManager.getInstance();
     manager.connect(tripId, {
       onMessage: (event) => {
         useTripStore.getState().handleTripEvent(event);
         useTodoStore.getState().handleTodoEvent(event);
+        // Add chat event handling
+        if (isChatEvent(event)) {
+          useChatStore.getState().handleChatEvent(event);
+        }
       }
     });
-
-    // Initialize chat WebSocket manager
-    const chatManager = ChatWebSocketManager.getInstance();
+    
+    // Fetch chat groups for this trip
+    useChatStore.getState().fetchChatGroups(tripId);
     
     // Start location tracking if location sharing is enabled
     if (isLocationSharingEnabled) {
@@ -123,7 +148,6 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
 
     return () => {
       manager.disconnect();
-      chatManager.disconnect(); // Disconnect chat WebSocket
       stopLocationTracking();
     };
   }, [tripId, isLocationSharingEnabled]);
@@ -140,11 +164,11 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
   // Effect to handle chat events
   useEffect(() => {
     // Fetch chat groups when the component mounts
-    useChatStore.getState().fetchChatGroups();
-  }, []);
+    useChatStore.getState().fetchChatGroups(tripId);
+  }, [tripId]);
 
   return (
-    <View style={styles(theme).container}>
+    <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
       <TripDetailHeader 
         trip={trip} 
@@ -153,9 +177,9 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
       />
 
       <ScrollView
-        style={styles(theme).scrollContainer}
+        style={styles.scrollContainer}
         contentContainerStyle={[
-          styles(theme).contentContainer,
+          styles.contentContainer,
           { maxWidth: containerWidth }
         ]}
         showsVerticalScrollIndicator={false}
@@ -175,27 +199,13 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
         tripId={tripId}
       />
 
-      <ChatModal
-        visible={showChatModal}
-        onClose={() => setShowChatModal(false)}
-        tripId={tripId}
-      />
-    </View>
+      {/* Location sharing modal */}
+      {showLocationModal && (
+        <LocationModal
+          tripId={tripId}
+          onClose={() => setShowLocationModal(false)}
+        />
+      )}
+    </SafeAreaView>
   );
 }
-
-const styles = (theme: Theme) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background.default,
-  },
-  scrollContainer: {
-    flex: 1,
-  },
-  contentContainer: {
-    flexGrow: 1,
-    alignSelf: 'center',
-    width: '100%',
-    paddingBottom: theme.spacing.stack.xl,
-  },
-});

@@ -30,7 +30,7 @@ export const ChatButton: React.FC<ChatButtonProps> = ({
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <Ionicons name="chatbubbles" size={24} color={theme.colors.primary.onPrimary} />
+      <Ionicons name="chatbubbles" size={24} color="#FFFFFF" />
       <Text style={styles(theme).text}>Chat</Text>
       
       {unreadCount > 0 && (
@@ -56,7 +56,7 @@ const styles = (theme: Theme) => StyleSheet.create({
     position: 'relative',
   },
   text: {
-    color: theme.colors.primary.onPrimary,
+    color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: theme.typography.size.md,
     marginLeft: theme.spacing.stack.xs,
@@ -74,7 +74,7 @@ const styles = (theme: Theme) => StyleSheet.create({
     paddingHorizontal: 6,
   },
   badgeText: {
-    color: theme.colors.primary.onPrimary,
+    color: '#FFFFFF',
     fontSize: theme.typography.size.xs,
     fontWeight: 'bold',
   },

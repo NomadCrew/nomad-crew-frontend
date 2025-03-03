@@ -1,6 +1,5 @@
 import { BaseApiClient } from './base-client';
 import { supabase } from '@/src/auth/supabaseClient';
-import { useAuthStore } from '@/src/store/useAuthStore';
 import { AxiosHeaders, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { API_PATHS } from '@/src/utils/api-paths';
 import { logger } from '@/src/utils/logger';
@@ -13,6 +12,29 @@ let refreshQueue: Array<{
   resolve: (value: unknown) => void;
   reject: (reason?: any) => void;
 }> = [];
+
+// Auth state access functions - to be set by the auth store
+type AuthState = {
+  getToken: () => string | null;
+  getRefreshToken: () => string | null;
+  isInitialized: () => boolean;
+  refreshSession: () => Promise<void>;
+  logout: () => void;
+};
+
+// Default implementations that do nothing
+let authState: AuthState = {
+  getToken: () => null,
+  getRefreshToken: () => null,
+  isInitialized: () => false,
+  refreshSession: async () => {},
+  logout: () => {},
+};
+
+// Function to register auth state handlers
+export const registerAuthHandlers = (handlers: AuthState) => {
+  authState = handlers;
+};
 
 // Process the queue with new token or error
 const processQueue = (error: Error | null, token: string | null = null) => {
@@ -61,17 +83,17 @@ export class ApiClient extends BaseApiClient {
         let attempts = 0;
         const maxAttempts = 5; // Prevent infinite loop
         
-        while ((!useAuthStore.getState().isInitialized || !useAuthStore.getState().token) && attempts < maxAttempts) {
+        while ((!authState.isInitialized() || !authState.getToken()) && attempts < maxAttempts) {
           logger.debug('API Client', 'Waiting for auth token...', {
-            isInitialized: useAuthStore.getState().isInitialized,
-            hasToken: !!useAuthStore.getState().token,
+            isInitialized: authState.isInitialized(),
+            hasToken: !!authState.getToken(),
             attempt: attempts + 1
           });
           await new Promise(resolve => setTimeout(resolve, 200));
           attempts++;
         }
     
-        const token = useAuthStore.getState().token;
+        const token = authState.getToken();
         const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
         
         // Check if token is expiring soon and preemptively refresh
@@ -79,7 +101,7 @@ export class ApiClient extends BaseApiClient {
           try {
             logger.debug('API Client', 'Token is expiring soon, preemptively refreshing');
             await this.refreshAuthToken();
-            const newToken = useAuthStore.getState().token;
+            const newToken = authState.getToken();
             
             if (newToken) {
               const headers = new AxiosHeaders(config.headers);
@@ -101,7 +123,7 @@ export class ApiClient extends BaseApiClient {
           try {
             logger.debug('API Client', 'No token available, attempting to refresh');
             await this.refreshAuthToken();
-            const newToken = useAuthStore.getState().token;
+            const newToken = authState.getToken();
             
             if (newToken) {
               const headers = new AxiosHeaders(config.headers);
@@ -115,7 +137,7 @@ export class ApiClient extends BaseApiClient {
           } catch (refreshError) {
             logger.error('API Client', 'Token refresh failed:', refreshError);
             // If refresh fails, redirect to login
-            useAuthStore.getState().logout();
+            authState.logout();
             throw new Error('Authentication required');
           }
         }
@@ -193,7 +215,7 @@ export class ApiClient extends BaseApiClient {
             await this.refreshAuthToken();
             
             // Get the new token after refresh
-            const newToken = useAuthStore.getState().token;
+            const newToken = authState.getToken();
             
             if (!newToken) {
               throw new Error('Token refresh failed - no new token available');
@@ -220,7 +242,7 @@ export class ApiClient extends BaseApiClient {
             
             // If refresh fails due to invalid refresh token, redirect to login
             if (refreshError.message === ERROR_MESSAGES.INVALID_REFRESH_TOKEN) {
-              useAuthStore.getState().logout();
+              authState.logout();
             }
             
             return Promise.reject(refreshError);
@@ -241,7 +263,7 @@ export class ApiClient extends BaseApiClient {
    */
   private async refreshAuthToken(): Promise<void> {
     try {
-      await useAuthStore.getState().refreshSession();
+      await authState.refreshSession();
     } catch (error) {
       logger.error('API Client', 'Failed to refresh authentication token:', error);
       throw error;
