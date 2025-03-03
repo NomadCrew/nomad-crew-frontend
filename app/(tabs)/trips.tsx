@@ -96,16 +96,22 @@ export default function TripsScreen() {
       status: trip.status?.toUpperCase() as TripStatus
     }));
   
+    const now = new Date();
+    
     // Filter by tab
     switch (activeTab) {
       case 'Active':
-        return filtered.filter((trip) => 
-          trip.status === 'ACTIVE' || trip.status === 'PLANNING');
+        return filtered.filter((trip) => {
+          const endDate = new Date(trip.endDate);
+          return (trip.status === 'ACTIVE' || trip.status === 'PLANNING') && 
+                 endDate >= now; // Only show trips that haven't ended yet
+        });
       case 'Recent':
-        return filtered.filter(
-          (trip) =>
-            trip.status === 'COMPLETED' || new Date(trip.endDate) < new Date()
-        );
+        return filtered.filter((trip) => {
+          const endDate = new Date(trip.endDate);
+          return trip.status === 'COMPLETED' || 
+                 endDate < now; // Show completed trips or trips that have ended
+        });
       case 'Cancelled':
         return filtered.filter((trip) => trip.status === 'CANCELLED');
       default:

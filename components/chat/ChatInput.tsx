@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet, Keyboard, ActivityIndicator } from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet, Keyboard, ActivityIndicator, Platform } from 'react-native';
 import { Send } from 'lucide-react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useChatStore } from '@/src/store/useChatStore';
@@ -47,33 +47,48 @@ export const ChatInput: React.FC<ChatInputProps> = ({ tripId }) => {
       container: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: theme.spacing.stack.md,
-        paddingVertical: theme.spacing.stack.sm,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
         borderTopWidth: 1,
         borderTopColor: theme.colors.border.default,
-        backgroundColor: theme.colors.background.surface,
+        backgroundColor: theme.colors.background.elevated,
+      },
+      inputContainer: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: theme.colors.background.default,
+        borderRadius: 24,
+        paddingHorizontal: 16,
+        paddingVertical: Platform.OS === 'ios' ? 8 : 4,
+        borderWidth: 1,
+        borderColor: theme.colors.border.default,
       },
       input: {
         flex: 1,
-        backgroundColor: theme.colors.background.muted,
-        borderRadius: theme.borderRadius.md,
-        paddingHorizontal: theme.spacing.stack.md,
-        paddingVertical: theme.spacing.stack.sm,
         color: theme.colors.content.primary,
-        fontSize: theme.typography.size.md,
+        fontSize: 15,
         maxHeight: 100,
+        paddingTop: 0,
+        paddingBottom: 0,
       },
       sendButton: {
-        marginLeft: theme.spacing.stack.sm,
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        marginLeft: 8,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
         backgroundColor: theme.colors.primary.main,
         justifyContent: 'center',
         alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 1,
+        elevation: 2,
       },
       disabledSendButton: {
-        backgroundColor: theme.colors.primary.muted,
+        backgroundColor: theme.colors.primary.disabled,
+        opacity: 0.7,
       },
     });
   });
@@ -149,18 +164,20 @@ export const ChatInput: React.FC<ChatInputProps> = ({ tripId }) => {
 
   return (
     <View style={styles.container}>
-      <TextInput
-        ref={inputRef}
-        style={styles.input}
-        value={message}
-        onChangeText={handleTextChange}
-        placeholder="Type a message..."
-        placeholderTextColor={theme.colors.content.tertiary}
-        multiline
-        maxLength={1000}
-        returnKeyType="default"
-        blurOnSubmit={false}
-      />
+      <View style={styles.inputContainer}>
+        <TextInput
+          ref={inputRef}
+          style={styles.input}
+          value={message}
+          onChangeText={handleTextChange}
+          placeholder="Type a message..."
+          placeholderTextColor={theme.colors.content.tertiary}
+          multiline
+          maxLength={1000}
+          returnKeyType="default"
+          blurOnSubmit={false}
+        />
+      </View>
       <TouchableOpacity
         style={[
           styles.sendButton,
@@ -168,11 +185,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({ tripId }) => {
         ]}
         onPress={handleSend}
         disabled={message.trim() === '' || isSending}
+        activeOpacity={0.7}
       >
         {isSending ? (
           <ActivityIndicator size="small" color="#FFFFFF" />
         ) : (
-          <Send size={20} color="#FFFFFF" />
+          <Send size={18} color="#FFFFFF" />
         )}
       </TouchableOpacity>
     </View>

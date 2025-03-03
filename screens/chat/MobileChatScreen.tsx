@@ -44,6 +44,11 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({
     setTypingStatus
   } = useChatStore();
   
+  // Trip store to get trip name
+  const { getTripById } = useTripStore();
+  const trip = getTripById(tripId);
+  const tripName = trip?.name || 'Trip Chat';
+  
   // Get messages for the trip
   const messages = messagesByTripId[tripId] || [];
   const hasMore = hasMoreMessages[tripId] || false;
@@ -156,21 +161,26 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({
       header: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
         borderBottomWidth: 1,
         borderBottomColor: theme?.colors?.border?.default || '#E0E0E0',
         backgroundColor: theme?.colors?.background?.elevated || '#FFFFFF',
         zIndex: 10,
-        height: 56,
+        minHeight: 56,
       },
       backButton: {
         marginRight: 16,
-        padding: 4,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
       },
       headerTitle: {
         flex: 1,
         fontSize: 18,
-        fontWeight: 'bold',
+        fontWeight: '600',
         color: theme?.colors?.content?.primary || '#1A1A1A',
       },
       chatContainer: {
@@ -227,16 +237,17 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({
             style={styles.backButton} 
             onPress={onBack}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            activeOpacity={0.7}
           >
             <Ionicons 
-              name="arrow-back" 
+              name="chevron-back" 
               size={24} 
               color={theme?.colors?.content?.primary || '#1A1A1A'} 
             />
           </TouchableOpacity>
         )}
         <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">
-          Chat
+          {tripName}
         </Text>
       </View>
       

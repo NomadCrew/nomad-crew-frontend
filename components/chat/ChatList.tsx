@@ -63,42 +63,71 @@ export const ChatList: React.FC<ChatListProps> = ({
         backgroundColor: theme.colors.background.default,
       },
       messageList: {
-        paddingHorizontal: theme.spacing.stack.md,
-        paddingVertical: theme.spacing.stack.sm,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
       },
       loadingContainer: {
-        padding: theme.spacing.stack.md,
+        padding: 12,
         alignItems: 'center',
       },
       typingContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: theme.spacing.stack.md,
-        paddingVertical: theme.spacing.stack.xs,
+        paddingHorizontal: 16,
+        paddingVertical: 6,
+        backgroundColor: 'transparent',
       },
       typingText: {
-        color: theme.colors.content.secondary,
-        fontSize: theme.typography.size.sm,
+        color: theme.colors.chat?.typing?.text || theme.colors.content.secondary,
+        fontSize: 13,
         fontStyle: 'italic',
+        opacity: 0.8,
       },
       emptyContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: theme.spacing.stack.lg,
+        padding: 24,
       },
       emptyText: {
         color: theme.colors.content.secondary,
         textAlign: 'center',
-        fontSize: theme.typography.size.md,
+        fontSize: 15,
+        fontWeight: '500',
+        opacity: 0.8,
       },
+      emptySubText: {
+        color: theme.colors.content.tertiary,
+        textAlign: 'center',
+        fontSize: 13,
+        marginTop: 8,
+        opacity: 0.7,
+      },
+      dateSeparator: {
+        alignItems: 'center',
+        marginVertical: 16,
+      },
+      dateSeparatorLine: {
+        height: 1,
+        backgroundColor: theme.colors.border.default,
+        opacity: 0.3,
+        width: '100%',
+        position: 'absolute',
+      },
+      dateSeparatorText: {
+        backgroundColor: theme.colors.background.default,
+        paddingHorizontal: 12,
+        fontSize: 12,
+        color: theme.colors.content.tertiary,
+        fontWeight: '500',
+      }
     });
   });
 
   const renderItem = useCallback(({ item, index }: { item: ChatMessageWithStatus; index: number }) => {
     // Validate message data
     if (!item.message || !item.message.sender) {
-      logger.warn('UI', 'Invalid message data:', JSON.stringify(item, null, 2));
+      logger.warn('UI', 'Invalid message data');
       return null;
     }
     
@@ -166,7 +195,8 @@ export const ChatList: React.FC<ChatListProps> = ({
     
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>No messages yet. Start the conversation!</Text>
+        <Text style={styles.emptyText}>No messages yet</Text>
+        <Text style={styles.emptySubText}>Start the conversation!</Text>
       </View>
     );
   }, [isLoading, styles]);
