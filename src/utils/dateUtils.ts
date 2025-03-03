@@ -9,7 +9,7 @@ export function formatRelativeTime(date: Date): string {
   
   // Just now (less than a minute ago)
   if (diffInSeconds < 60) {
-    return 'just now';
+    return 'Just now';
   }
   
   // Minutes
