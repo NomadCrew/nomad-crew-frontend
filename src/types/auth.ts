@@ -39,6 +39,7 @@ export interface User {
     initialize: () => Promise<void>;
     setFirstTimeDone: () => Promise<void>;
     handleGoogleSignInSuccess: (response: GoogleSignInResponse) => Promise<void>;
+    handleAppleSignInSuccess: (session: Session) => Promise<void>;
     refreshToken: string | null;
     refreshSession: () => Promise<void>;
   }

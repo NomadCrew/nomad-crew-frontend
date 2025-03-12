@@ -12,10 +12,21 @@
       "distribution": "internal"
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "distribution": "store"
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "naqeebali.shamsi@gmail.com",
+        "ascAppId": "6743161123",
+        "appleTeamId": "27DC66D35A"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./path/to/service-account.json",
+        "track": "production"
+      }
+    }
   }
 }
