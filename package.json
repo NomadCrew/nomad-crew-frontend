@@ -16,6 +16,8 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^14.0.2",
+    "@invertase/react-native-apple-authentication": "^2.4.0",
+    "@lottiefiles/dotlottie-react": "^0.13.2",
     "@neverdull-agency/expo-unlimited-secure-store": "^1.0.10",
     "@react-native-async-storage/async-storage": "1.23.1",
     "@react-native-community/datetimepicker": "^8.2.0",
@@ -33,6 +35,7 @@
     "expo-blur": "~14.0.1",
     "expo-constants": "~17.0.3",
     "expo-crypto": "~14.0.1",
+    "expo-dev-client": "~5.0.13",
     "expo-font": "~13.0.2",
     "expo-google-places-autocomplete": "^1.2.0",
     "expo-haptics": "~14.0.0",

@@ -332,25 +332,51 @@ export const useAuthStore = create<AuthState>((set, get) => {
     handleGoogleSignInSuccess: async (response: any) => {
       try {
         set({ loading: true, error: null });
-        // Response should contain an idToken
-        const idToken = response?.data?.idToken;
+        
+        console.log('Google Sign-In response:', response);
+        
+        // Extract the ID token based on the response structure
+        let idToken = null;
+        
+        // Handle different response formats from different platforms
+        if (response?.idToken) {
+          // Direct format
+          idToken = response.idToken;
+        } else if (response?.user?.idToken) {
+          // Nested user format
+          idToken = response.user.idToken;
+        } else if (response?.data?.idToken) {
+          // Data wrapper format
+          idToken = response.data.idToken;
+        } else if (response?.authentication?.idToken) {
+          // Authentication wrapper format (common in React Native)
+          idToken = response.authentication.idToken;
+        }
+        
         if (!idToken) {
+          console.error('No ID token found in response:', response);
           throw new Error('No ID token in response');
         }
+        
+        console.log('Using ID token:', idToken.substring(0, 10) + '...');
     
         // Sign in with Supabase using the ID token
         const { data, error } = await supabase.auth.signInWithIdToken({
           provider: 'google',
           token: idToken,
         });
-        if (error) throw error;
+        
+        if (error) {
+          console.error('Supabase sign-in error:', error);
+          throw error;
+        }
     
         if (!data.session) {
           throw new Error('No session returned from Google sign-in');
         }
     
         // Log the session and token
-        logger.debug('AUTH', 'Session after Google sign-in:', {
+        console.log('AUTH: Session after Google sign-in:', {
           userId: data.session.user.id,
           expiresAt: data.session.expires_at
         });
@@ -373,14 +399,51 @@ export const useAuthStore = create<AuthState>((set, get) => {
           error: null,
           isVerifying: false
         });
-        logger.debug('AUTH', 'Authentication successful', {
+        
+        console.log('AUTH: Authentication successful', {
           accessToken: data.session.access_token.substring(0, 10) + '...',
           refreshToken: data.session.refresh_token ? data.session.refresh_token.substring(0, 10) + '...' : 'none'
         });
       } catch (error: any) {
-        logger.error('AUTH', 'Google sign-in error:', error);
+        console.error('AUTH: Google sign-in error:', error);
         set({
           error: error.message || 'Google sign-in failed',
+          loading: false
+        });
+        throw error;
+      }
+    },
+
+    /**
+     * Apple sign-in success handler
+     */
+    handleAppleSignInSuccess: async (session: Session) => {
+      try {
+        set({ loading: true, error: null });
+
+        // Build user from session
+        const user: User = {
+          id: session.user.id,
+          email: session.user.email ?? '',
+          username: session.user.user_metadata?.username ?? '',
+          firstName: session.user.user_metadata?.firstName,
+          lastName: session.user.user_metadata?.lastName,
+          profilePicture: session.user.user_metadata?.avatar_url,
+        };
+
+        set({
+          user,
+          token: session.access_token,
+          refreshToken: session.refresh_token,
+          loading: false,
+          error: null,
+          isVerifying: false
+        });
+
+      } catch (error: any) {
+        console.error('AUTH: Apple sign-in error:', error);
+        set({
+          error: error.message || 'Apple sign-in failed',
           loading: false
         });
         throw error;

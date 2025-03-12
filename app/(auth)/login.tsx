@@ -10,6 +10,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useGoogleSignIn } from '@/src/hooks/useGoogleSignIn';
+import { useAppleSignIn } from '@/src/hooks/useAppleSignIn';
 import EmailLoginForm from '@/components/ui/auth/EmailLoginForm';
 import { AuthOptionButton } from '@/components/ui/auth/AuthOptionButton';
 import { Theme } from '@/src/theme/types';
@@ -19,6 +20,7 @@ export default function LoginScreen() {
   const [isEmailModalVisible, setEmailModalVisible] = useState(false);
   const { theme } = useTheme();
   const handleGoogleSignIn = useGoogleSignIn();
+  const handleAppleSignIn = useAppleSignIn();
 
   return (
     <KeyboardAvoidingView
@@ -45,6 +47,18 @@ export default function LoginScreen() {
             label="Continue with Google"
             onPress={handleGoogleSignIn}
           />
+          
+          {Platform.OS === 'ios' && (
+            <>
+              <Divider />
+              <AuthOptionButton
+                provider="apple"
+                label="Continue with Apple"
+                onPress={handleAppleSignIn}
+              />
+            </>
+          )}
+          
           <Divider />
           <AuthOptionButton
             provider="email"

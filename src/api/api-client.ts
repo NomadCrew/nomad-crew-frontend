@@ -94,7 +94,6 @@ export class ApiClient extends BaseApiClient {
         }
     
         const token = authState.getToken();
-        const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
         
         // Check if token is expiring soon and preemptively refresh
         if (token && isTokenExpiringSoon(token) && !isRefreshing) {
@@ -108,7 +107,6 @@ export class ApiClient extends BaseApiClient {
               headers.set('Content-Type', 'application/json');
               headers.set('Accept', 'application/json');
               headers.set('Authorization', `Bearer ${newToken}`);
-              headers.set('apikey', anonKey!);
               config.headers = headers;
               return config;
             }
@@ -130,7 +128,6 @@ export class ApiClient extends BaseApiClient {
               headers.set('Content-Type', 'application/json');
               headers.set('Accept', 'application/json');
               headers.set('Authorization', `Bearer ${newToken}`);
-              headers.set('apikey', anonKey!);
               config.headers = headers;
               return config;
             }
@@ -146,7 +143,6 @@ export class ApiClient extends BaseApiClient {
         headers.set('Content-Type', 'application/json');
         headers.set('Accept', 'application/json');
         headers.set('Authorization', `Bearer ${token}`);
-        headers.set('apikey', anonKey!);
         config.headers = headers;
     
         return config;

@@ -18,7 +18,15 @@
       "associatedDomains": [
         "applinks:nomadcrew.uk",
         "applinks:*.nomadcrew.uk"
-      ]
+      ],
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
+      },
+      "entitlements": {
+        "com.apple.developer.applesignin": ["Default"]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -111,6 +119,12 @@
         {
           "icon": "./assets/images/icon.png",
           "color": "#000000"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
         }
       ]
     ],
