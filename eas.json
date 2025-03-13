@@ -9,12 +9,27 @@
       "distribution": "internal",
       "env": {
         "APP_VARIANT": "development"
+      },
+      "android": {
+        "buildType": "apk"
       }
     },
     "preview": {
       "distribution": "internal",
       "env": {
-        "APP_VARIANT": "preview"
+        "APP_VARIANT": "staging"
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "staging": {
+      "distribution": "internal",
+      "env": {
+        "APP_VARIANT": "staging"
+      },
+      "android": {
+        "buildType": "app-bundle"
       }
     },
     "production": {
@@ -22,6 +37,9 @@
       "distribution": "store",
       "env": {
         "APP_VARIANT": "production"
+      },
+      "android": {
+        "buildType": "app-bundle"
       }
     }
   },
@@ -33,8 +51,19 @@
         "appleTeamId": "27DC66D35A"
       },
       "android": {
-        "serviceAccountKeyPath": "./path/to/service-account.json",
+        "serviceAccountKeyPath": "./android/service-account.json",
         "track": "production"
+      }
+    },
+    "staging": {
+      "ios": {
+        "appleId": "naqeebali.shamsi@gmail.com",
+        "ascAppId": "6743161123",
+        "appleTeamId": "27DC66D35A"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./android/service-account.json",
+        "track": "internal"
       }
     }
   }

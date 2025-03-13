@@ -1,114 +1,86 @@
-# NomadCrew Frontend Context
+# NomadCrew Frontend Project Context
 
-Last Updated: March 13, 2025
+## Latest Updates
 
-## Overview
+### March 13, 2024, 18:30 UTC
+- Implemented production readiness setup:
+  - Added environment management with `.env.development`, `.env.staging`, and `.env.production`
+  - Updated `app.config.js` to handle different environments
+  - Updated `eas.json` with proper build profiles for development, staging, and production
+  - Set up testing infrastructure with Jest and React Testing Library
+  - Added CircleCI configuration for CI/CD pipeline
+  - Created test utilities and mocks for theme system
 
-- **App**: NomadCrew - A React Native mobile application for connecting travelers and digital nomads
-- **Stack**:
-  - Framework: React Native with Expo (SDK 52)
-  - Language: TypeScript
-  - State Management: Zustand
-  - Authentication: Supabase + Social Auth (Google, Apple)
-  - Navigation: Expo Router + React Navigation
-  - UI Framework: React Native Paper
-  - Maps & Location: Google Places, Expo Location
-  - Real-time: WebSocket + SSE implementation
+### Files Modified/Created
+- Environment Files:
+  - `.env.development`
+  - `.env.staging`
+  - `.env.production`
+  - `.env.example`
+- Configuration:
+  - `app.config.js` (updated for environment handling)
+  - `eas.json` (updated build profiles)
+  - `.circleci/config.yml` (new CI/CD pipeline)
+- Testing:
+  - `__tests__/test-utils.tsx`
+  - `__tests__/mocks/theme-compatibility.ts`
+  - `jest.setup.js`
+  - Updated component tests to use new test utilities
 
 ## Project Structure
 
-```
-src/
-├── api/         # API client and endpoints
-├── auth/        # Authentication flows and utilities
-├── components/  # Reusable UI components
-├── constants/   # App-wide constants and configuration
-├── events/      # Event handling system
-├── hooks/       # Custom React hooks
-├── providers/   # Context providers and wrappers
-├── services/    # Business logic and external services
-├── store/       # Zustand stores
-├── theme/       # Custom theming system
-├── types/       # TypeScript type definitions
-├── utils/       # Utility functions
-└── websocket/   # WebSocket connection management
-```
+### Core Dependencies
+- React Native with Expo SDK
+- TypeScript
+- Zustand for state management
+- React Native Paper for UI components
+- Custom theme system with light/dark mode support
 
-## Key Features & Integrations
+### Environment Configuration
+- Development: Local development environment
+- Staging: Testing environment with staging APIs
+- Production: Production environment with live APIs
+
+### Build Configuration
+- Development: Development client with hot reload
+- Preview: Internal testing builds
+- Staging: Internal distribution builds
+- Production: App store builds
+
+### Testing Strategy
+- Jest for unit and integration tests
+- React Testing Library for component testing
+- Custom test utilities for theme and provider mocks
+- CircleCI for automated testing
 
 ### Authentication
+- Supabase for authentication
+- Google OAuth integration
+- Apple Sign-In support
 
-- Supabase Auth (URL: <https://efmqiltdajvqenndmylz.supabase.co>)
-- Social Authentication:
-  - Apple Sign-In (Bundle ID: com.nomadcrew.app)
-  - Google Sign-In
-- Secure token storage with Expo SecureStore
+### Deployment Pipeline
+- CircleCI for automated builds and deployments
+- Separate workflows for development, staging, and production
+- Automated testing and linting checks
 
-### Navigation & Deep Linking
+## Production Readiness Status
 
-- File-based routing with Expo Router
-- Deep link schemes:
-  - `nomadcrew://` (custom scheme)
-  - `https://nomadcrew.uk` (universal links)
-- Deep link paths:
-  - `/auth/callback` - Authentication
-  - `/invite/accept` - Invite handling
+### Completed
+- ✅ Environment management setup
+- ✅ Testing infrastructure
+- ✅ CI/CD pipeline configuration
 
-### UI/UX
+### In Progress
+- 🟡 Certificate & provisioning profile management
+- 🟡 Security implementation
+- 🟡 Release strategy
 
-- React Native Paper for Material Design components
-- Custom theme system (light/dark modes)
-- Animations:
-  - React Native Reanimated
-  - Lottie animations
-  - Expo Blur effects
-- Maps integration with Google Places API
+### Pending
+- ⚪ Monitoring and analytics
+- ⚪ Error tracking
+- ⚪ Performance optimization
 
-### State Management
-
-- Zustand stores for:
-  - Authentication state
-  - User data
-  - App configuration
-  - Real-time data
-
-### Real-time Features
-
-- WebSocket implementation for live updates
-- Server-Sent Events (SSE) integration
-- Event system for real-time state updates
-
-## Build Configuration
-
-- EAS Project ID: 50d59d51-34e0-49ab-a7ee-6989ed09f8ef
-- Bundle IDs:
-  - iOS: com.nomadcrew.app
-  - Android: com.nomadcrew.app
-- Expo Updates URL: <https://u.expo.dev/50d59d51-34e0-49ab-a7ee-6989ed09f8ef>
-
-## Development Guidelines
-
-1. Use TypeScript strictly - no any types
-2. Follow the modular architecture pattern
-3. Implement proper error boundaries and loading states
-4. Use React Native Paper components for UI consistency
-5. Implement proper form validation with Zod
-6. Follow React Native performance best practices
-
-## Production Readiness Checklist
-
-- [x] Project structure and architecture
-- [x] Navigation setup with deep linking
-- [x] Authentication flow implementation
-- [x] Basic UI components and theming
-- [ ] Complete user flow implementation
-- [ ] Error handling and monitoring
-- [ ] Performance optimization
-- [ ] Testing implementation
-- [ ] App store assets and metadata
-- [ ] CI/CD pipeline setup
-
-## Change Log
-
-- March 13, 2025, 14:30 UTC: Updated project context with comprehensive documentation
-- March 13, 2025, 14:00 UTC: Initialized frontend repo rules and context
+## Next Steps
+1. Set up fastlane for iOS and Android certificate management
+2. Implement Sentry for error tracking
+3. Configure app signing and versioning strategy
