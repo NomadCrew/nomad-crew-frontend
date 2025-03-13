@@ -1,7 +1,21 @@
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import { Platform } from 'react-native';
 import { useAuthStore } from '@/src/store/useAuthStore';
 import { useEffect, useState } from 'react';
-import { Platform } from 'react-native';
+import Constants from 'expo-constants';
+
+// Check if running in Expo Go
+const isExpoGo = Constants.appOwnership === 'expo';
+
+// Only import GoogleSignin if not in Expo Go
+let GoogleSignin: any;
+let statusCodes: any;
+
+if (!isExpoGo) {
+  // Dynamic import to avoid the error in Expo Go
+  const GoogleSignInModule = require('@react-native-google-signin/google-signin');
+  GoogleSignin = GoogleSignInModule.GoogleSignin;
+  statusCodes = GoogleSignInModule.statusCodes;
+}
 
 export function useGoogleSignIn() {
   const { handleGoogleSignInSuccess } = useAuthStore();
@@ -10,6 +24,12 @@ export function useGoogleSignIn() {
   // Configure Google Sign-In
   useEffect(() => {
     const configureGoogleSignIn = async () => {
+      // Skip configuration in Expo Go
+      if (isExpoGo) {
+        console.log('Google Sign-In is not available in Expo Go');
+        return;
+      }
+
       try {
         const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
         
@@ -20,12 +40,12 @@ export function useGoogleSignIn() {
         
         const config = {
           scopes: [
-            'https://www.googleapis.com/auth/drive.readonly',
             'https://www.googleapis.com/auth/userinfo.profile',
             'https://www.googleapis.com/auth/userinfo.email',
           ],
           webClientId: webClientId,
           offlineAccess: true,
+          iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
         };
         
         // Add Android-specific configuration
@@ -45,6 +65,13 @@ export function useGoogleSignIn() {
 
   // Sign-In Logic
   const signIn = async () => {
+    // Show a message in Expo Go
+    if (isExpoGo) {
+      console.log('Google Sign-In is not available in Expo Go. Please use a development build.');
+      alert('Google Sign-In is not available in Expo Go. Please use a development build.');
+      return;
+    }
+
     try {
       if (!isInitialized) {
         console.warn('Google Sign-In is not initialized yet');

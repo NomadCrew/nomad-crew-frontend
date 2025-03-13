@@ -5,7 +5,7 @@ import {
   Platform,
   Modal,
   Image
-} from 'react-native';;
+} from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useTheme } from '@/src/theme/ThemeProvider';

@@ -12,21 +12,14 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.nomadcrew.app",
       "config": {
-        "usesNonExemptEncryption": false,
-        "googleMapsApiKey": "${process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY}"
+        "usesNonExemptEncryption": false
       },
-      "associatedDomains": [
-        "applinks:nomadcrew.uk",
-        "applinks:*.nomadcrew.uk"
-      ],
       "infoPlist": {
         "UIBackgroundModes": [
           "remote-notification"
         ]
       },
-      "entitlements": {
-        "com.apple.developer.applesignin": ["Default"]
-      }
+      "usesAppleSignIn": true
     },
     "android": {
       "adaptiveIcon": {
@@ -45,24 +38,22 @@
           "autoVerify": true,
           "data": [
             {
-              "scheme": "nomadcrew",
-              "host": "login",
-              "pathPrefix": "/"
-            },
-            {
               "scheme": "https",
               "host": "nomadcrew.uk",
               "pathPrefix": "/auth/callback"
             },
             {
-              "scheme": "exp+nomad-crew-frontend",
-              "host": "*"
+              "scheme": "https",
+              "host": "efmqltdajyqenndmykz.supabase.co",
+              "pathPrefix": "/auth/v1/callback"
+            },
+            {
+              "scheme": "nomadcrew",
+              "host": "*",
+              "pathPrefix": "/auth/callback"
             }
           ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
+          "category": ["BROWSABLE", "DEFAULT"]
         },
         {
           "action": "VIEW",
@@ -112,7 +103,10 @@
         }
       ],
       [
-        "@react-native-google-signin/google-signin"
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.nomadcrew.app"
+        }
       ],
       [
         "expo-notifications",
@@ -125,6 +119,13 @@
         "expo-location",
         {
           "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
+        }
+      ],
+      [
+        "expo-apple-authentication",
+        {
+          "serviceId": "com.nomadcrew.app",
+          "teamId": "27DC66D35A"
         }
       ]
     ],

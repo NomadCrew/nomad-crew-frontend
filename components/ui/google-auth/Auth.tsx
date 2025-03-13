@@ -24,12 +24,12 @@ export default function AuthButton({ onPress }: AuthButtonProps) {
         
         const config = {
           scopes: [
-            "https://www.googleapis.com/auth/drive.readonly", 
             "https://www.googleapis.com/auth/userinfo.profile",
             "https://www.googleapis.com/auth/userinfo.email"
           ],
           webClientId: webClientId,
           offlineAccess: true,
+          iosClientId: webClientId,
         };
         
         await GoogleSignin.configure(config);

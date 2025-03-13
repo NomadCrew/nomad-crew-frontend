@@ -62,7 +62,17 @@ export class BaseApiClient {
           code: error.code,
           url: error.config?.url,
           status: error.response?.status,
-          data: error.response?.data
+          data: error.response?.data,
+          // Add these additional debug fields
+          config: {
+            baseURL: error.config?.baseURL,
+            headers: error.config?.headers,
+            method: error.config?.method,
+          },
+          // Network error details
+          isAxiosError: error.isAxiosError,
+          stack: error.stack,
+          cause: error.cause
         });
 
         // Handle network errors
