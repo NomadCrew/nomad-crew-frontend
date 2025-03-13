@@ -1,10 +1,28 @@
-import { appleAuth } from '@invertase/react-native-apple-authentication';
 import { Platform } from 'react-native';
 import { supabase } from '@/src/auth/supabaseClient';
 import { useAuthStore } from '@/src/store/useAuthStore';
+import Constants from 'expo-constants';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { useState, useEffect } from 'react';
+
+// Check if running in Expo Go
+const isExpoGo = Constants.appOwnership === 'expo';
 
 export function useAppleSignIn() {
   const { handleAppleSignInSuccess } = useAuthStore();
+  const [isAppleAuthAvailable, setIsAppleAuthAvailable] = useState(false);
+
+  // Check if Apple Authentication is available on this device
+  useEffect(() => {
+    const checkAvailability = async () => {
+      if (Platform.OS === 'ios') {
+        const isAvailable = await AppleAuthentication.isAvailableAsync();
+        setIsAppleAuthAvailable(isAvailable);
+      }
+    };
+    
+    checkAvailability();
+  }, []);
 
   const signIn = async () => {
     try {
@@ -13,14 +31,27 @@ export function useAppleSignIn() {
         throw new Error('Apple Sign In is only available on iOS devices');
       }
 
-      // Request credentials
-      const appleAuthResponse = await appleAuth.performRequest({
-        requestedOperation: appleAuth.Operation.LOGIN,
-        requestedScopes: [appleAuth.Scope.EMAIL, appleAuth.Scope.FULL_NAME],
+      // Check if Apple Authentication is available
+      if (!isAppleAuthAvailable) {
+        throw new Error('Apple Sign In is not available on this device');
+      }
+
+      // Show a message in Expo Go
+      if (isExpoGo) {
+        console.log('Apple Sign-In may have limited functionality in Expo Go. For best results, use a development build.');
+        // We'll still try to authenticate in Expo Go, as it might work
+      }
+
+      // Request credentials using Expo's Apple Authentication
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
       });
 
-      // Get id token
-      const { identityToken } = appleAuthResponse;
+      // Get identity token
+      const { identityToken } = credential;
       if (!identityToken) {
         throw new Error('No identity token returned from Apple Sign In');
       }

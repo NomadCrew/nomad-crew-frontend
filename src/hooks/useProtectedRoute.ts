@@ -1,11 +1,21 @@
 import { useEffect, useRef } from 'react';
-import { useRouter, useSegments } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/src/store/useAuthStore';
 import { useOnboarding } from '@/src/providers/OnboardingProvider';
+import Constants from 'expo-constants';
+
+// Safe way to import useSegments
+let useSegments: any;
+try {
+  useSegments = require('expo-router').useSegments;
+} catch (error) {
+  // Fallback if useSegments is not available
+  useSegments = () => [''];
+}
 
 export default function useProtectedRoute() {
   const router = useRouter();
-  const segments = useSegments();
+  const segments = useSegments ? useSegments() : [''];
   const { token, isInitialized, isVerifying } = useAuthStore();
   const { isFirstTime } = useOnboarding();
   const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);

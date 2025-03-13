@@ -59,9 +59,7 @@ export const useTodoStore = create<TodoState>((set, get) => ({
 
     set({ loading: true, error: null });
     try {
-      // Using POST as a workaround since the PUT endpoint is not available
-      // The backend team confirmed they're working on adding the missing PUT route
-      const response = await api.post<Todo>(API_PATHS.todos.update(todo.tripId, id), input);
+      const response = await api.put<Todo>(API_PATHS.todos.update(todo.tripId, id), input);
       set(state => ({
         todos: state.todos.map(t => t.id === id ? { ...t, ...response.data } : t)
       }));
