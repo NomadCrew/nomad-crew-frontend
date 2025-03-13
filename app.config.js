@@ -56,7 +56,7 @@ export default {
       [
         "@react-native-google-signin/google-signin",
         {
-          "iosUrlScheme": IS_DEV ? "com.nomadcrew.app.dev" : "com.nomadcrew.app",
+          "iosUrlScheme": process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
           "webClientId": process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
         }
       ]
