@@ -39,3 +39,8 @@ yarn-error.*
 app-example
 
 op.txt
+
+# Environment files
+.env
+.env.*
+!.env.example

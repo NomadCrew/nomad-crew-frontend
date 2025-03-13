@@ -1,8 +1,21 @@
-const IS_DEV = process.env.APP_VARIANT === 'development';
+const getEnvironment = () => {
+  switch (process.env.APP_VARIANT) {
+    case 'production':
+      return 'production';
+    case 'staging':
+      return 'staging';
+    default:
+      return 'development';
+  }
+};
+
+const ENV = getEnvironment();
+const IS_DEV = ENV === 'development';
+const IS_STAGING = ENV === 'staging';
 
 export default {
   expo: {
-    name: IS_DEV ? 'NomadCrew (Dev)' : 'NomadCrew',
+    name: IS_DEV ? 'NomadCrew (Dev)' : IS_STAGING ? 'NomadCrew (Staging)' : 'NomadCrew',
     slug: 'nomad-crew-frontend',
     version: '1.0.0',
     orientation: 'portrait',
@@ -17,7 +30,11 @@ export default {
     assetBundlePatterns: ['**/*'],
     ios: {
       supportsTablet: true,
-      bundleIdentifier: IS_DEV ? 'com.nomadcrew.app.dev' : 'com.nomadcrew.app',
+      bundleIdentifier: IS_DEV 
+        ? 'com.nomadcrew.app.dev' 
+        : IS_STAGING 
+          ? 'com.nomadcrew.app.staging' 
+          : 'com.nomadcrew.app',
       usesAppleSignIn: true,
       config: {
         usesNonExemptEncryption: false,
@@ -29,7 +46,11 @@ export default {
         foregroundImage: './assets/images/adaptive-icon.png',
         backgroundColor: '#ffffff'
       },
-      package: IS_DEV ? 'com.nomadcrew.app.dev' : 'com.nomadcrew.app',
+      package: IS_DEV 
+        ? 'com.nomadcrew.app.dev' 
+        : IS_STAGING 
+          ? 'com.nomadcrew.app.staging' 
+          : 'com.nomadcrew.app',
       config: {
         googleMaps: {
           apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
@@ -52,19 +73,13 @@ export default {
           }
         }
       ],
-      ["expo-apple-authentication"],
-      [
-        "@react-native-google-signin/google-signin",
-        {
-          "iosUrlScheme": process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-          "webClientId": process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
-        }
-      ]
+      ["expo-apple-authentication"]
     ],
     extra: {
       eas: {
         projectId: '50d59d51-34e0-49ab-a7ee-6989ed09f8ef'
-      }
+      },
+      environment: ENV
     }
   }
 };

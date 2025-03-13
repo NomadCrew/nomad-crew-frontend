@@ -19,7 +19,8 @@
           "remote-notification"
         ]
       },
-      "usesAppleSignIn": true
+      "usesAppleSignIn": true,
+      "googleServicesFile": "./ios/client_369652278516-05kcrkp3l28g4lt0hhki48othfgug3nc.apps.googleusercontent.com.plist"
     },
     "android": {
       "adaptiveIcon": {
@@ -44,7 +45,7 @@
             },
             {
               "scheme": "https",
-              "host": "efmqltdajyqenndmykz.supabase.co",
+              "host": "efmqiltdajyqenndmykz.supabase.co",
               "pathPrefix": "/auth/v1/callback"
             },
             {
@@ -100,12 +101,6 @@
           "fonts": [
             "./assets/fonts/SpaceMono-Regular.ttf"
           ]
-        }
-      ],
-      [
-        "@react-native-google-signin/google-signin",
-        {
-          "iosUrlScheme": "com.nomadcrew.app"
         }
       ],
       [
