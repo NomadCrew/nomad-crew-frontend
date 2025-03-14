@@ -7,6 +7,7 @@ export interface User {
     profilePicture?: string;
     createdAt?: string;
     updatedAt?: string;
+    appleUser?: boolean;
   }
   
   export interface RegisterCredentials {

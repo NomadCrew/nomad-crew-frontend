@@ -429,6 +429,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
           firstName: session.user.user_metadata?.firstName,
           lastName: session.user.user_metadata?.lastName,
           profilePicture: session.user.user_metadata?.avatar_url,
+          appleUser: true
         };
 
         set({

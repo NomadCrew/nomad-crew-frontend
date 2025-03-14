@@ -1,9 +1,19 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Image, Text, StyleSheet, ViewProps, StyleProp, ViewStyle, TextStyle, ImageStyle } from 'react-native';
 import { useThemedStyles } from '@/src/theme/utils';
 
 export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 export type AvatarVariant = 'circle' | 'rounded' | 'square';
+
+// Define a user interface that matches what we'll get from auth store
+interface UserData {
+  firstName?: string;
+  lastName?: string;
+  profilePicture?: string;
+  username?: string;
+  email?: string;
+  appleUser?: boolean;
+}
 
 export interface AvatarProps extends ViewProps {
   /**
@@ -45,6 +55,11 @@ export interface AvatarProps extends ViewProps {
    * Additional styles for the avatar text
    */
   textStyle?: StyleProp<TextStyle>;
+
+  /**
+   * User data for generating avatar
+   */
+  user?: UserData;
 }
 
 /**
@@ -59,6 +74,7 @@ export function Avatar({
   style,
   imageStyle,
   textStyle,
+  user,
   ...rest
 }: AvatarProps) {
   const styles = useThemedStyles((theme) => {
@@ -121,18 +137,87 @@ export function Avatar({
       },
     };
   });
+
+  // If user data is provided, use it to determine the avatar
+  const avatarSource = useMemo(() => {
+    // First priority: direct source prop
+    if (source) {
+      return source;
+    }
+
+    // Second priority: user profile picture (except for Apple users)
+    if (user?.profilePicture && !user?.appleUser) {
+      return user.profilePicture;
+    }
+    
+    // Third priority: generate avatar with UI Avatars
+    // Always use for Apple users, or as fallback for any user without profile pic
+    if (user) {
+      // Generate name for UI Avatars
+      const firstName = user.firstName || '';
+      const lastName = user.lastName || '';
+      const username = user.username || '';
+      const email = user.email || '';
+      
+      // Get initials - either from name parts or username or email
+      let displayName = '';
+      if (firstName || lastName) {
+        displayName = `${firstName} ${lastName}`.trim();
+      } else if (username) {
+        displayName = username;
+      } else if (email) {
+        // Use email before the @ symbol
+        displayName = email.split('@')[0];
+      }
+      
+      if (displayName) {
+        // Generate UI Avatars URL with better settings for our app
+        // Using random background colors for visual variety
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random&color=fff&size=256&bold=true`;
+      }
+    }
+    
+    // No valid source found
+    return null;
+  }, [source, user]);
+
+  // Calculate initials for fallback text display
+  const displayInitials = useMemo(() => {
+    // First priority: direct initials prop
+    if (initials) {
+      return initials;
+    }
+    
+    // Second priority: derive from user data
+    if (user) {
+      if (user.firstName && user.lastName) {
+        return `${user.firstName[0]}${user.lastName[0]}`;
+      }
+      if (user.firstName) {
+        return user.firstName[0];
+      }
+      if (user.username) {
+        return user.username[0];
+      }
+      if (user.email) {
+        return user.email[0];
+      }
+    }
+    
+    return '';
+  }, [initials, user]);
   
   return (
     <View style={[styles.container, style]} {...rest}>
-      {source ? (
+      {avatarSource ? (
         <Image
-          source={{ uri: source }}
+          source={{ uri: avatarSource }}
           style={[styles.image, imageStyle]}
           resizeMode="cover"
         />
       ) : (
         <Text style={[styles.text, textStyle]}>
-          {initials?.substring(0, 2).toUpperCase() || ''}
+          {displayInitials?.substring(0, 2).toUpperCase() || ''}
         </Text>
       )}
     </View>
