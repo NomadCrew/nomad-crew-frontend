@@ -1,7 +1,7 @@
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Provider as PaperProvider } from 'react-native-paper';
-import { Stack, useSegments, useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
 import RNEventSource from 'react-native-sse';
@@ -23,8 +23,17 @@ if (!global.EventSource) {
   global.EventSource = RNEventSource;
 }
 
+// Safe way to import useSegments
+let useSegments: any;
+try {
+  useSegments = require('expo-router').useSegments;
+} catch (error) {
+  // Fallback if useSegments is not available
+  useSegments = () => [''];
+}
+
 function RouteGuard({ children }: { children: React.ReactNode }) {
-  const segments = useSegments();
+  const segments = useSegments ? useSegments() : [''];
   const router = useRouter();
   const { token, isInitialized, loading, isVerifying } = useAuthStore();
   const { isFirstTime } = useOnboarding();

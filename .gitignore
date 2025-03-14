@@ -39,3 +39,11 @@ yarn-error.*
 app-example
 
 op.txt
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Exception for Google Services files
+!ios/GoogleService-Info*.plist

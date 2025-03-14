@@ -28,6 +28,8 @@ export const API_PATHS = {
     invite: (tripId: string) => createApiPath(`trips/${tripId}/invitations`),
     invitations: (tripId: string) => createApiPath(`trips/${tripId}/invitations`),
     acceptInvitation: createApiPath('trips/invitations/accept'),
+    messages: (tripId: string) => createApiPath(`trips/${tripId}/messages`),
+    messagesRead: (tripId: string) => createApiPath(`trips/${tripId}/messages/read`),
   },
   todos: {
     create: (tripId: string) => createApiPath(`trips/${tripId}/todos`),

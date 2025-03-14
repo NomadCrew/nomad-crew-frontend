@@ -1,5 +1,5 @@
 import { WebSocketConnection } from './WebSocketConnection';
-import { WebSocketStatus, ServerEvent, isLocationEvent } from '../types/events';
+import { WebSocketStatus, ServerEvent, isLocationEvent, isChatEvent } from '../types/events';
 import { useAuthStore } from '../store/useAuthStore';
 import { API_CONFIG } from '../api/env';
 import { jwtDecode } from 'jwt-decode';
@@ -69,13 +69,18 @@ export class WebSocketManager {
         throw new Error('Missing Supabase API key');
       }
 
-      // Create a wrapper for the onMessage callback to handle location events
+      // Create a wrapper for the onMessage callback to handle location events and chat events
       const wrappedCallbacks = {
         ...callbacks,
         onMessage: (event: ServerEvent) => {
           // Handle location events
           if (isLocationEvent(event)) {
             this.handleLocationEvent(event, tripId);
+          }
+          
+          // Handle chat events
+          if (isChatEvent(event)) {
+            this.handleChatEvent(event);
           }
           
           // Pass the event to the original callback
@@ -135,6 +140,268 @@ export class WebSocketManager {
     }
   }
 
+  private handleChatEvent(event: ServerEvent): void {
+    // Forward the chat event to the chat store
+    const { useChatStore } = require('../store/useChatStore');
+    
+    // Add detailed logging of the raw event
+    logger.debug('WS', 'Received chat event type:', event.type);
+    logger.debug('WS', 'Raw event data:', JSON.stringify(event, null, 2));
+    
+    // Special handling for CHAT_MESSAGE_SEND events (not in the ServerEventType enum)
+    // Use type assertion to handle custom event type
+    const eventType = event.type as string;
+    if (eventType === 'CHAT_MESSAGE_SEND') {
+      logger.debug('WS', 'Handling CHAT_MESSAGE_SEND event as MESSAGE_SENT');
+      
+      try {
+        const payload = event.payload as {
+          messageId: string;
+          tripId: string;
+          content: string;
+          user: {
+            id: string;
+            name: string;
+            avatar?: string;
+          };
+          timestamp: string;
+        };
+        
+        const mappedEvent = {
+          id: event.id,
+          type: 'MESSAGE_SENT',
+          tripId: payload.tripId,
+          userId: event.userId || payload.user.id,
+          timestamp: event.timestamp || payload.timestamp,
+          payload: {
+            message: {
+              id: payload.messageId,
+              content: payload.content,
+              sender: {
+                id: payload.user.id,
+                name: payload.user.name,
+                avatar: payload.user.avatar
+              },
+              createdAt: payload.timestamp
+            }
+          }
+        };
+        
+        logger.debug('WS', 'Created MESSAGE_SENT event from CHAT_MESSAGE_SEND with message ID:', payload.messageId);
+        useChatStore.getState().handleChatEvent(mappedEvent);
+        return;
+      } catch (error) {
+        logger.error('WS', 'Error handling CHAT_MESSAGE_SEND event:', error);
+        return;
+      }
+    }
+    
+    // Map the new event types to the ones expected by the chat store
+    let mappedEvent;
+    
+    switch (event.type) {
+      case 'CHAT_MESSAGE_SENT':
+        {
+          const payload = event.payload as {
+            messageId: string;
+            tripId: string;
+            content: string;
+            user: {
+              id: string;
+              name: string;
+              avatar?: string;
+            };
+            timestamp: string;
+          };
+          
+          logger.debug('WS', 'Mapping CHAT_MESSAGE_SENT event to MESSAGE_SENT');
+          
+          mappedEvent = {
+            id: event.id,
+            type: 'MESSAGE_SENT',
+            tripId: payload.tripId,
+            userId: event.userId,
+            timestamp: event.timestamp,
+            payload: {
+              message: {
+                id: payload.messageId,
+                content: payload.content,
+                sender: {
+                  id: payload.user.id,
+                  name: payload.user.name,
+                  avatar: payload.user.avatar
+                },
+                createdAt: payload.timestamp
+              }
+            }
+          };
+          
+          logger.debug('WS', 'Created MESSAGE_SENT event with message ID:', payload.messageId);
+        }
+        break;
+        
+      case 'CHAT_MESSAGE_EDITED':
+        {
+          const payload = event.payload as {
+            messageId: string;
+            tripId: string;
+            content: string;
+          };
+          
+          mappedEvent = {
+            id: event.id,
+            type: 'MESSAGE_EDITED',
+            tripId: payload.tripId,
+            userId: event.userId,
+            timestamp: event.timestamp,
+            payload: {
+              messageId: payload.messageId,
+              content: payload.content
+            }
+          };
+        }
+        break;
+        
+      case 'CHAT_MESSAGE_DELETED':
+        {
+          const payload = event.payload as {
+            messageId: string;
+            tripId: string;
+          };
+          
+          mappedEvent = {
+            id: event.id,
+            type: 'MESSAGE_DELETED',
+            tripId: payload.tripId,
+            userId: event.userId,
+            timestamp: event.timestamp,
+            payload: {
+              messageId: payload.messageId
+            }
+          };
+        }
+        break;
+        
+      case 'CHAT_REACTION_ADDED':
+        {
+          const payload = event.payload as {
+            messageId: string;
+            tripId: string;
+            reaction: string;
+            user: {
+              id: string;
+              name: string;
+              avatar?: string;
+            };
+          };
+          
+          mappedEvent = {
+            id: event.id,
+            type: 'REACTION_ADDED',
+            tripId: payload.tripId,
+            userId: event.userId,
+            timestamp: event.timestamp,
+            payload: {
+              messageId: payload.messageId,
+              reaction: payload.reaction,
+              user: payload.user
+            }
+          };
+        }
+        break;
+        
+      case 'CHAT_REACTION_REMOVED':
+        {
+          const payload = event.payload as {
+            messageId: string;
+            tripId: string;
+            reaction: string;
+            user: {
+              id: string;
+              name: string;
+              avatar?: string;
+            };
+          };
+          
+          mappedEvent = {
+            id: event.id,
+            type: 'REACTION_REMOVED',
+            tripId: payload.tripId,
+            userId: event.userId,
+            timestamp: event.timestamp,
+            payload: {
+              messageId: payload.messageId,
+              reaction: payload.reaction,
+              userId: payload.user.id
+            }
+          };
+        }
+        break;
+        
+      case 'CHAT_READ_RECEIPT':
+        {
+          const payload = event.payload as {
+            messageId: string;
+            tripId: string;
+            user: {
+              id: string;
+              name: string;
+              avatar?: string;
+            };
+          };
+          
+          mappedEvent = {
+            id: event.id,
+            type: 'MESSAGE_READ',
+            tripId: payload.tripId,
+            userId: event.userId,
+            timestamp: event.timestamp,
+            payload: {
+              messageId: payload.messageId,
+              userId: payload.user.id
+            }
+          };
+        }
+        break;
+        
+      case 'CHAT_TYPING_STATUS':
+        {
+          const payload = event.payload as {
+            tripId: string;
+            userId: string;
+            isTyping: boolean;
+            username: string;
+          };
+          
+          mappedEvent = {
+            id: event.id,
+            type: 'TYPING_STATUS',
+            tripId: payload.tripId,
+            userId: event.userId,
+            timestamp: event.timestamp,
+            payload: {
+              userId: payload.userId,
+              isTyping: payload.isTyping,
+              username: payload.username
+            }
+          };
+        }
+        break;
+        
+      default:
+        // Unknown chat event type
+        logger.warn('WS', `Unknown chat event type: ${event.type}`);
+        return;
+    }
+    
+    // Log the mapped event
+    logger.debug('WS', 'Mapped event type:', mappedEvent?.type);
+    logger.debug('WS', 'Mapped event data:', JSON.stringify(mappedEvent, null, 2));
+    
+    // Forward the mapped event to the chat store
+    useChatStore.getState().handleChatEvent(mappedEvent);
+  }
+
   private async handleConnectionError(tripId: string, callbacks?: ConnectionCallbacks): Promise<void> {
     this.reconnectAttempts++;
     
@@ -172,6 +439,98 @@ export class WebSocketManager {
 
     this.currentTripId = null;
     this.reconnectAttempts = 0;
+  }
+
+  public send(type: string, payload: any): boolean {
+    logger.debug('WS', `send method called with type: ${type}`);
+    
+    if (!this.connection) {
+      logger.error('WS', 'Cannot send message, no connection object');
+      return false;
+    }
+    
+    if (!this.isConnected()) {
+      logger.error('WS', 'Cannot send message, not connected');
+      return false;
+    }
+    
+    if (!this.currentTripId) {
+      logger.error('WS', 'Cannot send message, no current trip ID');
+      return false;
+    }
+    
+    try {
+      const userId = useAuthStore.getState().user?.id;
+      if (!userId) {
+        logger.error('WS', 'Cannot send message, no user ID');
+        return false;
+      }
+      
+      const message = {
+        type,
+        tripId: this.currentTripId,
+        userId,
+        payload
+      };
+      
+      logger.debug('WS', `Sending message of type ${type} to trip ${this.currentTripId}`);
+      logger.debug('WS', 'Message payload:', JSON.stringify(payload, null, 2));
+      
+      const result = this.connection.send(message);
+      logger.debug('WS', `Message send result: ${result ? 'success' : 'failure'}`);
+      
+      return result;
+    } catch (error) {
+      logger.error('WS', 'Error sending message:', error);
+      return false;
+    }
+  }
+
+  // Simplified method to send chat messages
+  public sendChatMessage(tripId: string, content: string, messageId: string): boolean {
+    const user = useAuthStore.getState().user;
+    if (!user) {
+      logger.error('WS', 'Cannot send chat message, user not logged in');
+      return false;
+    }
+
+    const messagePayload = {
+      tripId,
+      content,
+      messageId,
+      user: {
+        id: user.id,
+        name: user.username || user.firstName || 'You',
+        avatar: user.profilePicture
+      },
+      timestamp: new Date().toISOString()
+    };
+
+    return this.send('CHAT_MESSAGE_SEND', messagePayload);
+  }
+
+  // Simplified method to send typing status
+  public sendTypingStatus(tripId: string, isTyping: boolean): boolean {
+    const user = useAuthStore.getState().user;
+    if (!user) {
+      logger.error('WS', 'Cannot send typing status, user not logged in');
+      return false;
+    }
+
+    const typingPayload = {
+      tripId,
+      isTyping,
+      userId: user.id,
+      username: user.username || user.firstName || 'You'
+    };
+
+    return this.send('TYPING_STATUS', typingPayload);
+  }
+
+  public isConnected(): boolean {
+    const connected = this.connection?.isConnected() || false;
+    logger.debug('WS', `WebSocketManager.isConnected() called, result: ${connected}`);
+    return connected;
   }
 }
 

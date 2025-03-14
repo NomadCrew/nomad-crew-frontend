@@ -1,0 +1,71 @@
+---
+description: Expo Developer(frontend)
+globs: 
+alwaysApply: true
+---
+Context:
+- This is the NomadCrew frontend repo, a React Native app built with Expo, using TypeScript, Zustand, Supabase auth, and a custom theme system.
+- Refer to `/.cursor/rules/project-context.md` for the latest features, structure, and production progress. (Create if doesn't exist)
+
+Expertise:
+- You are an expert in React Native, Expo, TypeScript, Zustand, Supabase, and mobile UI development.
+
+Code Style:
+- Write concise, type-safe TypeScript code matching the existing `frontend/` structure.
+- Use functional, declarative patterns; avoid classes.
+- Modularize aggressively (components, hooks, stores).
+- Name variables with auxiliary verbs (e.g., `isAuthenticating`, `hasTripData`).
+- Structure files: exported component → subcomponents → hooks → utils → types.
+- Follow Expo’s managed workflow: https://docs.expo.dev/.
+
+Naming:
+- Directories: lowercase with dashes (e.g., `src/auth-flow`).
+- Use named exports (e.g., `export const TripScreen`).
+
+TypeScript:
+- Use interfaces (e.g., `interface TripProps`); avoid enums (use maps).
+- Enforce strict mode.
+
+Syntax:
+- Use `function` for pure functions (e.g., `function parseTripData()`).
+- Write concise conditionals (e.g., `if (!user) return <Login />`).
+- Use declarative JSX.
+
+UI and Styling:
+- Use React Native Paper for Material Design.
+- Implement the custom theme system (light/dark modes, semantic tokens—details in `project-context.md`).
+- Ensure responsive design with Flexbox and `useWindowDimensions`.
+- Use Reanimated and Gesture Handler for animations.
+- Apply Expo Blur, Linear Gradient, and Lottie as needed.
+
+State Management:
+- Use Zustand with stores: `useAuthStore`, `useTripStore`, `useTodoStore`, `useChatStore`, `useLocationStore`.
+- Minimize `useState/useEffect`; prefer Zustand or React Query.
+
+Navigation:
+- Use Expo Router for file-based routing.
+- Implement React Navigation (bottom tabs + stack navigators).
+- Handle deep links (nomadcrew://auth/callback) with Expo Linking.
+
+Auth:
+- Integrate Supabase (URL: https://efmqiltdajvqenndmylz.supabase.co) for email/password and social logins (Google, Apple).
+- Store tokens with Expo Secure Store; decode with jwt-decode.
+
+Data Fetching:
+- Use Axios for API calls to the backend (coordinate with backend repo’s endpoints).
+- Implement SSE and WebSocket Manager for real-time updates.
+
+Performance:
+- Use @shopify/flash-list for lists.
+- Lazy load with `Suspense` and dynamic imports.
+- Optimize with `useMemo` and `useCallback`.
+
+Security:
+- Sanitize inputs; use Expo Secure Store for tokens.
+- Follow Expo security guidelines: https://docs.expo.dev/guides/security/.
+
+Testing:
+- Write Jest unit tests; use Expo Dev Client for debugging.
+
+Production Goals:
+- Work toward the production readiness checklist in `project-context.md`, updating it with progress.

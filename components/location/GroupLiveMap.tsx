@@ -10,6 +10,7 @@ import { Theme } from '@/src/theme/types';
 import { MapPin, User, AlertCircle, Info } from 'lucide-react-native';
 import { LocationSharingToggle } from './LocationSharingToggle';
 import { Surface } from 'react-native-paper';
+import { logger } from '@/src/utils/logger';
 
 // Default coordinates to use as fallback (San Francisco)
 const DEFAULT_COORDINATES = {
@@ -22,9 +23,10 @@ const DEFAULT_COORDINATES = {
 interface GroupLiveMapProps {
   trip: Trip;
   onClose: () => void;
+  isStandalone?: boolean;
 }
 
-export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose }) => {
+export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isStandalone = false }) => {
   const { theme } = useTheme();
   const mapRef = useRef<MapView>(null);
   const { user } = useAuthStore();
@@ -71,7 +73,7 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose }) => 
         await getMemberLocations(trip.id);
       } catch (error) {
         setMapError('Unable to fetch member locations. Please try again later.');
-        console.error('Error fetching locations:', error);
+        logger.error('TRIP', 'Error fetching locations:', error);
       } finally {
         setIsLoading(false);
       }
@@ -83,14 +85,14 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose }) => 
     const intervalId = setInterval(() => {
       if (isLocationSharingEnabled) {
         getMemberLocations(trip.id).catch(error => {
-          console.error('Error polling locations:', error);
+          logger.error('TRIP', 'Error polling locations:', error);
         });
       }
-    }, 10000); // Poll every 10 seconds
+    }, 30000); // Poll every 30 seconds
 
     return () => {
       clearInterval(intervalId);
-      stopLocationTracking();
+      // Don't stop location tracking here, it's managed at the trip level
     };
   }, [trip.id, isLocationSharingEnabled]);
 
@@ -176,7 +178,7 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose }) => 
           animated: true,
         });
       } catch (error) {
-        console.error('Error fitting to coordinates:', error);
+        logger.error('UI', 'Error fitting to coordinates:', error);
       }
     } else {
       // If no markers, use default region
@@ -189,13 +191,50 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose }) => 
     }
   };
 
-  const handleMapReady = () => {
-    setMapLoaded(true);
+  // Handle map container dimensions
+  const handleMapContainerLayout = (event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    logger.debug(`[GroupLiveMap] Map container layout: ${width}x${height}`);
+    setMapContainerDimensions({ width, height });
+  };
+
+  // Retry loading the map with a different provider if it fails
+  useEffect(() => {
+    if (mapLoadAttempts > 0 && mapError) {
+      const timer = setTimeout(() => {
+        setMapError(null);
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [mapLoadAttempts, mapError]);
+
+  // Log when component mounts and unmounts
+  useEffect(() => {
+    logger.debug(`[GroupLiveMap] Component mounted for trip: ${trip.id}`);
     
-    // Add a slight delay before fitting to markers to ensure the map is fully rendered
+    return () => {
+      logger.debug(`[GroupLiveMap] Component unmounted for trip: ${trip.id}`);
+    };
+  }, [trip.id]);
+
+  // Log when map is ready
+  const handleMapReady = () => {
+    logger.debug(`[GroupLiveMap] Map ready for trip: ${trip.id}`);
+    setMapLoaded(true);
+    setIsLoading(false);
+    
+    // Fit to markers after a short delay to ensure the map is fully loaded
     setTimeout(() => {
       fitToMarkers();
     }, 500);
+  };
+
+  // Handle map errors
+  const handleMapError = () => {
+    logger.debug(`[GroupLiveMap] Map error occurred for trip: ${trip.id}`);
+    setMapError('There was an error loading the map. Please try again later.');
+    setMapLoadAttempts(prev => prev + 1);
   };
 
   // Render a marker for each member
@@ -262,29 +301,6 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose }) => 
     );
   };
 
-  // Handle map errors
-  const handleMapError = () => {
-    setMapError('There was an error loading the map. Please try again later.');
-    setMapLoadAttempts(prev => prev + 1);
-  };
-
-  // Handle map container dimensions
-  const handleMapContainerLayout = (event: LayoutChangeEvent) => {
-    const { width, height } = event.nativeEvent.layout;
-    setMapContainerDimensions({ width, height });
-  };
-
-  // Retry loading the map with a different provider if it fails
-  useEffect(() => {
-    if (mapLoadAttempts > 0 && mapError) {
-      const timer = setTimeout(() => {
-        setMapError(null);
-      }, 2000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [mapLoadAttempts, mapError]);
-
   // Render a fallback UI when the map fails to load
   const renderFallbackUI = () => {
     return (
@@ -309,14 +325,20 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose }) => 
   };
 
   return (
-    <View style={styles(theme).container}>
-      <View style={styles(theme).header}>
+    <View style={[
+      styles(theme).container,
+      isStandalone && styles(theme).standaloneContainer
+    ]}>
+      <View style={[
+        styles(theme).header,
+        isStandalone && styles(theme).standaloneHeader
+      ]}>
         <Text style={styles(theme).title}>Group Location</Text>
         <Pressable 
           style={styles(theme).closeButton} 
           onPress={onClose}
         >
-          <Text style={styles(theme).closeButtonText}>Close</Text>
+          <Text style={styles(theme).closeButtonText}>{isStandalone ? 'Back' : 'Close'}</Text>
         </Pressable>
       </View>
 
@@ -359,7 +381,10 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose }) => 
       )}
 
       <View 
-        style={styles(theme).mapContainer} 
+        style={[
+          styles(theme).mapContainer,
+          isStandalone && styles(theme).standaloneMapContainer
+        ]} 
         onLayout={handleMapContainerLayout}
       >
         {isLoading ? (
@@ -438,6 +463,7 @@ const styles = (theme: Theme) => StyleSheet.create({
     marginVertical: 0,
     overflow: 'hidden',
     height: Dimensions.get('window').height * 0.6,
+    backgroundColor: theme.colors.background.paper,
   },
   map: {
     width: '100%',
@@ -620,5 +646,15 @@ const styles = (theme: Theme) => StyleSheet.create({
     color: theme.colors.primary.text,
     fontSize: theme.typography.size.md,
     fontWeight: 'bold',
+  },
+  standaloneContainer: {
+    paddingTop: Platform.OS === 'ios' ? 50 : 30,
+  },
+  standaloneHeader: {
+    paddingTop: 10,
+    paddingBottom: 16,
+  },
+  standaloneMapContainer: {
+    paddingTop: Platform.OS === 'ios' ? 50 : 30,
   },
 }); 

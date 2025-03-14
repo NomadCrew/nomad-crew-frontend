@@ -125,7 +125,7 @@ export default function EmailLoginScreen() {
           >
             {loading ? (
               <ThemedView style={buttonStyles.loadingContainer}>
-                <Loader2 size={20} color={theme.colors.primary.onPrimary} />
+                <Loader2 size={20} color="#FFFFFF" />
                 <ThemedText style={buttonStyles.text}>Signing in...</ThemedText>
               </ThemedView>
             ) : (

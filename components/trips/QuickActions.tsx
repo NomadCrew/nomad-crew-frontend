@@ -5,10 +5,9 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuthStore } from '@/src/store/useAuthStore';
 import { Theme } from '@/src/theme/types';
 import { Trip } from '@/src/types/trip';
-import { ArrowLeft, ArrowRight, MapPin, MessageSquare, Users, UserPlus, Activity } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, MapPin, Users, UserPlus, Activity, MessageSquare } from 'lucide-react-native';
 import { MemberManagementModal } from './MemberManagementModal';
 import { TripStatusUpdateModal } from './TripStatusUpdateModal';
-import { GroupLiveMapModal } from '@/components/location/GroupLiveMapModal';
 
 // Define a type for the icon props
 type IconProps = {
@@ -17,23 +16,26 @@ type IconProps = {
 };
 
 interface QuickActionsProps {
-  trip: Trip;
-  setShowInviteModal: (show: boolean) => void;
+  trip?: Trip;
+  setShowInviteModal?: (show: boolean) => void;
+  onLocationPress?: () => void;
+  onChatPress?: () => void;
 }
 
 export const QuickActions: React.FC<QuickActionsProps> = ({
   trip,
-  setShowInviteModal
+  setShowInviteModal,
+  onLocationPress,
+  onChatPress,
 }) => {
   const { theme } = useTheme();
   const authStore = useAuthStore();
   const userId = authStore.user?.id;
   const [showMemberModal, setShowMemberModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
-  const [showLocationModal, setShowLocationModal] = useState(false);
   
-  const isOwner = trip.createdBy === userId;
-  const members = trip.members || [];
+  const isOwner = trip?.createdBy === userId;
+  const members = trip?.members || [];
   const isAdmin = members.some(
     (member) => member.userId === userId && member.role === 'admin'
   );
@@ -74,40 +76,44 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
     { 
       icon: (props: IconProps) => <MapPin {...props} />, 
       label: 'Location', 
-      onPress: () => setShowLocationModal(true) 
+      onPress: () => onLocationPress && onLocationPress()
     },
-    { 
-      icon: (props: IconProps) => <MessageSquare {...props} />, 
-      label: 'Chat', 
-      onPress: () => {} 
-    },
-    { 
-      icon: (props: IconProps) => <Users {...props} />, 
-      label: 'Members', 
-      onPress: () => {
-        // Get current user info
-        const currentUser = authStore.user;
-        const creatorName = currentUser && currentUser.id === trip.createdBy
-          ? getUserDisplayName(currentUser)
-          : undefined;
-        
-        // Ensure the trip has the creator as a member if members array is empty
-        const tripWithMembers = {
-          ...trip,
-          members: trip.members && trip.members.length > 0 
-            ? trip.members 
-            : [{ 
-                userId: trip.createdBy,
-                name: creatorName,
-                role: 'owner', 
-                joinedAt: trip.createdAt 
-              }]
-        };
-        
-        setShowMemberModal(true);
-      } 
-    },
-    ...(isOwnerOrAdmin
+    ...(trip && onChatPress ? [
+      { 
+        icon: (props: IconProps) => <MessageSquare {...props} />, 
+        label: 'Chat', 
+        onPress: () => onChatPress && onChatPress()
+      }
+    ] : []),
+    ...(trip ? [
+      { 
+        icon: (props: IconProps) => <Users {...props} />, 
+        label: 'Members', 
+        onPress: () => {
+          // Get current user info
+          const currentUser = authStore.user;
+          const creatorName = currentUser && currentUser.id === trip.createdBy
+            ? getUserDisplayName(currentUser)
+            : undefined;
+          
+          // Ensure the trip has the creator as a member if members array is empty
+          const tripWithMembers = {
+            ...trip,
+            members: trip.members && trip.members.length > 0 
+              ? trip.members 
+              : [{ 
+                  userId: trip.createdBy,
+                  name: creatorName,
+                  role: 'owner', 
+                  joinedAt: trip.createdAt 
+                }]
+          };
+          
+          setShowMemberModal(true);
+        } 
+      }
+    ] : []),
+    ...(isOwnerOrAdmin && setShowInviteModal
       ? [{ 
           icon: (props: IconProps) => <UserPlus {...props} />, 
           label: 'Invite', 
@@ -171,82 +177,80 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
         </View>
       </Surface>
 
-      <MemberManagementModal
-        visible={showMemberModal}
-        onClose={() => setShowMemberModal(false)}
-        trip={(() => {
-          // Create a copy of the trip to avoid modifying the original
-          const tripCopy = { ...trip };
-          
-          // Ensure members array exists
-          if (!tripCopy.members) {
-            tripCopy.members = [];
-          }
-          
-          // Ensure creator is in members array with owner role
-          const creatorExists = tripCopy.members.some(member => member.userId === trip.createdBy);
-          if (!creatorExists) {
-            const currentUser = authStore.user;
-            const creatorName = currentUser && currentUser.id === trip.createdBy
-              ? getUserDisplayName(currentUser)
-              : undefined;
+      {trip && (
+        <>
+          <MemberManagementModal
+            visible={showMemberModal}
+            onClose={() => setShowMemberModal(false)}
+            trip={(() => {
+              // Create a copy of the trip to avoid modifying the original
+              const tripCopy = { ...trip };
               
-            tripCopy.members.push({ 
-              userId: trip.createdBy, 
-              name: creatorName,
-              role: 'owner', 
-              joinedAt: trip.createdAt 
-            });
-          }
-          
-          // Ensure current user is in members array if they're not already
-          if (userId && !tripCopy.members.some(member => member.userId === userId)) {
-            // Determine the role based on whether they're the creator
-            const role = userId === trip.createdBy ? 'owner' : 'member';
-            const currentUser = authStore.user;
-            
-            tripCopy.members.push({
-              userId: userId,
-              name: currentUser ? getUserDisplayName(currentUser) : undefined,
-              role: role,
-              joinedAt: new Date().toISOString()
-            });
-          }
-          
-          // Make sure all members have names
-          tripCopy.members = tripCopy.members.map(member => {
-            if (!member.name) {
-              // If member is current user, use their info
-              if (member.userId === userId && authStore.user) {
-                return {
-                  ...member,
-                  name: getUserDisplayName(authStore.user)
-                };
+              // Ensure members array exists
+              if (!tripCopy.members) {
+                tripCopy.members = [];
               }
-              // For other members without names, add a placeholder
-              return {
-                ...member,
-                name: `Member ${member.userId.substring(0, 4)}`
-              };
-            }
-            return member;
-          });
-          
-          return tripCopy;
-        })()}
-      />
+              
+              // Ensure creator is in members array with owner role
+              const creatorExists = tripCopy.members.some(member => member.userId === trip.createdBy);
+              if (!creatorExists) {
+                const currentUser = authStore.user;
+                const creatorName = currentUser && currentUser.id === trip.createdBy
+                  ? getUserDisplayName(currentUser)
+                  : undefined;
+                  
+                tripCopy.members.push({ 
+                  userId: trip.createdBy, 
+                  name: creatorName,
+                  role: 'owner', 
+                  joinedAt: trip.createdAt 
+                });
+              }
+              
+              // Ensure current user is in members array if they're not already
+              if (userId && !tripCopy.members.some(member => member.userId === userId)) {
+                // Determine the role based on whether they're the creator
+                const role = userId === trip.createdBy ? 'owner' : 'member';
+                const currentUser = authStore.user;
+                
+                tripCopy.members.push({
+                  userId: userId,
+                  name: currentUser ? getUserDisplayName(currentUser) : undefined,
+                  role: role,
+                  joinedAt: new Date().toISOString()
+                });
+              }
+              
+              // Make sure all members have names
+              tripCopy.members = tripCopy.members.map(member => {
+                if (!member.name) {
+                  // If member is current user, use their info
+                  if (member.userId === userId && authStore.user) {
+                    return {
+                      ...member,
+                      name: getUserDisplayName(authStore.user)
+                    };
+                  }
+                  // For other members without names, add a placeholder
+                  return {
+                    ...member,
+                    name: `Member ${member.userId.substring(0, 4)}`
+                  };
+                }
+                return member;
+              });
+              
+              return tripCopy;
+            })()}
+          />
 
-      <TripStatusUpdateModal
-        visible={showStatusModal}
-        onClose={() => setShowStatusModal(false)}
-        trip={trip}
-      />
-
-      <GroupLiveMapModal
-        visible={showLocationModal}
-        onClose={() => setShowLocationModal(false)}
-        trip={trip}
-      />
+          <TripStatusUpdateModal
+            visible={showStatusModal}
+            onClose={() => setShowStatusModal(false)}
+            trip={trip}
+          />
+        </>
+      )}
     </>
   );
 };

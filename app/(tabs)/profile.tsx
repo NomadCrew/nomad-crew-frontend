@@ -40,6 +40,9 @@ export default function ProfileScreen() {
           user.profilePicture ||
           (user as any).user_metadata?.avatar_url ||
           (user as any).user_metadata?.picture,
+        email: user.email,
+        username: user.username,
+        appleUser: user.appleUser
       }
     : {};
 

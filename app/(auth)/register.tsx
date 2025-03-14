@@ -159,7 +159,7 @@ export default function RegisterScreen() {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color={theme.colors.primary.onPrimary} />
+              <ActivityIndicator color="#FFFFFF" />
             ) : (
               <ThemedText style={styles(theme).buttonText}>Register</ThemedText>
             )}

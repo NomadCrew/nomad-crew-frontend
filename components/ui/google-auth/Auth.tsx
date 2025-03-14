@@ -1,5 +1,7 @@
 import { GoogleSignin, GoogleSigninButton, statusCodes } from '@react-native-google-signin/google-signin';
 import { useAuthStore } from '@/src/store/useAuthStore';
+import { useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 
 interface AuthButtonProps {
   onPress?: () => void;
@@ -7,26 +9,73 @@ interface AuthButtonProps {
 
 export default function AuthButton({ onPress }: AuthButtonProps) {
   const { handleGoogleSignInSuccess } = useAuthStore();
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  GoogleSignin.configure({
-    scopes: ["https://www.googleapis.com/auth/drive.readonly", "https://www.googleapis.com/auth/userinfo.profile"],
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-    offlineAccess: true,
-  });
+  // Configure Google Sign-In
+  useEffect(() => {
+    const configureGoogleSignIn = async () => {
+      try {
+        const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+        
+        if (!webClientId) {
+          console.error('Google Web Client ID is not defined in environment variables');
+          return;
+        }
+        
+        const config = {
+          scopes: [
+            "https://www.googleapis.com/auth/userinfo.profile",
+            "https://www.googleapis.com/auth/userinfo.email"
+          ],
+          webClientId: webClientId,
+          offlineAccess: true,
+          iosClientId: webClientId,
+        };
+        
+        await GoogleSignin.configure(config);
+        setIsInitialized(true);
+      } catch (error) {
+        console.error('Error configuring Google Sign-In:', error);
+      }
+    };
+    
+    configureGoogleSignIn();
+  }, []);
 
   const handleGoogleSignIn = async () => {
     try {
-      await GoogleSignin.hasPlayServices();
+      if (!isInitialized) {
+        console.warn('Google Sign-In is not initialized yet');
+        return;
+      }
+      
+      // Check if Play Services are available (Android only)
+      if (Platform.OS === 'android') {
+        const isPlayServicesAvailable = await GoogleSignin.hasPlayServices({
+          showPlayServicesUpdateDialog: true,
+        });
+        
+        if (!isPlayServicesAvailable) {
+          console.error('Play Services are not available');
+          return;
+        }
+      }
+      
+      // Sign in
       const userInfo = await GoogleSignin.signIn();
+      console.log('Google Sign-In successful:', userInfo);
       await handleGoogleSignInSuccess(userInfo);
-      } catch (error: any) {
-      // Handle Google Sign-In errors
+    } catch (error: any) {
+      console.error('Google Sign-In error:', error);
+      
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-        // Sign in cancelled
+        console.log('Sign in cancelled');
       } else if (error.code === statusCodes.IN_PROGRESS) {
-        // Sign in in progress
+        console.log('Sign in in progress');
       } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        // Play services not available
+        console.log('Play services not available');
+      } else {
+        console.error('Other sign in error:', error);
       }
     }
   };
