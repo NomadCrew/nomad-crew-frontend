@@ -46,7 +46,11 @@ export default {
           'remote-notification'
         ]
       },
-      googleServicesFile: './ios/client_369652278516-05kcrkp3l28g4lt0hhki48othfgug3nc.apps.googleusercontent.com.plist'
+      googleServicesFile: IS_DEV 
+        ? './ios/GoogleService-Info.dev.plist'
+        : IS_STAGING 
+          ? './ios/GoogleService-Info.staging.plist' 
+          : './ios/GoogleService-Info.plist'
     },
     android: {
       adaptiveIcon: {
@@ -135,7 +139,9 @@ export default {
         }
       ],
       ['expo-apple-authentication', {
-        serviceId: 'com.nomadcrew.app',
+        serviceId: IS_DEV 
+          ? 'com.nomadcrew.app.dev' 
+          : 'com.nomadcrew.app',
         teamId: '27DC66D35A'
       }],
       ['expo-splash-screen', {

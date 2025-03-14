@@ -44,3 +44,6 @@ op.txt
 .env
 .env.*
 !.env.example
+
+# Exception for Google Services files
+!ios/GoogleService-Info*.plist
