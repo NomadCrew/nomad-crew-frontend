@@ -2,6 +2,27 @@
 
 ## Latest Updates
 
+### March 14, 2024, 14:30 UTC
+- Fixed iOS build failure related to Google Services file:
+  - Reverted app.config.js to use standardized GoogleService-Info.plist files
+  - Ensured GoogleService-Info.dev.plist is tracked by Git for EAS Build
+  - Aligned configuration with EAS Build expectations
+
+### Files Modified/Actions Taken
+- Configuration:
+  - `app.config.js` (updated googleServicesFile paths to use standardized file names)
+  - Added `ios/GoogleService-Info.dev.plist` to Git tracking
+
+### March 14, 2024, 14:00 UTC
+- Fixed iOS build failure related to Google Services file:
+  - Updated app.config.js to use the correct Google Services file paths
+  - Aligned configuration with the actual file names in the iOS directory
+  - Resolved the ENOENT error during prebuild process
+
+### Files Modified
+- Configuration:
+  - `app.config.js` (updated googleServicesFile paths to match actual file names)
+
 ### March 14, 2024, 13:15 UTC
 - Removed staging environment (deprecated):
   - Updated app.config.js to only use development and production environments
