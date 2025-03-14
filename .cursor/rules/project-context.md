@@ -2,6 +2,37 @@
 
 ## Latest Updates
 
+### March 14, 2024, 12:40 UTC
+- Fixed iOS build error related to GoogleService-Info.plist:
+  - Created standardized GoogleService-Info.plist files for all environments
+  - Updated app.config.js to use the standardized file names
+  - Modified .gitignore to ensure Google service files are tracked by Git
+  - Ensured EAS Build can access the required files
+
+### Files Modified/Created
+- iOS Configuration:
+  - `ios/GoogleService-Info.plist` (standardized from custom-named file)
+  - `ios/GoogleService-Info.dev.plist` (standardized from custom-named file)
+  - `ios/GoogleService-Info.staging.plist` (standardized from custom-named file)
+- Configuration:
+  - `app.config.js` (updated googleServicesFile paths)
+  - `.gitignore` (added exception for GoogleService-Info.plist files)
+
+### March 14, 2024, 10:00 UTC
+- Fixed iOS authentication issues:
+  - Added Google Sign-In URL scheme to Info.plist
+  - Created environment-specific Google client configuration files
+  - Updated Apple Sign-In serviceId to match bundle identifiers for each environment
+  - Fixed bundle identifier mismatches in authentication configuration
+
+### Files Modified/Created
+- iOS Configuration:
+  - `ios/nomad-crew-frontend/Info.plist` (added Google Sign-In URL scheme)
+  - `ios/client_369652278516-05kcrkp3l28g4lt0hhki48othfgug3nc.apps.googleusercontent.com.dev.plist` (new)
+  - `ios/client_369652278516-05kcrkp3l28g4lt0hhki48othfgug3nc.apps.googleusercontent.com.staging.plist` (new)
+- App Configuration:
+  - `app.config.js` (updated Apple Sign-In and Google services configuration)
+
 ### March 13, 2024, 18:30 UTC
 - Implemented production readiness setup:
   - Added environment management with `.env.development`, `.env.staging`, and `.env.production`
