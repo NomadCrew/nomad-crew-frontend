@@ -4,6 +4,9 @@ import type { AuthState, LoginCredentials, RegisterCredentials, User, AuthStatus
 import { Session } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logger } from '@/src/utils/logger';
+import { authApi } from '@/src/api/auth-api';
+import { ERROR_CODES, ERROR_MESSAGES } from '@/src/api/constants';
+import { registerAuthHandlers } from '@/src/api/api-client';
 
 /**
  * Attempt to recover a session from Supabase.
@@ -18,14 +21,14 @@ const recoverSession = async () => {
       return session;
     }
   } catch (error) {
-    console.error('[AuthStore] Session recovery failed:', error);
+    logger.error('AUTH', 'Session recovery failed:', error);
   }
   return null;
 };
 
 export const useAuthStore = create<AuthState>((set, get) => {
   // State for user, token, loading, etc.
-  return {
+  const store = {
     user: null,
     token: null,
     loading: false,
@@ -73,15 +76,137 @@ export const useAuthStore = create<AuthState>((set, get) => {
       }
     },
 
+    /**
+     * Refresh the authentication session
+     * First tries to use the backend's refresh endpoint
+     * Falls back to Supabase refresh if needed
+     */
     refreshSession: async () => {
       try {
         logger.debug('AUTH', 'Refreshing session');
+        
+        // Get the current refresh token
+        const refreshToken = get().refreshToken;
+        
+        if (!refreshToken) {
+          logger.debug('AUTH', 'No refresh token available, attempting to recover session');
+          // Try to recover session from Supabase
+          const recoveredSession = await recoverSession();
+          
+          if (recoveredSession) {
+            logger.debug('AUTH', 'Session recovered successfully from Supabase');
+            const user: User = {
+              id: recoveredSession.user.id,
+              email: recoveredSession.user.email ?? '',
+              username: recoveredSession.user.user_metadata?.username ?? '',
+              firstName: recoveredSession.user.user_metadata?.firstName,
+              lastName: recoveredSession.user.user_metadata?.lastName,
+              profilePicture: recoveredSession.user.user_metadata?.avatar_url,
+            };
+            
+            set({
+              user,
+              token: recoveredSession.access_token,
+              refreshToken: recoveredSession.refresh_token,
+              status: 'authenticated'
+            });
+            
+            return;
+          }
+          
+          // If no refresh token and no recovered session, we need to re-authenticate
+          throw new Error('No refresh token available and session recovery failed');
+        }
+        
+        // Try to refresh using the backend's refresh endpoint
+        try {
+          logger.debug('AUTH', 'Attempting to refresh token using backend endpoint');
+          
+          const { access_token, refresh_token, expires_in } = await authApi.refreshToken(refreshToken);
+          
+          if (!access_token || !refresh_token) {
+            throw new Error('Invalid response from refresh endpoint');
+          }
+          
+          logger.debug('AUTH', 'Token refreshed successfully via backend', {
+            expiresIn: expires_in
+          });
+          
+          // Keep the same user data but update tokens
+          set({
+            token: access_token,
+            refreshToken: refresh_token,
+            status: 'authenticated'
+          });
+          
+          return;
+        } catch (backendRefreshError: any) {
+          // Check for specific error codes from the backend
+          const errorData = backendRefreshError.response?.data;
+          
+          if (errorData?.code === ERROR_CODES.INVALID_REFRESH_TOKEN || 
+              errorData?.login_required === true) {
+            logger.error('AUTH', 'Refresh token is invalid or expired:', errorData);
+            // Clear auth state and throw specific error
+            set({
+              user: null,
+              token: null,
+              refreshToken: null,
+              status: 'unauthenticated'
+            });
+            throw new Error(ERROR_MESSAGES.INVALID_REFRESH_TOKEN);
+          }
+          
+          // For other errors, try Supabase refresh as fallback
+          logger.debug('AUTH', 'Backend refresh failed, falling back to Supabase:', backendRefreshError);
+        }
+        
+        // Fallback to Supabase refresh
+        logger.debug('AUTH', 'Attempting to refresh via Supabase');
         const { data, error } = await supabase.auth.refreshSession();
-        if (error) throw error;
+        
+        if (error) {
+          logger.error('AUTH', 'Supabase session refresh error:', error);
+          
+          // If Supabase refresh fails, try one last attempt to recover session
+          logger.debug('AUTH', 'Attempting to recover session as last resort');
+          const recoveredSession = await recoverSession();
+          
+          if (recoveredSession) {
+            logger.debug('AUTH', 'Session recovered successfully');
+            const user: User = {
+              id: recoveredSession.user.id,
+              email: recoveredSession.user.email ?? '',
+              username: recoveredSession.user.user_metadata?.username ?? '',
+              firstName: recoveredSession.user.user_metadata?.firstName,
+              lastName: recoveredSession.user.user_metadata?.lastName,
+              profilePicture: recoveredSession.user.user_metadata?.avatar_url,
+            };
+            
+            set({
+              user,
+              token: recoveredSession.access_token,
+              refreshToken: recoveredSession.refresh_token,
+              status: 'authenticated'
+            });
+            
+            return;
+          }
+          
+          // If all refresh attempts fail, clear auth state and throw error
+          set({
+            user: null,
+            token: null,
+            refreshToken: null,
+            status: 'unauthenticated'
+          });
+          
+          throw new Error(ERROR_MESSAGES.REFRESH_FAILED);
+        }
     
         const { session } = data;
         if (session) {
-          logger.debug('AUTH', 'Session refreshed successfully', {
+          logger.debug('AUTH', 'Session refreshed successfully via Supabase', {
             userId: session.user.id,
             expiresAt: session.expires_at
           });
@@ -99,13 +224,21 @@ export const useAuthStore = create<AuthState>((set, get) => {
             user,
             token: session.access_token,
             refreshToken: session.refresh_token,
+            status: 'authenticated'
           });
     
         } else {
-          throw new Error('Failed to refresh session');
+          throw new Error('Failed to refresh session - no session returned');
         }
       } catch (error: any) {
         logger.error('AUTH', 'Refresh session error:', error);
+        // Clear auth state on critical errors
+        set({
+          user: null,
+          token: null,
+          refreshToken: null,
+          status: 'unauthenticated'
+        });
         throw error;
       }
     },
@@ -184,7 +317,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         });
     
       } catch (error: any) {
-        console.error('[AuthStore] Login failed:', error);
+        logger.error('AUTH', 'Login failed:', error);
         set({
           error: error.message || 'Login failed',
           loading: false,
@@ -199,25 +332,51 @@ export const useAuthStore = create<AuthState>((set, get) => {
     handleGoogleSignInSuccess: async (response: any) => {
       try {
         set({ loading: true, error: null });
-        // Response should contain an idToken
-        const idToken = response?.data?.idToken;
+        
+        console.log('Google Sign-In response:', response);
+        
+        // Extract the ID token based on the response structure
+        let idToken = null;
+        
+        // Handle different response formats from different platforms
+        if (response?.idToken) {
+          // Direct format
+          idToken = response.idToken;
+        } else if (response?.user?.idToken) {
+          // Nested user format
+          idToken = response.user.idToken;
+        } else if (response?.data?.idToken) {
+          // Data wrapper format
+          idToken = response.data.idToken;
+        } else if (response?.authentication?.idToken) {
+          // Authentication wrapper format (common in React Native)
+          idToken = response.authentication.idToken;
+        }
+        
         if (!idToken) {
+          console.error('No ID token found in response:', response);
           throw new Error('No ID token in response');
         }
+        
+        console.log('Using ID token:', idToken.substring(0, 10) + '...');
     
         // Sign in with Supabase using the ID token
         const { data, error } = await supabase.auth.signInWithIdToken({
           provider: 'google',
           token: idToken,
         });
-        if (error) throw error;
+        
+        if (error) {
+          console.error('Supabase sign-in error:', error);
+          throw error;
+        }
     
         if (!data.session) {
           throw new Error('No session returned from Google sign-in');
         }
     
         // Log the session and token
-        logger.debug('AUTH', 'Session after Google sign-in:', {
+        console.log('AUTH: Session after Google sign-in:', {
           userId: data.session.user.id,
           expiresAt: data.session.expires_at
         });
@@ -240,12 +399,13 @@ export const useAuthStore = create<AuthState>((set, get) => {
           error: null,
           isVerifying: false
         });
-        logger.debug('AUTH', 'Authentication successful', {
+        
+        console.log('AUTH: Authentication successful', {
           accessToken: data.session.access_token.substring(0, 10) + '...',
           refreshToken: data.session.refresh_token ? data.session.refresh_token.substring(0, 10) + '...' : 'none'
         });
       } catch (error: any) {
-        logger.error('AUTH', 'Google sign-in error:', error);
+        console.error('AUTH: Google sign-in error:', error);
         set({
           error: error.message || 'Google sign-in failed',
           loading: false
@@ -255,22 +415,90 @@ export const useAuthStore = create<AuthState>((set, get) => {
     },
 
     /**
-     * Logout: sign out from Supabase and reset store
+     * Apple sign-in success handler
      */
-    logout: async () => {
+    handleAppleSignInSuccess: async (session: Session) => {
       try {
-        set({ loading: true });
-        const { error } = await supabase.auth.signOut();
-        if (error) throw error;
-      } catch (error: any) {
-        console.error('[AuthStore] Logout error:', error);
-      } finally {
+        set({ loading: true, error: null });
+
+        // Build user from session
+        const user: User = {
+          id: session.user.id,
+          email: session.user.email ?? '',
+          username: session.user.user_metadata?.username ?? '',
+          firstName: session.user.user_metadata?.firstName,
+          lastName: session.user.user_metadata?.lastName,
+          profilePicture: session.user.user_metadata?.avatar_url,
+          appleUser: true
+        };
+
         set({
-          user: null,
-          token: null,
+          user,
+          token: session.access_token,
+          refreshToken: session.refresh_token,
           loading: false,
           error: null,
           isVerifying: false
+        });
+
+      } catch (error: any) {
+        console.error('AUTH: Apple sign-in error:', error);
+        set({
+          error: error.message || 'Apple sign-in failed',
+          loading: false
+        });
+        throw error;
+      }
+    },
+
+    /**
+     * Logout the user
+     */
+    logout: async () => {
+      try {
+        logger.debug('AUTH', 'Logging out user');
+        set({ loading: true });
+        
+        // Sign out from Supabase
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+          logger.error('AUTH', 'Error during logout:', error);
+          // Continue with local logout even if Supabase logout fails
+        }
+        
+        // Clear all auth-related data from AsyncStorage
+        try {
+          await AsyncStorage.multiRemove([
+            'supabase.auth.token',
+            'supabase.auth.refreshToken',
+            'supabase.auth.user'
+          ]);
+        } catch (storageError) {
+          logger.error('AUTH', 'Error clearing storage during logout:', storageError);
+          // Continue with logout even if storage clearing fails
+        }
+        
+        // Reset the auth state
+        set({
+          user: null,
+          token: null,
+          refreshToken: null,
+          loading: false,
+          error: null,
+          status: 'unauthenticated'
+        });
+        
+        logger.debug('AUTH', 'Logout completed successfully');
+      } catch (error) {
+        logger.error('AUTH', 'Unexpected error during logout:', error);
+        // Ensure state is reset even if there's an error
+        set({
+          user: null,
+          token: null,
+          refreshToken: null,
+          loading: false,
+          error: null,
+          status: 'unauthenticated'
         });
       }
     },
@@ -282,4 +510,15 @@ export const useAuthStore = create<AuthState>((set, get) => {
       set({ isFirstTime: false });
     }
   };
+
+  // Register auth handlers with the API client
+  registerAuthHandlers({
+    getToken: () => get().token,
+    getRefreshToken: () => get().refreshToken,
+    isInitialized: () => get().isInitialized,
+    refreshSession: async () => await get().refreshSession(),
+    logout: () => get().logout(),
+  });
+
+  return store;
 });

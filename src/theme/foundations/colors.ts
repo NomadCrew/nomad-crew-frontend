@@ -87,6 +87,9 @@ export const colorTokens = {
       peachMedium: '#FFB8A8',
       peachDark: '#E8A598',
       coral: '#C99A94',
+      darkPeach: '#B06048',
+      darkCoral: '#8A4A3F',
+      lightPeach: '#FFE8DC',
     },
   } as const;
   
@@ -94,36 +97,36 @@ export const colorTokens = {
   export const createSemanticColors = (isDark: boolean) => ({
     // Interactive colors
     primary: {
-      main: isDark ? colorTokens.orange[400] : colorTokens.orange[600],
+      main: isDark ? colorTokens.orange[400] : colorTokens.orange[700],
       surface: isDark ? colorTokens.orange[900] : colorTokens.orange[50],
       border: isDark ? colorTokens.orange[700] : colorTokens.orange[300],
-      hover: isDark ? colorTokens.orange[300] : colorTokens.orange[700],
-      pressed: isDark ? colorTokens.orange[200] : colorTokens.orange[800],
+      hover: isDark ? colorTokens.orange[300] : colorTokens.orange[800],
+      pressed: isDark ? colorTokens.orange[200] : colorTokens.orange[900],
       disabled: isDark ? colorTokens.orange[800] : colorTokens.orange[200],
       text: isDark ? colorTokens.orange[50] : '#FFFFFF',
-      onPrimary: '#FFFFFF', // Add this for text on primary surfaces
+      onPrimary: '#FFFFFF',
     },
   
     // Content
     content: {
       primary: isDark ? '#F8FAFC' : '#1A1A1A',
       secondary: isDark ? '#CBD5E1' : '#404040',
-      tertiary: isDark ? '#94A3B8' : '#6B7280',
+      tertiary: isDark ? '#94A3B8' : '#555555',
       disabled: isDark ? '#475569' : '#D4D4D4',
       onSurface: isDark ? '#FFFFFF' : colorTokens.gray[900],
-      onSurfaceVariant: isDark ? colorTokens.gray[300] : colorTokens.gray[600],
+      onSurfaceVariant: isDark ? colorTokens.gray[300] : colorTokens.gray[700],
       onImage: '#FFFFFF',
     },
   
     // Surface colors
     surface: {
       default: isDark ? colorTokens.gray[900] : colorTokens.pastel.peachLight,
-      variant: isDark ? colorTokens.gray[800] : colorTokens.pastel.peachMedium,
+      variant: isDark ? colorTokens.gray[800] : colorTokens.pastel.darkPeach,
     },
     status: {
       error: {
         surface: isDark ? colorTokens.red[900] : colorTokens.red[50],
-        content: isDark ? colorTokens.red[300] : colorTokens.red[700],
+        content: isDark ? colorTokens.red[300] : colorTokens.red[800],
         background: isDark ? colorTokens.red[800] : colorTokens.red[100],
         border: isDark ? colorTokens.red[700] : colorTokens.red[300],
       },
@@ -135,21 +138,38 @@ export const colorTokens = {
       },
       planning: {
         background: isDark ? colorTokens.orange[800] : colorTokens.orange[100],
-        content: isDark ? colorTokens.orange[200] : colorTokens.orange[700]
+        content: isDark ? colorTokens.orange[200] : colorTokens.orange[800]
       },
       completed: {
         background: isDark ? colorTokens.gray[800] : colorTokens.gray[100],
-        content: isDark ? colorTokens.gray[200] : colorTokens.gray[700]
+        content: isDark ? colorTokens.gray[200] : colorTokens.gray[800]
       },
     },
     border: {
-      default: isDark ? colorTokens.gray[700] : colorTokens.pastel.peachDark,
-      strong: isDark ? colorTokens.gray[600] : colorTokens.pastel.coral,
+      default: isDark ? colorTokens.gray[700] : colorTokens.pastel.darkCoral,
+      strong: isDark ? colorTokens.gray[600] : colorTokens.pastel.darkCoral,
     },
     background: {
-      default: isDark ? colorTokens.gray[900] : colorTokens.pastel.peachLight,
+      default: isDark ? colorTokens.gray[900] : colorTokens.pastel.lightPeach,
       surface: isDark ? colorTokens.gray[800] : colorTokens.pastel.peachMedium,
+      elevated: isDark ? colorTokens.gray[800] : '#FFFFFF',
     },
+    chat: {
+      userBubble: {
+        background: isDark ? '#BA3A02' : '#BA3A02',
+        text: '#FFFFFF',
+        meta: isDark ? '#FFD0B5' : '#FFE8D7',
+      },
+      otherBubble: {
+        background: isDark ? colorTokens.gray[700] : '#F3F4F6',
+        text: isDark ? '#FFFFFF' : '#1F2937',
+        meta: isDark ? colorTokens.gray[400] : '#4B5563',
+        sender: isDark ? colorTokens.orange[300] : '#BA3A02',
+      },
+      typing: {
+        text: isDark ? colorTokens.gray[300] : '#4B5563',
+      }
+    }
   });
   
   // Add color value type

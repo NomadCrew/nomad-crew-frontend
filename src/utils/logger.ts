@@ -1,10 +1,16 @@
-type LogModule = 'API' | 'WS' | 'AUTH' | 'TRIP' | 'TODO' | 'WEATHER' | 'UI';
+type LogModule = 'API' | 'WS' | 'AUTH' | 'TRIP' | 'TODO' | 'WEATHER' | 'UI' | 'ChatStore';
 
 export const logger = {
   debug: (module: LogModule, ...args: unknown[]) => {
     if (__DEV__) {
       console.debug(`[${module}]`, ...args);
     }
+  },
+  log: (module: LogModule, ...args: unknown[]) => {
+    console.log(`[${module}]`, ...args);
+  },
+  info: (module: LogModule | string, ...args: unknown[]) => {
+    console.info(`[${module}]`, ...args);
   },
   error: (module: LogModule, ...args: unknown[]) => {
     console.error(`[${module}]`, ...args);

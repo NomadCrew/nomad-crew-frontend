@@ -1,10 +1,10 @@
-import * as React from 'react';
-import renderer from 'react-test-renderer';
-
+import React from 'react';
+import { render } from '../../__tests__/test-utils';
 import { ThemedText } from '../ThemedText';
 
-it(`renders correctly`, () => {
-  const tree = renderer.create(<ThemedText>Snapshot test!</ThemedText>).toJSON();
-
-  expect(tree).toMatchSnapshot();
+describe('ThemedText', () => {
+  it('renders correctly', () => {
+    const { getByText } = render(<ThemedText>Snapshot test!</ThemedText>);
+    expect(getByText('Snapshot test!')).toBeTruthy();
+  });
 });

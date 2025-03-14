@@ -1,7 +1,7 @@
-import createSecureStore from '@neverdull-agency/expo-unlimited-secure-store';
+import { secureUnlimitedStore } from './secure-unlimited-store';
 
 class BasicTokenManager {
-  private secureStore = createSecureStore();
+  private secureStore = secureUnlimitedStore;
 
   public async setItem(key: string, value: string) {
     return this.secureStore.setItem(key, value);

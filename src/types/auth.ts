@@ -7,6 +7,7 @@ export interface User {
     profilePicture?: string;
     createdAt?: string;
     updatedAt?: string;
+    appleUser?: boolean;
   }
   
   export interface RegisterCredentials {
@@ -39,6 +40,7 @@ export interface User {
     initialize: () => Promise<void>;
     setFirstTimeDone: () => Promise<void>;
     handleGoogleSignInSuccess: (response: GoogleSignInResponse) => Promise<void>;
+    handleAppleSignInSuccess: (session: Session) => Promise<void>;
     refreshToken: string | null;
     refreshSession: () => Promise<void>;
   }
