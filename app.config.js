@@ -42,8 +42,8 @@ export default {
         ]
       },
       googleServicesFile: IS_DEV 
-        ? './ios/GoogleService-Info.dev.plist'
-        : './ios/GoogleService-Info.plist'
+        ? process.env.GOOGLE_SERVICES_DEV_FILE || './ios/GoogleService-Info.dev.plist'
+        : process.env.GOOGLE_SERVICES_PROD_FILE || './ios/GoogleService-Info.plist'
     },
     android: {
       adaptiveIcon: {
