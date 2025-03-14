@@ -39,11 +39,15 @@ export default {
       infoPlist: {
         UIBackgroundModes: [
           'remote-notification'
+        ],
+        CFBundleURLTypes: [
+          {
+            CFBundleURLSchemes: [
+              'com.googleusercontent.apps.369652278516-05kcrkp3l28g4lt0hhki48othfgug3nc'
+            ]
+          }
         ]
-      },
-      googleServicesFile: IS_DEV 
-        ? process.env.GOOGLE_SERVICES_DEV_FILE || './ios/GoogleService-Info.dev.plist'
-        : process.env.GOOGLE_SERVICES_PROD_FILE || './ios/GoogleService-Info.plist'
+      }
     },
     android: {
       adaptiveIcon: {
@@ -131,8 +135,8 @@ export default {
       ],
       ['expo-apple-authentication', {
         serviceId: IS_DEV 
-          ? 'com.nomadcrew.app.dev' 
-          : 'com.nomadcrew.app',
+          ? 'com.nomadcrew.app.dev.signin' 
+          : 'com.nomadcrew.app.signin',
         teamId: '27DC66D35A'
       }],
       ['expo-splash-screen', {

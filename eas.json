@@ -15,7 +15,8 @@
         "buildType": "apk"
       },
       "ios": {
-        "resourceClass": "m-medium"
+        "resourceClass": "m-medium",
+        "buildConfiguration": "Debug"
       }
     },
     "preview": {
