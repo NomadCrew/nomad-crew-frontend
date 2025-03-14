@@ -2,8 +2,6 @@ const getEnvironment = () => {
   switch (process.env.APP_VARIANT) {
     case 'production':
       return 'production';
-    case 'staging':
-      return 'staging';
     default:
       return 'development';
   }
@@ -11,11 +9,10 @@ const getEnvironment = () => {
 
 const ENV = getEnvironment();
 const IS_DEV = ENV === 'development';
-const IS_STAGING = ENV === 'staging';
 
 export default {
   expo: {
-    name: IS_DEV ? 'NomadCrew (Dev)' : IS_STAGING ? 'NomadCrew (Staging)' : 'NomadCrew',
+    name: IS_DEV ? 'NomadCrew (Dev)' : 'NomadCrew',
     slug: 'nomad-crew-frontend',
     version: '1.0.0',
     orientation: 'portrait',
@@ -33,9 +30,7 @@ export default {
       supportsTablet: true,
       bundleIdentifier: IS_DEV 
         ? 'com.nomadcrew.app.dev' 
-        : IS_STAGING 
-          ? 'com.nomadcrew.app.staging' 
-          : 'com.nomadcrew.app',
+        : 'com.nomadcrew.app',
       usesAppleSignIn: true,
       config: {
         usesNonExemptEncryption: false,
@@ -48,9 +43,7 @@ export default {
       },
       googleServicesFile: IS_DEV 
         ? './ios/GoogleService-Info.dev.plist'
-        : IS_STAGING 
-          ? './ios/GoogleService-Info.staging.plist' 
-          : './ios/GoogleService-Info.plist'
+        : './ios/GoogleService-Info.plist'
     },
     android: {
       adaptiveIcon: {
@@ -59,9 +52,7 @@ export default {
       },
       package: IS_DEV 
         ? 'com.nomadcrew.app.dev' 
-        : IS_STAGING 
-          ? 'com.nomadcrew.app.staging' 
-          : 'com.nomadcrew.app',
+        : 'com.nomadcrew.app',
       config: {
         googleMaps: {
           apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY

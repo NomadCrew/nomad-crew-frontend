@@ -8,7 +8,8 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "APP_VARIANT": "development"
+        "APP_VARIANT": "development",
+        "EXPO_PUBLIC_GOOGLE_PLACES_API_KEY": "AIzaSyDp59nXzOiPmU_IOQI0NSVL6-sMF2GApPk"
       },
       "android": {
         "buildType": "apk"
@@ -17,26 +18,19 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "APP_VARIANT": "staging"
+        "APP_VARIANT": "development",
+        "EXPO_PUBLIC_GOOGLE_PLACES_API_KEY": "AIzaSyDp59nXzOiPmU_IOQI0NSVL6-sMF2GApPk"
       },
       "android": {
         "buildType": "apk"
-      }
-    },
-    "staging": {
-      "distribution": "internal",
-      "env": {
-        "APP_VARIANT": "staging"
-      },
-      "android": {
-        "buildType": "app-bundle"
       }
     },
     "production": {
       "autoIncrement": true,
       "distribution": "store",
       "env": {
-        "APP_VARIANT": "production"
+        "APP_VARIANT": "production",
+        "EXPO_PUBLIC_GOOGLE_PLACES_API_KEY": "AIzaSyDp59nXzOiPmU_IOQI0NSVL6-sMF2GApPk"
       },
       "android": {
         "buildType": "app-bundle"
@@ -53,17 +47,6 @@
       "android": {
         "serviceAccountKeyPath": "./android/service-account.json",
         "track": "production"
-      }
-    },
-    "staging": {
-      "ios": {
-        "appleId": "naqeebali.shamsi@gmail.com",
-        "ascAppId": "6743161123",
-        "appleTeamId": "27DC66D35A"
-      },
-      "android": {
-        "serviceAccountKeyPath": "./android/service-account.json",
-        "track": "internal"
       }
     }
   }

@@ -2,6 +2,17 @@
 
 ## Latest Updates
 
+### March 14, 2024, 13:15 UTC
+- Removed staging environment (deprecated):
+  - Updated app.config.js to only use development and production environments
+  - Modified eas.json to remove staging build and submit profiles
+  - Simplified environment configuration to a two-environment setup
+
+### Files Modified
+- Configuration:
+  - `app.config.js` (removed staging environment references)
+  - `eas.json` (removed staging build and submit profiles)
+
 ### March 14, 2024, 12:40 UTC
 - Fixed iOS build error related to GoogleService-Info.plist:
   - Created standardized GoogleService-Info.plist files for all environments
@@ -68,14 +79,12 @@
 - Custom theme system with light/dark mode support
 
 ### Environment Configuration
-- Development: Local development environment
-- Staging: Testing environment with staging APIs
-- Production: Production environment with live APIs
+- Development: Local development environment with development client
+- Production: Production environment with live APIs and App Store builds
 
 ### Build Configuration
 - Development: Development client with hot reload
-- Preview: Internal testing builds
-- Staging: Internal distribution builds
+- Preview: Internal testing builds (using development environment)
 - Production: App store builds
 
 ### Testing Strategy
