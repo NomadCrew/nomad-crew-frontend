@@ -9,7 +9,8 @@
       "distribution": "internal",
       "env": {
         "APP_VARIANT": "development",
-        "EXPO_PUBLIC_GOOGLE_PLACES_API_KEY": "AIzaSyDp59nXzOiPmU_IOQI0NSVL6-sMF2GApPk"
+        "EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID": "$(EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID)",
+        "EXPO_PUBLIC_GOOGLE_API_KEY_IOS": "$(EXPO_PUBLIC_GOOGLE_API_KEY_IOS)"
       },
       "android": {
         "buildType": "apk"
@@ -22,8 +23,9 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "APP_VARIANT": "development",
-        "EXPO_PUBLIC_GOOGLE_PLACES_API_KEY": "AIzaSyDp59nXzOiPmU_IOQI0NSVL6-sMF2GApPk"
+        "APP_VARIANT": "preview",
+        "EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID": "$(EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID)",
+        "EXPO_PUBLIC_GOOGLE_API_KEY_IOS": "$(EXPO_PUBLIC_GOOGLE_API_KEY_IOS)"
       },
       "android": {
         "buildType": "apk"
@@ -34,7 +36,8 @@
       "distribution": "store",
       "env": {
         "APP_VARIANT": "production",
-        "EXPO_PUBLIC_GOOGLE_PLACES_API_KEY": "AIzaSyDp59nXzOiPmU_IOQI0NSVL6-sMF2GApPk"
+        "EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID": "$(EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID)",
+        "EXPO_PUBLIC_GOOGLE_API_KEY_IOS": "$(EXPO_PUBLIC_GOOGLE_API_KEY_IOS)"
       },
       "android": {
         "buildType": "app-bundle"

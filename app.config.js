@@ -1,3 +1,5 @@
+const SUPABASE_URL = 'https://efmqiltdajvqenndmylz.supabase.co';
+
 const getEnvironment = () => {
   switch (process.env.APP_VARIANT) {
     case 'production':
@@ -34,7 +36,8 @@ export default {
       usesAppleSignIn: true,
       config: {
         usesNonExemptEncryption: false,
-        googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
+        googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_API_KEY_IOS,
+        googlePlacesApiKey: process.env.EXPO_PUBLIC_GOOGLE_API_KEY_IOS
       },
       infoPlist: {
         UIBackgroundModes: [
@@ -59,7 +62,10 @@ export default {
         : 'com.nomadcrew.app',
       config: {
         googleMaps: {
-          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
+          apiKey: process.env.EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID
+        },
+        googlePlaces: {
+          apiKey: process.env.EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID
         }
       },
       intentFilters: [
@@ -124,7 +130,7 @@ export default {
         'expo-build-properties',
         {
           android: {
-            compileSdkVersion: 34,
+            compileSdkVersion: 35,
             targetSdkVersion: 34,
             buildToolsVersion: '34.0.0'
           },
