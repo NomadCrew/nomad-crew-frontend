@@ -27,9 +27,9 @@ export default function AuthButton({ onPress }: AuthButtonProps) {
             "https://www.googleapis.com/auth/userinfo.profile",
             "https://www.googleapis.com/auth/userinfo.email"
           ],
-          webClientId: webClientId,
+          webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
           offlineAccess: true,
-          iosClientId: webClientId,
+          iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
         };
         
         await GoogleSignin.configure(config);

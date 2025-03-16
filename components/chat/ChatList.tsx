@@ -32,6 +32,15 @@ export const ChatList: React.FC<ChatListProps> = ({
   const { user } = useAuth();
   const flatListRef = useRef<FlatList>(null);
   
+  // Sort messages by creation time (oldest first)
+  const sortedMessages = useMemo(() => {
+    return [...messages].sort((a, b) => {
+      const dateA = new Date(a.message.created_at || 0);
+      const dateB = new Date(b.message.created_at || 0);
+      return dateA.getTime() - dateB.getTime();
+    });
+  }, [messages]);
+  
   // Filter out typing indicators older than 5 seconds and from the current user
   const activeTypingUsers = useMemo(() => {
     const now = Date.now();
@@ -55,6 +64,24 @@ export const ChatList: React.FC<ChatListProps> = ({
       logger.debug('UI', `Messages updated, now displaying ${messages.length} messages`);
     }
   }, [messages.length]);
+  
+  // Scroll to bottom when new messages arrive or component mounts
+  useEffect(() => {
+    if (sortedMessages.length > 0 && flatListRef.current) {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: false });
+      }, 100);
+    }
+  }, [sortedMessages.length]);
+  
+  // Scroll to bottom when the component mounts
+  useEffect(() => {
+    if (sortedMessages.length > 0 && flatListRef.current) {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: false });
+      }, 300);
+    }
+  }, []);
   
   const styles = useThemedStyles((theme) => {
     return StyleSheet.create({
@@ -132,9 +159,9 @@ export const ChatList: React.FC<ChatListProps> = ({
     }
     
     // Determine if we should show the avatar
-    // Show avatar if it's the first message or if the sender is different from the previous message
-    const showAvatar = index === messages.length - 1 || 
-      messages[index + 1].message.sender.id !== item.message.sender.id;
+    // Show avatar if it's the last message or if the sender is different from the next message
+    const showAvatar = index === 0 || 
+      sortedMessages[index - 1].message.sender.id !== item.message.sender.id;
     
     return (
       <ChatMessage 
@@ -142,7 +169,7 @@ export const ChatList: React.FC<ChatListProps> = ({
         showAvatar={showAvatar} 
       />
     );
-  }, [messages]);
+  }, [sortedMessages]);
 
   const renderFooter = useCallback(() => {
     if (!isLoading) return null;
@@ -206,7 +233,7 @@ export const ChatList: React.FC<ChatListProps> = ({
       {renderTypingIndicator()}
       <FlatList
         ref={flatListRef}
-        data={messages}
+        data={sortedMessages}
         renderItem={renderItem}
         keyExtractor={(item) => item.message.id}
         contentContainerStyle={styles.messageList}
@@ -216,7 +243,6 @@ export const ChatList: React.FC<ChatListProps> = ({
         onEndReachedThreshold={0.3}
         onRefresh={handleRefresh}
         refreshing={isRefreshing}
-        inverted
         removeClippedSubviews={true}
         maxToRenderPerBatch={10}
         windowSize={10}

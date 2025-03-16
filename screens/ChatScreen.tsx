@@ -11,6 +11,7 @@ import { useThemedStyles } from '@/src/theme/utils';
 import { useTripStore } from '@/src/store/useTripStore';
 import { useAuth } from '@/src/hooks/useAuth';
 import { HeaderWithBack } from '@/components/common/HeaderWithBack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ChatScreenRouteProp = RouteProp<RootStackParamList, 'Chat'>;
 type ChatScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Chat'>;
@@ -21,6 +22,7 @@ export const ChatScreen = () => {
   const { tripId } = route.params;
   const { theme } = useTheme();
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   
   const { 
     messagesByTripId, 
@@ -127,9 +129,19 @@ export const ChatScreen = () => {
     fetchMoreMessages(tripId);
   };
   
+  // Common container with safe area insets
+  const containerStyle = {
+    flex: 1,
+    backgroundColor: theme.colors.background.default,
+    paddingTop: insets.top,
+    paddingBottom: insets.bottom,
+    paddingLeft: insets.left,
+    paddingRight: insets.right
+  };
+  
   if (isLoading && messages.length === 0) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={containerStyle}>
         <ActivityIndicator size="large" color={theme.colors.primary.main} />
       </View>
     );
@@ -137,7 +149,7 @@ export const ChatScreen = () => {
   
   if (error && messages.length === 0) {
     return (
-      <View style={styles.errorContainer}>
+      <View style={containerStyle}>
         <Text style={styles.errorText}>
           {error}
         </Text>
@@ -146,7 +158,7 @@ export const ChatScreen = () => {
   }
   
   return (
-    <View style={styles.container}>
+    <View style={containerStyle}>
       <HeaderWithBack 
         title={trip?.name || 'Trip Chat'} 
         onBackPress={() => navigation.goBack()} 

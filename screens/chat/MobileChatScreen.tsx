@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, Text, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, ActivityIndicator } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useChatStore } from '@/src/store/useChatStore';
 import { useAuthStore } from '@/src/store/useAuthStore';
@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useThemedStyles } from '@/src/theme/utils';
 import { logger } from '@/src/utils/logger';
 import { useTripStore } from '@/src/store/useTripStore';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface MobileChatScreenProps {
   tripId: string;
@@ -220,7 +221,7 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({
   // If there's an auth error, show the error component
   if (authError) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
         <StatusBar style={styles.statusBarStyle} />
         <ChatAuthError onRetry={handleAuthRetry} />
       </SafeAreaView>
@@ -228,7 +229,7 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({
   }
   
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
       <StatusBar style={styles.statusBarStyle} />
       
       <View style={styles.header}>
