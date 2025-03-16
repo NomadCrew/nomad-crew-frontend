@@ -23,6 +23,7 @@ export function useGoogleSignIn() {
 
   // Configure Google Sign-In
   useEffect(() => {
+    console.log('Auth: ' + isExpoGo);
     const configureGoogleSignIn = async () => {
       // Skip configuration in Expo Go
       if (isExpoGo) {
