@@ -24,7 +24,7 @@ export default {
     newArchEnabled: true,
     splash: {
       image: './assets/images/splash.png',
-      resizeMode: 'contain',
+      resizeMode: 'cover',
       backgroundColor: '#ffffff'
     },
     assetBundlePatterns: ['**/*'],
@@ -167,7 +167,7 @@ export default {
       }],
       ['expo-splash-screen', {
         image: './assets/images/splash.png',
-        resizeMode: 'contain',
+        resizeMode: 'cover',
         backgroundColor: '#ffffff'
       }],
       ['expo-font', {
