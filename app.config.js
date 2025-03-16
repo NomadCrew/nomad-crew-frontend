@@ -46,16 +46,19 @@ export default {
         CFBundleURLTypes: [
           {
             CFBundleURLSchemes: [
-              IS_DEV 
-                ? 'com.googleusercontent.apps.369652278516-ug3bt8lt2b3pdq6vpuovhlgivaoquvp5'
-                : 'com.googleusercontent.apps.369652278516-05kcrkp3l28g4lt0hhki48othfgug3nc'
+              'nomadcrew',
             ]
           },
           {
             CFBundleURLSchemes: [
-              IS_DEV 
-                ? '369652278516-ug3bt8lt2b3pdq6vpuovhlgivaoquvp5.apps.googleusercontent.com'
-                : '369652278516-05kcrkp3l28g4lt0hhki48othfgug3nc.apps.googleusercontent.com'
+              'com.googleusercontent.apps.369652278516-ug3bt8lt2b3pdq6vpuovhlgivaoquvp5',
+              'com.googleusercontent.apps.369652278516-05kcrkp3l28g4lt0hhki48othfgug3nc'
+            ]
+          },
+          {
+            CFBundleURLSchemes: [
+              '369652278516-ug3bt8lt2b3pdq6vpuovhlgivaoquvp5.apps.googleusercontent.com',
+              '369652278516-05kcrkp3l28g4lt0hhki48othfgug3nc.apps.googleusercontent.com'
             ]
           }
         ]
