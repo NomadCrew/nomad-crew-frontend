@@ -2,6 +2,17 @@
 
 ## Latest Updates
 
+### March 16, 2024, 15:00 UTC
+- Fixed Google Sign-In issue on iOS development builds:
+  - Modified app.config.js to include both development and production URL schemes in CFBundleURLTypes
+  - Removed conditional logic for URL schemes to ensure both are always present
+  - Maintained conditional iosUrlScheme in the Google Sign-In plugin configuration
+  - Resolved "Your app is missing support for the following URL schemes..." error
+
+### Files Modified
+- Configuration:
+  - `app.config.js` (updated CFBundleURLTypes to include all URL schemes)
+
 ### March 14, 2024, 14:30 UTC
 - Fixed iOS build failure related to Google Services file:
   - Reverted app.config.js to use standardized GoogleService-Info.plist files

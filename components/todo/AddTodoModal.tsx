@@ -38,7 +38,7 @@ export const AddTodoModal = ({ visible, onClose, tripId }: AddTodoModalProps) =>
       >
         <View style={styles.content}>
           <TextInput
-            label="Todo"
+            label="To Do"
             value={text}
             onChangeText={setText}
             mode="outlined"
@@ -49,7 +49,7 @@ export const AddTodoModal = ({ visible, onClose, tripId }: AddTodoModalProps) =>
             onPress={handleSubmit}
             style={styles.button}
           >
-            Add Todo
+            Add
           </Button>
         </View>
       </Modal>

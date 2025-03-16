@@ -27,7 +27,7 @@ import Avatar from '@/components/ui/Avatar';
 
 
 export default function TripsScreen() {
-  const [activeTab, setActiveTab] = useState<'Active' | 'Recent' | 'Cancelled'>('Active');
+  const [activeTab, setActiveTab] = useState<'Active' | 'History' | 'Cancelled'>('Active');
   const [searchExpanded, setSearchExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const { theme } = useTheme();
@@ -86,7 +86,7 @@ export default function TripsScreen() {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter((trip) =>
         trip.name.toLowerCase().includes(query) ||
-        (trip.destination?.toString()?.toLowerCase().includes(query))
+        trip.destination?.address?.toLowerCase().includes(query)
       );
     }
   
@@ -106,7 +106,7 @@ export default function TripsScreen() {
           return (trip.status === 'ACTIVE' || trip.status === 'PLANNING') && 
                  endDate >= now; // Only show trips that haven't ended yet
         });
-      case 'Recent':
+      case 'History':
         return filtered.filter((trip) => {
           const endDate = new Date(trip.endDate);
           return trip.status === 'COMPLETED' || 
@@ -189,8 +189,6 @@ export default function TripsScreen() {
           {searchExpanded && (
             <TextInput
               style={styles(theme).searchInput}
-              placeholder="Search trips"
-              placeholderTextColor={theme.colors.content.secondary}
               onBlur={toggleSearch}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -201,10 +199,10 @@ export default function TripsScreen() {
 
       {/* Tabs Section */}
       <ThemedView style={styles(theme).tabs}>
-        {['Active', 'Recent', 'Cancelled'].map((tab) => (
+        {['Active', 'History', 'Cancelled'].map((tab) => (
           <TouchableOpacity
             key={tab}
-            onPress={() => setActiveTab(tab as 'Active' | 'Recent' | 'Cancelled')}
+            onPress={() => setActiveTab(tab as 'Active' | 'History' | 'Cancelled')}
             style={[
               styles(theme).tabButton,
               activeTab === tab && styles(theme).activeTabButton,

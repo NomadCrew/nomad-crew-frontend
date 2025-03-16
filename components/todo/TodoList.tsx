@@ -114,7 +114,7 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
       <View style={styles(theme).container}>
         <Surface style={styles(theme).centerContainer} pointerEvents="box-none">
           <Text style={styles(theme).emptyText}>
-            No todos yet. Create your first one!
+            No to dos yet. Create your first one!
           </Text>
         </Surface>
         

@@ -15,9 +15,11 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuthStore } from '@/src/store/useAuthStore';
 import Avatar from '@/components/ui/Avatar';
 import { Theme } from '@/src/theme/types';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
   const { theme, mode, toggleColorScheme } = useTheme();
+  const insets = useSafeAreaInsets();
   const styles = getStyles(theme);
   const { user, logout } = useAuthStore();
 
@@ -59,56 +61,65 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <ThemedView style={styles.header}>
-        <ThemedText style={styles.headerTitle}>Profile</ThemedText>
-        <View style={styles.avatarContainer}>
-          <Avatar user={profileData} size="xl" style={{ width: 100, height: 100 }} />
-        </View>
-        <ThemedText style={styles.name}>{displayName}</ThemedText>
-      </ThemedView>
+    <View style={{ 
+      flex: 1, 
+      backgroundColor: theme.colors.background.default,
+      paddingTop: insets.top,
+      paddingBottom: insets.bottom,
+      paddingLeft: insets.left,
+      paddingRight: insets.right
+    }}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <ThemedView style={styles.header}>
+          <ThemedText style={styles.headerTitle}>Profile</ThemedText>
+          <View style={styles.avatarContainer}>
+            <Avatar user={profileData} size="xl" style={{ width: 100, height: 100 }} />
+          </View>
+          <ThemedText style={styles.name}>{displayName}</ThemedText>
+        </ThemedView>
 
-      <ThemedView style={styles.detailsContainer}>
-        <ProfileDetailRow
-          icon="person-outline"
-          text={displayName}
-          onPress={handleEditProfile}
-          isEditable={true} // Mark the username row as editable
-        />
-        <ProfileDetailRow
-          icon="mail-outline"
-          text={user?.email || 'No email provided'}
-        />
-        <ProfileDetailRow
-          icon="lock-closed-outline"
-          text="******" // Placeholder for password
-        />
-        <ProfileDetailRow
-          icon="location-outline"
-          text="Location preference"
-          hasSwitch={true}
-        />
-        <ProfileDetailRow
-          icon="help-circle-outline"
-          text="Support" // Placeholder
-          onPress={() => Alert.alert('Support', 'Coming Soon!')}
-          isLast={true} 
-        />
-        <ProfileDetailRow
-          icon="log-out-outline"
-          text="Logout"
-          onPress={handleLogout}
-          isLogout={true}
-        />
-        <ProfileDetailRow
-          icon="contrast-outline"
-          text={mode === 'dark' ? 'Dark Mode' : 'Light Mode'}
-          hasSwitch={true}
-          value={mode === 'dark'}
-          onValueChange={toggleColorScheme}
-        />
-      </ThemedView>
-    </ScrollView>
+        <ThemedView style={styles.detailsContainer}>
+          <ProfileDetailRow
+            icon="person-outline"
+            text={displayName}
+            onPress={handleEditProfile}
+            isEditable={true} // Mark the username row as editable
+          />
+          <ProfileDetailRow
+            icon="mail-outline"
+            text={user?.email || 'No email provided'}
+          />
+          <ProfileDetailRow
+            icon="lock-closed-outline"
+            text="******" // Placeholder for password
+          />
+          <ProfileDetailRow
+            icon="location-outline"
+            text="Location preference"
+            hasSwitch={true}
+          />
+          <ProfileDetailRow
+            icon="help-circle-outline"
+            text="Support" // Placeholder
+            onPress={() => Alert.alert('Support', 'Coming Soon!')}
+            isLast={true} 
+          />
+          <ProfileDetailRow
+            icon="log-out-outline"
+            text="Logout"
+            onPress={handleLogout}
+            isLogout={true}
+          />
+          <ProfileDetailRow
+            icon="contrast-outline"
+            text={mode === 'dark' ? 'Dark Mode' : 'Light Mode'}
+            hasSwitch={true}
+            value={mode === 'dark'}
+            onValueChange={toggleColorScheme}
+          />
+        </ThemedView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -187,9 +198,9 @@ const getStyles = (theme: Theme) =>
       backgroundColor: theme.colors.background.default,
     },
     header: {
-      height: 250,
       alignItems: 'center',
       paddingTop: 20,
+      paddingBottom: 20,
     },
     headerTitle: {
       fontSize: 20,
