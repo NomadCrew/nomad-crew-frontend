@@ -2,6 +2,29 @@
 
 ## Latest Updates
 
+### March 16, 2024, 16:30 UTC
+- Implemented read receipts in chat functionality:
+  - Added read receipt tracking in the chat store
+  - Updated WebSocketManager to handle read receipt events
+  - Enhanced ChatMessage component to display read status
+  - Implemented automatic marking of messages as read when viewed
+  - Added persistence for read receipts and last read message IDs
+  - Updated theme system to include read receipt styling
+
+### Files Modified
+- Chat Components:
+  - `components/chat/ChatMessage.tsx` (added read receipt display)
+  - `components/chat/ChatList.tsx` (added automatic read receipt triggering)
+  - `screens/chat/ChatScreen.tsx` (updated to pass tripId to ChatList)
+  - `screens/chat/MobileChatScreen.tsx` (updated to pass tripId to ChatList)
+- State Management:
+  - `src/store/useChatStore.ts` (added read receipt functionality)
+  - `src/types/chat.ts` (added read receipt types)
+- WebSocket:
+  - `src/websocket/WebSocketManager.ts` (added read receipt handling)
+- Theme:
+  - `src/theme/foundations/colors.ts` (added read receipt styling)
+
 ### March 16, 2024, 15:00 UTC
 - Fixed Google Sign-In issue on iOS development builds:
   - Modified app.config.js to include both development and production URL schemes in CFBundleURLTypes

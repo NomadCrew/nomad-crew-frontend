@@ -45,6 +45,7 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
   const [mapContainerDimensions, setMapContainerDimensions] = useState({ width: 0, height: 0 });
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapLoadAttempts, setMapLoadAttempts] = useState(0);
+  const [mapProvider, setMapProvider] = useState<'google' | undefined>(Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined);
   
   // Use default coordinates if trip destination coordinates are missing
   const [region, setRegion] = useState<Region>({
@@ -60,45 +61,46 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
   // Convert to array for rendering
   const memberLocationArray = Object.values(tripMemberLocations);
 
+  // Log environment info on mount
   useEffect(() => {
-    // Start location tracking if sharing is enabled
-    if (isLocationSharingEnabled) {
-      startLocationTracking(trip.id);
+    console.log('===== MAP DEBUG INFO =====');
+    console.log('Platform:', Platform.OS, Platform.Version);
+    console.log('Map Provider:', mapProvider === PROVIDER_GOOGLE ? 'Google Maps' : 'Default');
+    console.log('Trip ID:', trip.id);
+    console.log('Has Destination Coords:', !!trip.destination.coordinates);
+    console.log('Initial Region:', JSON.stringify(region));
+    console.log('========================');
+    
+    if (Platform.OS === 'android') {
+      console.log('===== ANDROID SPECIFIC =====');
+      console.log('API Level:', Platform.Version);
+      console.log('Using Google Maps Provider:', mapProvider === PROVIDER_GOOGLE);
+      console.log('========================');
     }
+  }, []);
 
-    // Fetch member locations
-    const fetchLocations = async () => {
-      setIsLoading(true);
-      try {
-        await getMemberLocations(trip.id);
-      } catch (error) {
-        setMapError('Unable to fetch member locations. Please try again later.');
-        logger.error('TRIP', 'Error fetching locations:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  useEffect(() => {
+    // Start tracking when component mounts
+    console.log('Starting location tracking...');
+    startLocationTracking();
+    // Get initial member locations
+    console.log('Getting member locations...');
+    getMemberLocations();
 
-    fetchLocations();
-
-    // Set up polling for member locations
-    const intervalId = setInterval(() => {
-      if (isLocationSharingEnabled) {
-        getMemberLocations(trip.id).catch(error => {
-          logger.error('TRIP', 'Error polling locations:', error);
-        });
-      }
-    }, 30000); // Poll every 30 seconds
-
+    // Clean up when component unmounts
     return () => {
-      clearInterval(intervalId);
-      // Don't stop location tracking here, it's managed at the trip level
+      console.log('Stopping location tracking...');
+      stopLocationTracking();
     };
-  }, [trip.id, isLocationSharingEnabled]);
+  }, [startLocationTracking, getMemberLocations, stopLocationTracking]);
 
   // Update map region when current location changes
   useEffect(() => {
     if (currentLocation && isLocationSharingEnabled) {
+      console.log('Updating region based on current location:', {
+        lat: currentLocation.coords.latitude,
+        lng: currentLocation.coords.longitude
+      });
       setRegion({
         latitude: currentLocation.coords.latitude,
         longitude: currentLocation.coords.longitude,
@@ -112,6 +114,7 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
   useEffect(() => {
     // If we have trip destination coordinates, use them
     if (trip.destination.coordinates) {
+      console.log('Setting region to trip destination:', trip.destination.coordinates);
       setRegion({
         latitude: trip.destination.coordinates.lat,
         longitude: trip.destination.coordinates.lng,
@@ -121,6 +124,10 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
     } 
     // Otherwise, if we have current location and location sharing is enabled, use that
     else if (currentLocation && isLocationSharingEnabled) {
+      console.log('Setting region to current location:', {
+        lat: currentLocation.coords.latitude,
+        lng: currentLocation.coords.longitude
+      });
       setRegion({
         latitude: currentLocation.coords.latitude,
         longitude: currentLocation.coords.longitude,
@@ -130,6 +137,7 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
     }
     // Otherwise, use default coordinates
     else {
+      console.log('Setting region to default coordinates:', DEFAULT_COORDINATES);
       setRegion({
         latitude: DEFAULT_COORDINATES.latitude,
         longitude: DEFAULT_COORDINATES.longitude,
@@ -139,9 +147,17 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
     }
   }, [trip.destination.coordinates, currentLocation, isLocationSharingEnabled]);
 
+  // Force map re-render when container dimensions change significantly
+  useEffect(() => {
+    if (mapContainerDimensions.width > 0 && mapContainerDimensions.height > 0) {
+      console.log(`Map container dimensions changed: ${mapContainerDimensions.width}x${mapContainerDimensions.height}`);
+    }
+  }, [mapContainerDimensions]);
+
   // Fit all markers on the map
   const fitToMarkers = () => {
     if (!mapRef.current) {
+      console.log('Cannot fit to markers: mapRef is null');
       return;
     }
     
@@ -149,6 +165,7 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
     
     // Add member locations
     if (memberLocationArray.length > 0) {
+      console.log(`Adding ${memberLocationArray.length} member markers`);
       markers.push(...memberLocationArray.map(member => ({
         latitude: member.location.latitude,
         longitude: member.location.longitude,
@@ -157,6 +174,7 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
 
     // Add current location if available
     if (currentLocation) {
+      console.log('Adding current location marker');
       markers.push({
         latitude: currentLocation.coords.latitude,
         longitude: currentLocation.coords.longitude,
@@ -165,6 +183,7 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
 
     // Add trip destination if available
     if (trip.destination.coordinates) {
+      console.log('Adding destination marker');
       markers.push({
         latitude: trip.destination.coordinates.lat,
         longitude: trip.destination.coordinates.lng,
@@ -173,15 +192,17 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
 
     if (markers.length > 0) {
       try {
+        console.log(`Fitting to ${markers.length} markers`);
         mapRef.current.fitToCoordinates(markers, {
           edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
           animated: true,
         });
       } catch (error) {
-        logger.error('UI', 'Error fitting to coordinates:', error);
+        console.error('Error fitting to coordinates:', error);
       }
     } else {
       // If no markers, use default region
+      console.log('No markers to fit, using default region');
       setRegion({
         latitude: DEFAULT_COORDINATES.latitude,
         longitude: DEFAULT_COORDINATES.longitude,
@@ -194,15 +215,28 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
   // Handle map container dimensions
   const handleMapContainerLayout = (event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
-    logger.debug(`[GroupLiveMap] Map container layout: ${width}x${height}`);
+    console.log(`Map container layout: ${width}x${height}`);
     setMapContainerDimensions({ width, height });
   };
 
   // Retry loading the map with a different provider if it fails
   useEffect(() => {
     if (mapLoadAttempts > 0 && mapError) {
+      console.log(`Map load attempt ${mapLoadAttempts} failed with error: ${mapError}`);
+      
       const timer = setTimeout(() => {
         setMapError(null);
+        
+        // On second attempt, try without specifying a provider
+        if (mapLoadAttempts === 1 && Platform.OS === 'android') {
+          console.log('First attempt failed, trying without Google Maps provider');
+          setMapProvider(undefined);
+        } 
+        // On third attempt, try with Google Maps provider again
+        else if (mapLoadAttempts === 2 && Platform.OS === 'android') {
+          console.log('Second attempt failed, trying with Google Maps provider again');
+          setMapProvider(PROVIDER_GOOGLE);
+        }
       }, 2000);
       
       return () => clearTimeout(timer);
@@ -211,28 +245,45 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
 
   // Log when component mounts and unmounts
   useEffect(() => {
-    logger.debug(`[GroupLiveMap] Component mounted for trip: ${trip.id}`);
+    console.log(`Component mounted for trip: ${trip.id}`);
     
     return () => {
-      logger.debug(`[GroupLiveMap] Component unmounted for trip: ${trip.id}`);
+      console.log(`Component unmounted for trip: ${trip.id}`);
     };
   }, [trip.id]);
 
   // Log when map is ready
   const handleMapReady = () => {
-    logger.debug(`[GroupLiveMap] Map ready for trip: ${trip.id}`);
+    console.log(`Map ready for trip: ${trip.id}`);
+    console.log('Map is ready and should be visible now');
     setMapLoaded(true);
     setIsLoading(false);
     
     // Fit to markers after a short delay to ensure the map is fully loaded
     setTimeout(() => {
+      console.log('Fitting to markers after map load');
       fitToMarkers();
     }, 500);
   };
 
   // Handle map errors
-  const handleMapError = () => {
-    logger.debug(`[GroupLiveMap] Map error occurred for trip: ${trip.id}`);
+  const handleMapError = (error: any) => {
+    console.error(`Map error occurred for trip: ${trip.id}`, error);
+    console.error('Map error details:', JSON.stringify(error, null, 2));
+    
+    // Log more detailed error information
+    if (error && typeof error === 'object') {
+      console.error('Error properties:', Object.keys(error));
+      
+      if (error.message) {
+        console.error('Error message:', error.message);
+      }
+      
+      if (error.code) {
+        console.error('Error code:', error.code);
+      }
+    }
+    
     setMapError('There was an error loading the map. Please try again later.');
     setMapLoadAttempts(prev => prev + 1);
   };
@@ -301,7 +352,7 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
     );
   };
 
-  // Render a fallback UI when the map fails to load
+  // Render fallback UI with more detailed error information
   const renderFallbackUI = () => {
     return (
       <View style={styles(theme).fallbackContainer}>
@@ -309,12 +360,24 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
         <Text style={styles(theme).fallbackText}>
           We're having trouble loading the map. Your location is still being shared with trip members.
         </Text>
+        
+        {__DEV__ && mapError && (
+          <Text style={[styles(theme).fallbackText, { color: theme.colors.status.error.content }]}>
+            Error: {mapError}
+          </Text>
+        )}
+        
         <Pressable 
           style={styles(theme).retryButton} 
           onPress={() => {
+            console.log('Retry button pressed, resetting map');
             setMapError(null);
             setMapLoadAttempts(0);
             setIsLoading(true);
+            
+            // Reset provider to default
+            setMapProvider(Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined);
+            
             setTimeout(() => setIsLoading(false), 1000);
           }}
         >
@@ -387,21 +450,51 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
         ]} 
         onLayout={handleMapContainerLayout}
       >
+        {/* Debug info overlay in development */}
+        {__DEV__ && (
+          <View style={{
+            position: 'absolute', 
+            top: 10, 
+            left: 10, 
+            zIndex: 1000, 
+            backgroundColor: 'rgba(0,0,0,0.7)', 
+            padding: 10, 
+            borderRadius: 5
+          }}>
+            <Text style={{color: 'white'}}>
+              Map loading: {isLoading ? 'Yes' : 'No'}{'\n'}
+              Map loaded: {mapLoaded ? 'Yes' : 'No'}{'\n'}
+              Map error: {mapError || 'None'}{'\n'}
+              Attempts: {mapLoadAttempts}{'\n'}
+              Size: {mapContainerDimensions.width}x{mapContainerDimensions.height}{'\n'}
+              Provider: {mapProvider === PROVIDER_GOOGLE ? 'Google' : 'Default'}{'\n'}
+              Platform: {Platform.OS} {Platform.Version}
+            </Text>
+          </View>
+        )}
+
         {isLoading ? (
           <View style={styles(theme).loadingContainer}>
             <ActivityIndicator size="large" color={theme.colors.primary.main} />
             <Text style={styles(theme).loadingText}>Loading map...</Text>
           </View>
-        ) : mapError && mapLoadAttempts >= 2 ? (
+        ) : mapError && mapLoadAttempts >= 3 ? (
           renderFallbackUI()
         ) : (
           <MapView
-            key={`map-${trip.id}-${isLocationSharingEnabled}-${mapLoadAttempts}`}
+            key={`map-${trip.id}-${isLocationSharingEnabled}-${mapLoadAttempts}-${mapContainerDimensions.width}-${mapContainerDimensions.height}-${mapProvider}`}
             ref={mapRef}
-            style={styles(theme).map}
-            provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: mapContainerDimensions.width,
+              height: mapContainerDimensions.height,
+            }}
+            provider={mapProvider}
             initialRegion={region}
-            region={region}
+            liteMode={false}
+            moveOnMarkerPress={false}
             onMapReady={handleMapReady}
             showsUserLocation={isLocationSharingEnabled}
             showsMyLocationButton={true}
@@ -464,6 +557,7 @@ const styles = (theme: Theme) => StyleSheet.create({
     overflow: 'hidden',
     height: Dimensions.get('window').height * 0.6,
     backgroundColor: theme.colors.background.paper,
+    zIndex: 1, // Ensure the container is visible in view hierarchy
   },
   map: {
     width: '100%',
@@ -657,4 +751,4 @@ const styles = (theme: Theme) => StyleSheet.create({
   standaloneMapContainer: {
     paddingTop: Platform.OS === 'ios' ? 50 : 30,
   },
-}); 
+});

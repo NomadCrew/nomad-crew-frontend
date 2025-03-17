@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/src/store/useAuthStore';
 import { useOnboarding } from '@/src/providers/OnboardingProvider';
@@ -15,7 +15,7 @@ try {
 
 export default function useProtectedRoute() {
   const router = useRouter();
-  const segments = useSegments ? useSegments() : [''];
+  const segments = useSegments();
   const { token, isInitialized, isVerifying } = useAuthStore();
   const { isFirstTime } = useOnboarding();
   const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
