@@ -39,12 +39,9 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
     hasMore,
     fetchTodos,
     updateTodo,
-    deleteTodo,
-    wsConnection
+    deleteTodo
   } = useTodoStore();
 
-  const connectionStatus = wsConnection?.status;
-  
   // Deduplicate the todos by unique id.
   const dedupedTodos = React.useMemo(() => {
     const todoMap = new Map<string, Todo>();
@@ -63,13 +60,15 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
   }, [loading, hasMore, todos.length, tripId, fetchTodos]);
 
   const handleRetry = React.useCallback(() => {
-    fetchTodos(tripId, 0, 20).catch(error => logger.error('TODO', 'Failed to fetch todos:', error));
+    fetchTodos(tripId, 0, 20);
   }, [tripId, fetchTodos]);
 
   // Initial data load
   useEffect(() => {
-    fetchTodos(tripId, 0, 20);
-  }, [tripId]);
+    if (tripId) {
+      fetchTodos(tripId, 0, 20);
+    }
+  }, [tripId, fetchTodos]);
 
   // Render items
   const renderItem = React.useCallback(({ item }: { item: Todo }) => (
@@ -145,23 +144,6 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
             style={StyleSheet.absoluteFill}
           />
         </View>
-      )}
-
-      {/* Connection Status Banner */}
-      {(connectionStatus === 'CONNECTING' || connectionStatus === 'RECONNECTING') && (
-        <Surface style={styles(theme).connectionBanner} pointerEvents="box-none">
-          <Text style={styles(theme).connectionText}>
-            {connectionStatus === 'CONNECTING' ? 'Connecting...' : 'Reconnecting...'}
-          </Text>
-        </Surface>
-      )}
-
-      {connectionStatus === 'ERROR' && (
-        <Surface style={[styles(theme).loader, styles(theme).loader]} pointerEvents="box-none">
-          <Text style={styles(theme).errorText}>
-            Connection error. Please check your internet connection.
-          </Text>
-        </Surface>
       )}
 
       <FlashList

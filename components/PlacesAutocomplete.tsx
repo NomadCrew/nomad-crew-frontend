@@ -1,10 +1,8 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, StyleSheet, Pressable, Platform, Alert } from 'react-native';
 import { Text, TextInput, useTheme } from 'react-native-paper';
-import PlacesAutocomplete from 'expo-google-places-autocomplete';
-import type { Place } from 'expo-google-places-autocomplete';
-import type { PlaceDetailsWithFullText } from '@/src/types/places';
-import debounce from 'lodash.debounce';
+import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+import type { PlaceDetailsWithFullText, Coordinate } from '@/src/types/places';
 
 // Debug prefix to easily identify logs from this component
 const DEBUG_PREFIX = '🔍 PlacesAutocomplete:';
@@ -45,276 +43,168 @@ interface PlacesAutocompleteProps {
     };
 }
 
-interface PlacesSearchResult {
-    places: Place[];
-}
-
-// Update the interface to match RequestConfig
-interface PlacesAutocompleteOptions {
-  sessionToken: string;  // Remove optional
-  language: string;      // Remove optional
-  types: string[];      // Remove optional
-  countries: CountryCode[];  // Remove optional
-  strictbounds: boolean; // Remove optional
-  location?: {          // Keep this optional as it's a complex object
-    latitude: number;
-    longitude: number;
-  };
-  radius?: number;      // Keep this optional as it's a simple value
-}
-
 export default function CustomPlacesAutocomplete({
   onPlaceSelected,
   placeholder = 'Search...',
   styles: customStyles = {},
 }: PlacesAutocompleteProps) {
   const theme = useTheme();
+  const googlePlacesRef = useRef(null);
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Place[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasApiInitialized, setHasApiInitialized] = useState(false);
-  const [sessionToken, setSessionToken] = useState<string | null>(null);
 
-  // Generate a session token for the Places API
-  useEffect(() => {
-    // Generate a random session token
-    const token = Math.random().toString(36).substring(2, 15) + 
-                 Math.random().toString(36).substring(2, 15);
-    setSessionToken(token);
-  }, []);
-
-  // Initialize the Places API once when the component mounts
-  useEffect(() => {
-    const initPlacesApi = async () => {
-      try {
-        // Get platform-specific API key
-        const apiKey = Platform.select({
-          ios: process.env.EXPO_PUBLIC_GOOGLE_API_KEY_IOS,
-          android: process.env.EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID,
-          default: undefined
-        });
-
-        // Debug logging
-        console.log('Platform:', Platform.OS);
-        console.log('API Key:', apiKey ? 'Present' : 'Missing'); 
-          
-        if (!apiKey) {
-          throw new Error(`Google API key is missing for ${Platform.OS}`);
-        }
-        
-        await PlacesAutocomplete.initPlaces(apiKey);
-        setHasApiInitialized(true);
-      } catch (error) {
-        console.error('Failed to initialize Places API:', error);
-        if (error instanceof Error) {
-          console.error('Error message:', error.message);
-          console.error('Error stack:', error.stack);
-        }
-        
-        // Alert the user only in development
-        if (__DEV__) {
-          Alert.alert(
-            'Places API Error', 
-            `Failed to initialize Google Places API: ${error instanceof Error ? error.message : 'Unknown error'}`
-          );
-        }
-      }
-    };
-    
-    initPlacesApi();
-  }, []);
-
-  // Create a memoized debounced search function with improved error handling
-  const debouncedSearch = useCallback(
-    debounce(async (text: string) => {
-      if (!hasApiInitialized) {
-        return;
-      }
-      
-      setIsLoading(true);
-      try {
-        // Creating options with required fields
-        const options: PlacesAutocompleteOptions = {
-          sessionToken: sessionToken || '',  // Provide empty string if null
-          language: 'en',
-          types: ['geocode', 'establishment'],  // Common types for place search
-          countries: [],  // Empty array as default
-          strictbounds: false,  // Default value
-        };
-        
-        const result = await PlacesAutocomplete.findPlaces(text, options) as PlacesSearchResult;
-        
-        if (result && result.places) {
-          setResults(result.places);
-        } else {
-          // If result is an array directly (some versions of the API might return this way)
-          if (Array.isArray(result)) {
-            setResults(result as unknown as Place[]);
-          } else {
-            setResults([]);
-          }
-        }
-      } catch (error) {
-        console.error('Error searching places:', error);
-        if (error instanceof Error) {
-          console.error('Error message:', error.message);
-          console.error('Error stack:', error.stack);
-        }
-        
-        // Show error to user in development mode
-        if (__DEV__) {
-          Alert.alert(
-            'Places Search Error', 
-            'Failed to search places. This could be due to API key issues or network problems.'
-          );
-        }
-        setResults([]);
-      } finally {
-        setIsLoading(false);
-      }
-    }, 300),
-    [hasApiInitialized, sessionToken]
-  );
-
-  // Create a memoized handle search function
-  const handleSearch = useCallback((text: string) => {
-    setQuery(text);
-    
-    if (text.trim().length > 2) {
-      debouncedSearch(text);
-    } else {
-      setResults([]);
-    }
-  }, [debouncedSearch]);
-
-  // Create a memoized handle select function
-  const handleSelect = useCallback(async (place: Place) => {
-    try {
-      // Set the input value to the selected place's full text
-      setQuery(place.fullText);
-      // Clear results immediately for better UX
-      setResults([]);
-      setIsLoading(true);
-      
-      const details = await PlacesAutocomplete.placeDetails(place.placeId);
-      
-      const placeDetails = {
-        ...details,
-        formattedAddress: details.formattedAddress || place.fullText,
-        fullText: place.fullText
-      } as PlaceDetailsWithFullText;
-      
-      onPlaceSelected(placeDetails);
-    } catch (error) {
-      console.error('Error fetching place details:', error);
-      if (error instanceof Error) {
-        console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
-      }
-      
-      if (__DEV__) {
-        Alert.alert('Error', 'Failed to get place details');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [onPlaceSelected]);
+  // Get platform-specific API key
+  const apiKey = Platform.select({
+    ios: process.env.EXPO_PUBLIC_GOOGLE_API_KEY_IOS,
+    android: process.env.EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID,
+    default: process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY
+  });
 
   // Memoize the styles based on the theme to prevent recalculation on every render
   const memoizedStyles = useMemo(() => ({
-    resultsContainer: [
-      styles.resultsContainer, 
-      { backgroundColor: theme.colors.background }
+    container: [
+      styles.container,
+      customStyles.container
     ],
-    resultItemPressed: [
-      styles.resultItem,
-      { backgroundColor: theme.colors.surfaceVariant }
+    textInputContainer: {
+      backgroundColor: theme.colors.background,
+      borderTopWidth: 0,
+      borderBottomWidth: 0,
+      paddingHorizontal: 0,
+    },
+    textInput: [
+      styles.input,
+      customStyles.input,
+      {
+        height: 56,
+        color: theme.colors.onSurface,
+        fontSize: 16,
+        backgroundColor: theme.colors.surface,
+        borderWidth: 1,
+        borderColor: theme.colors.outline,
+        borderRadius: 4,
+      }
     ],
-    resultItemNormal: [
-      styles.resultItem,
-      { backgroundColor: theme.colors.background }
-    ]
-  }), [theme.colors]);
+    listView: {
+      backgroundColor: theme.colors.background,
+      borderWidth: 1,
+      borderColor: theme.colors.outline,
+      borderRadius: 4,
+      elevation: 3,
+    },
+    row: {
+      backgroundColor: theme.colors.background,
+      padding: 13,
+      height: 'auto',
+      flexDirection: 'row',
+    },
+    separator: {
+      height: 1,
+      backgroundColor: theme.colors.outlineVariant,
+    },
+    description: {
+      color: theme.colors.onSurface,
+      fontSize: 14,
+    },
+    poweredContainer: {
+      backgroundColor: theme.colors.background,
+      borderBottomLeftRadius: 4,
+      borderBottomRightRadius: 4,
+      borderColor: theme.colors.outline,
+      borderTopWidth: 0.5,
+    },
+  }), [theme.colors, customStyles]);
+
+  if (!apiKey) {
+    console.error('Google Places API key is missing');
+    return (
+      <View style={memoizedStyles.container}>
+        <TextInput
+          mode="outlined"
+          placeholder={placeholder}
+          value="API key missing"
+          disabled
+          style={memoizedStyles.textInput}
+        />
+      </View>
+    );
+  }
 
   return (
-    <View style={[styles.container, customStyles.container]}>
-      <TextInput
-        mode="outlined"
+    <View style={memoizedStyles.container}>
+      <GooglePlacesAutocomplete
+        ref={googlePlacesRef}
         placeholder={placeholder}
-        value={query}
-        onChangeText={handleSearch}
-        style={[styles.input, customStyles.input]}
-        theme={{
-          colors: {
-            placeholder: theme.colors.outline,
-            text: theme.colors.onSurface,
-            primary: theme.colors.primary,
+        onPress={(data, details = null) => {
+          if (details) {
+            // Convert Google Places API response to our app's format
+            const coordinate: Coordinate = {
+              latitude: details.geometry.location.lat,
+              longitude: details.geometry.location.lng
+            };
+            
+            const placeDetails: PlaceDetailsWithFullText = {
+              addressComponents: details.address_components?.map(component => component.long_name) || [],
+              coordinate,
+              formattedAddress: details.formatted_address || data.description,
+              name: details.name || data.structured_formatting?.main_text || '',
+              placeId: details.place_id,
+              fullText: data.description
+            };
+            
+            onPlaceSelected(placeDetails);
           }
         }}
+        query={{
+          key: apiKey,
+          language: 'en',
+          types: 'geocode|establishment',
+        }}
+        fetchDetails={true}
+        enablePoweredByContainer={true}
+        debounce={300}
+        styles={memoizedStyles}
+        textInputProps={{
+          placeholderTextColor: theme.colors.outline,
+          clearButtonMode: 'while-editing',
+        }}
       />
-
-      {results.length > 0 && (
-        <View 
-          style={memoizedStyles.resultsContainer}
-          // This forces view to render on top of other elements on iOS
-          pointerEvents="box-none"
-        >
-          {results.map((place, index) => (
-            <Pressable
-              key={`${place.placeId}-${index}`}
-              onPress={() => handleSelect(place)}
-              style={({ pressed }) => 
-                pressed 
-                  ? [memoizedStyles.resultItemPressed, customStyles.resultItem]
-                  : [memoizedStyles.resultItemNormal, customStyles.resultItem]
-              }
-            >
-              <Text style={{ color: theme.colors.onSurface }}>{place.fullText}</Text>
-            </Pressable>
-          ))}
-        </View>
-      )}
-      
-      {isLoading && results.length === 0 && query.trim().length > 2 && (
-        <View style={[memoizedStyles.resultsContainer, { padding: 12 }]}>
-          <Text>Searching...</Text>
-        </View>
-      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 0,
     width: '100%',
-    position: 'relative',
+    zIndex: 1,
   },
   input: {
     width: '100%',
+    marginBottom: 5,
   },
   resultsContainer: {
+    maxHeight: 200,
+    width: '100%',
+    borderRadius: 4,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    zIndex: 2,
     position: 'absolute',
     top: 60,
-    left: 0,
-    right: 0,
-    borderRadius: 4,
-    zIndex: Platform.OS === 'ios' ? 9999 : 1000, // Higher z-index for iOS
-    elevation: Platform.OS === 'android' ? 3 : 0,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25, // Increased opacity for better visibility
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
   },
   resultItem: {
-    padding: 12,
+    padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: 'rgba(0,0,0,0.1)',
+  },
+  resultText: {
+    fontSize: 14,
+  },
+  loadingContainer: {
+    padding: 10,
+    alignItems: 'center',
   },
 }); 

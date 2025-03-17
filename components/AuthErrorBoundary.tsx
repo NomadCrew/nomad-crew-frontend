@@ -12,17 +12,11 @@ export default function AuthErrorBoundary({ children }) {
   const initAttempted = useRef(false);
 
   useEffect(() => {
-    // Only attempt initialization once
-    if (!isInitialized && !loading && !initAttempted.current) {
-      startInitialization();
+    if (isInitialized) {
+      return;
     }
-
-    return () => {
-      if (initTimer.current) {
-        clearTimeout(initTimer.current);
-      }
-    };
-  }, [isInitialized, loading]);
+    startInitialization();
+  }, [isInitialized, startInitialization]);
 
   const startInitialization = async () => {
     setError(null);

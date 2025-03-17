@@ -256,26 +256,30 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({
         {isLoadingMessages && messages.length === 0 ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={theme?.colors?.primary?.main} />
-            <Text style={styles.loadingText}>Loading chat...</Text>
+            <Text style={styles.loadingText}>Loading messages...</Text>
+          </View>
+        ) : messages.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>No messages yet. Start the conversation!</Text>
           </View>
         ) : (
-          <>
-            <ChatList
-              messages={messages}
-              isLoading={isLoadingMessages}
-              hasMore={hasMore}
-              onLoadMore={() => fetchMoreMessages(tripId)}
-              onRefresh={handleRefresh}
-              isRefreshing={isRefreshing}
-              typingUsers={currentTypingUsers}
-            />
-            <ChatInput
-              tripId={tripId}
-              onSend={handleSendMessage}
-              onTypingStatusChange={handleTypingStatusChange}
-            />
-          </>
+          <ChatList
+            messages={messages}
+            isLoading={isLoadingMessages}
+            hasMore={hasMore}
+            onLoadMore={() => fetchMoreMessages(tripId)}
+            onRefresh={handleRefresh}
+            isRefreshing={isRefreshing}
+            typingUsers={currentTypingUsers}
+            tripId={tripId}
+          />
         )}
+        
+        <ChatInput 
+          tripId={tripId} 
+          onSend={handleSendMessage} 
+          onTypingStatusChange={handleTypingStatusChange}
+        />
       </View>
     </SafeAreaView>
   );

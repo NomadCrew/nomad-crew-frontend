@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { logger } from '@/src/utils/logger';
 import { useTripStore } from '@/src/store/useTripStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Theme } from '@/src/theme/types';
 
 interface ChatScreenProps {
   tripId: string;
@@ -235,6 +236,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId, onBack }) => {
             onRefresh={handleRefresh}
             isRefreshing={isRefreshing}
             typingUsers={typingUsers[tripId] || []}
+            tripId={tripId}
           />
           <ChatInput tripId={tripId} />
         </View>
