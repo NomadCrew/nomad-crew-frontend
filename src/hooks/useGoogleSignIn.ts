@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import { useAuthStore } from '@/src/store/useAuthStore';
 import { useEffect, useState } from 'react';
 import Constants from 'expo-constants';
+import { supabase } from '@/src/auth/supabaseClient';
 
 // Check if running in Expo Go
 const isExpoGo = Constants.appOwnership === 'expo';
@@ -33,6 +34,8 @@ export function useGoogleSignIn() {
 
       try {
         const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+        // Use the development client ID directly since we're in development mode
+        const iosClientId = '369652278516-ug3bt8lt2b3pdq6vpuovhlgivaoquvp5.apps.googleusercontent.com';
         
         if (!webClientId) {
           console.error('Google Web Client ID is not defined in environment variables');
@@ -40,20 +43,22 @@ export function useGoogleSignIn() {
         }
         
         const config = {
+          ...Platform.select({
+            ios: {
+              iosClientId: iosClientId,
+            },
+            android: {
+              offlineAccess: true,
+            }
+          }),
+          webClientId: webClientId,
           scopes: [
             'https://www.googleapis.com/auth/userinfo.profile',
             'https://www.googleapis.com/auth/userinfo.email',
           ],
-          webClientId: webClientId,
-          offlineAccess: true,
-          iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
         };
         
-        // Add Android-specific configuration
-        if (Platform.OS === 'android') {
-          // You can add Android-specific configuration here if needed
-        }
-        
+        console.log('Configuring Google Sign-In with:', config);
         await GoogleSignin.configure(config);
         setIsInitialized(true);
       } catch (error) {
@@ -91,10 +96,37 @@ export function useGoogleSignIn() {
         }
       }
       
-      // Sign in
+      // Sign in with Google
       const userInfo = await GoogleSignin.signIn();
-      console.log('Google Sign-In successful:', userInfo);
-      await handleGoogleSignInSuccess(userInfo);
+      console.log('Google Sign-In userInfo:', userInfo);
+      
+      // Get the ID token
+      const { accessToken, idToken } = await GoogleSignin.getTokens();
+      console.log('Google Sign-In tokens:', { accessToken, idToken });
+      
+      // Sign in with Supabase using the Google token
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: idToken, // Use idToken instead of accessToken
+      });
+      
+      if (error) {
+        console.error('Supabase sign in error:', error);
+        throw error;
+      }
+      
+      if (data.session) {
+        // Convert Supabase session to expected format
+        const googleSignInResponse = {
+          user: userInfo.user,
+          authentication: {
+            accessToken,
+            idToken
+          }
+        };
+        await handleGoogleSignInSuccess(googleSignInResponse);
+      }
+      
     } catch (error: any) {
       console.error('Google Sign-In error:', error);
       
