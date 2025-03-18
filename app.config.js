@@ -52,21 +52,17 @@ export default {
           {
             CFBundleURLSchemes: [
               'com.googleusercontent.apps.369652278516-ug3bt8lt2b3pdq6vpuovhlgivaoquvp5',
-              'com.googleusercontent.apps.369652278516-05kcrkp3l28g4lt0hhki48othfgug3nc'
-            ]
-          },
-          {
-            CFBundleURLSchemes: [
+              'com.googleusercontent.apps.369652278516-05kcrkp3l28g4lt0hhki48othfgug3nc',
               '369652278516-ug3bt8lt2b3pdq6vpuovhlgivaoquvp5.apps.googleusercontent.com',
               '369652278516-05kcrkp3l28g4lt0hhki48othfgug3nc.apps.googleusercontent.com'
             ]
-          }
+          },
         ]
       }
     },
     android: {
       adaptiveIcon: {
-        foregroundImage: './assets/images/adaptive-icon.png',
+        foregroundImage: './assets/images/icon.png',
         backgroundColor: '#ffffff'
       },
       package: IS_DEV 

@@ -3,12 +3,12 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>369652278516-05kcrkp3l28g4lt0hhki48othfgug3nc.apps.googleusercontent.com</string>
+	<string>369652278516-ug3bt8lt2b3pdq6vpuovhlgivaoquvp5.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.369652278516-05kcrkp3l28g4lt0hhki48othfgug3nc</string>
+	<string>com.googleusercontent.apps.369652278516-ug3bt8lt2b3pdq6vpuovhlgivaoquvp5</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.nomadcrew.app</string>
+	<string>com.nomadcrew.app.dev</string>
 </dict>
 </plist>

@@ -10,7 +10,9 @@
       "env": {
         "APP_VARIANT": "development",
         "EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID": "$(EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID)",
-        "EXPO_PUBLIC_GOOGLE_API_KEY_IOS": "$(EXPO_PUBLIC_GOOGLE_API_KEY_IOS)"
+        "EXPO_PUBLIC_GOOGLE_API_KEY_IOS": "$(EXPO_PUBLIC_GOOGLE_API_KEY_IOS)",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "369652278516-gamn2lkrh2ul45v7l8nn6i9su8nseu7j.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "369652278516-ug3bt8lt2b3pdq6vpuovhlgivaoquvp5.apps.googleusercontent.com"
       },
       "android": {
         "buildType": "apk"
