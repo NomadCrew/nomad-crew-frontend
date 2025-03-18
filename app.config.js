@@ -12,6 +12,10 @@ const getEnvironment = () => {
 const ENV = getEnvironment();
 const IS_DEV = ENV === 'development';
 
+// Extract client ID from the full URL for URL scheme
+const getClientId = (fullClientId) => fullClientId?.split('.')[0] || '';
+const IOS_CLIENT_ID = getClientId(process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID);
+
 export default {
   expo: {
     name: IS_DEV ? 'NomadCrew (Dev)' : 'NomadCrew',
@@ -46,17 +50,14 @@ export default {
         CFBundleURLTypes: [
           {
             CFBundleURLSchemes: [
-              'nomadcrew',
+              'nomadcrew'
             ]
           },
           {
             CFBundleURLSchemes: [
-              'com.googleusercontent.apps.369652278516-ug3bt8lt2b3pdq6vpuovhlgivaoquvp5',
-              'com.googleusercontent.apps.369652278516-05kcrkp3l28g4lt0hhki48othfgug3nc',
-              '369652278516-ug3bt8lt2b3pdq6vpuovhlgivaoquvp5.apps.googleusercontent.com',
-              '369652278516-05kcrkp3l28g4lt0hhki48othfgug3nc.apps.googleusercontent.com'
+              `com.googleusercontent.apps.${IOS_CLIENT_ID}`
             ]
-          },
+          }
         ]
       }
     },
@@ -124,7 +125,7 @@ export default {
       favicon: './assets/images/favicon.png',
       config: {
         supabase: {
-          url: 'https://efmqiltdajvqenndmylz.supabase.co'
+          url: SUPABASE_URL
         }
       }
     },
@@ -137,9 +138,7 @@ export default {
       [
         '@react-native-google-signin/google-signin',
         {
-          iosUrlScheme: IS_DEV 
-            ? 'com.googleusercontent.apps.369652278516-ug3bt8lt2b3pdq6vpuovhlgivaoquvp5'
-            : 'com.googleusercontent.apps.369652278516-05kcrkp3l28g4lt0hhki48othfgug3nc'
+          iosUrlScheme: `com.googleusercontent.apps.${IOS_CLIENT_ID}`
         }
       ],
       [
@@ -186,7 +185,12 @@ export default {
       eas: {
         projectId: '50d59d51-34e0-49ab-a7ee-6989ed09f8ef'
       },
-      environment: ENV
+      environment: ENV,
+      googleClientIds: {
+        ios: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+        android: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+        web: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
+      }
     },
     owner: 'nomad-crew',
     updates: {
