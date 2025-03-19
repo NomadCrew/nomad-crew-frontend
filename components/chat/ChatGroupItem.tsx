@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, _Image } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { ChatGroup } from '@/src/types/chat';
 import { formatRelativeTime } from '@/src/utils/dateUtils';

@@ -1,3 +1,5 @@
+const SUPABASE_URL = 'https://efmqiltdajvqenndmylz.supabase.co';
+
 const getEnvironment = () => {
   switch (process.env.APP_VARIANT) {
     case 'production':
@@ -9,6 +11,10 @@ const getEnvironment = () => {
 
 const ENV = getEnvironment();
 const IS_DEV = ENV === 'development';
+
+// Extract client ID from the full URL for URL scheme
+const getClientId = (fullClientId) => fullClientId?.split('.')[0] || '';
+const IOS_CLIENT_ID = getClientId(process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID);
 
 export default {
   expo: {
@@ -22,7 +28,7 @@ export default {
     newArchEnabled: true,
     splash: {
       image: './assets/images/splash.png',
-      resizeMode: 'contain',
+      resizeMode: 'cover',
       backgroundColor: '#ffffff'
     },
     assetBundlePatterns: ['**/*'],
@@ -34,7 +40,8 @@ export default {
       usesAppleSignIn: true,
       config: {
         usesNonExemptEncryption: false,
-        googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
+        googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_API_KEY_IOS,
+        googlePlacesApiKey: process.env.EXPO_PUBLIC_GOOGLE_API_KEY_IOS
       },
       infoPlist: {
         UIBackgroundModes: [
@@ -43,7 +50,12 @@ export default {
         CFBundleURLTypes: [
           {
             CFBundleURLSchemes: [
-              'com.googleusercontent.apps.369652278516-05kcrkp3l28g4lt0hhki48othfgug3nc'
+              'nomadcrew'
+            ]
+          },
+          {
+            CFBundleURLSchemes: [
+              `com.googleusercontent.apps.${IOS_CLIENT_ID}`
             ]
           }
         ]
@@ -51,7 +63,7 @@ export default {
     },
     android: {
       adaptiveIcon: {
-        foregroundImage: './assets/images/adaptive-icon.png',
+        foregroundImage: './assets/images/icon.png',
         backgroundColor: '#ffffff'
       },
       package: IS_DEV 
@@ -59,7 +71,10 @@ export default {
         : 'com.nomadcrew.app',
       config: {
         googleMaps: {
-          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
+          apiKey: process.env.EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID
+        },
+        googlePlaces: {
+          apiKey: process.env.EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID
         }
       },
       intentFilters: [
@@ -110,7 +125,7 @@ export default {
       favicon: './assets/images/favicon.png',
       config: {
         supabase: {
-          url: 'https://efmqiltdajvqenndmylz.supabase.co'
+          url: SUPABASE_URL
         }
       }
     },
@@ -121,10 +136,16 @@ export default {
       }],
       'expo-secure-store', 
       [
+        '@react-native-google-signin/google-signin',
+        {
+          iosUrlScheme: `com.googleusercontent.apps.${IOS_CLIENT_ID}`
+        }
+      ],
+      [
         'expo-build-properties',
         {
           android: {
-            compileSdkVersion: 34,
+            compileSdkVersion: 35,
             targetSdkVersion: 34,
             buildToolsVersion: '34.0.0'
           },
@@ -141,7 +162,7 @@ export default {
       }],
       ['expo-splash-screen', {
         image: './assets/images/splash.png',
-        resizeMode: 'contain',
+        resizeMode: 'cover',
         backgroundColor: '#ffffff'
       }],
       ['expo-font', {
@@ -164,7 +185,12 @@ export default {
       eas: {
         projectId: '50d59d51-34e0-49ab-a7ee-6989ed09f8ef'
       },
-      environment: ENV
+      environment: ENV,
+      googleClientIds: {
+        ios: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+        android: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+        web: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
+      }
     },
     owner: 'nomad-crew',
     updates: {

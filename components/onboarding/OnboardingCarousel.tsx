@@ -12,9 +12,9 @@ interface Props {
 }
 
 export function OnboardingCarousel({ slides, onComplete }: Props) {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const { theme } = useTheme();
-  const { width: screenWidth } = useWindowDimensions();
+  const [_currentIndex, _setCurrentIndex] = useState(0);
+  const { _theme } = useTheme();
+  const { width: _screenWidth } = useWindowDimensions();
 
   // Components for the onboarding pages
   const Title = ({ title, titleStyles }: { title: string; titleStyles?: any }) => (

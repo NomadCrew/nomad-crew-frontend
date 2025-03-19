@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { ChatState, ChatMessageWithStatus, ChatUser, PaginationInfo } from '@/src/types/chat';
+import { ChatState, ChatMessageWithStatus, ChatUser, PaginationInfo, ReadReceipt } from '@/src/types/chat';
 import { chatService } from '@/src/services/chatService';
 import { useAuthStore } from './useAuthStore';
 import { logger } from '@/src/utils/logger';
@@ -13,6 +13,8 @@ import { useEffect } from 'react';
 
 // Constants
 const MESSAGES_STORAGE_KEY = 'nomad_crew_chat_messages';
+const READ_RECEIPTS_STORAGE_KEY = 'nomad_crew_read_receipts';
+const LAST_READ_STORAGE_KEY = 'nomad_crew_last_read';
 const TYPING_TIMEOUT = 5000; // 5 seconds
 
 // Helper functions for persistence
@@ -21,6 +23,24 @@ const persistMessages = async (messagesByTripId: Record<string, ChatMessageWithS
     await AsyncStorage.setItem(MESSAGES_STORAGE_KEY, JSON.stringify(messagesByTripId));
   } catch (error) {
     logger.error('ChatStore', 'Failed to persist messages:', error);
+  }
+};
+
+// Add persistence for read receipts
+const persistReadReceipts = async (readReceipts: Record<string, Record<string, ReadReceipt[]>>) => {
+  try {
+    await AsyncStorage.setItem(READ_RECEIPTS_STORAGE_KEY, JSON.stringify(readReceipts));
+  } catch (error) {
+    logger.error('ChatStore', 'Failed to persist read receipts:', error);
+  }
+};
+
+// Add persistence for last read message IDs
+const persistLastReadMessageIds = async (lastReadMessageIds: Record<string, string>) => {
+  try {
+    await AsyncStorage.setItem(LAST_READ_STORAGE_KEY, JSON.stringify(lastReadMessageIds));
+  } catch (error) {
+    logger.error('ChatStore', 'Failed to persist last read message IDs:', error);
   }
 };
 
@@ -36,6 +56,32 @@ const loadPersistedMessages = async (): Promise<{ messagesByTripId: Record<strin
   return { messagesByTripId: {} };
 };
 
+// Add loading for read receipts
+const loadPersistedReadReceipts = async (): Promise<{ readReceipts: Record<string, Record<string, ReadReceipt[]>> }> => {
+  try {
+    const storedData = await AsyncStorage.getItem(READ_RECEIPTS_STORAGE_KEY);
+    if (storedData) {
+      return { readReceipts: JSON.parse(storedData) };
+    }
+  } catch (error) {
+    logger.error('ChatStore', 'Failed to load persisted read receipts:', error);
+  }
+  return { readReceipts: {} };
+};
+
+// Add loading for last read message IDs
+const loadPersistedLastReadMessageIds = async (): Promise<{ lastReadMessageIds: Record<string, string> }> => {
+  try {
+    const storedData = await AsyncStorage.getItem(LAST_READ_STORAGE_KEY);
+    if (storedData) {
+      return { lastReadMessageIds: JSON.parse(storedData) };
+    }
+  } catch (error) {
+    logger.error('ChatStore', 'Failed to load persisted last read message IDs:', error);
+  }
+  return { lastReadMessageIds: {} };
+};
+
 export const useChatStore = create<ChatState>((set, get) => ({
   // Initial state
   messagesByTripId: {},
@@ -48,13 +94,24 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isSending: false,
   isLoading: false,
   error: null,
+  // Add read receipt state
+  lastReadMessageIds: {},
+  readReceipts: {},
 
   // Initialize store with persisted data
   initializeStore: async () => {
     try {
       logger.debug('ChatStore', 'Initializing store with persisted data');
       const { messagesByTripId } = await loadPersistedMessages();
-      set({ messagesByTripId });
+      const { readReceipts } = await loadPersistedReadReceipts();
+      const { lastReadMessageIds } = await loadPersistedLastReadMessageIds();
+      
+      set({ 
+        messagesByTripId,
+        readReceipts,
+        lastReadMessageIds
+      });
+      
       logger.debug('ChatStore', 'Store initialized successfully');
     } catch (error) {
       logger.error('ChatStore', 'Failed to initialize store:', error);
@@ -324,15 +381,157 @@ export const useChatStore = create<ChatState>((set, get) => ({
   // Mark a message as read
   markAsRead: async (tripId: string, messageId: string) => {
     try {
-      await chatService.updateLastRead(tripId, { message_id: messageId });
+      logger.debug('ChatStore', `Marking message ${messageId} as read in trip ${tripId}`);
+      
+      // Get the current user
+      const { user } = useAuthStore.getState();
+      if (!user) {
+        logger.error('ChatStore', 'Cannot mark message as read: user not logged in');
+        return;
+      }
+      
+      // Check if this message is already the last read message for this trip
+      const currentLastReadMessageId = get().lastReadMessageIds[tripId];
+      if (currentLastReadMessageId === messageId) {
+        logger.debug('ChatStore', `Message ${messageId} is already marked as last read`);
+        return;
+      }
+      
+      // Update the last read message ID in the store
+      set(state => ({
+        lastReadMessageIds: {
+          ...state.lastReadMessageIds,
+          [tripId]: messageId
+        }
+      }));
+      
+      // Persist the updated last read message IDs
+      persistLastReadMessageIds({
+        ...get().lastReadMessageIds,
+        [tripId]: messageId
+      });
+      
+      // Create a read receipt
+      const readReceipt: ReadReceipt = {
+        user_id: user.id,
+        user_name: user.username || user.firstName || 'You',
+        user_avatar: user.profilePicture,
+        message_id: messageId,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Update the read receipt in the store
+      get().updateReadReceipt(tripId, messageId, readReceipt);
+      
+      // Send the read receipt to the server
+      try {
+        // Call the API to update the last read message
+        await api.post(API_PATHS.CHAT.UPDATE_LAST_READ(tripId), { message_id: messageId });
+        
+        // Send a WebSocket message to notify other users
+        const wsManager = WebSocketManager.getInstance();
+        wsManager.send('READ_RECEIPT', {
+          tripId,
+          messageId,
+          userId: user.id,
+          userName: user.username || user.firstName || 'You',
+          userAvatar: user.profilePicture,
+          timestamp: new Date().toISOString()
+        });
+        
+        logger.debug('ChatStore', `Successfully marked message ${messageId} as read`);
+      } catch (error) {
+        logger.error('ChatStore', 'Failed to send read receipt to server:', error);
+      }
     } catch (error) {
       logger.error('ChatStore', 'Failed to mark message as read:', error);
     }
   },
+  
+  // Update a read receipt
+  updateReadReceipt: (tripId: string, messageId: string, readReceipt: ReadReceipt) => {
+    logger.debug('ChatStore', `Updating read receipt for message ${messageId} in trip ${tripId}`);
+    
+    // Get the current read receipts for this trip
+    const tripReadReceipts = get().readReceipts[tripId] || {};
+    
+    // Get the current read receipts for this message
+    const messageReadReceipts = tripReadReceipts[messageId] || [];
+    
+    // Check if this user already has a read receipt for this message
+    const existingIndex = messageReadReceipts.findIndex(receipt => receipt.user_id === readReceipt.user_id);
+    
+    // Update or add the read receipt
+    let updatedMessageReadReceipts: ReadReceipt[];
+    if (existingIndex >= 0) {
+      // Update the existing read receipt
+      updatedMessageReadReceipts = [...messageReadReceipts];
+      updatedMessageReadReceipts[existingIndex] = readReceipt;
+    } else {
+      // Add a new read receipt
+      updatedMessageReadReceipts = [...messageReadReceipts, readReceipt];
+    }
+    
+    // Update the read receipts in the store
+    set(state => ({
+      readReceipts: {
+        ...state.readReceipts,
+        [tripId]: {
+          ...tripReadReceipts,
+          [messageId]: updatedMessageReadReceipts
+        }
+      }
+    }));
+    
+    // Update the readBy property of the message
+    const messages = get().messagesByTripId[tripId] || [];
+    const messageIndex = messages.findIndex(msg => msg.message.id === messageId);
+    
+    if (messageIndex >= 0) {
+      const updatedMessages = [...messages];
+      updatedMessages[messageIndex] = {
+        ...updatedMessages[messageIndex],
+        readBy: updatedMessageReadReceipts
+      };
+      
+      set(state => ({
+        messagesByTripId: {
+          ...state.messagesByTripId,
+          [tripId]: updatedMessages
+        }
+      }));
+      
+      // Persist the updated messages
+      persistMessages({
+        ...get().messagesByTripId,
+        [tripId]: updatedMessages
+      });
+    }
+    
+    // Persist the updated read receipts
+    persistReadReceipts({
+      ...get().readReceipts,
+      [tripId]: {
+        ...tripReadReceipts,
+        [messageId]: updatedMessageReadReceipts
+      }
+    });
+  },
+  
+  // Get read receipts for a message
+  getReadReceipts: (tripId: string, messageId: string): ReadReceipt[] => {
+    const tripReadReceipts = get().readReceipts[tripId] || {};
+    return tripReadReceipts[messageId] || [];
+  },
+  
+  // Get the last read message ID for a trip
+  getLastReadMessageId: (tripId: string): string | undefined => {
+    return get().lastReadMessageIds[tripId];
+  },
 
   // Handle chat events from WebSocket
   handleChatEvent: (event: ServerEvent) => {
-    logger.debug('ChatStore', 'Handling chat event:', event.type);
+    logger.debug('ChatStore', `Handling chat event: ${event.type}`);
     
     switch (event.type) {
       case 'CHAT_MESSAGE_SENT':
@@ -460,6 +659,38 @@ export const useChatStore = create<ChatState>((set, get) => ({
         // We don't need to update the UI for read receipts in this simplified version
         break;
       }
+      
+      // Add case for read receipt events
+      case 'CHAT_READ_RECEIPT':
+        try {
+          const { tripId } = event;
+          const payload = event.payload as {
+            messageId: string;
+            user: {
+              id: string;
+              name: string;
+              avatar?: string;
+            };
+            timestamp: string;
+          };
+          
+          logger.debug('ChatStore', `Received read receipt for message ${payload.messageId} from user ${payload.user.id}`);
+          
+          // Create a read receipt
+          const readReceipt: ReadReceipt = {
+            user_id: payload.user.id,
+            user_name: payload.user.name,
+            user_avatar: payload.user.avatar,
+            message_id: payload.messageId,
+            timestamp: payload.timestamp
+          };
+          
+          // Update the read receipt in the store
+          get().updateReadReceipt(tripId, payload.messageId, readReceipt);
+        } catch (error) {
+          logger.error('ChatStore', 'Error handling read receipt event:', error);
+        }
+        break;
       
       default:
         logger.warn('ChatStore', 'Unknown chat event type:', event.type);

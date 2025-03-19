@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
 import Carousel from 'react-native-reanimated-carousel';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import Animated, { runOnJS } from 'react-native-reanimated';
+import Animated, { runOnJS, useSharedValue } from 'react-native-reanimated';
 
 interface CarouselItem {
   id: string;
@@ -23,7 +23,8 @@ export const BentoCarousel = ({
   height, 
   onProgressChange 
 }: BentoCarouselProps) => {
-  const [currentIndex, setCurrentIndex] = React.useState(0);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const _currentIndex = useSharedValue(0);
 
   const renderItem = React.useCallback(({ item, animationValue }: { 
     item: CarouselItem; 
@@ -46,11 +47,15 @@ export const BentoCarousel = ({
   }), [width, height]);
 
   const handleProgressChange = React.useCallback((offsetProgress: number) => {
-    runOnJS(setCurrentIndex)(Math.round(offsetProgress));
+    runOnJS(setActiveIndex)(Math.round(offsetProgress));
     if (onProgressChange) {
       runOnJS(onProgressChange)(offsetProgress);
     }
   }, [onProgressChange]);
+
+  const renderDot = (_animationValue: number, index: number) => {
+    // ... existing code ...
+  };
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

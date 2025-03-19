@@ -59,6 +59,23 @@ export interface Theme {
   elevation: SemanticElevation;
   components: ComponentStyles;
   breakpoints: typeof BREAKPOINTS;
+  borderRadius: {
+    xs: number;
+    sm: number;
+    md: number;
+    lg: number;
+    xl: number;
+  };
+  typography: {
+    size: {
+      xs: number;
+      sm: number;
+      md: number;
+      lg: number;
+      xl: number;
+    };
+    // ... other typography properties
+  };
 }
 
 // Helper types

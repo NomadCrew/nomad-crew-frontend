@@ -14,6 +14,8 @@ import { supabase } from '@/src/auth/supabaseClient';
 import { useOnboarding } from '@/src/providers/OnboardingProvider';
 import AppInitializer from './AppInitializer';
 import 'react-native-get-random-values'
+import React from 'react';
+
 if (!global.crypto) {
   global.crypto = require('react-native-get-random-values');
 }
@@ -33,7 +35,9 @@ try {
 }
 
 function RouteGuard({ children }: { children: React.ReactNode }) {
-  const segments = useSegments ? useSegments() : [''];
+  // Use useSegments directly at the top level
+  const segments = useSegments();
+  
   const router = useRouter();
   const { token, isInitialized, loading, isVerifying } = useAuthStore();
   const { isFirstTime } = useOnboarding();
@@ -49,8 +53,12 @@ function RouteGuard({ children }: { children: React.ReactNode }) {
       const { data: { session }, error } = await supabase.auth.getSession();
       // Session check completed
     };
-    debugSession();
-  }, []);
+    
+    // Only run this once
+    if (isInitialized) {
+      debugSession();
+    }
+  }, [isInitialized]);
 
   useEffect(() => {
     if (!isInitialized) return;

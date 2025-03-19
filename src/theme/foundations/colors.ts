@@ -168,6 +168,10 @@ export const colorTokens = {
       },
       typing: {
         text: isDark ? colorTokens.gray[300] : '#4B5563',
+      },
+      readReceipt: {
+        icon: isDark ? colorTokens.blue[400] : colorTokens.blue[600],
+        text: isDark ? colorTokens.gray[300] : colorTokens.gray[600],
       }
     }
   });

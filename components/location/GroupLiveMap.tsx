@@ -10,7 +10,7 @@ import { Theme } from '@/src/theme/types';
 import { MapPin, User, AlertCircle, Info } from 'lucide-react-native';
 import { LocationSharingToggle } from './LocationSharingToggle';
 import { Surface } from 'react-native-paper';
-import { logger } from '@/src/utils/logger';
+import { logger, LogModule } from '@/src/utils/logger';
 
 // Default coordinates to use as fallback (San Francisco)
 const DEFAULT_COORDINATES = {
@@ -194,7 +194,7 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
   // Handle map container dimensions
   const handleMapContainerLayout = (event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
-    logger.debug(`[GroupLiveMap] Map container layout: ${width}x${height}`);
+    logger.debug('UI', `Map container layout: ${width}x${height}`);
     setMapContainerDimensions({ width, height });
   };
 
@@ -211,20 +211,19 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
 
   // Log when component mounts and unmounts
   useEffect(() => {
-    logger.debug(`[GroupLiveMap] Component mounted for trip: ${trip.id}`);
+    logger.debug('UI', `Component mounted for trip: ${trip.id}`);
     
     return () => {
-      logger.debug(`[GroupLiveMap] Component unmounted for trip: ${trip.id}`);
+      logger.debug('UI', `Component unmounted for trip: ${trip.id}`);
     };
   }, [trip.id]);
 
   // Log when map is ready
   const handleMapReady = () => {
-    logger.debug(`[GroupLiveMap] Map ready for trip: ${trip.id}`);
+    logger.debug('UI', `Map ready for trip: ${trip.id}`);
     setMapLoaded(true);
     setIsLoading(false);
     
-    // Fit to markers after a short delay to ensure the map is fully loaded
     setTimeout(() => {
       fitToMarkers();
     }, 500);
@@ -232,7 +231,7 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
 
   // Handle map errors
   const handleMapError = () => {
-    logger.debug(`[GroupLiveMap] Map error occurred for trip: ${trip.id}`);
+    logger.debug('UI', `Map error occurred for trip: ${trip.id}`);
     setMapError('There was an error loading the map. Please try again later.');
     setMapLoadAttempts(prev => prev + 1);
   };
@@ -407,7 +406,15 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
             showsMyLocationButton={true}
             showsCompass={true}
             showsScale={true}
-            onError={handleMapError}
+            onLayout={() => {
+              if (!mapLoaded) {
+                setTimeout(() => {
+                  if (!mapLoaded) {
+                    handleMapError();
+                  }
+                }, 5000); // If map doesn't load within 5 seconds, trigger error
+              }
+            }}
           >
             {renderMemberMarkers()}
             {renderCurrentUserMarker()}
@@ -463,7 +470,7 @@ const styles = (theme: Theme) => StyleSheet.create({
     marginVertical: 0,
     overflow: 'hidden',
     height: Dimensions.get('window').height * 0.6,
-    backgroundColor: theme.colors.background.paper,
+    backgroundColor: theme.colors.background.surface,
   },
   map: {
     width: '100%',

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Text, TextProps } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Text, TextProps, StyleSheet } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { Typography } from '@/src/theme/foundations/typography';
 import { SemanticColors } from '@/src/theme/foundations/colors';
@@ -68,7 +68,7 @@ export function ThemedText({
           size in categoryStyles) {
         return categoryStyles[size as keyof typeof categoryStyles];
       }
-    } catch (error) {
+    } catch (_error) {
       logger.warn('UI', `Invalid typography variant: ${variant}`);
     }
     
@@ -88,7 +88,7 @@ export function ThemedText({
           shade in colorCategory) {
         return colorCategory[shade as keyof typeof colorCategory];
       }
-    } catch (error) {
+    } catch (_error) {
       logger.warn('UI', `Invalid color variant: ${color}`);
     }
 
