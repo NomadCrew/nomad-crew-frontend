@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, SafeAreaView, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useChatStore } from '@/src/store/useChatStore';
 import { useAuthStore } from '@/src/store/useAuthStore';
@@ -10,6 +10,8 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { logger } from '@/src/utils/logger';
 import { useTripStore } from '@/src/store/useTripStore';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Theme } from '@/src/theme/types';
 
 interface ChatScreenProps {
   tripId: string;
@@ -20,6 +22,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId, onBack }) => {
   logger.info('Chat Screen', `Rendering ChatScreen for trip ${tripId}`);
   
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [authError, setAuthError] = useState(false);
   
@@ -103,22 +106,30 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId, onBack }) => {
     }
   };
   
+  // Common container with safe area insets
+  const containerStyle = {
+    flex: 1,
+    backgroundColor: theme?.colors?.background?.default || '#FFFFFF',
+  };
+  
   // If there's an auth error, show the error component
   if (authError) {
     logger.warn('Chat Screen', 'Rendering auth error component due to authentication issues');
     return (
-      <SafeAreaView style={styles(theme).container}>
+      <View style={containerStyle}>
         <StatusBar style={theme.dark ? 'light' : 'dark'} />
+        <View style={{ paddingTop: insets.top }} />
         <ChatAuthError onRetry={handleAuthRetry} />
-      </SafeAreaView>
+      </View>
     );
   }
   
   // Show loading state
   if (isLoadingMessages && messages.length === 0) {
     return (
-      <SafeAreaView style={styles(theme).container}>
+      <View style={containerStyle}>
         <StatusBar style={theme.dark ? 'light' : 'dark'} />
+        <View style={{ paddingTop: insets.top }} />
         <View style={styles(theme).header}>
           {onBack && (
             <TouchableOpacity 
@@ -142,15 +153,16 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId, onBack }) => {
           <ActivityIndicator size="large" color={theme?.colors?.primary?.main} />
           <Text style={styles(theme).loadingText}>Loading chat...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
   
   // Show error state
   if (error && messages.length === 0) {
     return (
-      <SafeAreaView style={styles(theme).container}>
+      <View style={containerStyle}>
         <StatusBar style={theme.dark ? 'light' : 'dark'} />
+        <View style={{ paddingTop: insets.top }} />
         <View style={styles(theme).header}>
           {onBack && (
             <TouchableOpacity 
@@ -179,14 +191,16 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId, onBack }) => {
             <Text style={styles(theme).retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
   
   logger.debug('Chat Screen', `Rendering chat UI with ${messages.length} messages`);
   return (
-    <SafeAreaView style={styles(theme).container}>
+    <View style={containerStyle}>
       <StatusBar style={theme?.dark ? 'light' : 'dark'} />
+      
+      <View style={{ paddingTop: insets.top }} />
       
       <View style={styles(theme).header}>
         {onBack && (
@@ -208,7 +222,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId, onBack }) => {
         </Text>
       </View>
       
-      <View style={styles(theme).content}>
+      <View style={[styles(theme).content, { 
+        paddingLeft: insets.left,
+        paddingRight: insets.right,
+        paddingBottom: insets.bottom
+      }]}>
         <View style={styles(theme).chatArea}>
           <ChatList
             messages={messages}
@@ -218,19 +236,16 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId, onBack }) => {
             onRefresh={handleRefresh}
             isRefreshing={isRefreshing}
             typingUsers={typingUsers[tripId] || []}
+            tripId={tripId}
           />
           <ChatInput tripId={tripId} />
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = (theme: Theme) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme?.colors?.background?.default || '#FFFFFF',
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -258,12 +273,9 @@ const styles = (theme: Theme) => StyleSheet.create({
   },
   content: {
     flex: 1,
-    width: '100%',
   },
   chatArea: {
     flex: 1,
-    position: 'relative',
-    height: '100%',
   },
   loadingContainer: {
     flex: 1,

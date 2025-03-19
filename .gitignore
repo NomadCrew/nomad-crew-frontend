@@ -47,3 +47,4 @@ op.txt
 
 # Exception for Google Services files
 !ios/GoogleService-Info*.plist
+GOOGLE_API_KEYS.txt

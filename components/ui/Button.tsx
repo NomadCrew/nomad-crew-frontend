@@ -9,7 +9,7 @@ import {
   TextStyle,
   TouchableOpacityProps,
 } from 'react-native';
-import { useThemedStyles } from '@/src/theme/utils';
+import { useThemedStyles, useTheme } from '@/src/theme/utils';
 
 export type ButtonVariant = 'filled' | 'outlined' | 'ghost';
 export type ButtonSize = 'sm' | 'md' | 'lg';
@@ -83,6 +83,11 @@ export function Button({
   onPress,
   ...rest
 }: ButtonProps) {
+  const { theme } = useTheme();
+  const _primaryHover = theme.colors.primary.hover;
+  const _primarySurface = theme.colors.primary.surface;
+  const _contentPrimary = theme.colors.content.primary;
+  const _contentSecondary = theme.colors.content.secondary;
   const styles = useThemedStyles((theme) => {
     // Safely access theme properties with fallbacks
     const primaryColor = theme?.colors?.primary?.main || '#F46315';

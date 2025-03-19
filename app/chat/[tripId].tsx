@@ -7,6 +7,7 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { useChatStore } from '@/src/store/useChatStore';
 import { StatusBar } from 'expo-status-bar';
 import { logger } from '@/src/utils/logger';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 export default function ChatRoute() {
   const params = useLocalSearchParams<{ tripId: string }>();
@@ -42,12 +43,14 @@ export default function ChatRoute() {
   if (!tripId) {
     logger.error('TRIP', 'No tripId provided to chat route');
     return (
-      <View style={[styles.container, { backgroundColor: theme?.colors?.background?.default || '#FFFFFF' }]}>
-        <StatusBar style={theme?.dark ? 'light' : 'dark'} />
-        <Text style={{ color: theme?.colors?.content?.primary || '#000000', textAlign: 'center', padding: 20 }}>
-          No trip ID provided. Cannot load chat.
-        </Text>
-      </View>
+      <SafeAreaProvider>
+        <View style={[styles.container, { backgroundColor: theme?.colors?.background?.default || '#FFFFFF' }]}>
+          <StatusBar style={theme?.dark ? 'light' : 'dark'} />
+          <Text style={{ color: theme?.colors?.content?.primary || '#000000', textAlign: 'center', padding: 20 }}>
+            No trip ID provided. Cannot load chat.
+          </Text>
+        </View>
+      </SafeAreaProvider>
     );
   }
   
@@ -55,20 +58,22 @@ export default function ChatRoute() {
   const isMobile = width < 768;
   
   return (
-    <View style={[styles.container, { backgroundColor: theme?.colors?.background?.default || '#FFFFFF' }]}>
-      <StatusBar style={theme?.dark ? 'light' : 'dark'} />
-      {isMobile ? (
-        <MobileChatScreen 
-          tripId={tripId} 
-          onBack={handleBack}
-        />
-      ) : (
-        <ChatScreen 
-          tripId={tripId}
-          onBack={handleBack}
-        />
-      )}
-    </View>
+    <SafeAreaProvider>
+      <View style={[styles.container, { backgroundColor: theme?.colors?.background?.default || '#FFFFFF' }]}>
+        <StatusBar style={theme?.dark ? 'light' : 'dark'} />
+        {isMobile ? (
+          <MobileChatScreen 
+            tripId={tripId} 
+            onBack={handleBack}
+          />
+        ) : (
+          <ChatScreen 
+            tripId={tripId}
+            onBack={handleBack}
+          />
+        )}
+      </View>
+    </SafeAreaProvider>
   );
 }
 

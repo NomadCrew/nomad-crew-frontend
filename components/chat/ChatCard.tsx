@@ -3,8 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useChatStore } from '@/src/store/useChatStore';
 import { formatRelativeTime } from '@/src/utils/dateUtils';
-import { Theme } from '@/src/theme/types';
-import { Ionicons } from '@expo/vector-icons';
+import { _Theme } from '@/src/theme/types';
+import { _Ionicons } from '@expo/vector-icons';
 import { MessageSquare } from 'lucide-react-native';
 import { useThemedStyles } from '@/src/theme/utils';
 

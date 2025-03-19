@@ -1,3 +1,5 @@
+/* global jest */
+
 // Mock expo-router
 jest.mock('expo-router/entry');
 jest.mock('expo-router', () => ({

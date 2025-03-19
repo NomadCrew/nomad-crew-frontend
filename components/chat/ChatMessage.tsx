@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { ChatMessageWithStatus } from '@/src/types/chat';
@@ -6,6 +6,7 @@ import { useAuthStore } from '@/src/store/useAuthStore';
 import { formatRelativeTime } from '@/src/utils/dateUtils';
 import { Theme } from '@/src/theme/types';
 import { logger } from '@/src/utils/logger';
+import { Ionicons } from '@expo/vector-icons';
 
 interface ChatMessageProps {
   messageWithStatus: ChatMessageWithStatus;
@@ -19,38 +20,83 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   const { theme } = useTheme();
   const { user } = useAuthStore();
   
-  // Validate message data before rendering
-  if (!messageWithStatus?.message) {
-    logger.warn('UI', 'Invalid message data');
-    return null;
-  }
+  // Safely extract message data with fallbacks
+  const message = useMemo(() => messageWithStatus?.message || null, [messageWithStatus]);
+  const status = useMemo(() => messageWithStatus?.status || '', [messageWithStatus]);
+  const readBy = useMemo(() => messageWithStatus?.readBy || [], [messageWithStatus]);
   
-  const { message, status } = messageWithStatus;
-  const isCurrentUser = user?.id === message.sender?.id;
+  // Derived values
+  const isCurrentUser = useMemo(() => 
+    user?.id === message?.sender?.id, 
+    [user?.id, message?.sender?.id]
+  );
   
   // Get user display name
   const getUserDisplayName = useCallback(() => {
-    return message.sender?.name || 'Unknown User';
-  }, [message.sender?.name]);
+    return message?.sender?.name || 'Unknown User';
+  }, [message?.sender?.name]);
   
   // Get user initial for avatar
   const getUserInitial = useCallback(() => {
-    const name = message.sender?.name || '';
+    const name = message?.sender?.name || '';
     return name.charAt(0).toUpperCase();
-  }, [message.sender?.name]);
+  }, [message?.sender?.name]);
   
   // Format timestamp
-  const formattedTime = message.created_at 
-    ? formatRelativeTime(new Date(message.created_at)) 
-    : 'Just now';
+  const formattedTime = useMemo(() => 
+    message?.created_at 
+      ? formatRelativeTime(new Date(message.created_at)) 
+      : 'Just now',
+    [message?.created_at]
+  );
   
   // Status text
-  const statusText = isCurrentUser 
-    ? status === 'sending' ? 'Sending...' 
-    : status === 'sent' ? 'Sent' 
-    : status === 'error' ? 'Failed' 
-    : '' 
-    : '';
+  const statusText = useMemo(() => 
+    isCurrentUser 
+      ? status === 'sending' ? 'Sending...' 
+      : status === 'sent' ? 'Sent' 
+      : status === 'error' ? 'Failed' 
+      : '' 
+      : '',
+    [isCurrentUser, status]
+  );
+  
+  // Format read receipts
+  const formatReadReceipts = useCallback(() => {
+    if (!isCurrentUser || readBy.length === 0) {
+      return null;
+    }
+    
+    // Sort read receipts by timestamp (newest first)
+    const sortedReadBy = [...readBy].sort((a, b) => 
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+    
+    // Get the number of readers
+    const readCount = sortedReadBy.length;
+    
+    // Return read receipt indicator
+    return (
+      <View style={styles(theme).readReceiptContainer}>
+        <Ionicons 
+          name="checkmark-done" 
+          size={12} 
+          color={theme.colors.chat?.readReceipt?.icon || theme.colors.primary.main} 
+        />
+        <Text style={styles(theme).readReceiptText}>
+          {readCount === 1 
+            ? `Read by ${sortedReadBy[0].user_name}` 
+            : `Read by ${readCount} people`}
+        </Text>
+      </View>
+    );
+  }, [isCurrentUser, readBy, theme]);
+  
+  // Validate message data before rendering
+  if (!message) {
+    logger.warn('UI', 'Invalid message data');
+    return null;
+  }
   
   return (
     <View style={[
@@ -112,6 +158,9 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
         ]}>
           {formattedTime}{statusText ? ` · ${statusText}` : ''}
         </Text>
+        
+        {/* Read receipts */}
+        {formatReadReceipts()}
       </View>
     </View>
   );
@@ -211,5 +260,15 @@ const styles = (theme: Theme) => StyleSheet.create({
   avatarSpacer: {
     width: 28,
     marginLeft: 8,
+  },
+  readReceiptContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  readReceiptText: {
+    fontSize: 10,
+    marginLeft: 2,
+    color: theme.colors.chat?.readReceipt?.text || theme.colors.content.tertiary,
   },
 }); 

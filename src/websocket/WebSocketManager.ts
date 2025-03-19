@@ -343,24 +343,32 @@ export class WebSocketManager {
           const payload = event.payload as {
             messageId: string;
             tripId: string;
-            user: {
-              id: string;
-              name: string;
-              avatar?: string;
-            };
+            userId: string;
+            userName: string;
+            userAvatar?: string;
+            timestamp: string;
           };
+          
+          logger.debug('WS', 'Mapping CHAT_READ_RECEIPT event');
           
           mappedEvent = {
             id: event.id,
-            type: 'MESSAGE_READ',
-            tripId: payload.tripId,
-            userId: event.userId,
+            type: 'CHAT_READ_RECEIPT',
+            tripId: payload.tripId || event.tripId,
+            userId: payload.userId || event.userId,
             timestamp: event.timestamp,
             payload: {
               messageId: payload.messageId,
-              userId: payload.user.id
+              user: {
+                id: payload.userId,
+                name: payload.userName,
+                avatar: payload.userAvatar
+              },
+              timestamp: payload.timestamp || event.timestamp
             }
           };
+          
+          logger.debug('WS', 'Created CHAT_READ_RECEIPT event for message ID:', payload.messageId);
         }
         break;
         
@@ -531,6 +539,37 @@ export class WebSocketManager {
     const connected = this.connection?.isConnected() || false;
     logger.debug('WS', `WebSocketManager.isConnected() called, result: ${connected}`);
     return connected;
+  }
+
+  public sendReadReceipt(tripId: string, messageId: string): boolean {
+    logger.debug('WS', `Sending read receipt for message ${messageId} in trip ${tripId}`);
+    
+    if (!this.connection || !this.connection.isConnected()) {
+      logger.warn('WS', 'Cannot send read receipt: WebSocket not connected');
+      return false;
+    }
+    
+    try {
+      const { user } = useAuthStore.getState();
+      if (!user) {
+        logger.warn('WS', 'Cannot send read receipt: User not authenticated');
+        return false;
+      }
+      
+      const payload = {
+        tripId,
+        messageId,
+        userId: user.id,
+        userName: user.username || user.firstName || 'You',
+        userAvatar: user.profilePicture,
+        timestamp: new Date().toISOString()
+      };
+      
+      return this.send('READ_RECEIPT', payload);
+    } catch (error) {
+      logger.error('WS', 'Error sending read receipt:', error);
+      return false;
+    }
   }
 }
 
