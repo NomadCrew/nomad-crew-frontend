@@ -19,7 +19,7 @@ if (!isExpoGo) {
 
   // Configure Google Sign-In immediately after import
   const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
-  const iosClientId = '369652278516-ug3bt8lt2b3pdq6vpuovhlgivaoquvp5.apps.googleusercontent.com';
+  const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
   
   if (webClientId) {
     const config = {

@@ -7,6 +7,8 @@ import { logger } from '@/src/utils/logger';
 import { authApi } from '@/src/api/auth-api';
 import { ERROR_CODES, ERROR_MESSAGES } from '@/src/api/constants';
 import { registerAuthHandlers } from '@/src/api/api-client';
+import * as Notifications from 'expo-notifications';
+import { api } from '@/src/api/api-client';
 
 /**
  * Attempt to recover a session from Supabase.
@@ -38,6 +40,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
     isVerifying: false,
     status: 'unauthenticated' as AuthStatus,
     refreshToken: null,
+    pushToken: null,
 
     /**
      * Called on app start to recover session
@@ -508,6 +511,32 @@ export const useAuthStore = create<AuthState>((set, get) => {
      */
     setFirstTimeDone: async () => {
       set({ isFirstTime: false });
+    },
+
+    registerPushToken: async () => {
+      try {
+        // Check if we already have permission
+        const { status } = await Notifications.getPermissionsAsync();
+        if (status !== 'granted') {
+          return;
+        }
+
+        // Get the token
+        const token = await Notifications.getExpoPushTokenAsync({
+          projectId: process.env.EXPO_PUBLIC_PROJECT_ID // Add this to your env
+        });
+
+        // Store it locally
+        set({ pushToken: token.data });
+
+        // Send it to the backend
+        const { user } = get();
+        if (user) {
+          await api.post('/users/push-token', { token: token.data });
+        }
+      } catch (error) {
+        console.error('Failed to register push token:', error);
+      }
     }
   };
 

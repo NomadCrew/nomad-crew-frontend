@@ -1,10 +1,13 @@
 import { WebSocketConnection } from './WebSocketConnection';
-import { WebSocketStatus, ServerEvent, isLocationEvent, isChatEvent } from '../types/events';
+import { WebSocketStatus, ServerEvent, isLocationEvent, isChatEvent, isTripInviteEvent } from '../types/events';
 import { useAuthStore } from '../store/useAuthStore';
 import { API_CONFIG } from '../api/env';
 import { jwtDecode } from 'jwt-decode';
 import { logger } from '../utils/logger';
 import { useLocationStore } from '../store/useLocationStore';
+import { useNotificationStore } from '../store/useNotificationStore';
+import { isTripInviteEvent as isRawTripInviteEvent } from '../types/notification';
+import { useTripStore } from '../store/useTripStore';
 
 interface ConnectionCallbacks {
   onMessage?: (event: ServerEvent) => void;
@@ -81,6 +84,11 @@ export class WebSocketManager {
           // Handle chat events
           if (isChatEvent(event)) {
             this.handleChatEvent(event);
+          }
+          
+          // Handle trip invite events
+          if (isTripInviteEvent(event)) {
+            this.handleTripInviteEvent(event);
           }
           
           // Pass the event to the original callback
@@ -569,6 +577,34 @@ export class WebSocketManager {
     } catch (error) {
       logger.error('WS', 'Error sending read receipt:', error);
       return false;
+    }
+  }
+
+  private handleTripInviteEvent(event: ServerEvent): void {
+    logger.debug('WS', 'Handling trip invite event');
+    
+    try {
+      // Format the event for the notification store
+      const notificationEvent = {
+        event: 'TRIP_INVITE',
+        data: {
+          inviteId: event.payload.inviteId,
+          tripId: event.payload.tripId || event.tripId,
+          inviterName: event.payload.inviterName,
+          message: event.payload.message,
+          timestamp: event.payload.timestamp || event.timestamp,
+          status: event.payload.status || 'pending'
+        }
+      };
+      
+      // Check if this event matches our TripInviteEvent schema
+      if (isRawTripInviteEvent(notificationEvent)) {
+        // Add to notification store
+        const notificationStore = useNotificationStore.getState();
+        notificationStore.handleTripInviteEvent(notificationEvent);
+      }
+    } catch (error) {
+      logger.error('WS', 'Error handling trip invite event:', error);
     }
   }
 }

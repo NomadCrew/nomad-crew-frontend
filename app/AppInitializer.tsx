@@ -4,9 +4,10 @@ import { useFonts } from 'expo-font';
 import { useAuthStore } from '@/src/store/useAuthStore';
 import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
+import { configureNotifications } from '@/src/utils/notifications';
 
 export default function AppInitializer({ children }: { children: React.ReactNode }) {
-  const { initialize } = useAuthStore();
+  const { initialize, user, registerPushToken } = useAuthStore();
 
   const [fontsLoaded, fontError] = useFonts({
     'Inter': require('../assets/fonts/Inter/Inter-VariableFont_opsz,wght.ttf'),
@@ -47,6 +48,16 @@ export default function AppInitializer({ children }: { children: React.ReactNode
       subscription.remove();
     };
   }, []);
+
+  useEffect(() => {
+    // Configure notifications
+    configureNotifications();
+
+    // Register push token when user logs in
+    if (user) {
+      registerPushToken();
+    }
+  }, [user]);
 
   const handleDeepLink = (event: { url: string }) => {
     const { url } = event;
