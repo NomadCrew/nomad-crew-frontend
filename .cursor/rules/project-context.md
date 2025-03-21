@@ -2,6 +2,87 @@
 
 ## Latest Updates
 
+### April 9, 2024, 20:30 UTC
+- Fixed CreateTripModal autocomplete and theme integration:
+  - Replaced basic text input with proper CustomPlacesAutocomplete component
+  - Fixed the destination search functionality for location selection
+  - Enhanced modal styling to follow app's theme system
+  - Improved component responsiveness and user experience
+  - Added proper theming for all UI elements in the modal
+
+### Files Modified
+- UI Components:
+  - `components/trips/CreateTripModal.tsx` (fixed autocomplete, added theming)
+  - `components/PlacesAutocomplete.tsx` (added initialValue support)
+
+### April 4, 2024, 18:40 UTC
+- Improved UI for trip creation and notifications:
+  - Moved the create trip functionality from the top button group to a FAB (Floating Action Button)
+  - Added a dedicated notifications tab to the bottom navigation bar with badge indicator
+  - Relocated the notifications bell from the trips screen to the main tab navigation
+  - Cleaned up the trips screen header for a more focused interface
+  - Enhanced navigation consistency across the application
+
+### Files Modified/Created
+- Navigation:
+  - `app/(tabs)/_layout.tsx` (added notifications tab with badge in bottom navigation)
+  - `app/(tabs)/notifications.tsx` (created new tab screen for notifications)
+- UI Components:
+  - `app/(tabs)/trips.tsx` (replaced top button with FAB, removed NotificationBell)
+
+### March 21, 2024, 15:45 UTC
+- Fixed in-app notification system:
+  - Updated NotificationProvider to use Zustand v5.0.1's subscription API correctly
+  - Created custom hook for testing notifications (useTestNotifications)
+  - Added test controls to the Notifications screen
+  - Enhanced notification toast display logic
+  - Improved state handling for notification queue management
+
+### Files Created/Modified
+- New Components:
+  - `src/components/notifications/NotificationTestButton.tsx` (test controls)
+- New Hooks:
+  - `src/hooks/useTestNotifications.ts` (notification testing hook)
+- Modified Components:
+  - `src/components/notifications/NotificationProvider.tsx` (fixed subscription)
+  - `src/components/notifications/index.ts` (added export)
+  - `app/notifications.tsx` (added test section)
+
+### March 19, 2024, 17:30 UTC
+- Implemented in-app notification system with focus on trip invites:
+  - Created Zustand notification store for managing notifications
+  - Built UI components for displaying notifications (toast, badge, list)
+  - Added WebSocket integration for real-time notifications
+  - Created a dedicated notifications screen
+  - Added notification bell to the Trips screen
+  - Implemented accept/decline functionality for trip invites
+  - Added persistence with AsyncStorage for offline access
+
+### Files Created
+- Types:
+  - `src/types/notification.ts` (notification types and schemas)
+- Store:
+  - `src/store/useNotificationStore.ts` (notification state management)
+- Components:
+  - `src/components/notifications/NotificationBadge.tsx` (unread count badge)
+  - `src/components/notifications/NotificationBell.tsx` (notification bell icon)
+  - `src/components/notifications/NotificationItem.tsx` (individual notification)
+  - `src/components/notifications/NotificationList.tsx` (list of notifications)
+  - `src/components/notifications/NotificationToast.tsx` (toast notifications)
+  - `src/components/notifications/NotificationProvider.tsx` (provider component)
+  - `src/components/notifications/index.ts` (barrel file)
+- Screens:
+  - `app/notifications.tsx` (notifications screen)
+
+### Files Modified
+- WebSocket Management:
+  - `src/websocket/WebSocketManager.ts` (added trip invite event handling)
+- Types:
+  - `src/types/events.ts` (added TRIP_INVITE event type)
+- App Layout:
+  - `app/_layout.tsx` (added NotificationProvider)
+  - `app/(tabs)/trips.tsx` (added notification bell to header)
+
 ### March 16, 2024, 16:30 UTC
 - Implemented read receipts in chat functionality:
   - Added read receipt tracking in the chat store
@@ -179,3 +260,7 @@
 1. Set up fastlane for iOS and Android certificate management
 2. Implement Sentry for error tracking
 3. Configure app signing and versioning strategy
+
+## Updates
+
+- March 14, 2023, 16:00 UTC: Simplified CreateTripModal and PlacesAutocomplete components by removing excessive memoization, debug logging, and performance optimizations. Introduced a reusable AutocompleteRow component to modularize row rendering in PlacesAutocomplete.

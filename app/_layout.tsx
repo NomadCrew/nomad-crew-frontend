@@ -12,6 +12,7 @@ import AuthErrorBoundary from '@/components/AuthErrorBoundary';
 import { InitialLoadingScreen } from '@/components/InitialLoadingScreen';
 import { supabase } from '@/src/auth/supabaseClient';
 import { useOnboarding } from '@/src/providers/OnboardingProvider';
+import { NotificationProvider } from '@/src/components/notifications';
 import AppInitializer from './AppInitializer';
 import 'react-native-get-random-values'
 import React from 'react';
@@ -106,35 +107,44 @@ function RootLayoutNav() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <NavigationThemeProvider value={mode === 'dark' ? DarkTheme : DefaultTheme}>
-        <RouteGuard>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen 
-              name="trip/[id]" 
-              options={{ 
-                headerShown: false,
-                presentation: 'card'
-              }} 
-            />
-            <Stack.Screen 
-              name="invite/[id]" 
-              options={{ 
-                headerShown: false,
-                presentation: 'transparentModal'
-              }} 
-            />
-            <Stack.Screen 
-              name="invitation" 
-              options={{ 
-                headerShown: false,
-                presentation: 'transparentModal'
-              }} 
-            />
-          </Stack>
-        </RouteGuard>
-        <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
+        <NotificationProvider>
+          <RouteGuard>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
+              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen 
+                name="trip/[id]" 
+                options={{ 
+                  headerShown: false,
+                  presentation: 'card'
+                }} 
+              />
+              <Stack.Screen 
+                name="invite/[id]" 
+                options={{ 
+                  headerShown: false,
+                  presentation: 'transparentModal'
+                }} 
+              />
+              <Stack.Screen 
+                name="invitation" 
+                options={{ 
+                  headerShown: false,
+                  presentation: 'transparentModal'
+                }} 
+              />
+              <Stack.Screen 
+                name="notifications" 
+                options={{ 
+                  headerShown: false,
+                  presentation: 'card'
+                }} 
+              />
+            </Stack>
+          </RouteGuard>
+          <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
+        </NotificationProvider>
       </NavigationThemeProvider>
     </GestureHandlerRootView>
   );
