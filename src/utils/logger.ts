@@ -1,4 +1,4 @@
-export type LogModule = 'UI' | 'AUTH' | 'TRIP' | 'LOCATION' | 'CHAT' | 'STORE' | 'API';
+export type LogModule = 'UI' | 'AUTH' | 'TRIP' | 'LOCATION' | 'CHAT' | 'STORE' | 'API' | 'DEEPLINK' | 'INVITATION' | 'NOTIFICATION';
 
 export const logger = {
   debug: (module: LogModule, ...args: unknown[]) => {

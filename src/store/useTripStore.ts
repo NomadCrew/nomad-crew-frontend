@@ -16,6 +16,7 @@ import { mapWeatherCode } from '@/src/utils/weather';
 import { apiClient } from '@/src/api/api-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '@/src/store/useAuthStore';
+import { logger } from '@/src/utils/logger';
 
 interface TripState {
   trips: Trip[];
@@ -41,6 +42,7 @@ interface TripState {
   handleTripEvent: (event: ServerEvent) => void;
   acceptInvitation: (token: string) => Promise<void>;
   checkPendingInvitations: () => Promise<void>;
+  persistInvitation: (token: string) => Promise<void>;
 }
 
 export const useTripStore = create<TripState>((set, get) => ({
@@ -469,11 +471,32 @@ export const useTripStore = create<TripState>((set, get) => ({
 
   acceptInvitation: async (token: string) => {
     try {
-      const response = await apiClient.getAxiosInstance().post(API_PATHS.trips.acceptInvitation, {
+      logger.debug('TRIP', `Accepting invitation with token: ${token.substring(0, 15)}...`);
+      const currentUser = useAuthStore.getState().user;
+      logger.debug('TRIP', `Current user: ${currentUser ? currentUser.email : 'Not logged in'}`);
+      
+      // Refresh auth session to ensure token is valid
+      if (currentUser) {
+        logger.debug('TRIP', 'Refreshing auth session before accepting invitation');
+        await useAuthStore.getState().refreshSession();
+        
+        // Log the current auth token after refresh (first 15 chars)
+        const authToken = useAuthStore.getState().token;
+        logger.debug('TRIP', `Auth token after refresh: ${authToken ? authToken.substring(0, 15) + '...' : 'Not available'}`);
+      }
+      
+      // Create a custom instance for this call to debug the exact headers
+      const axiosInstance = apiClient.getAxiosInstance();
+      
+      // Log the request details before sending
+      logger.debug('TRIP', `Sending invitation acceptance request to: ${API_PATHS.trips.acceptInvitation}`);
+      logger.debug('TRIP', `Request payload: { token: ${token.substring(0, 15)}... }`);
+      
+      const response = await axiosInstance.post(API_PATHS.trips.acceptInvitation, {
         token
       });
       
-      const currentUser = useAuthStore.getState().user;
+      logger.debug('TRIP', `Invitation acceptance response:`, response.data);
       
       if (response.data.trip && currentUser) {
         // Make sure the user is added to the members list
@@ -496,10 +519,13 @@ export const useTripStore = create<TripState>((set, get) => ({
         set(state => ({
           trips: [...state.trips, tripWithMember]
         }));
+      } else {
+        logger.debug('TRIP', `Could not add trip: trip=${!!response.data.trip}, user=${!!currentUser}`);
       }
       await AsyncStorage.removeItem('pendingInvitation');
       return response.data;
     } catch (error) {
+      logger.error('TRIP', 'Error accepting invitation:', error);
       throw error;
     }
   },
@@ -508,6 +534,15 @@ export const useTripStore = create<TripState>((set, get) => ({
     const token = await AsyncStorage.getItem('pendingInvitation');
     if (token && useAuthStore.getState().user) {
       get().acceptInvitation(token);
+    }
+  },
+  
+  persistInvitation: async (token: string) => {
+    try {
+      logger.debug('TRIP', `Storing invitation token for later: ${token.substring(0, 15)}...`);
+      await AsyncStorage.setItem('pendingInvitation', token);
+    } catch (error) {
+      logger.error('TRIP', 'Error storing invitation:', error);
     }
   }
 }));

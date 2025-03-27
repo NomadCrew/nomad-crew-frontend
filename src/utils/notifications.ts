@@ -1,6 +1,18 @@
 import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
+import { Platform, Alert } from 'react-native';
 import { router } from 'expo-router';
+import { useAuthStore } from '@/src/store/useAuthStore';
+import { useTripStore } from '@/src/store/useTripStore';
+import { logger } from '@/src/utils/logger';
+import { jwtDecode } from 'jwt-decode';
+
+// Define token interface
+interface InvitationToken {
+  tripId?: string;
+  inviteeEmail?: string;
+  invitationId?: string;
+  exp?: number;
+}
 
 // Configure notification behavior
 Notifications.setNotificationHandler({
@@ -24,15 +36,78 @@ export function configureNotifications() {
   }
 
   // Handle notification taps
-  Notifications.addNotificationResponseReceivedListener((response) => {
+  Notifications.addNotificationResponseReceivedListener(async (response) => {
     const data = response.notification.request.content.data;
 
     if (data?.type === 'TRIP_INVITE' && data.token) {
-      // Navigate to the invitation screen
-      router.push({
-        pathname: '/invitation',
-        params: { token: data.token }
-      });
+      const token = data.token;
+      logger.debug('NOTIFICATION', `Processing invitation token: ${token.substring(0, 15)}...`);
+      
+      const { user } = useAuthStore.getState();
+      
+      // If user is logged in, process invitation directly
+      if (user) {
+        try {
+          // Verify the token is valid and matches the logged-in user
+          let isValid = true;
+          let errorMessage = '';
+          
+          try {
+            const decodedToken: InvitationToken = jwtDecode(token);
+            logger.debug('NOTIFICATION', 'Decoded token:', decodedToken);
+            
+            // Check if token is expired
+            if (decodedToken.exp && decodedToken.exp * 1000 < Date.now()) {
+              isValid = false;
+              errorMessage = 'Invitation has expired';
+            }
+            
+            // Check if the invitation is for this user
+            if (decodedToken.inviteeEmail && user.email && decodedToken.inviteeEmail !== user.email) {
+              isValid = false;
+              errorMessage = `This invitation was sent to ${decodedToken.inviteeEmail}, but you're logged in as ${user.email}`;
+            }
+          } catch (error) {
+            isValid = false;
+            errorMessage = 'Invalid invitation format';
+            logger.error('NOTIFICATION', 'Error decoding token:', error);
+          }
+          
+          if (isValid) {
+            logger.debug('NOTIFICATION', 'Processing invitation for logged-in user');
+            await useTripStore.getState().acceptInvitation(token);
+            
+            // Navigate to trips page
+            router.replace('/(tabs)/trips');
+            
+            // Show success message
+            Alert.alert(
+              'Invitation Accepted',
+              'You have been added to the trip successfully!',
+              [{ text: 'OK' }]
+            );
+          } else {
+            // Show error
+            Alert.alert(
+              'Invitation Error',
+              errorMessage,
+              [{ text: 'OK' }]
+            );
+          }
+        } catch (error) {
+          logger.error('NOTIFICATION', 'Error processing invitation:', error);
+          Alert.alert(
+            'Error',
+            'Failed to process invitation. Please try again.',
+            [{ text: 'OK' }]
+          );
+        }
+      } else {
+        // Not logged in, store the token and redirect to login
+        const { persistInvitation } = useTripStore.getState();
+        await persistInvitation(token);
+        router.replace('/(auth)/login');
+      }
     }
   });
 
