@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, Dimensions, Platform, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, InteractionManager, Platform, Pressable, ActivityIndicator } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useLocationStore } from '@/src/store/useLocationStore';
@@ -39,8 +39,8 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
   const [region, setRegion] = useState<Region>({
     latitude: trip.destination.coordinates?.lat || DEFAULT_COORDINATES.latitude,
     longitude: trip.destination.coordinates?.lng || DEFAULT_COORDINATES.longitude,
-    latitudeDelta: DEFAULT_COORDINATES.latitudeDelta,
-    longitudeDelta: DEFAULT_COORDINATES.longitudeDelta,
+    latitudeDelta: 0.05,
+    longitudeDelta: 0.05,
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -89,6 +89,20 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
     }
   }, [currentLocation, isLocationSharingEnabled]);
 
+  // Ensure we have valid coordinates initially
+  useEffect(() => {
+    if (trip.destination.coordinates?.lat && trip.destination.coordinates?.lng) {
+      setRegion({
+        latitude: trip.destination.coordinates.lat,
+        longitude: trip.destination.coordinates.lng,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      });
+      console.log('[MapDebug] Map ready called, coordinates:', JSON.stringify(trip.destination.coordinates));
+
+    }
+  }, [trip.id]);
+
   const fitToMarkers = () => {
     const markers = [];
 
@@ -122,12 +136,25 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
   };
 
   const handleMapReady = () => {
+    console.log('[MapDebug] Map ready called, coordinates:', JSON.stringify(trip.destination.coordinates));
     setMapLoaded(true);
     setIsLoading(false);
-    setTimeout(() => fitToMarkers(), 500);
+  
+    if (mapRef.current && trip.destination.coordinates) {
+      InteractionManager.runAfterInteractions(() => {
+        console.log('[MapDebug] Animating to region');
+        mapRef.current?.animateToRegion({
+          latitude: trip.destination.coordinates.lat,
+          longitude: trip.destination.coordinates.lng,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        }, 1000);
+      });
+    }
   };
 
   const handleMapError = () => {
+    console.error('[MapDebug] Map error occurred');
     setMapError('Error loading the map.');
     setMapLoadAttempts(prev => prev + 1);
   };
@@ -139,7 +166,6 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
       style={styles(theme).map}
       provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
       initialRegion={region}
-      region={region}
       onMapReady={handleMapReady}
       loadingEnabled
       showsUserLocation={isLocationSharingEnabled}
@@ -148,14 +174,13 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
       showsScale
       minZoomLevel={10}
       maxZoomLevel={20}
-      onLayout={() => {
-        if (!mapLoaded) {
-          setTimeout(() => {
-            if (!mapLoaded) handleMapError();
-          }, Platform.OS === 'android' ? 10000 : 5000);
-        }
-      }}
+      scrollEnabled
+      zoomEnabled
+      rotateEnabled
+      pitchEnabled
     >
+
+
       {memberLocationArray.map((m) => m.userId !== user?.id && (
         <Marker
           key={m.userId}
@@ -245,8 +270,23 @@ const styles = (theme: any) => StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', padding: 16 },
   title: { fontSize: 18, fontWeight: 'bold' },
   closeButtonText: { color: theme.colors.primary.main },
-  mapContainer: { flex: 1, minHeight: 300 },
-  map: { width: '100%', height: '100%' },
+  mapContainer: { 
+    flex: 1, 
+    minHeight: 300, 
+    zIndex: 1, 
+    position: 'relative',
+    overflow: 'hidden',
+    pointerEvents: 'box-none',
+  },
+  map: { 
+    width: '100%', 
+    height: '100%',
+    ...Platform.select({
+      ios: {
+        zIndex: 5,
+      }
+    })
+  },
   warningContainer: { flexDirection: 'row', alignItems: 'center', padding: 12 },
   warningText: { marginLeft: 8 },
   errorContainer: { flexDirection: 'row', alignItems: 'center', padding: 12 },
