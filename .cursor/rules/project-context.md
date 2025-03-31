@@ -264,3 +264,58 @@
 ## Updates
 
 - March 14, 2023, 16:00 UTC: Simplified CreateTripModal and PlacesAutocomplete components by removing excessive memoization, debug logging, and performance optimizations. Introduced a reusable AutocompleteRow component to modularize row rendering in PlacesAutocomplete.
+
+## March 18, 2025, 15:30 UTC
+- Added map troubleshooting guide for Android
+- Fixed map rendering issue on Android physical devices
+
+## Map Configuration Guide
+
+### Android Google Maps API Key Setup
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Select your project
+3. Navigate to APIs & Services > Credentials
+4. Find your Android Maps API key
+5. Click Edit
+6. Add the SHA-1 certificate fingerprints:
+   - For debug builds: Get your debug SHA-1 with:
+     ```
+     cd android && ./gradlew signingReport
+     ```
+   - For production builds: Add the signing key SHA-1 fingerprint
+
+7. Make sure your API key has these APIs enabled:
+   - Maps SDK for Android
+   - Places API
+   - Geocoding API
+
+### Common Issues
+- **Blank map on Android**: Usually caused by missing SHA-1 certificate in API key restrictions
+- **Map loads on iOS but not Android**: Different configuration requirements between platforms
+- **Map crashes on Android**: Check logcat for specific error messages
+
+### Configuration Best Practices
+- Use separate API keys for iOS and Android
+- Restrict API keys by app package name and SHA-1 fingerprint
+- For production, create separate keys for debug and release builds
+
+## June 10, 2025, 15:45 UTC - Implemented Comprehensive Notification System
+
+Enhanced the app's notification system to support all backend event types:
+
+- Extended `notification.ts` with interfaces for all notification types:
+  - Trip invites, updates and status changes
+  - Todo creation, updates, and completion
+  - Member addition, removal, and role changes
+  - Weather updates and alerts
+  - Chat messages and reactions
+  - Location updates
+
+- Updated `useNotificationStore` with handlers for all event types
+- Improved the `WebSocketManager` to route all events to the notification store
+- Enhanced notification UI components to display type-specific content:
+  - Added custom icons and content for each notification type
+  - Implemented appropriate navigation based on notification type
+  - Added user-friendly formatting and styling
+
+This implementation provides a complete real-time notification system that integrates with the backend's WebSocket-based event infrastructure, delivering a seamless user experience for all collaborative app features.
