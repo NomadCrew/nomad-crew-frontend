@@ -4,12 +4,27 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   Notification,
   TripInviteNotification,
+  TripUpdateNotification,
+  TodoNotification,
+  MemberNotification,
+  WeatherNotification,
+  ChatNotification,
+  LocationNotification,
   GenericNotification,
   NotificationType,
   TripInviteEvent,
   isTripInviteNotification
 } from '../types/notification';
-import { ServerEvent, isTripInviteEvent } from '../types/events';
+import { 
+  ServerEvent, 
+  isTripInviteEvent,
+  isTripEvent,
+  isTodoEvent,
+  isMemberEvent,
+  isWeatherEvent,
+  isChatEvent,
+  isLocationEvent
+} from '../types/events';
 import { api } from '../api/api-client';
 import { logger } from '../utils/logger';
 
@@ -36,8 +51,15 @@ interface NotificationState {
   // Data fetching
   fetchNotifications: () => Promise<void>;
   
-  // WebSocket handling
+  // WebSocket event handling
   handleTripInviteEvent: (event: TripInviteEvent) => void;
+  handleServerEvent: (event: ServerEvent) => void;
+  handleTripEvent: (event: ServerEvent) => void;
+  handleTodoEvent: (event: ServerEvent) => void;
+  handleMemberEvent: (event: ServerEvent) => void;
+  handleWeatherEvent: (event: ServerEvent) => void;
+  handleChatEvent: (event: ServerEvent) => void;
+  handleLocationEvent: (event: ServerEvent) => void;
   
   // Internal helpers
   getNotificationById: (id: string) => Notification | undefined;
@@ -55,7 +77,19 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   // Add a new notification
   addNotification: (notification: Notification) => {
     set(state => {
-      const notifications = [notification, ...state.notifications];
+      // Check if we already have this notification (prevent duplicates)
+      const existingIndex = state.notifications.findIndex(n => n.id === notification.id);
+      
+      let notifications: Notification[];
+      if (existingIndex !== -1) {
+        // Update existing notification
+        notifications = [...state.notifications];
+        notifications[existingIndex] = notification;
+      } else {
+        // Add new notification to the beginning of the array
+        notifications = [notification, ...state.notifications];
+      }
+      
       const unreadCount = notifications.filter(n => !n.isRead).length;
       
       // Persist notifications to storage
@@ -276,6 +310,27 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     }
   },
   
+  // Main handler for server events - routes to specific handlers
+  handleServerEvent: (event: ServerEvent) => {
+    logger.debug('NOTIFICATION', `Handling server event of type: ${event.type}`);
+    
+    if (isTripInviteEvent(event)) {
+      get().handleTripInviteEvent(event as any);
+    } else if (isTripEvent(event)) {
+      get().handleTripEvent(event);
+    } else if (isTodoEvent(event)) {
+      get().handleTodoEvent(event);
+    } else if (isMemberEvent(event)) {
+      get().handleMemberEvent(event);
+    } else if (isWeatherEvent(event)) {
+      get().handleWeatherEvent(event);
+    } else if (isChatEvent(event)) {
+      get().handleChatEvent(event);
+    } else if (isLocationEvent(event)) {
+      get().handleLocationEvent(event);
+    }
+  },
+  
   // Handle WebSocket trip invite event
   handleTripInviteEvent: (event: TripInviteEvent) => {
     const { inviteId, tripId, inviterName, message, timestamp, status } = event.data;
@@ -295,6 +350,316 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     
     // Add to store
     get().addNotification(notification);
+  },
+  
+  // Handle trip events
+  handleTripEvent: (event: ServerEvent) => {
+    if (!event.payload) return;
+    
+    const payload = event.payload as any;
+    const tripId = event.tripId;
+    const userId = event.userId || 'system';
+    
+    // Skip self-triggered events to reduce noise
+    const currentUserId = require('../store/useAuthStore').useAuthStore.getState().user?.id;
+    if (userId === currentUserId) return;
+    
+    let notification: TripUpdateNotification;
+    
+    switch (event.type) {
+      case 'TRIP_UPDATED':
+        notification = {
+          id: event.id,
+          type: 'TRIP_UPDATE',
+          tripId,
+          tripName: payload.name || 'Trip',
+          updaterName: payload.updaterName || 'Someone',
+          updateType: 'details',
+          timestamp: event.timestamp,
+          isRead: false,
+          data: {
+            oldValue: payload.oldValue,
+            newValue: payload.newValue
+          }
+        };
+        break;
+      
+      case 'TRIP_STARTED':
+      case 'TRIP_ENDED':
+      case 'TRIP_STATUS_UPDATED':
+        notification = {
+          id: event.id,
+          type: 'TRIP_STATUS',
+          tripId,
+          tripName: payload.name || 'Trip',
+          updaterName: payload.updaterName || 'Someone',
+          updateType: 'status',
+          timestamp: event.timestamp,
+          isRead: false,
+          data: {
+            statusChange: {
+              from: payload.oldStatus || 'unknown',
+              to: payload.status || 'unknown'
+            }
+          }
+        };
+        break;
+      
+      default:
+        return; // Unknown trip event type
+    }
+    
+    get().addNotification(notification);
+  },
+  
+  // Handle todo events
+  handleTodoEvent: (event: ServerEvent) => {
+    if (!event.payload) return;
+    
+    const payload = event.payload as any;
+    const tripId = event.tripId;
+    
+    // Skip self-triggered events to reduce noise
+    const currentUserId = require('../store/useAuthStore').useAuthStore.getState().user?.id;
+    if (payload.createdBy === currentUserId) return;
+    
+    let notification: TodoNotification;
+    
+    switch (event.type) {
+      case 'TODO_CREATED':
+        notification = {
+          id: event.id,
+          type: 'TODO_CREATED',
+          tripId,
+          todoId: payload.id,
+          todoText: payload.text,
+          creatorName: payload.creatorName || 'Someone',
+          timestamp: event.timestamp,
+          isRead: false,
+          data: {
+            assignedToName: payload.assignedToName
+          }
+        };
+        break;
+      
+      case 'TODO_UPDATED':
+        notification = {
+          id: event.id,
+          type: 'TODO_UPDATED',
+          tripId,
+          todoId: payload.id,
+          todoText: payload.text,
+          creatorName: payload.updaterName || 'Someone',
+          timestamp: event.timestamp,
+          isRead: false
+        };
+        break;
+      
+      case 'TODO_COMPLETED':
+        notification = {
+          id: event.id,
+          type: 'TODO_COMPLETED',
+          tripId,
+          todoId: payload.id,
+          todoText: payload.text,
+          creatorName: payload.updaterName || 'Someone',
+          timestamp: event.timestamp,
+          isRead: false,
+          data: {
+            completedByName: payload.completedByName || 'Someone'
+          }
+        };
+        break;
+      
+      default:
+        return; // Unknown todo event type
+    }
+    
+    get().addNotification(notification);
+  },
+  
+  // Handle member events
+  handleMemberEvent: (event: ServerEvent) => {
+    if (!event.payload) return;
+    
+    const payload = event.payload as any;
+    const tripId = event.tripId;
+    
+    // Skip self-triggered events to reduce noise
+    const currentUserId = require('../store/useAuthStore').useAuthStore.getState().user?.id;
+    if (payload.actorId === currentUserId) return;
+    
+    let notification: MemberNotification;
+    
+    switch (event.type) {
+      case 'MEMBER_ADDED':
+        notification = {
+          id: event.id,
+          type: 'MEMBER_ADDED',
+          tripId,
+          tripName: payload.tripName || 'Trip',
+          memberName: payload.memberName || 'Someone',
+          timestamp: event.timestamp,
+          isRead: false,
+          data: {
+            role: payload.role,
+            actorName: payload.actorName
+          }
+        };
+        break;
+      
+      case 'MEMBER_REMOVED':
+        notification = {
+          id: event.id,
+          type: 'MEMBER_REMOVED',
+          tripId,
+          tripName: payload.tripName || 'Trip',
+          memberName: payload.memberName || 'Someone',
+          timestamp: event.timestamp,
+          isRead: false,
+          data: {
+            actorName: payload.actorName
+          }
+        };
+        break;
+      
+      case 'MEMBER_ROLE_UPDATED':
+        notification = {
+          id: event.id,
+          type: 'MEMBER_ROLE_UPDATED',
+          tripId,
+          tripName: payload.tripName || 'Trip',
+          memberName: payload.memberName || 'Someone',
+          timestamp: event.timestamp,
+          isRead: false,
+          data: {
+            role: payload.role,
+            previousRole: payload.previousRole,
+            actorName: payload.actorName
+          }
+        };
+        break;
+      
+      default:
+        return; // Unknown member event type
+    }
+    
+    get().addNotification(notification);
+  },
+  
+  // Handle weather events
+  handleWeatherEvent: (event: ServerEvent) => {
+    if (!event.payload) return;
+    
+    const payload = event.payload as any;
+    const tripId = event.tripId;
+    
+    let notification: WeatherNotification;
+    
+    switch (event.type) {
+      case 'WEATHER_UPDATED':
+        // Only notify of significant weather changes
+        if (!payload.significant) return;
+        
+        notification = {
+          id: event.id,
+          type: 'WEATHER_UPDATED',
+          tripId,
+          tripLocation: payload.location || 'your destination',
+          timestamp: event.timestamp,
+          isRead: false,
+          data: {
+            weatherCode: payload.weather_code,
+            temperature: payload.temperature_2m
+          }
+        };
+        break;
+      
+      case 'WEATHER_ALERT':
+        notification = {
+          id: event.id,
+          type: 'WEATHER_ALERT',
+          tripId,
+          tripLocation: payload.location || 'your destination',
+          timestamp: event.timestamp,
+          isRead: false,
+          data: {
+            alertType: payload.alert_type,
+            alertSeverity: payload.severity || 'warning',
+            alertMessage: payload.message
+          }
+        };
+        break;
+      
+      default:
+        return; // Unknown weather event type
+    }
+    
+    get().addNotification(notification);
+  },
+  
+  // Handle chat events
+  handleChatEvent: (event: ServerEvent) => {
+    if (!event.payload) return;
+    
+    const payload = event.payload as any;
+    const tripId = event.tripId;
+    
+    // Skip self-triggered events to reduce noise
+    const currentUserId = require('../store/useAuthStore').useAuthStore.getState().user?.id;
+    if (payload.user?.id === currentUserId) return;
+    
+    // Only notify for new messages, not other chat events
+    if (event.type === 'CHAT_MESSAGE_SENT') {
+      const notification: ChatNotification = {
+        id: event.id,
+        type: 'CHAT_MESSAGE',
+        tripId,
+        chatId: payload.groupId || tripId,
+        senderName: payload.user?.name || 'Someone',
+        timestamp: event.timestamp,
+        isRead: false,
+        data: {
+          messageId: payload.messageId,
+          messagePreview: payload.content?.substring(0, 50) + (payload.content?.length > 50 ? '...' : '')
+        }
+      };
+      
+      get().addNotification(notification);
+    }
+  },
+  
+  // Handle location events
+  handleLocationEvent: (event: ServerEvent) => {
+    if (!event.payload) return;
+    
+    const payload = event.payload as any;
+    const tripId = event.tripId;
+    
+    // Skip self-triggered events
+    const currentUserId = require('../store/useAuthStore').useAuthStore.getState().user?.id;
+    if (payload.userId === currentUserId) return;
+    
+    // Only notify for important location updates (can be customized)
+    if (event.type === 'LOCATION_UPDATED' && payload.isSignificant) {
+      const notification: LocationNotification = {
+        id: event.id,
+        type: 'LOCATION_UPDATED',
+        tripId,
+        memberName: payload.name || 'Someone',
+        timestamp: event.timestamp,
+        isRead: false,
+        data: {
+          location: {
+            latitude: payload.location.latitude,
+            longitude: payload.location.longitude
+          },
+          locationName: payload.locationName
+        }
+      };
+      
+      get().addNotification(notification);
+    }
   },
   
   // Get a notification by ID
