@@ -28,7 +28,11 @@ export const ServerEventType = z.enum([
   'CHAT_REACTION_ADDED',
   'CHAT_REACTION_REMOVED',
   'CHAT_READ_RECEIPT',
-  'CHAT_TYPING_STATUS'
+  'CHAT_TYPING_STATUS',
+  // Additional event types used in code
+  'MESSAGE_SENT',
+  'TYPING_STATUS',
+  'MESSAGE_READ'
 ]);
 
 export type ServerEventType = z.infer<typeof ServerEventType>;

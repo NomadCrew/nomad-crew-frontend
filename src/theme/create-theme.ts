@@ -30,11 +30,6 @@ export function createTheme(options: ThemeOptions = {}): Theme {
   return {
     colors: {
       ...semanticColors,
-      error: {
-        background: '#FEF2F2',
-        content: '#DC2626',
-        border: '#FCA5A5',
-      },
     },
     typography,
     spacing: {
@@ -43,6 +38,13 @@ export function createTheme(options: ThemeOptions = {}): Theme {
     },
     elevation,
     breakpoints,
+    borderRadius: {
+      xs: customBorderRadius?.xs ?? 2,
+      sm: customBorderRadius?.sm ?? 4,
+      md: customBorderRadius?.md ?? 8,
+      lg: customBorderRadius?.lg ?? 12,
+      xl: customBorderRadius?.xl ?? 16,
+    },
     components: {
       Button: {
         base: {

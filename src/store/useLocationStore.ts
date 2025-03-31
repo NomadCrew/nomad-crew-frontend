@@ -56,6 +56,9 @@ interface LocationState {
   // Trip member locations
   memberLocations: Record<string, Record<string, MemberLocation>>;
   
+  // Location tracking subscription
+  locationSubscription: Location.LocationSubscription | null;
+  
   // Actions
   startLocationTracking: (tripId: string) => Promise<void>;
   stopLocationTracking: () => void;
@@ -168,7 +171,7 @@ export const useLocationStore = create<LocationState>((set, get) => ({
   
   stopLocationTracking: () => {
     logger.debug('Stopping location tracking');
-    const { locationSubscription } = get() as any;
+    const { locationSubscription } = get();
     if (locationSubscription) {
       locationSubscription.remove();
     }

@@ -452,10 +452,28 @@ export class WebSocketManager {
     if (this.connection) {
       this.connection.disconnect();
       this.connection = null;
+      this.currentTripId = null;
     }
 
-    this.currentTripId = null;
     this.reconnectAttempts = 0;
+  }
+
+  /**
+   * Pause all WebSocket connections when app goes to background
+   */
+  public pauseAllConnections(): void {
+    if (this.connection) {
+      this.connection.disconnect();
+    }
+  }
+
+  /**
+   * Resume all WebSocket connections when app comes to foreground
+   */
+  public resumeAllConnections(): void {
+    if (this.currentTripId) {
+      this.connect(this.currentTripId);
+    }
   }
 
   public send(type: string, payload: any): boolean {

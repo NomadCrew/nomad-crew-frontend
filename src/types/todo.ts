@@ -1,5 +1,3 @@
-import { BaseEvent } from './events';
-
 export type TodoStatus = 'COMPLETE' | 'INCOMPLETE';
 
 export interface Todo {
