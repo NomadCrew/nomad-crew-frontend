@@ -180,7 +180,6 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
       pitchEnabled
     >
 
-
       {memberLocationArray.map((m) => m.userId !== user?.id && (
         <Marker
           key={m.userId}

@@ -13,6 +13,7 @@ export const API_PATHS = {
     logout: createApiPath('auth/logout'),
     refresh: createApiPath('auth/refresh'),
     validate: createApiPath('auth/validate'),
+    register: createApiPath('auth/register'),
   },
   users: {
     create: createApiPath('users'),
@@ -43,4 +44,8 @@ export const API_PATHS = {
     byTrip: (tripId: string) => createApiPath(`trips/${tripId}/locations`),
     preferences: createApiPath('location/preferences'),
   },
+  // Add chat endpoints
+  CHAT: {
+    UPDATE_LAST_READ: (tripId: string) => createApiPath(`trips/${tripId}/messages/read`),
+  }
 } as const;
