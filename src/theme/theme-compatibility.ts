@@ -36,6 +36,7 @@ export const BORDER_RADIUS = {
 export function extendTheme(theme: Theme): Theme & {
   typography: Theme['typography'] & { size: typeof TYPOGRAPHY_SIZES };
   borderRadius: typeof BORDER_RADIUS;
+  dark: boolean;
 } {
   return {
     ...theme,
@@ -46,6 +47,8 @@ export function extendTheme(theme: Theme): Theme & {
     },
     // Add borderRadius property for consistent access
     borderRadius: BORDER_RADIUS,
+    // Add dark property
+    dark: theme.dark ?? false,
   };
 }
 

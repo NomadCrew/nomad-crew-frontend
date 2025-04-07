@@ -1,25 +1,34 @@
 import React from 'react';
 import { Pressable, Text, StyleSheet } from 'react-native';
-import { useTheme } from 'react-native-paper';
+import { useTheme } from '@/src/theme/ThemeProvider';
+
+interface GooglePlacePrediction {
+  description: string;
+  place_id: string;
+  structured_formatting: {
+    main_text: string;
+    secondary_text?: string;
+  };
+}
 
 interface AutocompleteRowProps {
-  data: any;
+  data: GooglePlacePrediction;
 }
 
 export function AutocompleteRow({ data }: AutocompleteRowProps) {
-  const theme = useTheme();
+  const { theme } = useTheme();
   return (
     <Pressable
       style={({ pressed }) => [
         styles.row,
-        { backgroundColor: pressed ? theme.colors.surfaceVariant : theme.colors.surface }
+        { backgroundColor: pressed ? theme.colors.surface.variant : theme.colors.surface.default }
       ]}
     >
       <Text style={styles.mainText}>
         {data.structured_formatting.main_text}
       </Text>
       {data.structured_formatting.secondary_text && (
-        <Text style={[styles.secondaryText, { color: theme.colors.outline }]}>
+        <Text style={[styles.secondaryText, { color: theme.colors.content.secondary }]}>
           {data.structured_formatting.secondary_text}
         </Text>
       )}

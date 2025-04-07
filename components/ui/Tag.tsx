@@ -91,9 +91,9 @@ export function Tag({
     
     return {
       tag: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        justifyContent: 'center' as const,
         height: sizeMap[size].height,
         paddingHorizontal: sizeMap[size].paddingHorizontal,
         borderRadius: theme?.borderRadius?.sm || 4,
@@ -102,7 +102,7 @@ export function Tag({
       label: {
         fontSize: sizeMap[size].fontSize,
         color: colors[variant].text,
-        fontWeight: '500',
+        fontWeight: '500' as const,
       },
       startIcon: {
         marginRight: 4,

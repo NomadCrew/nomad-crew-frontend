@@ -14,6 +14,17 @@ interface InvitationToken {
   exp?: number;
 }
 
+// Define a type for notification data
+export interface NotificationData {
+  type?: string;
+  tripId?: string;
+  messageId?: string;
+  invitationId?: string;
+  senderId?: string;
+  url?: string;
+  [key: string]: unknown;
+}
+
 // Configure notification behavior
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -119,7 +130,7 @@ export function configureNotifications() {
 }
 
 // Helper function to show a local notification (useful for testing)
-export async function showLocalNotification(title: string, body: string, data?: any) {
+export async function showLocalNotification(title: string, body: string, data?: NotificationData) {
   await Notifications.scheduleNotificationAsync({
     content: {
       title,

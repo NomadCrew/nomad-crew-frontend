@@ -5,7 +5,9 @@ import {
   InteractionManager,
   ViewStyle,
   StyleSheet,
-  Platform
+  Platform,
+  NativeSyntheticEvent,
+  TextInputFocusEventData
 } from 'react-native';
 
 /**
@@ -43,14 +45,14 @@ export const OptimizedTextInput = memo(({
     }
   }, [onChangeText]);
   
-  const handleFocus = useCallback((e) => {
+  const handleFocus = useCallback((e: NativeSyntheticEvent<TextInputFocusEventData>) => {
     setIsFocused(true);
     if (onFocus) {
       onFocus(e);
     }
   }, [onFocus]);
   
-  const handleBlur = useCallback((e) => {
+  const handleBlur = useCallback((e: NativeSyntheticEvent<TextInputFocusEventData>) => {
     setIsFocused(false);
     if (onBlur) {
       onBlur(e);
@@ -113,8 +115,8 @@ export function useInputPerformance(options = {}) {
     containerStyle: performantInputStyles.container,
     inputStyle: performantInputStyles.input,
     // Callback optimization helper
-    optimizeCallback: (callback) => {
-      return useCallback((...args) => {
+    optimizeCallback: (callback: (...args: any[]) => void) => {
+      return useCallback((...args: any[]) => {
         if (callback) {
           callback(...args);
         }

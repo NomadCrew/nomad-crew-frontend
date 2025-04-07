@@ -30,7 +30,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   
   // Create the base theme and then extend it with our compatibility layer
   const baseTheme = React.useMemo(() => createTheme({ isDark }), [isDark]);
-  const theme = React.useMemo(() => extendTheme(baseTheme), [baseTheme]);
+  const theme = React.useMemo(() => {
+    const extendedTheme = extendTheme(baseTheme);
+    // Add dark property directly to the theme
+    return {
+      ...extendedTheme,
+      dark: isDark
+    };
+  }, [baseTheme, isDark]);
   
   const toggleColorScheme = React.useCallback(() => {
     setMode(prev => prev === 'dark' ? 'light' : 'dark');

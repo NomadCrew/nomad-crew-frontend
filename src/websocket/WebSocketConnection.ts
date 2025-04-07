@@ -248,7 +248,7 @@ export class WebSocketConnection {
    * @param data The data to send
    * @returns True if the message was sent, false otherwise
    */
-  public send(data: any): boolean {
+  public send(data: Record<string, unknown> | string): boolean {
     logger.debug('WS', 'WebSocketConnection.send called');
     
     if (!this.ws) {

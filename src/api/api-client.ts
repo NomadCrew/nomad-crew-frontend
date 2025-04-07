@@ -8,10 +8,10 @@ import { isTokenExpiringSoon } from '@/src/utils/token';
 
 // Token refresh lock mechanism
 let isRefreshing = false;
-let refreshQueue: {
+let refreshQueue: Array<{
   resolve: (value: unknown) => void;
-  reject: (reason?: any) => void;
-}[] = [];
+  reject: (reason?: Error | unknown) => void;
+}> = [];
 
 // Auth state access functions - to be set by the auth store
 type AuthState = {
@@ -37,7 +37,7 @@ export const registerAuthHandlers = (handlers: AuthState) => {
 };
 
 // Process the queue with new token or error
-const processQueue = (error: Error | null, token: string | null = null) => {
+const processQueue = (error: Error | null, token: string | null = null): void => {
   refreshQueue.forEach((promise) => {
     if (error) {
       promise.reject(error);

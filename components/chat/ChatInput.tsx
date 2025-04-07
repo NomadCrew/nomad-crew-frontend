@@ -11,7 +11,7 @@ interface ChatInputProps {
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({ tripId }) => {
-  logger.debug('Chat Input', `Rendering ChatInput for trip ${tripId}`);
+  logger.debug('CHAT', `Rendering ChatInput for trip ${tripId}`);
   
   const { theme } = useTheme();
   const { sendMessage, setTypingStatus, isSending } = useChatStore();
@@ -22,10 +22,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({ tripId }) => {
   
   // Log when the component mounts and unmounts
   useEffect(() => {
-    logger.debug('Chat Input', `ChatInput mounted for trip ${tripId}`);
+    logger.debug('CHAT', `ChatInput mounted for trip ${tripId}`);
     
     return () => {
-      logger.debug('Chat Input', `ChatInput unmounted for trip ${tripId}`);
+      logger.debug('CHAT', `ChatInput unmounted for trip ${tripId}`);
       // Clear any typing timeout when unmounting
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
@@ -38,7 +38,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ tripId }) => {
   // Log when sending state changes
   useEffect(() => {
     if (isSending) {
-      logger.debug('Chat Input', 'Message sending in progress');
+      logger.debug('CHAT', 'Message sending in progress');
     }
   }, [isSending]);
   
@@ -103,7 +103,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ tripId }) => {
       
       // Update typing status in the store
       setTypingStatus(tripId, newIsTyping);
-      logger.debug('Chat Input', `User typing status changed to: ${newIsTyping ? 'typing' : 'not typing'}`);
+      logger.debug('CHAT', `User typing status changed to: ${newIsTyping ? 'typing' : 'not typing'}`);
       
       // Clear existing timeout
       if (typingTimeoutRef.current) {
@@ -115,7 +115,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ tripId }) => {
         typingTimeoutRef.current = setTimeout(() => {
           setIsTyping(false);
           setTypingStatus(tripId, false);
-          logger.debug('Chat Input', 'User typing status reset due to inactivity');
+          logger.debug('CHAT', 'User typing status reset due to inactivity');
         }, 5000);
       }
     }
@@ -129,10 +129,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({ tripId }) => {
 
   // Handle send
   const handleSend = useCallback(async () => {
-    logger.info('Chat Input', 'Send button pressed');
+    logger.info('CHAT', 'Send button pressed');
     
     if (message.trim() === '' || isSending) {
-      logger.debug('Chat Input', 'Send prevented: message empty or already sending');
+      logger.debug('CHAT', 'Send prevented: message empty or already sending');
       return;
     }
     
@@ -140,9 +140,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({ tripId }) => {
     
     // Only log and send if tripId is defined
     if (tripId) {
-      logger.info('Chat Input', `Sending message in trip ${tripId}: "${trimmedMessage.substring(0, 20)}${trimmedMessage.length > 20 ? '...' : ''}"`);
+      logger.info('CHAT', `Sending message in trip ${tripId}: "${trimmedMessage.substring(0, 20)}${trimmedMessage.length > 20 ? '...' : ''}"`);
     } else {
-      logger.warn('Chat Input', 'Attempted to send message but tripId is undefined');
+      logger.warn('CHAT', 'Attempted to send message but tripId is undefined');
       return;
     }
     
@@ -156,9 +156,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({ tripId }) => {
     try {
       // Send message directly using the chat store
       await sendMessage({ tripId, content: trimmedMessage });
-      logger.debug('Chat Input', 'Message sent successfully');
+      logger.debug('CHAT', 'Message sent successfully');
     } catch (error) {
-      logger.error('Chat Input', 'Error sending message:', error);
+      logger.error('CHAT', 'Error sending message:', error);
     }
   }, [message, isSending, tripId, sendMessage, setTypingStatus]);
 

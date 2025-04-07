@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Platform, useWindowDimensions, Image } from 'react-native';
+import { StyleSheet, View, Platform, useWindowDimensions, Image, TextStyle } from 'react-native';
 import Onboarding from 'react-native-onboarding-swiper';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import type { OnboardingSlide } from '@/src/types/onboarding';
+
+// Add declaration for the module
+declare module 'react-native-onboarding-swiper' {}
 
 interface Props {
   slides: OnboardingSlide[];
@@ -13,23 +16,23 @@ interface Props {
 
 export function OnboardingCarousel({ slides, onComplete }: Props) {
   const [_currentIndex, _setCurrentIndex] = useState(0);
-  const { _theme } = useTheme();
+  const { theme } = useTheme();
   const { width: _screenWidth } = useWindowDimensions();
 
   // Components for the onboarding pages
-  const Title = ({ title, titleStyles }: { title: string; titleStyles?: any }) => (
+  const Title = ({ title, titleStyles }: { title: string; titleStyles?: TextStyle }) => (
     <ThemedText 
       style={[styles.title, titleStyles]}
-      variant="heading.h1.fontSize"
+      variant="heading.h1"
     >
       {title}
     </ThemedText>
   );
 
-  const Subtitle = ({ subtitle, subtitleStyles }: { subtitle: string; subtitleStyles?: any }) => (
+  const Subtitle = ({ subtitle, subtitleStyles }: { subtitle: string; subtitleStyles?: TextStyle }) => (
     <ThemedText 
       style={[styles.subtitle, subtitleStyles]}
-      variant="body.large.fontSize"
+      variant="body.large"
     >
       {subtitle}
     </ThemedText>
@@ -76,7 +79,11 @@ const styles = StyleSheet.create({
   imageContainer: {
     paddingBottom: 20,
   },
-
+  image: {
+    width: 280,
+    height: 280,
+    alignSelf: 'center',
+  },
   title: {
     fontSize: 32,
     fontWeight: '700',

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { ChatState, ChatMessageWithStatus, ChatUser, PaginationInfo, ReadReceipt } from '@/src/types/chat';
+import { ChatState, ChatMessageWithStatus, ChatUser, PaginationInfo, ReadReceipt, ChatMessage } from '@/src/types/chat';
 import { chatService } from '@/src/services/chatService';
 import { useAuthStore } from './useAuthStore';
 import { logger } from '@/src/utils/logger';

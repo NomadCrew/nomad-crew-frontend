@@ -11,6 +11,7 @@ import { logger } from '@/src/utils/logger';
 import { api } from '@/src/api/api-client';
 import { API_PATHS } from '@/src/utils/api-paths';
 import { Trip } from '@/src/types/trip';
+import { Theme } from '@/src/theme/types';
 
 export default function LocationScreen() {
   const { id } = useLocalSearchParams();
@@ -103,7 +104,7 @@ export default function LocationScreen() {
   );
 }
 
-const styles = (theme: any) => StyleSheet.create({
+const styles = (theme: Theme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background.default,

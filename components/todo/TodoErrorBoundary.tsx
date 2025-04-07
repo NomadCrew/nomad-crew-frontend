@@ -1,5 +1,5 @@
 import React from 'react';
-import { _View, StyleSheet, _TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Surface, Text, Button } from 'react-native-paper';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { Theme } from '@/src/theme/types';
@@ -27,7 +27,7 @@ export class TodoErrorBoundary extends React.Component<Props, State> {
 
   componentDidCatch(error: Error, _errorInfo: React.ErrorInfo) {
     // Log to error reporting service
-    logger.error('TODO', 'Todo component error:', error);
+    logger.error('todo', 'Todo component error:', error);
   }
 
   handleRetry = () => {

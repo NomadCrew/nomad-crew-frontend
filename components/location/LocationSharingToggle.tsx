@@ -3,14 +3,14 @@ import { View, StyleSheet, Text, Switch, Pressable, Alert } from 'react-native';
 import { Surface } from 'react-native-paper';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useLocationStore } from '@/src/store/useLocationStore';
-import { _Theme } from '@/src/theme/types';
-import { MapPin, Info, _AlertCircle } from 'lucide-react-native';
+import { Theme } from '@/src/theme/types';
+import { MapPin, Info, AlertCircle } from 'lucide-react-native';
 import * as Location from 'expo-location';
 import * as Linking from 'expo-linking';
 import { logger } from '@/src/utils/logger';
 
 // Default fallback colors
-const DEFAULT_COLORS = {
+const DEFAULT_COLORS: Record<string, string> = {
   primary: '#F46315',
   primaryLight: '#FFB088',
   secondary: '#6B7280',
@@ -25,7 +25,7 @@ const DEFAULT_COLORS = {
 };
 
 // Helper functions for safely getting theme colors with fallbacks
-const getSafeColor = (themeColor: any, fallback: string): string => {
+const getSafeColor = (themeColor: string | undefined, fallback: string): string => {
   return themeColor || fallback;
 };
 
@@ -40,12 +40,12 @@ export const LocationSharingToggle: React.FC = () => {
   useEffect(() => {
     const checkPermissions = async () => {
       try {
-        logger.debug('Checking location permissions');
+        logger.debug('LOCATION', 'Checking location permissions');
         const { status } = await Location.getForegroundPermissionsAsync();
-        logger.debug('Location permission status:', status);
+        logger.debug('LOCATION', 'Location permission status:', status);
         setPermissionStatus(status);
       } catch (error) {
-        logger.error('Error checking location permissions:', error);
+        logger.error('LOCATION', 'Error checking location permissions:', error);
         setErrorMessage('Unable to check location permissions');
       }
     };
@@ -55,7 +55,7 @@ export const LocationSharingToggle: React.FC = () => {
 
   // Log when location sharing status changes
   useEffect(() => {
-    logger.debug('Location sharing enabled state:', isLocationSharingEnabled);
+    logger.debug('LOCATION', 'Location sharing enabled state:', isLocationSharingEnabled);
   }, [isLocationSharingEnabled]);
 
   const handleToggleLocationSharing = async (value: boolean) => {
@@ -63,24 +63,24 @@ export const LocationSharingToggle: React.FC = () => {
     setErrorMessage(null);
     
     try {
-      logger.debug('Toggling location sharing to:', value);
+      logger.debug('LOCATION', 'Toggling location sharing to:', value);
       
       if (value) {
         // Check if location permission is granted
         const { status } = await Location.getForegroundPermissionsAsync();
-        logger.debug('Current permission status:', status);
+        logger.debug('LOCATION', 'Current permission status:', status);
         setPermissionStatus(status);
         
         if (status !== 'granted') {
           // Request permission
-          logger.debug('Requesting location permission');
+          logger.debug('LOCATION', 'Requesting location permission');
           const { status: newStatus } = await Location.requestForegroundPermissionsAsync();
-          logger.debug('New permission status:', newStatus);
+          logger.debug('LOCATION', 'New permission status:', newStatus);
           setPermissionStatus(newStatus);
           
           if (newStatus !== 'granted') {
             // Permission denied, show alert
-            logger.debug('Permission denied, showing alert');
+            logger.debug('LOCATION', 'Permission denied, showing alert');
             Alert.alert(
               'Location Permission Required',
               'To share your location with trip members, please enable location permissions in your device settings.',
@@ -98,12 +98,12 @@ export const LocationSharingToggle: React.FC = () => {
         }
 
         // Check if location services are enabled
-        logger.debug('Checking if location services are enabled');
+        logger.debug('LOCATION', 'Checking if location services are enabled');
         const isLocationServicesEnabled = await Location.hasServicesEnabledAsync();
-        logger.debug('Location services enabled:', isLocationServicesEnabled);
+        logger.debug('LOCATION', 'Location services enabled:', isLocationServicesEnabled);
         
         if (!isLocationServicesEnabled) {
-          logger.debug('Location services disabled, showing alert');
+          logger.debug('LOCATION', 'Location services disabled, showing alert');
           Alert.alert(
             'Location Services Disabled',
             'Please enable location services in your device settings to share your location.',
@@ -121,11 +121,11 @@ export const LocationSharingToggle: React.FC = () => {
       }
       
       // Update location sharing preference
-      logger.debug('Updating location sharing preference to:', value);
+      logger.debug('LOCATION', 'Updating location sharing preference to:', value);
       await setLocationSharingEnabled(value);
-      logger.debug('Location sharing preference updated successfully');
+      logger.debug('LOCATION', 'Location sharing preference updated successfully');
     } catch (error) {
-      logger.error('Error toggling location sharing:', error);
+      logger.error('LOCATION', 'Error toggling location sharing:', error);
       setErrorMessage('Failed to update location sharing preference. Please try again.');
       Alert.alert(
         'Error',
@@ -145,20 +145,20 @@ export const LocationSharingToggle: React.FC = () => {
   };
 
   // Safely get color values with fallbacks
-  const getPrimaryColor = () => {
+  const getPrimaryColor = (): string => {
     return getSafeColor(theme?.colors?.primary?.main, DEFAULT_COLORS.primary);
   };
 
-  const getSecondaryColor = () => {
+  const getSecondaryColor = (): string => {
     return getSafeColor(theme?.colors?.content?.secondary, DEFAULT_COLORS.secondary);
   };
 
-  const getDisabledColor = () => {
+  const getDisabledColor = (): string => {
     return getSafeColor(theme?.colors?.content?.disabled, DEFAULT_COLORS.disabled);
   };
 
-  const getPrimaryLightColor = () => {
-    return getSafeColor(theme?.colors?.primary?.light, DEFAULT_COLORS.primaryLight);
+  const getPrimaryLightColor = (): string => {
+    return getSafeColor(theme?.colors?.primary?.border, DEFAULT_COLORS.primaryLight);
   };
 
   // Create a styles object with current theme and warning/error colors
@@ -184,21 +184,21 @@ export const LocationSharingToggle: React.FC = () => {
     title: {
       fontSize: theme?.typography?.size?.md || 16,
       fontWeight: 'bold',
-      color: getSafeColor(theme?.colors?.text?.primary, DEFAULT_COLORS.textPrimary),
+      color: getSafeColor(theme?.colors?.content?.primary, DEFAULT_COLORS.textPrimary),
     },
     description: {
       fontSize: theme?.typography?.size?.sm || 14,
-      color: getSafeColor(theme?.colors?.text?.secondary, DEFAULT_COLORS.textSecondary),
+      color: getSafeColor(theme?.colors?.content?.secondary, DEFAULT_COLORS.textSecondary),
       marginTop: 2,
     },
     warningText: {
       fontSize: theme?.typography?.size?.xs || 12,
-      color: getSafeColor(theme?.colors?.warning, DEFAULT_COLORS.warning),
+      color: getSafeColor(theme?.colors?.status?.warning?.content, DEFAULT_COLORS.warning),
       marginTop: 4,
     },
     errorText: {
       fontSize: theme?.typography?.size?.xs || 12,
-      color: getSafeColor(theme?.colors?.error, DEFAULT_COLORS.error),
+      color: getSafeColor(theme?.colors?.status?.error?.content, DEFAULT_COLORS.error),
       marginTop: 4,
     },
     infoButton: {

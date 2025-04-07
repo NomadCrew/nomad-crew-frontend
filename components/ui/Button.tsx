@@ -8,8 +8,10 @@ import {
   ViewStyle,
   TextStyle,
   TouchableOpacityProps,
+  StyleSheet,
 } from 'react-native';
-import { useThemedStyles, useTheme } from '@/src/theme/utils';
+import { useThemedStyles } from '@/src/theme/utils';
+import { useTheme as useThemeProvider } from '@/src/theme/ThemeProvider';
 
 export type ButtonVariant = 'filled' | 'outlined' | 'ghost';
 export type ButtonSize = 'sm' | 'md' | 'lg';
@@ -83,7 +85,7 @@ export function Button({
   onPress,
   ...rest
 }: ButtonProps) {
-  const { theme } = useTheme();
+  const { theme } = useThemeProvider();
   const _primaryHover = theme.colors.primary.hover;
   const _primarySurface = theme.colors.primary.surface;
   const _contentPrimary = theme.colors.content.primary;
@@ -122,14 +124,30 @@ export function Button({
       },
     };
     
+    // Get colors based on variant and state
+    const getBackgroundColor = () => {
+      if (disabled) return theme?.colors?.disabled?.background || surfaceDefault;
+      return theme?.colors?.[variant]?.background || primarySurface;
+    };
+    
+    const getBorderColor = () => {
+      if (disabled) return theme?.colors?.disabled?.border || borderDefault;
+      return variant === 'outlined' ? primaryColor : 'transparent';
+    };
+    
+    const getTextColor = () => {
+      if (disabled) return theme?.colors?.disabled?.text || contentDisabled;
+      return theme?.colors?.[variant]?.text || primaryColor;
+    };
+    
     // Variant styles
     const getVariantStyles = () => {
       if (disabled) {
         return {
-          backgroundColor: variant === 'ghost' ? 'transparent' : surfaceDefault,
-          borderColor: variant === 'outlined' ? borderDefault : 'transparent',
+          backgroundColor: 'transparent',
+          borderColor: getBorderColor(),
           borderWidth: variant === 'outlined' ? 1 : 0,
-          color: contentDisabled,
+          color: getTextColor(),
         };
       }
       
@@ -162,23 +180,23 @@ export function Button({
     
     return {
       button: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        justifyContent: 'center' as const,
         height: sizeMap[size].height,
         paddingHorizontal: sizeMap[size].paddingHorizontal,
         borderRadius: borderRadius,
-        backgroundColor: variantStyles.backgroundColor,
-        borderWidth: variantStyles.borderWidth,
-        borderColor: variantStyles.borderColor,
-        opacity: disabled ? 0.6 : 1,
-        width: fullWidth ? '100%' : 'auto',
+        backgroundColor: getBackgroundColor(),
+        borderWidth: variant === 'outlined' ? 1 : undefined,
+        borderColor: getBorderColor(),
+        opacity: loading ? 0.8 : 1,
+        width: fullWidth ? '100%' as const : 'auto' as const,
       },
       label: {
         fontSize: sizeMap[size].fontSize,
-        color: variantStyles.color,
-        fontWeight: '600',
-        textAlign: 'center',
+        color: getTextColor(),
+        fontWeight: '600' as const,
+        textAlign: 'center' as const,
       },
       startIcon: {
         marginRight: 8,
@@ -187,7 +205,7 @@ export function Button({
         marginLeft: 8,
       },
       loadingIndicator: {
-        color: variantStyles.color,
+        color: getTextColor(),
       },
     };
   });
