@@ -5,11 +5,24 @@
 import { logger } from './logger';
 
 /**
+ * Interface for the JWT token payload
+ */
+export interface JwtPayload {
+  exp: number;
+  iat: number;
+  sub: string;
+  email?: string;
+  user_id?: string;
+  role?: string;
+  [key: string]: unknown;
+}
+
+/**
  * Parse a JWT token to extract its payload
  * @param token The JWT token to parse
  * @returns The decoded payload or null if parsing fails
  */
-export function parseJwt(token: string | null): any | null {
+export function parseJwt(token: string | null): JwtPayload | null {
   if (!token) return null;
   
   try {

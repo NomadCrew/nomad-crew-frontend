@@ -3,13 +3,61 @@ import { useAuthStore } from '@/src/store/useAuthStore';
 import { useState } from 'react';
 import Constants from 'expo-constants';
 import { supabase } from '@/src/auth/supabaseClient';
+import { GoogleSignInResponse } from '@/src/types/auth';
+
+// Define interfaces for the Google Sign-In module
+interface GoogleSigninStatusCodes {
+  SIGN_IN_CANCELLED: string;
+  IN_PROGRESS: string;
+  PLAY_SERVICES_NOT_AVAILABLE: string;
+  [key: string]: string;
+}
+
+interface GoogleUser {
+  id: string;
+  name: string;
+  email: string;
+  photo: string | null;
+  familyName: string | null;
+  givenName: string | null;
+}
+
+interface GoogleSigninResponse {
+  idToken: string | null;
+  user: GoogleUser;
+}
+
+interface GoogleSigninTokens {
+  accessToken: string;
+  idToken: string;
+}
+
+interface GoogleSigninModule {
+  configure: (config: GoogleSigninConfig) => void;
+  hasPlayServices: (options: { showPlayServicesUpdateDialog: boolean }) => Promise<boolean>;
+  signIn: () => Promise<GoogleSigninResponse>;
+  getTokens: () => Promise<GoogleSigninTokens>;
+  isSignedIn: () => Promise<boolean>;
+  signOut: () => Promise<void>;
+}
+
+interface GoogleSigninConfig {
+  webClientId?: string;
+  iosClientId?: string;
+  scopes: string[];
+}
+
+interface GoogleSigninError extends Error {
+  code: string;
+  message: string;
+}
 
 // Check if running in Expo Go
 const isExpoGo = Constants.appOwnership === 'expo';
 
 // Only import GoogleSignin if not in Expo Go
-let GoogleSignin: any;
-let statusCodes: any;
+let GoogleSignin: GoogleSigninModule;
+let statusCodes: GoogleSigninStatusCodes;
 
 if (!isExpoGo) {
   // Dynamic import to avoid the error in Expo Go
@@ -22,7 +70,7 @@ if (!isExpoGo) {
   const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
   
   if (webClientId) {
-    const config = {
+    const config: GoogleSigninConfig = {
       iosClientId,
       webClientId,
       scopes: ['openid', 'email', 'profile']
@@ -74,8 +122,12 @@ export function useGoogleSignIn() {
       
       if (data.session) {
         // Convert Supabase session to expected format
-        const googleSignInResponse = {
-          user: userInfo.user,
+        const googleSignInResponse: GoogleSignInResponse = {
+          user: {
+            email: userInfo.user.email,
+            name: userInfo.user.name,
+            photo: userInfo.user.photo || undefined
+          },
           authentication: {
             accessToken,
             idToken
@@ -84,12 +136,13 @@ export function useGoogleSignIn() {
         await handleGoogleSignInSuccess(googleSignInResponse);
       }
       
-    } catch (error: any) {
-      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+    } catch (error: unknown) {
+      const googleError = error as GoogleSigninError;
+      if (googleError.code === statusCodes.SIGN_IN_CANCELLED) {
         console.log('Sign in cancelled');
-      } else if (error.code === statusCodes.IN_PROGRESS) {
+      } else if (googleError.code === statusCodes.IN_PROGRESS) {
         console.log('Sign in in progress');
-      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+      } else if (googleError.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
         console.log('Play services not available');
       } else {
         console.error('Google Sign-In error:', error);

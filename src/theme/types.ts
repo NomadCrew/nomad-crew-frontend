@@ -22,6 +22,7 @@ export interface ThemeOptions {
   spacing?: Partial<SemanticSpacing>;
   borderRadius?: {
     none?: number;
+    xs?: number;
     sm?: number;
     md?: number;
     lg?: number;
@@ -43,6 +44,90 @@ export interface ComponentStyles {
   };
 }
 
+// Extended Status colors interface to include missing properties
+export interface StatusColors {
+  error: {
+    surface: string;
+    content: string;
+    background: string;
+    border: string;
+    main?: string;
+  };
+  success: {
+    surface: string;
+    content: string;
+    background: string;
+    border: string;
+    main?: string;
+  };
+  warning: {
+    surface: string;
+    content: string;
+    background?: string;
+    border?: string;
+    main?: string;
+  };
+  info: {
+    surface: string;
+    content: string;
+    background?: string;
+    border?: string;
+    main?: string;
+  };
+  planning: {
+    background: string;
+    content: string;
+  };
+  completed: {
+    background: string;
+    content: string;
+  };
+}
+
+// Extended colors to include disabled state
+export interface ExtendedColors {
+  disabled?: {
+    background: string;
+    text: string;
+    border: string;
+  };
+  outlined?: {
+    background: string;
+    text: string;
+    border?: string;
+  };
+  success?: {
+    surface: string;
+    main: string;
+  };
+  warning?: {
+    surface: string;
+    main: string;
+  };
+  error?: {
+    surface: string;
+    main: string;
+  };
+  info?: {
+    surface: string;
+    main: string;
+  };
+}
+
+// Font size interface for typography
+export interface FontSizes {
+  xs: number;
+  sm: number;
+  md: number;
+  lg: number;
+  xl: number;
+}
+
+// Extended Typography interface
+export interface ExtendedTypography extends Typography {
+  size?: FontSizes;
+}
+
 export interface ThemeColors {
   // ... other color definitions
   error: {
@@ -53,8 +138,8 @@ export interface ThemeColors {
 }
 
 export interface Theme {
-  colors: SemanticColors;
-  typography: Typography;
+  colors: SemanticColors & ExtendedColors;
+  typography: ExtendedTypography;
   spacing: SemanticSpacing;
   elevation: SemanticElevation;
   components: ComponentStyles;
@@ -66,6 +151,7 @@ export interface Theme {
     lg: number;
     xl: number;
   };
+  dark?: boolean;
 }
 
 // Helper types

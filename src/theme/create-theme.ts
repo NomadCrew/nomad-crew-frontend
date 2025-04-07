@@ -45,6 +45,7 @@ export function createTheme(options: ThemeOptions = {}): Theme {
       lg: customBorderRadius?.lg ?? 12,
       xl: customBorderRadius?.xl ?? 16,
     },
+    dark: isDark,
     components: {
       Button: {
         base: {

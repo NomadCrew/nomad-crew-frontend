@@ -10,6 +10,22 @@ import { registerAuthHandlers } from '@/src/api/api-client';
 import * as Notifications from 'expo-notifications';
 import { api } from '@/src/api/api-client';
 
+// API Error interface for better type safety
+interface ApiError extends Error {
+  response?: {
+    data?: {
+      code?: string;
+      message?: string;
+      login_required?: boolean;
+      [key: string]: unknown;
+    };
+    status?: number;
+  };
+  status?: number;
+  code?: string;
+  [key: string]: unknown;
+}
+
 /**
  * Attempt to recover a session from Supabase.
  */
@@ -125,17 +141,10 @@ export const useAuthStore = create<AuthState>((set, get) => {
         try {
           logger.debug('AUTH', 'Attempting to refresh token using backend endpoint');
           
-          const { access_token, refresh_token, expires_in } = await authApi.refreshToken(refreshToken);
+          const response = await api.post('/auth/refresh', { refresh_token: refreshToken });
+          const { access_token, refresh_token } = response.data;
           
-          if (!access_token || !refresh_token) {
-            throw new Error('Invalid response from refresh endpoint');
-          }
-          
-          logger.debug('AUTH', 'Token refreshed successfully via backend', {
-            expiresIn: expires_in
-          });
-          
-          // Keep the same user data but update tokens
+          logger.debug('AUTH', 'Backend refresh successful');
           set({
             token: access_token,
             refreshToken: refresh_token,
@@ -143,9 +152,10 @@ export const useAuthStore = create<AuthState>((set, get) => {
           });
           
           return;
-        } catch (backendRefreshError: any) {
+        } catch (backendRefreshError: unknown) {
+          console.error('[Auth] Backend token refresh failed:', backendRefreshError);
           // Check for specific error codes from the backend
-          const errorData = backendRefreshError.response?.data;
+          const errorData = backendRefreshError as ApiError;
           
           if (errorData?.code === ERROR_CODES.INVALID_REFRESH_TOKEN || 
               errorData?.login_required === true) {
@@ -161,7 +171,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
           }
           
           // For other errors, try Supabase refresh as fallback
-          logger.debug('AUTH', 'Backend refresh failed, falling back to Supabase:', backendRefreshError);
+          logger.debug('AUTH', 'Backend refresh failed, falling back to Supabase:', errorData);
         }
         
         // Fallback to Supabase refresh
@@ -233,8 +243,8 @@ export const useAuthStore = create<AuthState>((set, get) => {
         } else {
           throw new Error('Failed to refresh session - no session returned');
         }
-      } catch (error: any) {
-        logger.error('AUTH', 'Refresh session error:', error);
+      } catch (error: unknown) {
+        console.error('[Auth] Refresh session error:', error);
         // Clear auth state on critical errors
         set({
           user: null,
@@ -272,9 +282,10 @@ export const useAuthStore = create<AuthState>((set, get) => {
           error: null
         });
         return;
-      } catch (error: any) {
+      } catch (error: unknown) {
+        console.error('[Auth] Registration error:', error);
         set({
-          error: error.message,
+          error: error instanceof Error ? error.message : 'Registration failed',
           loading: false
         });
         throw error;
@@ -319,10 +330,10 @@ export const useAuthStore = create<AuthState>((set, get) => {
           isVerifying: false,
         });
     
-      } catch (error: any) {
-        logger.error('AUTH', 'Login failed:', error);
+      } catch (error: unknown) {
+        console.error('[Auth] Login failed:', error);
         set({
-          error: error.message || 'Login failed',
+          error: error instanceof Error ? error.message : 'Login failed',
           loading: false,
         });
         throw error;
@@ -407,7 +418,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
           accessToken: data.session.access_token.substring(0, 10) + '...',
           refreshToken: data.session.refresh_token ? data.session.refresh_token.substring(0, 10) + '...' : 'none'
         });
-      } catch (error: any) {
+      } catch (error: ApiError) {
         console.error('AUTH: Google sign-in error:', error);
         set({
           error: error.message || 'Google sign-in failed',
@@ -444,7 +455,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
           isVerifying: false
         });
 
-      } catch (error: any) {
+      } catch (error: ApiError) {
         console.error('AUTH: Apple sign-in error:', error);
         set({
           error: error.message || 'Apple sign-in failed',

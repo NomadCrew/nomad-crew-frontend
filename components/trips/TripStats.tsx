@@ -1,6 +1,6 @@
 // components/trips/TripStats.tsx
 import React from 'react';
-import { View } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { Surface, Text } from 'react-native-paper';
 import { CalendarClock } from 'lucide-react-native';
 import { useThemedStyles } from '@/src/theme/utils';
@@ -35,11 +35,11 @@ export const TripStats: React.FC = () => {
       statsContent: {
         flex: 1,
         justifyContent: 'center',
-        alignItems: 'center',
+        alignItems: 'center' as 'center',
       },
       comingSoonContainer: {
-        alignItems: 'center',
-        justifyContent: 'center',
+        alignItems: 'center' as 'center',
+        justifyContent: 'center' as 'center',
       },
       icon: {
         marginBottom: spacingStackSm,
@@ -47,7 +47,7 @@ export const TripStats: React.FC = () => {
       },
       comingSoon: {
         color: textSecondary,
-        textAlign: 'center',
+        textAlign: 'center' as 'center',
         opacity: 0.8,
         letterSpacing: 0.25,
       },
@@ -55,7 +55,7 @@ export const TripStats: React.FC = () => {
   });
   
   return (
-    <Surface style={styles.statsCard} elevation={0}>
+    <Surface style={StyleSheet.flatten(styles.statsCard)} elevation={0}>
       <Text 
         variant="headlineSmall" 
         style={styles.statsTitle}

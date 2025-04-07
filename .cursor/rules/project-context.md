@@ -205,6 +205,35 @@
   - `jest.setup.js`
   - Updated component tests to use new test utilities
 
+### May 19, 2024, 14:00 UTC (Placeholder Date - Please Adjust)
+- Finalized notification system plan with backend:
+  - Confirmed backend as source of truth; frontend uses API calls for sync.
+  - API Endpoints:
+    - Mark read (single): `PATCH /api/notifications/:id`
+    - Mark all read: `PATCH /api/notifications` (Body: `{"status": "read"}`)
+    - Get unread count: `GET /api/notifications/count?status=unread`
+    - Fetch notifications: `GET /api/notifications` (Params: `limit`, `offset`, `status`)
+  - Metadata: Agreed on structure for `TRIP_INVITATION`, `CHAT_MESSAGE`, `TRIP_MEMBER_ADDED`. Frontend to assume structure is provided.
+  - WebSocket Contract: Backend sends full notification object; frontend acknowledges.
+  - Chat Notifications (`CHAT_MESSAGE`): Display Toast notification only if user is not actively viewing the specific chat screen; do not create a persistent list item; update relevant notification badges.
+  - Caching: Implement local cache in AsyncStorage for the latest 100 notifications, pruning the oldest when the limit is exceeded.
+  - Actions: Frontend will call specific business logic endpoints (e.g., `/invitations/:id/accept`) provided by the backend.
+
+### Files Modified/Created (Planned)
+- State Management:
+  - `src/store/useNotificationStore.ts` (creation or major update)
+- API Client:
+  - Update/create functions for new notification endpoints.
+- WebSocket Handling:
+  - Update `src/websocket/WebSocketManager.ts` for new notification types and chat logic.
+- UI Components:
+  - `src/components/notifications/NotificationBell.tsx` (integrate unread count)
+  - `src/components/notifications/NotificationList.tsx` (integrate fetching/pagination)
+  - `src/components/notifications/NotificationItem.tsx` (handle types, metadata, actions)
+  - `src/components/notifications/NotificationToast.tsx` (implement chat strategy)
+- Caching Logic:
+  - Implement within store or dedicated utility.
+
 ## Project Structure
 
 ### Core Dependencies

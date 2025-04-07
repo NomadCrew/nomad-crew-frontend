@@ -14,6 +14,7 @@ import type { Trip } from '@/src/types/trip';
 import { WeatherIcon } from '../ui/WeatherIcon';
 import { WeatherCondition } from '@/src/utils/weather';
 import { TripStatusBadge } from './TripStatusBadge';
+import { Theme } from '@/src/theme/types';
 
 interface TripHeaderProps {
   trip: Trip;
@@ -91,7 +92,7 @@ export const TripHeader = ({
   );
 };
 
-const styles = (theme: any) =>
+const styles = (theme: Theme) =>
   StyleSheet.create({
     backgroundImage: {
       width: '100%',

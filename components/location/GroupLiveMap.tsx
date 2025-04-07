@@ -8,6 +8,7 @@ import { Trip } from '@/src/types/trip';
 import { AlertCircle, Info } from 'lucide-react-native';
 import { LocationSharingToggle } from './LocationSharingToggle';
 import { Surface } from 'react-native-paper';
+import { Theme } from '@/src/theme/types';
 
 const DEFAULT_COORDINATES = {
   latitude: 37.7749,
@@ -43,10 +44,10 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
     longitudeDelta: 0.05,
   });
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [mapError, setMapError] = useState<string | null>(null);
-  const [mapLoaded, setMapLoaded] = useState(false);
-  const [mapLoadAttempts, setMapLoadAttempts] = useState(0);
+  const [mapLoaded, setMapLoaded] = useState<boolean>(false);
+  const [mapLoadAttempts, setMapLoadAttempts] = useState<number>(0);
 
   const tripMemberLocations = memberLocations[trip.id] || {};
   const memberLocationArray = Object.values(tripMemberLocations);
@@ -60,7 +61,7 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
       try {
         setIsLoading(true);
         await getMemberLocations(trip.id);
-      } catch {
+      } catch (error) {
         setMapError('Unable to fetch member locations.');
       } finally {
         setIsLoading(false);
@@ -91,7 +92,7 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
 
   // Ensure we have valid coordinates initially
   useEffect(() => {
-    if (trip.destination.coordinates?.lat && trip.destination.coordinates?.lng) {
+    if (trip.destination.coordinates?.lat !== undefined && trip.destination.coordinates?.lng !== undefined) {
       setRegion({
         latitude: trip.destination.coordinates.lat,
         longitude: trip.destination.coordinates.lng,
@@ -99,12 +100,11 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
         longitudeDelta: 0.05,
       });
       console.log('[MapDebug] Map ready called, coordinates:', JSON.stringify(trip.destination.coordinates));
-
     }
   }, [trip.id]);
 
   const fitToMarkers = () => {
-    const markers = [];
+    const markers: { latitude: number; longitude: number }[] = [];
 
     if (memberLocationArray.length > 0) {
       markers.push(...memberLocationArray.map(m => ({
@@ -120,10 +120,11 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
       });
     }
 
-    if (trip.destination.coordinates) {
+    if (trip.destination.coordinates?.lat !== undefined && trip.destination.coordinates?.lng !== undefined) {
+      const coordinates = trip.destination.coordinates;
       markers.push({
-        latitude: trip.destination.coordinates.lat,
-        longitude: trip.destination.coordinates.lng,
+        latitude: coordinates.lat,
+        longitude: coordinates.lng,
       });
     }
 
@@ -140,12 +141,12 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
     setMapLoaded(true);
     setIsLoading(false);
   
-    if (mapRef.current && trip.destination.coordinates) {
+    if (mapRef.current && trip.destination?.coordinates) {
       InteractionManager.runAfterInteractions(() => {
         console.log('[MapDebug] Animating to region');
         mapRef.current?.animateToRegion({
-          latitude: trip.destination.coordinates.lat,
-          longitude: trip.destination.coordinates.lng,
+          latitude: trip.destination.coordinates?.lat || DEFAULT_COORDINATES.latitude,
+          longitude: trip.destination.coordinates?.lng || DEFAULT_COORDINATES.longitude,
           latitudeDelta: 0.05,
           longitudeDelta: 0.05,
         }, 1000);
@@ -199,8 +200,8 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
       {trip.destination.coordinates && (
         <Marker
           coordinate={{
-            latitude: trip.destination.coordinates.lat,
-            longitude: trip.destination.coordinates.lng,
+            latitude: trip.destination.coordinates?.lat || DEFAULT_COORDINATES.latitude,
+            longitude: trip.destination.coordinates?.lng || DEFAULT_COORDINATES.longitude,
           }}
           title={trip.destination.address}
         />
@@ -264,7 +265,7 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
   );
 };
 
-const styles = (theme: any) => StyleSheet.create({
+const styles = (theme: Theme) => StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background.default },
   header: { flexDirection: 'row', justifyContent: 'space-between', padding: 16 },
   title: { fontSize: 18, fontWeight: 'bold' },

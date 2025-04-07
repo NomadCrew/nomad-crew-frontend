@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { SplashScreen } from 'expo-router';
+import * as ExpoSplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import { useAuthStore } from '@/src/store/useAuthStore';
 import * as Linking from 'expo-linking';
@@ -19,6 +20,11 @@ interface InvitationToken {
   exp?: number;
 }
 
+// Keep the splash screen visible while we fetch resources
+ExpoSplashScreen.preventAutoHideAsync().catch(() => {
+  /* reloading the app might trigger some race conditions, ignore them */
+});
+
 export default function AppInitializer({ children }: { children: React.ReactNode }) {
   const { initialize, user, registerPushToken } = useAuthStore();
 
@@ -33,6 +39,8 @@ export default function AppInitializer({ children }: { children: React.ReactNode
     const initApp = async () => {
       if (fontsLoaded) {
         await initialize();
+        // Hide both splash screens to ensure proper transition
+        await ExpoSplashScreen.hideAsync();
         await SplashScreen.hideAsync();
       }
     };
@@ -211,9 +219,10 @@ export default function AppInitializer({ children }: { children: React.ReactNode
     }
   };
 
-  if (!fontsLoaded || fontError) {
+  // Show children only if fonts are loaded
+  if (!fontsLoaded && !fontError) {
     return null;
   }
 
-  return <>{children}</>;
+  return children;
 }

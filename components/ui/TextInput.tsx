@@ -1,6 +1,15 @@
 import React, { useCallback, useMemo, useState, memo } from 'react';
-import { TextInput as RNTextInput, TextInputProps as RNTextInputProps, Platform, StyleSheet, View } from 'react-native';
-import { useTheme } from 'react-native-paper';
+import { 
+  TextInput as RNTextInput, 
+  TextInputProps as RNTextInputProps, 
+  Platform, 
+  StyleSheet, 
+  View, 
+  ViewStyle,
+  NativeSyntheticEvent,
+  TextInputFocusEventData
+} from 'react-native';
+import { useTheme } from '@/src/theme/ThemeProvider';
 
 /**
  * PerformantTextInput - A high-performance TextInput component
@@ -16,7 +25,7 @@ export interface TextInputProps extends RNTextInputProps {
   /**
    * Custom container style
    */
-  containerStyle?: any;
+  containerStyle?: ViewStyle;
 }
 
 function TextInputComponent({
@@ -27,7 +36,7 @@ function TextInputComponent({
   placeholder,
   ...rest
 }: TextInputProps) {
-  const theme = useTheme();
+  const theme = useTheme().theme;
   const [isFocused, setIsFocused] = useState(false);
 
   // Memoize the container style
@@ -40,29 +49,29 @@ function TextInputComponent({
   const inputStyles = useMemo(() => [
     styles.input,
     {
-      color: theme.colors.onSurface,
-      backgroundColor: theme.colors.surface,
-      borderColor: isFocused ? theme.colors.primary : theme.colors.outline,
+      color: theme.colors.content.onSurface,
+      backgroundColor: theme.colors.surface.default,
+      borderColor: isFocused ? theme.colors.primary.main : theme.colors.border.default,
     },
     style
   ], [style, theme.colors, isFocused]);
 
-  // Memoize event handlers
-  const handleFocus = useCallback((e) => {
+  // Memoize event handlers with correct types
+  const handleFocus = useCallback((e: NativeSyntheticEvent<TextInputFocusEventData>) => {
     setIsFocused(true);
     if (rest.onFocus) {
       rest.onFocus(e);
     }
   }, [rest.onFocus]);
 
-  const handleBlur = useCallback((e) => {
+  const handleBlur = useCallback((e: NativeSyntheticEvent<TextInputFocusEventData>) => {
     setIsFocused(false);
     if (rest.onBlur) {
       rest.onBlur(e);
     }
   }, [rest.onBlur]);
 
-  const handleChangeText = useCallback((text) => {
+  const handleChangeText = useCallback((text: string) => {
     if (onChangeText) {
       onChangeText(text);
     }
@@ -77,13 +86,13 @@ function TextInputComponent({
     // Critical for Android performance
     disableFullscreenUI: true,
     // Reduce unnecessary re-renders
-    placeholderTextColor: theme.colors.outline,
-    selectionColor: theme.colors.primary,
+    placeholderTextColor: theme.colors.border.default,
+    selectionColor: theme.colors.primary.main,
     // Modern platforms support better keyboard handling
     keyboardType: rest.keyboardType || 'default',
     returnKeyType: rest.returnKeyType || 'done',
     ...rest
-  }), [theme.colors.outline, theme.colors.primary, rest]);
+  }), [theme.colors.border.default, theme.colors.primary.main, rest]);
 
   return (
     <View style={containerStyles}>

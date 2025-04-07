@@ -208,15 +208,15 @@ export function Avatar({
   }, [initials, user]);
   
   return (
-    <View style={[styles.container, style]} {...rest}>
+    <View style={[styles.container as ViewStyle, style]} {...rest}>
       {avatarSource ? (
         <Image
           source={{ uri: avatarSource }}
-          style={[styles.image, imageStyle]}
+          style={[styles.image as ImageStyle, imageStyle]}
           resizeMode="cover"
         />
       ) : (
-        <Text style={[styles.text, textStyle]}>
+        <Text style={[styles.text as TextStyle, textStyle]}>
           {displayInitials?.substring(0, 2).toUpperCase() || ''}
         </Text>
       )}

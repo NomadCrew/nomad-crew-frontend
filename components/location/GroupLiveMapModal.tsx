@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, StyleSheet, View, _Dimensions, TouchableOpacity } from 'react-native';
+import { Modal, StyleSheet, View, Dimensions, TouchableOpacity } from 'react-native';
 import { GroupLiveMap } from './GroupLiveMap';
 import { Trip } from '@/src/types/trip';
 import { useTheme } from '@/src/theme/ThemeProvider';

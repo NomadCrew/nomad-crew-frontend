@@ -1,4 +1,6 @@
-export const extendTheme = (theme: any) => ({
+import { Theme } from '@/src/theme/types';
+
+export const extendTheme = (theme: Partial<Theme>) => ({
   ...theme,
   colors: {
     ...theme.colors,

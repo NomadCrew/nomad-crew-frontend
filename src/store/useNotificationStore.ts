@@ -1,690 +1,375 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { v4 as uuidv4 } from 'uuid';
 import {
   Notification,
-  TripInviteNotification,
-  TripUpdateNotification,
-  TodoNotification,
-  MemberNotification,
-  WeatherNotification,
-  ChatNotification,
-  LocationNotification,
-  GenericNotification,
-  NotificationType,
-  TripInviteEvent,
-  isTripInviteNotification
+  NotificationBase,
+  TripInvitationNotification,
+  ChatMessageNotification,
+  MarkNotificationsReadPayload,
+  isChatMessageNotification,
+  isTripInvitationNotification
 } from '../types/notification';
-import { 
-  ServerEvent, 
-  isTripInviteEvent,
-  isTripEvent,
-  isTodoEvent,
-  isMemberEvent,
-  isWeatherEvent,
-  isChatEvent,
-  isLocationEvent
-} from '../types/events';
-import { api } from '../api/api-client';
+import { ServerEvent } from '../types/events';
+import { apiClient } from '../api/api-client';
 import { logger } from '../utils/logger';
+
+const NOTIFICATION_LIMIT = 100; // Max notifications to keep in state/storage
+const API_PAGE_LIMIT = 20; // How many notifications to fetch per API call
+const STORAGE_KEY = '@nomad_crew_notifications_v2'; // Use new key due to structure change
 
 interface NotificationState {
   // Data
   notifications: Notification[];
   unreadCount: number;
+  hasHydrated: boolean; // To track store hydration from AsyncStorage
+  latestChatMessageToast: ChatMessageNotification | null; // For transient toast display
   
   // Loading and error states
-  loading: boolean;
+  isFetching: boolean;
+  isFetchingUnreadCount: boolean;
+  isMarkingRead: boolean;
+  isHandlingAction: boolean; // e.g., accepting/declining invites
   error: string | null;
   
+  // Pagination
+  offset: number;
+  hasMore: boolean;
+  
   // Actions
-  addNotification: (notification: Notification) => void;
-  markAsRead: (notificationId: string) => Promise<void>;
-  markAllAsRead: () => Promise<void>;
-  removeNotification: (notificationId: string) => void;
+  fetchUnreadCount: () => Promise<void>;
+  fetchNotifications: (options?: { loadMore?: boolean }) => Promise<void>;
+  markNotificationRead: (notificationId: string) => Promise<void>;
+  markAllNotificationsRead: () => Promise<void>;
+  handleIncomingNotification: (notification: Notification) => void;
+  acceptTripInvitation: (notification: TripInvitationNotification) => Promise<void>;
+  declineTripInvitation: (notification: TripInvitationNotification) => Promise<void>;
+  clearChatToast: () => void;
+  setHasHydrated: (state: boolean) => void;
   clearNotifications: () => void;
-  
-  // Trip invite specific actions
-  acceptTripInvite: (inviteId: string) => Promise<void>;
-  declineTripInvite: (inviteId: string) => Promise<void>;
-  
-  // Data fetching
-  fetchNotifications: () => Promise<void>;
-  
-  // WebSocket event handling
-  handleTripInviteEvent: (event: TripInviteEvent) => void;
-  handleServerEvent: (event: ServerEvent) => void;
-  handleTripEvent: (event: ServerEvent) => void;
-  handleTodoEvent: (event: ServerEvent) => void;
-  handleMemberEvent: (event: ServerEvent) => void;
-  handleWeatherEvent: (event: ServerEvent) => void;
-  handleChatEvent: (event: ServerEvent) => void;
-  handleLocationEvent: (event: ServerEvent) => void;
-  
-  // Internal helpers
-  getNotificationById: (id: string) => Notification | undefined;
-  updateNotificationStatus: (id: string, status: string) => void;
 }
 
-const STORAGE_KEY = '@nomad_crew_notifications';
+export const useNotificationStore = create<NotificationState>()(
+  persist(
+    (set, get) => ({
+      notifications: [],
+      unreadCount: 0,
+      hasHydrated: false,
+      latestChatMessageToast: null,
+      isFetching: false,
+      isFetchingUnreadCount: false,
+      isMarkingRead: false,
+      isHandlingAction: false,
+      error: null,
+      offset: 0,
+      hasMore: true,
 
-export const useNotificationStore = create<NotificationState>((set, get) => ({
-  notifications: [],
-  unreadCount: 0,
-  loading: false,
-  error: null,
-  
-  // Add a new notification
-  addNotification: (notification: Notification) => {
-    set(state => {
-      // Check if we already have this notification (prevent duplicates)
-      const existingIndex = state.notifications.findIndex(n => n.id === notification.id);
-      
-      let notifications: Notification[];
-      if (existingIndex !== -1) {
-        // Update existing notification
-        notifications = [...state.notifications];
-        notifications[existingIndex] = notification;
-      } else {
-        // Add new notification to the beginning of the array
-        notifications = [notification, ...state.notifications];
-      }
-      
-      const unreadCount = notifications.filter(n => !n.isRead).length;
-      
-      // Persist notifications to storage
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(notifications))
-        .catch(err => logger.error('Failed to save notifications', err));
-      
-      return { 
-        notifications,
-        unreadCount
-      };
-    });
-  },
-  
-  // Mark a notification as read
-  markAsRead: async (notificationId: string) => {
-    try {
-      const notification = get().getNotificationById(notificationId);
-      
-      if (!notification) {
-        return;
-      }
-      
-      // If it's a trip invite, call API to mark as read
-      if (isTripInviteNotification(notification)) {
-        await api.put(`/api/trip-invites/${notification.inviteId}/read`);
-      }
-      
-      set(state => {
-        const updatedNotifications = state.notifications.map(n => 
-          n.id === notificationId ? { ...n, isRead: true } : n
-        );
-        
-        const unreadCount = updatedNotifications.filter(n => !n.isRead).length;
-        
-        // Persist notifications
-        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedNotifications))
-          .catch(err => logger.error('Failed to save notifications', err));
-        
-        return { 
-          notifications: updatedNotifications,
-          unreadCount
-        };
-      });
-    } catch (error) {
-      set({ error: error instanceof Error ? error.message : 'Failed to mark notification as read' });
-      logger.error('Failed to mark notification as read', error);
-    }
-  },
-  
-  // Mark all notifications as read
-  markAllAsRead: async () => {
-    try {
-      // Get all unread trip invite notifications
-      const unreadInvites = get().notifications
-        .filter(n => !n.isRead && isTripInviteNotification(n))
-        .map(n => (n as TripInviteNotification).inviteId);
-      
-      // Mark them all as read via API in parallel
-      if (unreadInvites.length > 0) {
-        await Promise.all(
-          unreadInvites.map(inviteId => 
-            api.put(`/api/trip-invites/${inviteId}/read`)
-          )
-        );
-      }
-      
-      set(state => {
-        const updatedNotifications = state.notifications.map(n => ({
-          ...n,
-          isRead: true
-        }));
-        
-        // Persist notifications
-        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedNotifications))
-          .catch(err => logger.error('Failed to save notifications', err));
-        
-        return { 
-          notifications: updatedNotifications, 
-          unreadCount: 0 
-        };
-      });
-    } catch (error) {
-      set({ error: error instanceof Error ? error.message : 'Failed to mark all notifications as read' });
-      logger.error('Failed to mark all notifications as read', error);
-    }
-  },
-  
-  // Remove a notification
-  removeNotification: (notificationId: string) => {
-    set(state => {
-      const updatedNotifications = state.notifications.filter(n => n.id !== notificationId);
-      const unreadCount = updatedNotifications.filter(n => !n.isRead).length;
-      
-      // Persist notifications
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedNotifications))
-        .catch(err => logger.error('Failed to save notifications', err));
-      
-      return { 
-        notifications: updatedNotifications,
-        unreadCount
-      };
-    });
-  },
-  
-  // Clear all notifications
-  clearNotifications: () => {
-    AsyncStorage.removeItem(STORAGE_KEY)
-      .catch(err => logger.error('Failed to clear notifications', err));
-    
-    set({ 
-      notifications: [], 
-      unreadCount: 0 
-    });
-  },
-  
-  // Accept a trip invite
-  acceptTripInvite: async (inviteId: string) => {
-    try {
-      set({ loading: true, error: null });
-      
-      // Call API to accept the invite
-      await api.post('/api/trip-invites/accept', { inviteId });
-      
-      // Update notification status
-      get().updateNotificationStatus(inviteId, 'accepted');
-      
-      set({ loading: false });
-    } catch (error) {
-      set({ 
-        loading: false, 
-        error: error instanceof Error ? error.message : 'Failed to accept trip invite' 
-      });
-      logger.error('Failed to accept trip invite', error);
-    }
-  },
-  
-  // Decline a trip invite
-  declineTripInvite: async (inviteId: string) => {
-    try {
-      set({ loading: true, error: null });
-      
-      // Call API to decline the invite
-      await api.post('/api/trip-invites/decline', { inviteId });
-      
-      // Update notification status
-      get().updateNotificationStatus(inviteId, 'declined');
-      
-      set({ loading: false });
-    } catch (error) {
-      set({ 
-        loading: false, 
-        error: error instanceof Error ? error.message : 'Failed to decline trip invite' 
-      });
-      logger.error('Failed to decline trip invite', error);
-    }
-  },
-  
-  // Fetch all notifications
-  fetchNotifications: async () => {
-    try {
-      set({ loading: true, error: null });
-      
-      // First, try to load from storage
-      const storedNotifications = await AsyncStorage.getItem(STORAGE_KEY);
-      if (storedNotifications) {
-        const parsed = JSON.parse(storedNotifications) as Notification[];
-        const unreadCount = parsed.filter(n => !n.isRead).length;
-        set({ 
-          notifications: parsed, 
-          unreadCount,
-          loading: false 
-        });
-      }
-      
-      // Then fetch from API
-      const response = await api.get('/api/trip-invites');
-      
-      if (response.data && Array.isArray(response.data)) {
-        // Convert API response to TripInviteNotification format
-        const tripInvites: TripInviteNotification[] = response.data.map((invite: any) => ({
-          id: invite.inviteId,
-          type: 'TRIP_INVITE' as const,
-          inviteId: invite.inviteId,
-          tripId: invite.tripId,
-          inviterName: invite.inviterName,
-          message: invite.message,
-          timestamp: invite.timestamp,
-          status: invite.status,
-          isRead: false // Default to unread for new notifications
-        }));
-        
-        // Merge with existing notifications, prioritizing server data
-        const mergedNotifications = [...tripInvites];
-        
-        // Add any local notifications that aren't trip invites
-        const localNonInvites = get().notifications.filter(
-          n => !isTripInviteNotification(n)
-        );
-        
-        const updatedNotifications = [...mergedNotifications, ...localNonInvites];
-        const unreadCount = updatedNotifications.filter(n => !n.isRead).length;
-        
-        // Persist to storage
-        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedNotifications));
-        
-        set({ 
-          notifications: updatedNotifications,
-          unreadCount,
-          loading: false 
-        });
-      }
-    } catch (error) {
-      set({ 
-        loading: false, 
-        error: error instanceof Error ? error.message : 'Failed to fetch notifications' 
-      });
-      logger.error('Failed to fetch notifications', error);
-    }
-  },
-  
-  // Main handler for server events - routes to specific handlers
-  handleServerEvent: (event: ServerEvent) => {
-    logger.debug('NOTIFICATION', `Handling server event of type: ${event.type}`);
-    
-    if (isTripInviteEvent(event)) {
-      get().handleTripInviteEvent(event as any);
-    } else if (isTripEvent(event)) {
-      get().handleTripEvent(event);
-    } else if (isTodoEvent(event)) {
-      get().handleTodoEvent(event);
-    } else if (isMemberEvent(event)) {
-      get().handleMemberEvent(event);
-    } else if (isWeatherEvent(event)) {
-      get().handleWeatherEvent(event);
-    } else if (isChatEvent(event)) {
-      get().handleChatEvent(event);
-    } else if (isLocationEvent(event)) {
-      get().handleLocationEvent(event);
-    }
-  },
-  
-  // Handle WebSocket trip invite event
-  handleTripInviteEvent: (event: TripInviteEvent) => {
-    const { inviteId, tripId, inviterName, message, timestamp, status } = event.data;
-    
-    // Create a new notification
-    const notification: TripInviteNotification = {
-      id: inviteId, // Use inviteId as the notification id
-      type: 'TRIP_INVITE',
-      inviteId,
-      tripId,
-      inviterName,
-      message,
-      timestamp,
-      status: status as 'pending' | 'accepted' | 'declined',
-      isRead: false
-    };
-    
-    // Add to store
-    get().addNotification(notification);
-  },
-  
-  // Handle trip events
-  handleTripEvent: (event: ServerEvent) => {
-    if (!event.payload) return;
-    
-    const payload = event.payload as any;
-    const tripId = event.tripId;
-    const userId = event.userId || 'system';
-    
-    // Skip self-triggered events to reduce noise
-    const currentUserId = require('../store/useAuthStore').useAuthStore.getState().user?.id;
-    if (userId === currentUserId) return;
-    
-    let notification: TripUpdateNotification;
-    
-    switch (event.type) {
-      case 'TRIP_UPDATED':
-        notification = {
-          id: event.id,
-          type: 'TRIP_UPDATE',
-          tripId,
-          tripName: payload.name || 'Trip',
-          updaterName: payload.updaterName || 'Someone',
-          updateType: 'details',
-          timestamp: event.timestamp,
-          isRead: false,
-          data: {
-            oldValue: payload.oldValue,
-            newValue: payload.newValue
-          }
-        };
-        break;
-      
-      case 'TRIP_STARTED':
-      case 'TRIP_ENDED':
-      case 'TRIP_STATUS_UPDATED':
-        notification = {
-          id: event.id,
-          type: 'TRIP_STATUS',
-          tripId,
-          tripName: payload.name || 'Trip',
-          updaterName: payload.updaterName || 'Someone',
-          updateType: 'status',
-          timestamp: event.timestamp,
-          isRead: false,
-          data: {
-            statusChange: {
-              from: payload.oldStatus || 'unknown',
-              to: payload.status || 'unknown'
-            }
-          }
-        };
-        break;
-      
-      default:
-        return; // Unknown trip event type
-    }
-    
-    get().addNotification(notification);
-  },
-  
-  // Handle todo events
-  handleTodoEvent: (event: ServerEvent) => {
-    if (!event.payload) return;
-    
-    const payload = event.payload as any;
-    const tripId = event.tripId;
-    
-    // Skip self-triggered events to reduce noise
-    const currentUserId = require('../store/useAuthStore').useAuthStore.getState().user?.id;
-    if (payload.createdBy === currentUserId) return;
-    
-    let notification: TodoNotification;
-    
-    switch (event.type) {
-      case 'TODO_CREATED':
-        notification = {
-          id: event.id,
-          type: 'TODO_CREATED',
-          tripId,
-          todoId: payload.id,
-          todoText: payload.text,
-          creatorName: payload.creatorName || 'Someone',
-          timestamp: event.timestamp,
-          isRead: false,
-          data: {
-            assignedToName: payload.assignedToName
-          }
-        };
-        break;
-      
-      case 'TODO_UPDATED':
-        notification = {
-          id: event.id,
-          type: 'TODO_UPDATED',
-          tripId,
-          todoId: payload.id,
-          todoText: payload.text,
-          creatorName: payload.updaterName || 'Someone',
-          timestamp: event.timestamp,
-          isRead: false
-        };
-        break;
-      
-      case 'TODO_COMPLETED':
-        notification = {
-          id: event.id,
-          type: 'TODO_COMPLETED',
-          tripId,
-          todoId: payload.id,
-          todoText: payload.text,
-          creatorName: payload.updaterName || 'Someone',
-          timestamp: event.timestamp,
-          isRead: false,
-          data: {
-            completedByName: payload.completedByName || 'Someone'
-          }
-        };
-        break;
-      
-      default:
-        return; // Unknown todo event type
-    }
-    
-    get().addNotification(notification);
-  },
-  
-  // Handle member events
-  handleMemberEvent: (event: ServerEvent) => {
-    if (!event.payload) return;
-    
-    const payload = event.payload as any;
-    const tripId = event.tripId;
-    
-    // Skip self-triggered events to reduce noise
-    const currentUserId = require('../store/useAuthStore').useAuthStore.getState().user?.id;
-    if (payload.actorId === currentUserId) return;
-    
-    let notification: MemberNotification;
-    
-    switch (event.type) {
-      case 'MEMBER_ADDED':
-        notification = {
-          id: event.id,
-          type: 'MEMBER_ADDED',
-          tripId,
-          tripName: payload.tripName || 'Trip',
-          memberName: payload.memberName || 'Someone',
-          timestamp: event.timestamp,
-          isRead: false,
-          data: {
-            role: payload.role,
-            actorName: payload.actorName
-          }
-        };
-        break;
-      
-      case 'MEMBER_REMOVED':
-        notification = {
-          id: event.id,
-          type: 'MEMBER_REMOVED',
-          tripId,
-          tripName: payload.tripName || 'Trip',
-          memberName: payload.memberName || 'Someone',
-          timestamp: event.timestamp,
-          isRead: false,
-          data: {
-            actorName: payload.actorName
-          }
-        };
-        break;
-      
-      case 'MEMBER_ROLE_UPDATED':
-        notification = {
-          id: event.id,
-          type: 'MEMBER_ROLE_UPDATED',
-          tripId,
-          tripName: payload.tripName || 'Trip',
-          memberName: payload.memberName || 'Someone',
-          timestamp: event.timestamp,
-          isRead: false,
-          data: {
-            role: payload.role,
-            previousRole: payload.previousRole,
-            actorName: payload.actorName
-          }
-        };
-        break;
-      
-      default:
-        return; // Unknown member event type
-    }
-    
-    get().addNotification(notification);
-  },
-  
-  // Handle weather events
-  handleWeatherEvent: (event: ServerEvent) => {
-    if (!event.payload) return;
-    
-    const payload = event.payload as any;
-    const tripId = event.tripId;
-    
-    let notification: WeatherNotification;
-    
-    switch (event.type) {
-      case 'WEATHER_UPDATED':
-        // Only notify of significant weather changes
-        if (!payload.significant) return;
-        
-        notification = {
-          id: event.id,
-          type: 'WEATHER_UPDATED',
-          tripId,
-          tripLocation: payload.location || 'your destination',
-          timestamp: event.timestamp,
-          isRead: false,
-          data: {
-            weatherCode: payload.weather_code,
-            temperature: payload.temperature_2m
-          }
-        };
-        break;
-      
-      case 'WEATHER_ALERT':
-        notification = {
-          id: event.id,
-          type: 'WEATHER_ALERT',
-          tripId,
-          tripLocation: payload.location || 'your destination',
-          timestamp: event.timestamp,
-          isRead: false,
-          data: {
-            alertType: payload.alert_type,
-            alertSeverity: payload.severity || 'warning',
-            alertMessage: payload.message
-          }
-        };
-        break;
-      
-      default:
-        return; // Unknown weather event type
-    }
-    
-    get().addNotification(notification);
-  },
-  
-  // Handle chat events
-  handleChatEvent: (event: ServerEvent) => {
-    if (!event.payload) return;
-    
-    const payload = event.payload as any;
-    const tripId = event.tripId;
-    
-    // Skip self-triggered events to reduce noise
-    const currentUserId = require('../store/useAuthStore').useAuthStore.getState().user?.id;
-    if (payload.user?.id === currentUserId) return;
-    
-    // Only notify for new messages, not other chat events
-    if (event.type === 'CHAT_MESSAGE_SENT') {
-      const notification: ChatNotification = {
-        id: event.id,
-        type: 'CHAT_MESSAGE',
-        tripId,
-        chatId: payload.groupId || tripId,
-        senderName: payload.user?.name || 'Someone',
-        timestamp: event.timestamp,
-        isRead: false,
-        data: {
-          messageId: payload.messageId,
-          messagePreview: payload.content?.substring(0, 50) + (payload.content?.length > 50 ? '...' : '')
+      setHasHydrated: (state) => {
+        set({ hasHydrated: state });
+      },
+
+      fetchUnreadCount: async () => {
+        if (get().isFetchingUnreadCount) return;
+        set({ isFetchingUnreadCount: true, error: null });
+        try {
+          const response = await apiClient.get<{ count: number }>('/api/notifications/count?status=unread');
+          set({ unreadCount: response.data.count });
+        } catch (err: any) {
+          const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch unread count';
+          set({ error: errorMessage });
+          logger.error('fetchUnreadCount failed:', err);
+        } finally {
+          set({ isFetchingUnreadCount: false });
         }
-      };
-      
-      get().addNotification(notification);
-    }
-  },
-  
-  // Handle location events
-  handleLocationEvent: (event: ServerEvent) => {
-    if (!event.payload) return;
-    
-    const payload = event.payload as any;
-    const tripId = event.tripId;
-    
-    // Skip self-triggered events
-    const currentUserId = require('../store/useAuthStore').useAuthStore.getState().user?.id;
-    if (payload.userId === currentUserId) return;
-    
-    // Only notify for important location updates (can be customized)
-    if (event.type === 'LOCATION_UPDATED' && payload.isSignificant) {
-      const notification: LocationNotification = {
-        id: event.id,
-        type: 'LOCATION_UPDATED',
-        tripId,
-        memberName: payload.name || 'Someone',
-        timestamp: event.timestamp,
-        isRead: false,
-        data: {
-          location: {
-            latitude: payload.location.latitude,
-            longitude: payload.location.longitude
-          },
-          locationName: payload.locationName
+      },
+
+      fetchNotifications: async (options = { loadMore: false }) => {
+        const { isFetching, offset, hasMore } = get();
+        const limit = API_PAGE_LIMIT;
+        if (isFetching || (!options.loadMore && offset > 0) || (options.loadMore && !hasMore)) {
+            return;
         }
-      };
-      
-      get().addNotification(notification);
-    }
-  },
-  
-  // Get a notification by ID
-  getNotificationById: (id: string) => {
-    return get().notifications.find(n => n.id === id);
-  },
-  
-  // Update notification status
-  updateNotificationStatus: (inviteId: string, status: string) => {
-    set(state => {
-      const updatedNotifications = state.notifications.map(n => {
-        if (isTripInviteNotification(n) && n.inviteId === inviteId) {
+
+        set({ isFetching: true, error: null });
+        const currentOffset = options.loadMore ? offset : 0;
+
+        try {
+          const response = await apiClient.get<Notification[]>('/api/notifications', {
+            params: { limit, offset: currentOffset },
+          });
+          const fetchedNotifications = response.data || [];
+
+          set(state => ({
+            notifications: options.loadMore
+              ? [...state.notifications, ...fetchedNotifications]
+              : fetchedNotifications,
+            offset: currentOffset + fetchedNotifications.length,
+            hasMore: fetchedNotifications.length === limit,
+          }));
+
+          if (!options.loadMore) {
+            get().fetchUnreadCount();
+          }
+
+        } catch (err: any) {
+          const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch notifications';
+          set({ error: errorMessage });
+          logger.error('fetchNotifications failed:', err);
+        } finally {
+           set({ isFetching: false });
+        }
+      },
+
+      markNotificationRead: async (notificationId: string) => {
+        const notification = get().notifications.find(n => n.id === notificationId);
+        if (!notification || notification.isRead || get().isMarkingRead) return;
+
+        set({ isMarkingRead: true, error: null });
+        try {
+          await apiClient.patch(`/api/notifications/${notificationId}`);
+
+          set(state => ({
+            notifications: state.notifications.map(n =>
+              n.id === notificationId ? { ...n, isRead: true } : n
+            ),
+          }));
+
+          get().fetchUnreadCount();
+
+        } catch (err: any) {
+          const errorMessage = err.response?.data?.message || err.message || 'Failed to mark notification as read';
+          set({ error: errorMessage });
+          logger.error('markNotificationRead failed:', err);
+        } finally {
+            set({ isMarkingRead: false });
+        }
+      },
+
+      markAllNotificationsRead: async () => {
+        if (get().isMarkingRead || get().unreadCount === 0) return;
+        set({ isMarkingRead: true, error: null });
+        try {
+          const payload: MarkNotificationsReadPayload = { status: 'read' };
+          await apiClient.patch('/api/notifications', payload);
+
+          set(state => ({
+            notifications: state.notifications.map(n => ({ ...n, isRead: true })),
+            unreadCount: 0,
+          }));
+        } catch (err: any) {
+          const errorMessage = err.response?.data?.message || err.message || 'Failed to mark all notifications as read';
+          get().fetchUnreadCount();
+          logger.error('markAllNotificationsRead failed:', err);
+        } finally {
+            set({ isMarkingRead: false });
+        }
+      },
+
+      handleIncomingNotification: (notification: Notification) => {
+        // Ensure the notification object is valid (basic check)
+        if (!notification || !notification.id || !notification.type) {
+          logger.warn('Received invalid notification object via WebSocket', notification);
+          return;
+        }
+
+        // Handle CHAT_MESSAGE specifically
+        if (isChatMessageNotification(notification)) {
+          set(state => ({
+            // Set the transient state for the toast component to pick up
+            latestChatMessageToast: notification,
+            // Increment count only if the backend marked it as unread
+            // Or potentially if the chat screen for this message isn't active (requires more context)
+            unreadCount: notification.read ? state.unreadCount : state.unreadCount + 1,
+          }));
+          // Note: The UI component displaying the toast will be responsible for calling clearChatToast
+          return; // Don't add chat messages to the persistent notification list
+        }
+
+        // Handle all other notification types
+        set(state => {
+          // Prevent duplicates if the same notification arrives multiple times via WS
+          if (state.notifications.some(n => n.id === notification.id)) {
+            logger.debug('Duplicate notification received via WS, ignoring:', notification.id);
+            return state; // Return current state without modification
+          }
+
+          // Add the new notification to the beginning of the array
+          const newNotifications = [notification, ...state.notifications];
+
+          // Pruning Logic: Enforce the notification limit
+          if (newNotifications.length > NOTIFICATION_LIMIT) {
+            // Remove the oldest notification (the last element in the array)
+            newNotifications.pop();
+          }
+
           return {
-            ...n,
-            status: status as 'pending' | 'accepted' | 'declined'
+            notifications: newNotifications,
+            // Increment count only if the backend marked it as unread
+            unreadCount: notification.read ? state.unreadCount : state.unreadCount + 1,
+            // Decide if receiving a notification should reset pagination/scroll
+            // For now, let's not reset offset/hasMore automatically
           };
+        });
+      },
+
+      acceptTripInvitation: async (notification: TripInvitationNotification) => {
+        if (get().isHandlingAction) return;
+        if (!isTripInvitationNotification(notification)) {
+          logger.warn('acceptTripInvitation called with non-invite notification:', notification);
+          return;
         }
-        return n;
-      });
-      
-      // Persist to storage
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedNotifications))
-        .catch(err => logger.error('Failed to save notifications', err));
-      
-      return { notifications: updatedNotifications };
+
+        set({ isHandlingAction: true, error: null });
+        const inviteId = notification.metadata.inviteId;
+
+        try {
+          // POST to the backend's business logic endpoint for accepting
+          await apiClient.post(`/api/invitations/${inviteId}/accept`);
+
+          // Success! We rely on the backend to potentially send a follow-up
+          // WebSocket message (e.g., MEMBER_ADDED or TRIP_UPDATE) to reflect the change.
+          // Alternatively, we could optimistically remove/update the notification here.
+          // For now, just log success and potentially mark as read locally if desired.
+          logger.info(`Accepted trip invitation: ${inviteId}`);
+
+          // Optional: Mark as read locally after accepting
+          set(state => ({
+             notifications: state.notifications.map(n =>
+               n.id === notification.id ? { ...n, read: true } : n
+             ),
+             // Adjust unreadCount if it was unread
+             unreadCount: !notification.read ? Math.max(0, state.unreadCount - 1) : state.unreadCount,
+          }));
+
+        } catch (err: any) {
+          const errorMessage = err.response?.data?.message || err.message || 'Failed to accept trip invitation';
+          set({ error: errorMessage });
+          logger.error('acceptTripInvitation failed:', err);
+        } finally {
+          set({ isHandlingAction: false });
+        }
+      },
+
+      declineTripInvitation: async (notification: TripInvitationNotification) => {
+        if (get().isHandlingAction) return;
+        if (!isTripInvitationNotification(notification)) {
+           logger.warn('declineTripInvitation called with non-invite notification:', notification);
+           return;
+        }
+
+        set({ isHandlingAction: true, error: null });
+        const inviteId = notification.metadata.inviteId;
+
+        try {
+          // POST to the backend's business logic endpoint for declining
+          await apiClient.post(`/api/invitations/${inviteId}/decline`);
+
+          // Success! Similar to accept, rely on backend for subsequent state updates via WS.
+          logger.info(`Declined trip invitation: ${inviteId}`);
+
+          // Optional: Remove the notification locally after declining
+          set(state => ({
+            notifications: state.notifications.filter(n => n.id !== notification.id),
+            // Adjust unreadCount if it was unread
+            unreadCount: !notification.read ? Math.max(0, state.unreadCount - 1) : state.unreadCount,
+          }));
+
+        } catch (err: any) {
+          const errorMessage = err.response?.data?.message || err.message || 'Failed to decline trip invitation';
+          set({ error: errorMessage });
+          logger.error('declineTripInvitation failed:', err);
+        } finally {
+          set({ isHandlingAction: false });
+        }
+      },
+
+      clearChatToast: () => {
+        set({ latestChatMessageToast: null });
+      },
+
+      clearNotifications: () => {
+        AsyncStorage.removeItem(STORAGE_KEY)
+          .catch(err => logger.error('Failed to clear notifications', err));
+        set({ notifications: [], unreadCount: 0, offset: 0, hasMore: true, error: null });
+      }
+    }),
+    {
+      name: STORAGE_KEY,
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({
+        notifications: state.notifications,
+      }),
+      onRehydrateStorage: () => (state) => {
+         if (state) {
+            state.setHasHydrated(true);
+            logger.info('Notification store rehydrated from AsyncStorage.');
+         } else {
+            logger.warn('Notification store rehydration resulted in null state.');
+            useNotificationStore.setState({ hasHydrated: true });
+         }
+      },
+    }
+  )
+);
+
+// --- Post-Hydration Initial Data Fetching ---
+// We use a flag to ensure this runs only once after hydration completes.
+let hydrationCompleted = false;
+const unsubscribe = useNotificationStore.subscribe((state) => {
+  // Check if hydration is complete AND we haven't run this logic yet
+  if (state.hasHydrated && !hydrationCompleted) {
+    hydrationCompleted = true; // Mark as completed to prevent re-running
+    logger.info('Notification store hydration complete. Fetching initial data...');
+
+    // Use a microtask to delay execution slightly, ensuring the current state
+    // update cycle finishes and we get the truly latest state after hydration.
+    queueMicrotask(() => {
+       const currentState = useNotificationStore.getState(); // Get latest state inside microtask
+
+        // Fetch the accurate unread count from the server first
+        currentState.fetchUnreadCount().then(() => {
+          // After getting the count, fetch the first page of notifications
+          // only if the persisted list is empty. Adjust this condition if needed
+          // (e.g., fetch always, fetch if data is older than X).
+          if (currentState.notifications.length === 0) {
+             logger.info('No persisted notifications found, fetching first page.');
+             currentState.fetchNotifications(); // Fetch initial page (offset 0)
+          } else {
+             logger.info(`Loaded ${currentState.notifications.length} notifications from storage.`);
+             // If notifications were loaded, we might still want to refresh the count
+             // based on potentially missed WS messages while offline.
+             // fetchUnreadCount() already ran, so the count should be accurate.
+          }
+        }).catch(error => {
+            logger.error('Error during post-hydration fetchUnreadCount:', error);
+        });
     });
+
+    // Optional: Unsubscribe after running once if we don't need to listen for further state changes here.
+    // However, keeping it subscribed is harmless.
+    // unsubscribe();
   }
-})); 
+});
+
+// --- WebSocket Integration Hook (Example - Keep for reference) ---
+/*
+import React, { useEffect } from 'react';
+import { useWebSocket } from './useWebSocket'; // Your WebSocket hook/manager
+import { useNotificationStore } from './useNotificationStore';
+import { Notification } from '../types/notification';
+
+const useNotificationWebSocket = () => {
+  const handleIncomingNotification = useNotificationStore(state => state.handleIncomingNotification);
+  const { lastJsonMessage } = useWebSocket(); // Assuming your hook provides the last message
+
+  useEffect(() => {
+    if (lastJsonMessage) {
+      // TODO: Add strong type checking/validation here (e.g., using Zod)
+      const notification = lastJsonMessage as Notification; // Replace with validation
+      if (notification && notification.id && notification.type) { // Basic check
+         handleIncomingNotification(notification);
+      }
+    }
+  }, [lastJsonMessage, handleIncomingNotification]);
+};
+*/ 
