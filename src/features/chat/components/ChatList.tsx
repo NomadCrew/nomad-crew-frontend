@@ -1,12 +1,12 @@
 import React, { useRef, useEffect, useCallback, useMemo } from 'react';
 import { View, FlatList, StyleSheet, ActivityIndicator, Text } from 'react-native';
 import { ChatMessage } from './ChatMessage';
-import { ChatMessageWithStatus } from '@/src/features/chat';
+import { ChatMessageWithStatus } from '../types';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/hooks/useAuth';
 import { useThemedStyles } from '@/src/theme/utils';
 import { logger } from '@/src/utils/logger';
-import { useChatStore } from '@/src/features/chat';
+import { useChatStore } from '../store';
 
 interface ChatListProps {
   messages: ChatMessageWithStatus[];

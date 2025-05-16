@@ -1,7 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { Platform, Alert } from 'react-native';
 import { router } from 'expo-router';
-import { useAuthStore } from '@/src/features/auth';
+import { useAuthStore } from '@/src/features/auth/store';
 import { useTripStore } from '@/src/store/useTripStore';
 import { logger } from '@/src/utils/logger';
 import { jwtDecode } from 'jwt-decode';

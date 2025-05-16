@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { useChatStore } from '@/src/features/chat';
-import { useAuthStore } from '@/src/features/auth';
-import { ChatList, ChatInput, ChatAuthError } from '@/src/features/chat';
+import { useChatStore } from '../store';
+import { useAuthStore } from '@/src/features/auth/store';
+import { ChatList, ChatInput, ChatAuthError } from '../components';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { logger } from '@/src/utils/logger';

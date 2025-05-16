@@ -7,7 +7,7 @@ import {
   SendMessageResponse,
   UpdateLastReadRequest,
   UpdateLastReadResponse
-} from '@/src/features/chat';
+} from './types';
 
 /**
  * Service for handling chat-related API calls

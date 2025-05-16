@@ -12,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { useAuthStore } from '@/src/features/auth';
+import { useAuthStore } from '@/src/features/auth/store';
 import Avatar from '@/components/ui/Avatar';
 import { Theme } from '@/src/theme/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';

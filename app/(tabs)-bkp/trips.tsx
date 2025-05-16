@@ -24,7 +24,7 @@ import { Theme } from '@/src/theme/types';
 import { useTripStore } from '@/src/store/useTripStore';
 import { TripStatus } from '@/src/types/trip';
 import CreateTripModal from '@/components/trips/CreateTripModal';
-import { useAuthStore } from '@/src/features/auth';
+import { useAuthStore } from '@/src/features/auth/store';
 import { RefreshControl } from 'react-native';
 import Avatar from '@/components/ui/Avatar';
 
