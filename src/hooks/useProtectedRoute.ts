@@ -1,6 +1,6 @@
 import { useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'expo-router';
-import { useAuthStore } from '@/src/store/useAuthStore';
+import { useAuthStore } from '@/src/features/auth';
 import { useOnboarding } from '@/src/providers/OnboardingProvider';
 import Constants from 'expo-constants';
 

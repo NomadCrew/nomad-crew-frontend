@@ -9,19 +9,42 @@
 
 ### Phase 1: Foundational Refactoring
 1.  **Project Structure Refactor:**
-    *   [~] Transition to a feature-first directory structure (`src/features/...`).
+    *   [x] Transition to a feature-first directory structure (`src/features/...`).
         *   [x] Create `src/features` and `src/navigation` directories.
-        *   [x] Move `auth` module files (utils, client) to `src/features/auth/`.
-        *   [x] Create `src/features/auth/service.ts` with initial content.
-        *   [!] Attempted to move `useAuthStore` to `src/features/auth/store.ts` - **FILE INCOMPLETE, AUTH BROKEN**.
-        *   [ ] **Resolve `src/features/auth/store.ts` incompleteness.**
-        *   [ ] Abstract Supabase calls from `auth/store.ts` to `auth/service.ts`.
-        *   [ ] Create `src/features/auth/types.ts` & `index.ts`.
-        *   [ ] Update codebase imports for `useAuthStore`.
-        *   [ ] Move `chat` module to `src/features/chat/` & refactor.
-        *   [ ] Move `trips` module to `src/features/trips/` & refactor.
-        *   [ ] Move `todos` module to `src/features/todos/` & refactor.
-        *   [ ] Move `notifications` module to `src/features/notifications/` & refactor.
+        *   [x] **Auth Module:** Moved to `src/features/auth/`.
+        *   [x] **Auth Module:** `service.ts` created; `supabaseClient` & `secure-token-manager` integrated.
+        *   [x] **Auth Module:** `store.ts` (full content) moved & `supabaseClient` import updated.
+        *   [x] **Auth Module:** Direct Supabase calls in `store.ts` abstracted to `service.ts` methods.
+        *   [x] **Auth Module:** Auth-specific types moved to `src/features/auth/types.ts`; old global type file deleted.
+        *   [x] **Auth Module:** `index.ts` (barrel file) created.
+        *   [x] **Auth Module:** Codebase imports for `useAuthStore` and `supabaseClient` updated.
+        *   [x] **Auth Module:** Refactored API calls in `store.ts` (e.g., `registerPushToken`) into `AuthService`.
+        *   [x] **Auth Module:** Reviewed `registerAuthHandlers` in `store.ts` (current approach acceptable).
+        *   [x] **Auth Module:** Finalized `types.ts` (removed redundant custom `Session`).
+        *   [x] **Auth Module:** Verified `src/store` and `src/types` not empty.
+        *   [x] **Chat Module:** Moved to `src/features/chat/` & refactor (service, store, types, etc.).
+            *   [x] Created `src/features/chat/` and subdirectories `screens/` and `components/`.
+            *   [x] Moved `screens/chat/ChatScreen.tsx` to `src/features/chat/screens/ChatScreen.tsx`.
+            *   [x] Moved `screens/chat/MobileChatScreen.tsx` to `src/features/chat/screens/MobileChatScreen.tsx`.
+            *   [x] Moved `components/chat/ChatButton.tsx` to `src/features/chat/components/ChatButton.tsx`.
+            *   [x] Moved `components/chat/ChatCard.tsx` to `src/features/chat/components/ChatCard.tsx`.
+            *   [x] Moved `components/chat/ChatMessage.tsx` to `src/features/chat/components/ChatMessage.tsx`.
+            *   [x] Moved `components/chat/ChatList.tsx` to `src/features/chat/components/ChatList.tsx`.
+            *   [x] Moved `components/chat/ChatInput.tsx` to `src/features/chat/components/ChatInput.tsx`.
+            *   [x] Moved `components/chat/ChatGroupItem.tsx` to `src/features/chat/components/ChatGroupItem.tsx`.
+            *   [x] Moved `components/chat/ChatGroupList.tsx` to `src/features/chat/components/ChatGroupList.tsx`.
+            *   [x] Moved `components/chat/ChatAuthError.tsx` to `src/features/chat/components/ChatAuthError.tsx`.
+            *   [x] Deleted old `components/chat/index.ts` and `components/chat/` directory (and orphaned files).
+            *   [x] Moved `src/store/useChatStore.ts` to `src/features/chat/store.ts`.
+            *   [x] Moved `src/services/chatService.ts` to `src/features/chat/service.ts`.
+            *   [x] Moved chat types to `src/features/chat/types.ts` (old global file deleted).
+            *   [x] Created `src/features/chat/index.ts` barrel file.
+            *   [x] Updated all chat-related imports throughout the codebase.
+            *   [x] Deleted old `screens/chat/` directory (and orphaned files).
+        *   [ ] **Refactor Existing Barrel Files:** Update imports from `auth` and `chat` feature barrel files to use direct paths, then delete the barrel files.
+        *   [ ] **Trips Module:** Move to `src/features/trips/` & refactor.
+        *   [ ] **Todos Module:** Move to `src/features/todos/` & refactor.
+        *   [ ] **Notifications Module:** Move to `src/features/notifications/` & refactor.
         *   [ ] Consolidate global directories (`components`, `hooks`, `services`, `store`, `types`, `utils`) under `src/`.
     *   [ ] Organize `app/` (Expo Router) to mirror feature groupings.
     *   [ ] Clean up obsolete files (e.g., `app/(tabs)-bkp/`, `TestScreen`).
@@ -51,7 +74,7 @@
     *   [ ] Implement Container/Presenter pattern.
     *   [ ] Expand service abstraction layer.
     *   [ ] Organize and create new custom hooks.
-    *   [ ] Use barrel files (`index.ts`).
+    *   [x] Use barrel files (`index.ts`).
 
 ### Phase 3: Feature-Specific Refactoring
 7.  **Feature Module Refactoring (Chat):**

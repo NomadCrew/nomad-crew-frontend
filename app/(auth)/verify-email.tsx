@@ -5,8 +5,8 @@ import { Linking } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { useAuthStore } from '@/src/store/useAuthStore';
-import { supabase } from '@/src/auth/supabaseClient';
+import { useAuthStore } from '@/src/features/auth';
+import { supabase } from '@/src/features/auth';
 import { Theme } from '@/src/theme/types';
 
 export default function VerifyEmailScreen() {

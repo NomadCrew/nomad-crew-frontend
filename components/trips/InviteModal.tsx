@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
 import { Portal, Modal, TextInput, Button, useTheme, RadioButton, Text } from 'react-native-paper';
 import { useTripStore } from '@/src/store/useTripStore';
-import { useAuthStore } from '@/src/store/useAuthStore';
+import { useAuthStore } from '@/src/features/auth';
 import { Trip } from '@/src/types/trip';
 
 interface InviteModalProps {

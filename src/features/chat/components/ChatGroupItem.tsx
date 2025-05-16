@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, _Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { ChatGroup } from '@/src/types/chat';
+import { ChatGroup } from '@/src/features/chat';
 import { formatRelativeTime } from '@/src/utils/dateUtils';
 import { Theme } from '@/src/theme/types';
 import { Ionicons } from '@expo/vector-icons';

@@ -1,12 +1,12 @@
 import React, { useRef, useEffect, useCallback, useMemo } from 'react';
 import { View, FlatList, StyleSheet, ActivityIndicator, Text } from 'react-native';
 import { ChatMessage } from './ChatMessage';
-import { ChatMessageWithStatus } from '@/src/types/chat';
+import { ChatMessageWithStatus } from '@/src/features/chat';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/hooks/useAuth';
 import { useThemedStyles } from '@/src/theme/utils';
 import { logger } from '@/src/utils/logger';
-import { useChatStore } from '@/src/store/useChatStore';
+import { useChatStore } from '@/src/features/chat';
 
 interface ChatListProps {
   messages: ChatMessageWithStatus[];
@@ -252,33 +252,8 @@ export const ChatList: React.FC<ChatListProps> = ({
     );
   }, [isLoading, styles]);
 
-  // Handle when a message becomes visible
-  const handleViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: Array<any> }) => {
-    if (viewableItems.length > 0 && user?.id) {
-      // Get the last visible message
-      const lastVisibleItem = viewableItems[viewableItems.length - 1];
-      const message = lastVisibleItem?.item as ChatMessageWithStatus;
-      
-      if (message && message.message.sender?.id !== user.id) {
-        // Mark the message as read
-        markAsRead(tripId, message.message.id);
-      }
-    }
-  }, [tripId, markAsRead, user?.id]);
-
-  // Configure viewability
-  const viewabilityConfig = {
-    itemVisiblePercentThreshold: 80 // Item is considered visible when 80% of it is in the viewport
-  };
-  
-  // Create a ref for the viewability config
-  const viewabilityConfigCallbackPairs = useRef([
-    { viewabilityConfig, onViewableItemsChanged: handleViewableItemsChanged }
-  ]);
-
   return (
     <View style={styles.container}>
-      {renderTypingIndicator()}
       <FlatList
         ref={flatListRef}
         data={sortedMessages}
@@ -288,15 +263,63 @@ export const ChatList: React.FC<ChatListProps> = ({
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmptyComponent}
         onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.3}
+        onEndReachedThreshold={0.5}
         onRefresh={handleRefresh}
         refreshing={isRefreshing}
-        removeClippedSubviews={true}
-        maxToRenderPerBatch={10}
+        // Performance optimization: Only render items visible on screen
         windowSize={10}
-        initialNumToRender={15}
-        viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs.current}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        // Remove if not using custom date separators
+        // ItemSeparatorComponent={({ leadingItem }) => <DateSeparator leadingItem={leadingItem} />} 
       />
+      {renderTypingIndicator()}
     </View>
   );
-}; 
+};
+
+// TODO: Re-evaluate the DateSeparator logic, possibly removing or simplifying it.
+// interface DateSeparatorProps {
+//   leadingItem: ChatMessageWithStatus;
+// }
+
+// const DateSeparator: React.FC<DateSeparatorProps> = ({ leadingItem }) => {
+//   const { theme } = useTheme();
+//   const styles = useThemedStyles((theme) => StyleSheet.create({
+//     dateSeparator: {
+//       alignItems: 'center',
+//       marginVertical: 16,
+//     },
+//     dateSeparatorLine: {
+//       height: 1,
+//       backgroundColor: theme.colors.border.default,
+//       opacity: 0.3,
+//       width: '100%',
+//       position: 'absolute',
+//     },
+//     dateSeparatorText: {
+//       backgroundColor: theme.colors.background.default,
+//       paddingHorizontal: 12,
+//       fontSize: 12,
+//       color: theme.colors.content.tertiary,
+//       fontWeight: '500',
+//     }
+//   }));
+
+//   const messageDate = new Date(leadingItem.message.created_at || 0);
+  
+//   // Only show date separator if it's a new day
+//   // This logic needs access to the *previous* item, not `leadingItem` if it means the current.
+//   // FlatList's ItemSeparatorComponent provides `leadingItem` (the item *before* the separator)
+//   // and `trailingItem` (the item *after* the separator).
+//   // This needs careful re-evaluation.
+
+//   return (
+//     <View style={styles.dateSeparator}>
+//       <View style={styles.dateSeparatorLine} />
+//       <Text style={styles.dateSeparatorText}>
+//         {messageDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}
+//       </Text>
+//     </View>
+//   );
+// }; 

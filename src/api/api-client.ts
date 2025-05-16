@@ -1,5 +1,5 @@
 import { BaseApiClient } from './base-client';
-import { supabase } from '@/src/auth/supabaseClient';
+import { supabase } from '@/src/features/auth';
 import { AxiosHeaders, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { API_PATHS } from '@/src/utils/api-paths';
 import { logger } from '@/src/utils/logger';

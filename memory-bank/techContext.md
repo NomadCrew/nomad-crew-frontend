@@ -104,4 +104,12 @@ This document outlines the technology stack, key libraries, and development prac
 ## 14. Documentation
 *   **JSDoc/TSDoc:** For inline code documentation of functions, components, and hooks.
 *   **Markdown files (`.md`):** For project overview, context, patterns, and progress tracking (in `./memory-bank/`).
-*   **README.md:** High-level project information, setup instructions, and script commands. 
+*   **README.md:** High-level project information, setup instructions, and script commands.
+
+## 15. Code Module & Import Strategies
+*   **Feature-First Structure:** Code is organized by features (e.g., `src/features/auth`, `src/features/chat`) to promote modularity and maintainability.
+*   **Direct Imports (No Barrel Files for Application Code):**
+    *   To optimize bundle size, improve tree-shaking, and enhance build/test performance, **barrel files (e.g., `index.ts` files that re-export multiple modules from a directory) MUST NOT be used for importing modules within the application code.**
+    *   Always prefer direct imports from the specific file where a module is defined (e.g., `import { MyComponent } from '@/src/features/chat/components/MyComponent';` instead of `import { MyComponent } from '@/src/features/chat';`).
+    *   This rule is based on observed negative impacts on final bundle sizes and test execution times. For more details, see: [Barrel files and why you should STOP using them now](https://dev.to/tassiofront/barrel-files-and-why-you-should-stop-using-them-now-bc4).
+    *   Note: This rule applies to internal application imports. External library entry points (which often act as barrel files) are consumed as designed by the library authors. 

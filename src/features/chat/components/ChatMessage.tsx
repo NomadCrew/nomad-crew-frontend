@@ -1,8 +1,8 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { ChatMessageWithStatus } from '@/src/types/chat';
-import { useAuthStore } from '@/src/store/useAuthStore';
+import { ChatMessageWithStatus } from '@/src/features/chat';
+import { useAuthStore } from '@/src/features/auth';
 import { formatRelativeTime } from '@/src/utils/dateUtils';
 import { Theme } from '@/src/theme/types';
 import { logger } from '@/src/utils/logger';
@@ -248,18 +248,18 @@ const styles = (theme: Theme) => StyleSheet.create({
     marginLeft: 36, // Align with the message bubble, not the avatar
   },
   metaText: {
-    fontSize: 10,
-    opacity: 0.7,
+    fontSize: 12,
+    color: theme.colors.chat?.metaText || theme.colors.content.tertiary,
   },
   currentUserMetaText: {
-    color: theme.colors.chat?.userBubble?.meta || theme.colors.content.tertiary,
+    // No specific style for current user meta text, inherits from metaText
   },
   otherUserMetaText: {
-    color: theme.colors.chat?.otherBubble?.meta || theme.colors.content.tertiary,
+    // No specific style for other user meta text, inherits from metaText
   },
   avatarSpacer: {
-    width: 28,
-    marginLeft: 8,
+    width: 28, // Same width as avatar
+    marginRight: 8, // Same margin as avatarWrapper
   },
   readReceiptContainer: {
     flexDirection: 'row',
@@ -267,8 +267,18 @@ const styles = (theme: Theme) => StyleSheet.create({
     marginTop: 2,
   },
   readReceiptText: {
+    marginLeft: 4,
     fontSize: 10,
-    marginLeft: 2,
-    color: theme.colors.chat?.readReceipt?.text || theme.colors.content.tertiary,
+    color: theme.colors.chat?.readReceipt?.text || theme.colors.content.secondary,
   },
-}); 
+});
+
+// Considerations:
+// - Image messages (if applicable)
+// - Message reactions (if applicable)
+// - Error handling for image loading (basic added)
+// - Accessibility labels
+// - Long press for actions (copy, reply, etc.)
+// - Tap on avatar for profile view
+// - Performance for very long messages (truncation?)
+// - Localization for status text (e.g., 'Sending...') 
