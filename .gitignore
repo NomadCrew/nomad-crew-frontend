@@ -16,6 +16,7 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
+android/
 
 # Metro
 .metro-health-check*
@@ -38,3 +39,15 @@ yarn-error.*
 app-example
 
 op.txt
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Exception for Google Services files
+!ios/GoogleService-Info*.plist
+GOOGLE_API_KEYS.txt
+
+.cursorrules
+.cursor/*

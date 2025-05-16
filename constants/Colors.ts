@@ -9,20 +9,20 @@ const tintColorDark = '#FF8A4D';  // Lighter orange for dark mode
 
 export const Colors = {
   light: {
-    text: '#2A2B2A',        // jet
-    background: '#FFFAFB',  // snow
+    text: '#1A1A1A',        // Darker gray for better readability
+    background: '#FCFCFC',  // Slightly cooler white
     tint: tintColorLight,   // orange
-    icon: '#D3C0CD',        // thistle
-    tabIconDefault: '#D3C0CD', // thistle
+    icon: '#6B7280',        // Medium gray
+    tabIconDefault: '#A1A1AA',
     tabIconSelected: tintColorLight, // orange
-    accent: '#61C9A8',      // mint - adding this for accent elements
+    accent: '#2F855E',      // Darker mint for better contrast
   },
   dark: {
-    text: '#FFFAFB',        // snow
-    background: '#2A2B2A',  // jet
+    text: '#F8FAFC',
+    background: '#0F172A',  // Darker base for better contrast
     tint: tintColorDark,    // light orange
-    icon: '#D3C0CD',        // thistle
-    tabIconDefault: '#D3C0CD', // thistle
+    icon: '#94A3B8',
+    tabIconDefault: '#94A3B8',
     tabIconSelected: tintColorDark, // light orange
     accent: '#61C9A8',      // mint - keeping same accent for consistency
   },
