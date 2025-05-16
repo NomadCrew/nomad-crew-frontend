@@ -1,167 +1,29 @@
-import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { Provider as PaperProvider } from 'react-native-paper';
-import { Stack, useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef } from 'react';
-import RNEventSource from 'react-native-sse';
-import { ThemeProvider, useTheme } from '@/src/theme/ThemeProvider';
-import { useAuthStore } from '@/src/store/useAuthStore';
-import { OnboardingProvider } from '@/src/providers/OnboardingProvider';
-import AuthErrorBoundary from '@/components/AuthErrorBoundary';
-import { InitialLoadingScreen } from '@/components/InitialLoadingScreen';
-import { supabase } from '@/src/auth/supabaseClient';
-import { useOnboarding } from '@/src/providers/OnboardingProvider';
-import { NotificationProvider } from '@/src/components/notifications';
-import AppInitializer from './AppInitializer';
-import 'react-native-get-random-values'
-import React from 'react';
+    // app/index.tsx (Temporary Test Screen)
+    import React from 'react';
+    import { View, Text, Button } from 'react-native';
+    import { useTheme } from '@/src/theme/ThemeProvider';
+    import { SplashScreen } from 'expo-router';
 
-if (!global.crypto) {
-  global.crypto = require('react-native-get-random-values');
-}
-
-if (!global.EventSource) {
-  // @ts-ignore - React Native SSE polyfill
-  global.EventSource = RNEventSource;
-}
-
-// Safe way to import useSegments
-let useSegments: any;
-try {
-  useSegments = require('expo-router').useSegments;
-} catch (error) {
-  // Fallback if useSegments is not available
-  useSegments = () => [''];
-}
-
-function RouteGuard({ children }: { children: React.ReactNode }) {
-  // Use useSegments directly at the top level
-  const segments = useSegments();
-  
-  const router = useRouter();
-  const { token, isInitialized, loading, isVerifying } = useAuthStore();
-  const { isFirstTime } = useOnboarding();
-  const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastNavigationRef = useRef<string | null>(null);
-
-  const currentSegment = segments[0];
-  const inAuthGroup = currentSegment === '(auth)';
-  const inOnboardingGroup = currentSegment === '(onboarding)';
-
-  useEffect(() => {
-    const debugSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      // Session check completed
-    };
-    
-    // Only run this once
-    if (isInitialized) {
-      debugSession();
-    }
-  }, [isInitialized]);
-
-  useEffect(() => {
-    if (!isInitialized) return;
-
-    if (navigationTimeoutRef.current) {
-      clearTimeout(navigationTimeoutRef.current);
-    }
-
-    let targetRoute: string | null = null;
-    if (isVerifying) {
-      targetRoute = '/(auth)/verify-email';
-    } else if (isFirstTime && !inOnboardingGroup) {
-      targetRoute = '/(onboarding)/welcome';
-    } else if (!token && !inAuthGroup && !isFirstTime) {
-      targetRoute = '/(auth)/login';
-    } else if (token && (inAuthGroup || inOnboardingGroup)) {
-      targetRoute = '/(tabs)';
-    }
-
-    if (targetRoute && targetRoute !== lastNavigationRef.current) {
-      navigationTimeoutRef.current = setTimeout(() => {
-        lastNavigationRef.current = targetRoute;
-        router.replace(targetRoute as any);
-      }, 100);
-    }
-
-    return () => {
-      if (navigationTimeoutRef.current) {
-        clearTimeout(navigationTimeoutRef.current);
+    export default function TestScreen() {
+      try {
+        // Hide splash screen ASAP, but after potential theme access
+        SplashScreen.hideAsync(); 
+        const { theme, mode, toggleColorScheme } = useTheme();
+        
+        return (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background.default }}>
+            <Text style={{ color: theme.colors.content.primary }}>Theme mode: {mode}</Text>
+            <Text style={{ color: theme.colors.content.primary }}>Test Screen: Theme loaded!</Text>
+            <Button title="Toggle Theme" onPress={toggleColorScheme} />
+          </View>
+        );
+      } catch (e: any) {
+        SplashScreen.hideAsync(); // Ensure splash is hidden to see error
+        return (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <Text>Error using theme in TestScreen (app/index.tsx):</Text>
+            <Text>{e.message}</Text>
+          </View>
+        );
       }
-    };
-  }, [segments, token, isInitialized, isFirstTime, isVerifying, router, inAuthGroup, inOnboardingGroup]);
-
-  return children;
-}
-
-function RootLayoutNav() {
-  const { theme, mode } = useTheme();
-  const { isInitialized } = useAuthStore();
-  
-  if (!isInitialized) {
-    return <InitialLoadingScreen />;
-  }
-
-  return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <NavigationThemeProvider value={mode === 'dark' ? DarkTheme : DefaultTheme}>
-        <NotificationProvider>
-          <RouteGuard>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
-              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen 
-                name="trip/[id]" 
-                options={{ 
-                  headerShown: false,
-                  presentation: 'card'
-                }} 
-              />
-              <Stack.Screen 
-                name="invite/[id]" 
-                options={{ 
-                  headerShown: false,
-                  presentation: 'transparentModal'
-                }} 
-              />
-              <Stack.Screen 
-                name="invitation" 
-                options={{ 
-                  headerShown: false,
-                  presentation: 'transparentModal'
-                }} 
-              />
-              <Stack.Screen 
-                name="notifications" 
-                options={{ 
-                  headerShown: false,
-                  presentation: 'card'
-                }} 
-              />
-            </Stack>
-          </RouteGuard>
-          <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
-        </NotificationProvider>
-      </NavigationThemeProvider>
-    </GestureHandlerRootView>
-  );
-}
-
-export default function RootLayout() {
-  return (
-    <PaperProvider>
-      <OnboardingProvider>
-        <ThemeProvider>
-          <AuthErrorBoundary>
-            <AppInitializer>
-              <RootLayoutNav />
-            </AppInitializer>
-          </AuthErrorBoundary>
-        </ThemeProvider>
-      </OnboardingProvider>
-    </PaperProvider>
-  );
-}
+    }
