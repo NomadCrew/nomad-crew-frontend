@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { Link, router } from 'expo-router';
-import { useAuthStore } from '@/src/features/auth';
+import { useAuthStore } from '@/src/features/auth/store';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useTheme } from '@/src/theme/ThemeProvider';

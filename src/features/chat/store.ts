@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { ChatState, ChatMessageWithStatus, ChatUser, PaginationInfo, ReadReceipt, ChatMessage } from '@/src/features/chat';
-import { chatService } from '@/src/features/chat';
-import { useAuthStore } from './useAuthStore';
+import { ChatState, ChatMessageWithStatus, ChatUser, PaginationInfo, ReadReceipt, ChatMessage } from './types';
+import { chatService } from './service';
+import { useAuthStore } from '@/src/features/auth/store';
 import { logger } from '@/src/utils/logger';
 import { ServerEvent } from '@/src/types/events';
 import { WebSocketManager } from '@/src/websocket/WebSocketManager';

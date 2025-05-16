@@ -3,7 +3,7 @@ import { View, StyleSheet, Platform, Pressable, Alert, ScrollView, Dimensions } 
 import { Portal, Modal, Text as PaperText, Button, useTheme, TextInput } from 'react-native-paper';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
-import { useAuthStore } from '@/src/features/auth';
+import { useAuthStore } from '@/src/features/auth/store';
 import { Trip } from '@/src/types/trip';
 import { PlaceDetailsWithFullText } from '@/src/types/places';
 import CustomPlacesAutocomplete from '@/components/PlacesAutocomplete';

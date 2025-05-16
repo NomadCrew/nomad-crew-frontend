@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, InteractionManager, Platform, Pressable, Activi
 import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useLocationStore } from '@/src/store/useLocationStore';
-import { useAuthStore } from '@/src/features/auth';
+import { useAuthStore } from '@/src/features/auth/store';
 import { Trip } from '@/src/types/trip';
 import { AlertCircle, Info } from 'lucide-react-native';
 import { LocationSharingToggle } from './LocationSharingToggle';

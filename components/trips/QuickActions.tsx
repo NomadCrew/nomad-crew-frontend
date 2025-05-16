@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Pressable, Text, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { Surface } from 'react-native-paper';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { useAuthStore } from '@/src/features/auth';
+import { useAuthStore } from '@/src/features/auth/store';
 import { Theme } from '@/src/theme/types';
 import { Trip } from '@/src/types/trip';
 import { ArrowLeft, ArrowRight, MapPin, Users, UserPlus, Activity, MessageSquare } from 'lucide-react-native';

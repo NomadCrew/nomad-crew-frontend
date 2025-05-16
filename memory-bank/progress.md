@@ -41,7 +41,7 @@
             *   [x] Created `src/features/chat/index.ts` barrel file.
             *   [x] Updated all chat-related imports throughout the codebase.
             *   [x] Deleted old `screens/chat/` directory (and orphaned files).
-        *   [ ] **Refactor Existing Barrel Files:** Update imports from `auth` and `chat` feature barrel files to use direct paths, then delete the barrel files.
+        *   [x] **Refactor Existing Barrel Files:** Update imports from `auth` and `chat` feature barrel files to use direct paths, then delete the barrel files.
         *   [ ] **Trips Module:** Move to `src/features/trips/` & refactor.
         *   [ ] **Todos Module:** Move to `src/features/todos/` & refactor.
         *   [ ] **Notifications Module:** Move to `src/features/notifications/` & refactor.

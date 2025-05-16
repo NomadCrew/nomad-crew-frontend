@@ -1,8 +1,8 @@
 import { Platform } from 'react-native';
-import { useAuthStore } from '@/src/features/auth';
+import { useAuthStore } from '@/src/features/auth/store';
 import { useState } from 'react';
 import Constants from 'expo-constants';
-import { supabase } from '@/src/features/auth';
+import { supabase } from '@/src/features/auth/service';
 import { GoogleSignInResponse } from '@/src/types/auth';
 
 // Define interfaces for the Google Sign-In module

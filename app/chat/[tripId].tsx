@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react';
 import { View, StyleSheet, useWindowDimensions, Text } from 'react-native';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
-import { ChatScreen, MobileChatScreen } from '@/src/features/chat';
+import { ChatScreen, MobileChatScreen } from '@/src/features/chat/screens';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { useChatStore } from '@/src/features/chat';
+import { useChatStore } from '@/src/features/chat/store';
 import { StatusBar } from 'expo-status-bar';
 import { logger } from '@/src/utils/logger';
 import { SafeAreaProvider } from 'react-native-safe-area-context';

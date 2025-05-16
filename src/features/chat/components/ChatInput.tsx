@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet, Keyboard, ActivityIndicator, Platform } from 'react-native';
 import { Send } from 'lucide-react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { useChatStore } from '@/src/features/chat';
+import { useChatStore } from '../store';
 import { useThemedStyles } from '@/src/theme/utils';
 import { logger } from '@/src/utils/logger';
 

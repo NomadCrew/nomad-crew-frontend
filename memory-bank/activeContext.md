@@ -35,6 +35,7 @@
     - Created `src/features/chat/index.ts` barrel file.
     - Updated all imports for moved chat files throughout the codebase.
     - Deleted old `screens/chat/` directory and orphaned screen files.
+    - **Barrel File Refactor (Auth & Chat):** Updated all imports previously using `src/features/auth/index.ts` and `src/features/chat/index.ts` to use direct module paths. Deleted both barrel files.
 
 ## 🧠 Next Steps
 

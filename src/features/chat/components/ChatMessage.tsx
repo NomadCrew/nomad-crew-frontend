@@ -1,8 +1,8 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { ChatMessageWithStatus } from '@/src/features/chat';
-import { useAuthStore } from '@/src/features/auth';
+import { ChatMessageWithStatus } from '../types';
+import { useAuthStore } from '@/src/features/auth/store';
 import { formatRelativeTime } from '@/src/utils/dateUtils';
 import { Theme } from '@/src/theme/types';
 import { logger } from '@/src/utils/logger';

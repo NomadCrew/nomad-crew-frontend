@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { useChatStore } from '@/src/features/chat';
+import { useChatStore } from '../store';
 import { formatRelativeTime } from '@/src/utils/dateUtils';
 import { MessageSquare } from 'lucide-react-native';
 import { useThemedStyles } from '@/src/theme/utils';
