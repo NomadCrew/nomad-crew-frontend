@@ -9,11 +9,8 @@ export const createApiPath = (path: string) => {
 // Define all API endpoints
 export const API_PATHS = {
   auth: {
-    login: '/login',
     logout: createApiPath('auth/logout'),
-    refresh: createApiPath('auth/refresh'),
     validate: createApiPath('auth/validate'),
-    register: createApiPath('auth/register'),
   },
   users: {
     create: createApiPath('users'),
@@ -21,7 +18,7 @@ export const API_PATHS = {
     byId: (id: string) => createApiPath(`users/${id}`),
   },
   trips: {
-    list: createApiPath('trips/list'),
+    list: createApiPath('trips'),
     create: createApiPath('trips'),
     byId: (id: string) => createApiPath(`trips/${id}`),
     updateStatus: (id: string) => createApiPath(`trips/${id}/status`),

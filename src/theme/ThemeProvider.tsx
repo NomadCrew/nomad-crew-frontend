@@ -19,7 +19,7 @@ const ThemeContext = createContext<ThemeContextType | null>(null);
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemColorScheme = useColorScheme();
   const [mode, setMode] = React.useState<ThemeMode>('system');
-  const [isThemeLoaded, setIsThemeLoaded] = useState(false);
+  const [isThemeLoaded, setIsThemeLoaded] = useState(true);
   
   const isDark = React.useMemo(() => {
     if (mode === 'system') {
@@ -41,15 +41,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   
   const toggleColorScheme = React.useCallback(() => {
     setMode(prev => prev === 'dark' ? 'light' : 'dark');
-  }, []);
-  
-  // Set theme as loaded after a short delay to ensure it's fully initialized
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsThemeLoaded(true);
-    }, 300);
-    
-    return () => clearTimeout(timer);
   }, []);
   
   const value = React.useMemo(() => ({

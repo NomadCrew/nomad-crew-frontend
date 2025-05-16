@@ -68,12 +68,16 @@ export class ApiClient extends BaseApiClient {
     // 1) Attach the current token from Supabase before each request
     this.api.interceptors.request.use(
       async (config) => {
-        // Skip auth for public endpoints
-        const isPublicEndpoint = [
-          API_PATHS.auth.login,
-          API_PATHS.auth.register,
-          API_PATHS.auth.refresh
-        ].some(path => config.url?.includes(path));
+        // Skip auth for public endpoints that might exist on the backend (e.g., health checks, public data)
+        // Auth-specific backend endpoints (login, register, refresh) are removed as Supabase handles these.
+        const publicBackendPaths = [
+          // Add any known public backend paths here if necessary, for example:
+          // '/v1/public/some-data',
+          // API_PATHS.auth.validate, // If validate is a public check, otherwise remove
+          // API_PATHS.auth.logout, // If logout needs to be called without a token (e.g. to clear cookies), otherwise remove
+        ];
+        
+        const isPublicEndpoint = publicBackendPaths.some(path => path && config.url?.includes(path));
         
         if (isPublicEndpoint) {
           return config;
