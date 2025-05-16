@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import { useTheme } from './ThemeProvider';
 import { logger } from '../utils/logger';
+import { Theme } from './types';
 
 /**
  * Creates a styles object using the theme
@@ -11,7 +12,7 @@ import { logger } from '../utils/logger';
  * @returns A styles object
  */
 export function createStyles<T extends StyleSheet.NamedStyles<T> | StyleSheet.NamedStyles<any>>(
-  createStyles: (theme: any) => T
+  createStyles: (theme: Theme) => T
 ) {
   return createStyles;
 }
@@ -24,7 +25,7 @@ export function createStyles<T extends StyleSheet.NamedStyles<T> | StyleSheet.Na
  * @returns An object with the theme and styles
  */
 export function useThemeAndStyles<T extends StyleSheet.NamedStyles<T> | StyleSheet.NamedStyles<any>>(
-  createStyles: (theme: any) => T
+  createStyles: (theme: Theme) => T
 ) {
   const { theme } = useTheme();
   
@@ -43,28 +44,28 @@ export function useThemeAndStyles<T extends StyleSheet.NamedStyles<T> | StyleShe
  * @returns A styles object with safe access to theme properties
  */
 export function useThemedStyles<T extends Record<string, any>>(
-  stylesFn: (theme: any) => T
+  stylesFn: (theme: Theme) => T
 ): T {
   const { theme } = useTheme();
   
   // Create a safe version of the theme that handles undefined properties
   const safeTheme = useMemo(() => {
-    if (!theme) return {};
+    if (!theme) return {} as Theme;
     
     // Create a proxy to handle undefined properties safely
     return new Proxy(theme, {
       get: (target, prop) => {
-        const value = target[prop];
+        const value = target[prop as keyof Theme];
         if (typeof value === 'object' && value !== null) {
           return new Proxy(value, {
             get: (obj, key) => {
-              return obj[key] !== undefined ? obj[key] : null;
+              return obj[key as keyof typeof obj] !== undefined ? obj[key as keyof typeof obj] : null;
             }
           });
         }
         return value;
       }
-    });
+    }) as Theme;
   }, [theme]);
   
   // Memoize the styles to prevent unnecessary recalculations
@@ -89,7 +90,7 @@ export function useThemedStyles<T extends Record<string, any>>(
  * @param fallback A fallback value if the property is undefined
  * @returns The property value or the fallback
  */
-export function getThemeValue(obj: any, path: string, fallback: any = undefined): any {
+export function getThemeValue<T>(obj: Record<string, any>, path: string, fallback: T | undefined = undefined): T | undefined {
   const keys = path.split('.');
   let current = obj;
   

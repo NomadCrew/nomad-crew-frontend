@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { ChatState, ChatMessageWithStatus, ChatUser, PaginationInfo, ReadReceipt } from '@/src/types/chat';
+import { ChatState, ChatMessageWithStatus, ChatUser, PaginationInfo, ReadReceipt, ChatMessage } from '@/src/types/chat';
 import { chatService } from '@/src/services/chatService';
 import { useAuthStore } from './useAuthStore';
 import { logger } from '@/src/utils/logger';
@@ -537,7 +537,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       case 'CHAT_MESSAGE_SENT':
       case 'MESSAGE_SENT': {
         const { tripId } = event;
-        const { message } = event.payload;
+        const payload = event.payload as { message: ChatMessage };
+        const message = payload.message;
         
         if (!message || !tripId) {
           logger.warn('ChatStore', 'Invalid message event payload:', event);
@@ -597,7 +598,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       
       case 'TYPING_STATUS': {
         const { tripId } = event;
-        const { userId, isTyping, username } = event.payload;
+        const payload = event.payload as { userId: string; isTyping: boolean; username: string };
+        const { userId, isTyping, username } = payload;
         
         if (!userId || !tripId) {
           logger.warn('ChatStore', 'Invalid typing status event payload:', event);

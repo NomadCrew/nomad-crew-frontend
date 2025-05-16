@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useChatStore } from '@/src/store/useChatStore';
 import { useAuthStore } from '@/src/store/useAuthStore';
@@ -9,6 +9,7 @@ import { ChatAuthError } from '@/components/chat/ChatAuthError';
 import { WebSocketManager } from '@/src/websocket/WebSocketManager';
 import { Theme } from '@/src/theme/types';
 import { StatusBar } from 'expo-status-bar';
+import { StatusBarStyle } from 'expo-status-bar/build/StatusBar.types';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemedStyles } from '@/src/theme/utils';
 import { logger } from '@/src/utils/logger';
@@ -157,64 +158,56 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({
     return StyleSheet.create({
       container: {
         flex: 1,
-        backgroundColor: theme?.colors?.background?.default || '#FFFFFF',
-      },
+        backgroundColor: theme?.colors?.surface?.default || '#FFFFFF',
+      } as ViewStyle,
       header: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
         paddingHorizontal: 16,
         paddingVertical: 12,
         borderBottomWidth: 1,
-        borderBottomColor: theme?.colors?.border?.default || '#E0E0E0',
-        backgroundColor: theme?.colors?.background?.elevated || '#FFFFFF',
-        zIndex: 10,
-        minHeight: 56,
-      },
+        borderBottomColor: theme?.colors?.border?.default || '#EEEEEE',
+        backgroundColor: theme?.colors?.surface?.default || '#FFFFFF',
+        minHeight: 60,
+      } as ViewStyle,
       backButton: {
         marginRight: 16,
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
-      },
+        padding: 4,
+      } as ViewStyle,
       headerTitle: {
         flex: 1,
         fontSize: 18,
-        fontWeight: '600',
+        fontWeight: '600' as const,
         color: theme?.colors?.content?.primary || '#1A1A1A',
-      },
+      } as TextStyle,
       chatContainer: {
         flex: 1,
-        position: 'relative',
-        width: '100%',
-        height: '100%',
-      },
+      } as ViewStyle,
       emptyState: {
         flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
+        justifyContent: 'center' as const,
+        alignItems: 'center' as const,
         padding: 20,
-      },
+      } as ViewStyle,
       emptyStateText: {
         fontSize: 16,
         color: theme?.colors?.content?.secondary || '#757575',
-        textAlign: 'center',
+        textAlign: 'center' as const,
         marginBottom: 20,
-      },
-      statusBarStyle: theme?.dark ? 'light' : 'dark',
+      } as TextStyle,
+      statusBarStyle: (theme?.dark ? 'light' : 'dark') as StatusBarStyle,
       loadingContainer: {
         flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
+        justifyContent: 'center' as const,
+        alignItems: 'center' as const,
         padding: 20,
-      },
+      } as ViewStyle,
       loadingText: {
         fontSize: 16,
         color: theme?.colors?.content?.secondary || '#757575',
-        textAlign: 'center',
+        textAlign: 'center' as const,
         marginTop: 12,
-      },
+      } as TextStyle,
     });
   });
   

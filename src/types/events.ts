@@ -20,6 +20,7 @@ export const ServerEventType = z.enum([
   'MEMBER_INVITED',
   'LOCATION_UPDATED',
   'LOCATION_SHARING_CHANGED',
+  'TRIP_INVITE',
   // New chat event types
   'CHAT_MESSAGE_SENT',
   'CHAT_MESSAGE_EDITED',
@@ -27,7 +28,11 @@ export const ServerEventType = z.enum([
   'CHAT_REACTION_ADDED',
   'CHAT_REACTION_REMOVED',
   'CHAT_READ_RECEIPT',
-  'CHAT_TYPING_STATUS'
+  'CHAT_TYPING_STATUS',
+  // Additional event types used in code
+  'MESSAGE_SENT',
+  'TYPING_STATUS',
+  'MESSAGE_READ'
 ]);
 
 export type ServerEventType = z.infer<typeof ServerEventType>;
@@ -208,6 +213,19 @@ export const EventSchemas = {
         avatar: z.string().optional()
       })
     })
+  }),
+
+  // Trip invite event schema
+  tripInvite: BaseEventSchema.extend({
+    type: z.literal('TRIP_INVITE'),
+    payload: z.object({
+      inviteId: z.string(),
+      tripId: z.string(),
+      inviterName: z.string(),
+      message: z.string().optional(),
+      timestamp: z.string(),
+      status: z.string()
+    })
   })
 };
 
@@ -251,3 +269,7 @@ export const isChatEvent = (event: ServerEvent): boolean => {
     'CHAT_READ_RECEIPT'
   ].includes(event.type);
 };
+
+export const isTripInviteEvent = (event: ServerEvent): event is z.infer<typeof EventSchemas.tripInvite> => {
+  return event.type === 'TRIP_INVITE' && EventSchemas.tripInvite.safeParse(event).success;
+}

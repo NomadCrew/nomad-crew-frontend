@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ActivityIndicator, Text } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '@/src/navigation/types';
+import { RootStackParamList } from '@/src/types/navigation';
 import { ChatList } from '@/components/chat/ChatList';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { useChatStore } from '@/src/store/useChatStore';
@@ -36,7 +36,7 @@ export const ChatScreen = () => {
     hasMoreMessages
   } = useChatStore();
   
-  const { trips, fetchTrip } = useTripStore();
+  const { trips, getTripById } = useTripStore();
   const [trip, setTrip] = useState<any>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
@@ -74,7 +74,7 @@ export const ChatScreen = () => {
       emptyText: {
         color: theme.colors.content.secondary,
         textAlign: 'center',
-        fontSize: theme.typography.size.md,
+        fontSize: theme.typography.size?.md || 16,
       },
     });
   });
@@ -82,9 +82,13 @@ export const ChatScreen = () => {
   // Fetch trip details
   useEffect(() => {
     if (tripId) {
-      fetchTrip(tripId);
+      // Use getTripById as a simpler way to get trip info
+      const tripInfo = getTripById(tripId);
+      if (tripInfo) {
+        setTrip(tripInfo);
+      }
     }
-  }, [tripId, fetchTrip]);
+  }, [tripId, getTripById]);
   
   // Set trip from store
   useEffect(() => {
@@ -173,6 +177,7 @@ export const ChatScreen = () => {
           onRefresh={handleRefresh}
           isRefreshing={isRefreshing}
           typingUsers={typingUsers[tripId] || []}
+          tripId={tripId}
         />
       </View>
       

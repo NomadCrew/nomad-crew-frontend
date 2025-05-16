@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ServerEvent } from './events';
 
 // API Response Types
 export interface ChatMessage {

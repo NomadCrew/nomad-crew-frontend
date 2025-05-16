@@ -6,6 +6,7 @@ import { useAuthStore } from '@/src/store/useAuthStore';
 import { ThemedView } from '@/components/ThemedView';
 import { useTripStore } from '@/src/store/useTripStore';
 import { jwtDecode } from 'jwt-decode';
+import { logger } from '@/src/utils/logger';
 
 interface InvitationToken {
   tripId?: string;
@@ -21,14 +22,19 @@ export default function InvitationScreen() {
   const [errorMessage, setErrorMessage] = useState<string>('');
 
   useEffect(() => {
+    logger.debug('INVITATION', `Invitation screen mounted with token: ${typeof token === 'string' ? token.substring(0, 15) + '...' : 'none'}`);
+    logger.debug('INVITATION', `Auth state: ${user ? 'Logged in as ' + user.email : 'Not logged in'}`);
+    
     const handleInvitation = async () => {
       if (!token) {
+        logger.debug('INVITATION', 'No invitation token provided');
         setStatus('error');
         setErrorMessage('No invitation token provided');
         return;
       }
 
       if (typeof token !== 'string') {
+        logger.debug('INVITATION', `Invalid token format: ${typeof token}`);
         setStatus('error');
         setErrorMessage('Invalid token format');
         return;
@@ -39,9 +45,11 @@ export default function InvitationScreen() {
         let decodedToken: InvitationToken;
         try {
           decodedToken = jwtDecode(token);
+          logger.debug('INVITATION', `Token decoded successfully:`, decodedToken);
           
           // Check if token is expired
           if (decodedToken.exp && decodedToken.exp * 1000 < Date.now()) {
+            logger.debug('INVITATION', `Token expired: ${new Date(decodedToken.exp * 1000).toISOString()}`);
             setStatus('error');
             setErrorMessage('Invitation has expired');
             return;
@@ -49,24 +57,37 @@ export default function InvitationScreen() {
           
           // Check if token has required fields
           if (!decodedToken.tripId) {
+            logger.debug('INVITATION', 'Token missing tripId');
             // Token missing tripId
           }
           
           if (!decodedToken.invitationId) {
+            logger.debug('INVITATION', 'Token missing invitationId');
             // Token missing invitationId
           }
+
+          // Check if email in token matches current user
+          if (decodedToken.inviteeEmail && user?.email && decodedToken.inviteeEmail !== user.email) {
+            logger.debug('INVITATION', `Email mismatch: token has ${decodedToken.inviteeEmail}, user is ${user.email}`);
+            setStatus('error');
+            setErrorMessage(`This invitation was sent to ${decodedToken.inviteeEmail}, but you're logged in as ${user.email}`);
+            return;
+          }
         } catch (decodeError) {
+          logger.debug('INVITATION', 'Failed to decode token:', decodeError);
           // Failed to decode token
         }
 
         // For logged-in users: accept invitation directly
         if (user) {
+          logger.debug('INVITATION', `Accepting invitation with user: ${user.email}`);
           await useTripStore.getState().acceptInvitation(token);
           setStatus('success');
           setTimeout(() => {
             router.replace('/(tabs)/trips');
           }, 1500);
         } else {
+          logger.debug('INVITATION', 'No user logged in, storing invitation for later');
           // Store invitation token for after login
           await AsyncStorage.setItem('pendingInvitation', token);
           setStatus('success');
@@ -75,6 +96,7 @@ export default function InvitationScreen() {
           }, 1500);
         }
       } catch (error) {
+        logger.debug('INVITATION', 'Error processing invitation:', error);
         setStatus('error');
         setErrorMessage(error instanceof Error ? error.message : 'Failed to process invitation');
       }

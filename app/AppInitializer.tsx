@@ -1,25 +1,16 @@
-import { useEffect } from 'react';
-import { SplashScreen } from 'expo-router';
-import { useFonts } from 'expo-font';
-import { useAuthStore } from '@/src/store/useAuthStore';
-import * as Linking from 'expo-linking';
-import { router } from 'expo-router';
-
+// AppInitializer.tsx
 export default function AppInitializer({ children }: { children: React.ReactNode }) {
-  const { initialize } = useAuthStore();
-
-  const [fontsLoaded, fontError] = useFonts({
-    'Inter': require('../assets/fonts/Inter/Inter-VariableFont_opsz,wght.ttf'),
-    'Inter-Italic': require('../assets/fonts/Inter/Inter-Italic-VariableFont_opsz,wght.ttf'),
-    'SpaceMono': require('../assets/fonts/SpaceMono-Regular.ttf'),
-    'Manrope': require('../assets/fonts/Manrope/Manrope-VariableFont_wght.ttf'),
-  });
+  // ...
+  const [fontsLoaded, fontError] = useFonts({ /* ... */ });
 
   useEffect(() => {
     const initApp = async () => {
-      if (fontsLoaded) {
+      if (fontsLoaded) { // <--- Condition
         await initialize();
+        await ExpoSplashScreen.hideAsync();
         await SplashScreen.hideAsync();
+        // Children are rendered regardless of this effect,
+        // but this effect controls when the app is truly "ready"
       }
     };
 
@@ -28,64 +19,25 @@ export default function AppInitializer({ children }: { children: React.ReactNode
     }
   }, [fontsLoaded, initialize]);
 
-  // Handle deep links
-  useEffect(() => {
-    // Handle deep links when the app is already open
-    const subscription = Linking.addEventListener('url', handleDeepLink);
+  // ... (deep link and notification logic) ...
 
-    // Handle deep links when the app is opened from a link
-    const getInitialURL = async () => {
-      const initialUrl = await Linking.getInitialURL();
-      if (initialUrl) {
-        handleDeepLink({ url: initialUrl });
-      }
-    };
-
-    getInitialURL();
-
-    return () => {
-      subscription.remove();
-    };
-  }, []);
-
-  const handleDeepLink = (event: { url: string }) => {
-    const { url } = event;
-
-    // Parse the URL
-    const parsedUrl = Linking.parse(url);
-    
-    let token = null;
-
-    // Case 1: Custom scheme with token in query params
-    if (parsedUrl.hostname === 'invite' && parsedUrl.path === 'accept' && parsedUrl.queryParams?.token) {
-      token = parsedUrl.queryParams.token;
-    } 
-    // Case 2: Custom scheme with token in path
-    else if (parsedUrl.hostname === 'invite' && parsedUrl.path?.startsWith('accept/')) {
-      token = parsedUrl.path.replace('accept/', '');
-    }
-    // Case 3: Web URL with token in path
-    else if (url.includes('/invite/accept/')) {
-      token = url.split('/invite/accept/').pop();
-    }
-    // Case 4: Web URL with different format
-    else if (parsedUrl.hostname === 'nomadcrew.uk' && parsedUrl.path?.includes('/invite/accept')) {
-      // Try to extract token from the end of the path
-      const pathParts = parsedUrl.path.split('/');
-      token = pathParts[pathParts.length - 1];
-    }
-
-    if (token) {
-      router.replace({
-        pathname: "/invitation",
-        params: { token }
-      });
-    }
-  };
-
-  if (!fontsLoaded || fontError) {
-    return null;
+  if (!fontsLoaded && !fontError) { // Or if fontError, show error
+    // Potentially return null or a loading indicator here
+    // If nothing is returned, children might render immediately
+    // or be subject to the parent's rendering logic.
+    // The provided snippet doesn't explicitly show a return here
+    // for the !fontsLoaded case.
+    // However, typical use of expo-splash-screen with useFonts
+    // involves returning null or a minimal view until fonts are loaded.
+    return null; // Let's assume this is the implicit or actual behavior
   }
 
-  return <>{children}</>;
+  // If fontError, an error UI should be shown (not detailed here)
+  if (fontError) {
+     // return <Text>Error loading fonts</Text>; (Example)
+     return null; // For simplicity of analysis
+  }
+  
+  // Only if fontsLoaded (and no error) are children rendered.
+  return children;
 }

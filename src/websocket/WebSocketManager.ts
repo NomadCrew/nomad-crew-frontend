@@ -1,13 +1,17 @@
 import { WebSocketConnection } from './WebSocketConnection';
-import { WebSocketStatus, ServerEvent, isLocationEvent, isChatEvent } from '../types/events';
+import { WebSocketStatus, ServerEvent, BaseEventSchema, isLocationEvent, isChatEvent } from '../types/events';
 import { useAuthStore } from '../store/useAuthStore';
 import { API_CONFIG } from '../api/env';
 import { jwtDecode } from 'jwt-decode';
 import { logger } from '../utils/logger';
 import { useLocationStore } from '../store/useLocationStore';
+import { useNotificationStore } from '../store/useNotificationStore';
+import { ZodNotificationSchema, Notification } from '../types/notification';
+import { useTripStore } from '../store/useTripStore';
+import { ZodError } from 'zod';
 
 interface ConnectionCallbacks {
-  onMessage?: (event: ServerEvent) => void;
+  onMessage?: (event: Notification | ServerEvent) => void;
   onStatus?: (status: WebSocketStatus) => void;
   onError?: (error: Error) => void;
 }
@@ -69,23 +73,64 @@ export class WebSocketManager {
         throw new Error('Missing Supabase API key');
       }
 
-      // Create a wrapper for the onMessage callback to handle location events and chat events
-      const wrappedCallbacks = {
+      // Create a wrapper for the onMessage callback
+      const wrappedCallbacks: ConnectionCallbacks = {
         ...callbacks,
-        onMessage: (event: ServerEvent) => {
-          // Handle location events
-          if (isLocationEvent(event)) {
-            this.handleLocationEvent(event, tripId);
+        onMessage: (messageData: any) => {
+          let parsedData: any;
+          try {
+            parsedData = JSON.parse(messageData);
+          } catch (error) {
+            logger.error('WS', 'Failed to parse incoming JSON message:', error);
+            return;
           }
-          
-          // Handle chat events
-          if (isChatEvent(event)) {
-            this.handleChatEvent(event);
+
+          // Attempt 1: Validate as a standardized Notification object
+          const notificationResult = ZodNotificationSchema.safeParse(parsedData);
+
+          if (notificationResult.success) {
+            const validatedNotification = notificationResult.data;
+            logger.debug('WS', `Received valid Notification object, type: ${validatedNotification.type}`);
+
+            // Handle with the notification store
+            useNotificationStore.getState().handleIncomingNotification(validatedNotification);
+
+            // Pass the validated Notification object to the original callback
+            callbacks?.onMessage?.(validatedNotification);
+            return;
           }
-          
-          // Pass the event to the original callback
-          callbacks?.onMessage?.(event);
-        }
+
+          // Attempt 2: Handle as other ServerEvent types (e.g., Location, Chat)
+          if (typeof parsedData === 'object' && parsedData !== null && parsedData.type) {
+             const eventData = parsedData as ServerEvent;
+              logger.debug('WS', `Attempting to handle as ServerEvent, type: ${eventData.type}`);
+
+              let handled = false;
+              if (isLocationEvent(eventData)) {
+                this.handleLocationEvent(eventData, tripId);
+                handled = true;
+              }
+
+              if (isChatEvent(eventData)) {
+                this.handleChatEvent(eventData);
+                handled = true;
+              }
+
+              callbacks?.onMessage?.(eventData);
+
+          } else {
+              logger.warn('WS', 'Received message is not a valid Notification or recognizable ServerEvent:', parsedData);
+          }
+        },
+        onError: (error) => {
+          callbacks?.onError?.(error);
+          if (error.message === 'Authentication failed') {
+            useAuthStore.getState().refreshSession()
+              .then(() => this.reconnect(tripId, callbacks))
+              .catch((err) => logger.error('WS', 'Token refresh failed:', err));
+          }
+        },
+        onStatus: callbacks?.onStatus,
       };
 
       this.connection = new WebSocketConnection({
@@ -95,14 +140,6 @@ export class WebSocketManager {
         tripId,
         userId: user.id,
         ...wrappedCallbacks,
-        onError: (error) => {
-          callbacks?.onError?.(error);
-          if (error.message === 'Authentication failed') {
-            useAuthStore.getState().refreshSession()
-              .then(() => this.reconnect(tripId, callbacks))
-              .catch((err) => logger.error('WS', 'Token refresh failed:', err));
-          }
-        }
       });
 
       await this.connection.connect();
@@ -117,7 +154,16 @@ export class WebSocketManager {
 
   private handleLocationEvent(event: ServerEvent, tripId: string): void {
     if (event.type === 'LOCATION_UPDATED' && event.payload) {
-      const { userId, name, location } = event.payload as any;
+      const { userId, name, location } = event.payload as {
+        userId: string;
+        name?: string;
+        location: {
+          latitude: number;
+          longitude: number;
+          accuracy?: number;
+          timestamp: number;
+        }
+      };
       
       if (userId && location) {
         useLocationStore.getState().updateMemberLocation(tripId, {
@@ -133,7 +179,10 @@ export class WebSocketManager {
       }
     } else if (event.type === 'LOCATION_SHARING_CHANGED' && event.payload) {
       // Handle location sharing status changes if needed
-      const { userId, isSharingEnabled } = event.payload as any;
+      const { userId, isSharingEnabled } = event.payload as {
+        userId: string;
+        isSharingEnabled: boolean;
+      };
       
       // You might want to update UI or take other actions based on this event
       logger.debug('WS', `User ${userId} ${isSharingEnabled ? 'enabled' : 'disabled'} location sharing`);
@@ -443,13 +492,31 @@ export class WebSocketManager {
     if (this.connection) {
       this.connection.disconnect();
       this.connection = null;
+      this.currentTripId = null;
     }
 
-    this.currentTripId = null;
     this.reconnectAttempts = 0;
   }
 
-  public send(type: string, payload: any): boolean {
+  /**
+   * Pause all WebSocket connections when app goes to background
+   */
+  public pauseAllConnections(): void {
+    if (this.connection) {
+      this.connection.disconnect();
+    }
+  }
+
+  /**
+   * Resume all WebSocket connections when app comes to foreground
+   */
+  public resumeAllConnections(): void {
+    if (this.currentTripId) {
+      this.connect(this.currentTripId);
+    }
+  }
+
+  public send(type: string, payload: Record<string, unknown>): boolean {
     logger.debug('WS', `send method called with type: ${type}`);
     
     if (!this.connection) {

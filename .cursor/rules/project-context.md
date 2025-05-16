@@ -2,6 +2,87 @@
 
 ## Latest Updates
 
+### April 9, 2024, 20:30 UTC
+- Fixed CreateTripModal autocomplete and theme integration:
+  - Replaced basic text input with proper CustomPlacesAutocomplete component
+  - Fixed the destination search functionality for location selection
+  - Enhanced modal styling to follow app's theme system
+  - Improved component responsiveness and user experience
+  - Added proper theming for all UI elements in the modal
+
+### Files Modified
+- UI Components:
+  - `components/trips/CreateTripModal.tsx` (fixed autocomplete, added theming)
+  - `components/PlacesAutocomplete.tsx` (added initialValue support)
+
+### April 4, 2024, 18:40 UTC
+- Improved UI for trip creation and notifications:
+  - Moved the create trip functionality from the top button group to a FAB (Floating Action Button)
+  - Added a dedicated notifications tab to the bottom navigation bar with badge indicator
+  - Relocated the notifications bell from the trips screen to the main tab navigation
+  - Cleaned up the trips screen header for a more focused interface
+  - Enhanced navigation consistency across the application
+
+### Files Modified/Created
+- Navigation:
+  - `app/(tabs)/_layout.tsx` (added notifications tab with badge in bottom navigation)
+  - `app/(tabs)/notifications.tsx` (created new tab screen for notifications)
+- UI Components:
+  - `app/(tabs)/trips.tsx` (replaced top button with FAB, removed NotificationBell)
+
+### March 21, 2024, 15:45 UTC
+- Fixed in-app notification system:
+  - Updated NotificationProvider to use Zustand v5.0.1's subscription API correctly
+  - Created custom hook for testing notifications (useTestNotifications)
+  - Added test controls to the Notifications screen
+  - Enhanced notification toast display logic
+  - Improved state handling for notification queue management
+
+### Files Created/Modified
+- New Components:
+  - `src/components/notifications/NotificationTestButton.tsx` (test controls)
+- New Hooks:
+  - `src/hooks/useTestNotifications.ts` (notification testing hook)
+- Modified Components:
+  - `src/components/notifications/NotificationProvider.tsx` (fixed subscription)
+  - `src/components/notifications/index.ts` (added export)
+  - `app/notifications.tsx` (added test section)
+
+### March 19, 2024, 17:30 UTC
+- Implemented in-app notification system with focus on trip invites:
+  - Created Zustand notification store for managing notifications
+  - Built UI components for displaying notifications (toast, badge, list)
+  - Added WebSocket integration for real-time notifications
+  - Created a dedicated notifications screen
+  - Added notification bell to the Trips screen
+  - Implemented accept/decline functionality for trip invites
+  - Added persistence with AsyncStorage for offline access
+
+### Files Created
+- Types:
+  - `src/types/notification.ts` (notification types and schemas)
+- Store:
+  - `src/store/useNotificationStore.ts` (notification state management)
+- Components:
+  - `src/components/notifications/NotificationBadge.tsx` (unread count badge)
+  - `src/components/notifications/NotificationBell.tsx` (notification bell icon)
+  - `src/components/notifications/NotificationItem.tsx` (individual notification)
+  - `src/components/notifications/NotificationList.tsx` (list of notifications)
+  - `src/components/notifications/NotificationToast.tsx` (toast notifications)
+  - `src/components/notifications/NotificationProvider.tsx` (provider component)
+  - `src/components/notifications/index.ts` (barrel file)
+- Screens:
+  - `app/notifications.tsx` (notifications screen)
+
+### Files Modified
+- WebSocket Management:
+  - `src/websocket/WebSocketManager.ts` (added trip invite event handling)
+- Types:
+  - `src/types/events.ts` (added TRIP_INVITE event type)
+- App Layout:
+  - `app/_layout.tsx` (added NotificationProvider)
+  - `app/(tabs)/trips.tsx` (added notification bell to header)
+
 ### March 16, 2024, 16:30 UTC
 - Implemented read receipts in chat functionality:
   - Added read receipt tracking in the chat store
@@ -124,6 +205,35 @@
   - `jest.setup.js`
   - Updated component tests to use new test utilities
 
+### May 19, 2024, 14:00 UTC (Placeholder Date - Please Adjust)
+- Finalized notification system plan with backend:
+  - Confirmed backend as source of truth; frontend uses API calls for sync.
+  - API Endpoints:
+    - Mark read (single): `PATCH /api/notifications/:id`
+    - Mark all read: `PATCH /api/notifications` (Body: `{"status": "read"}`)
+    - Get unread count: `GET /api/notifications/count?status=unread`
+    - Fetch notifications: `GET /api/notifications` (Params: `limit`, `offset`, `status`)
+  - Metadata: Agreed on structure for `TRIP_INVITATION`, `CHAT_MESSAGE`, `TRIP_MEMBER_ADDED`. Frontend to assume structure is provided.
+  - WebSocket Contract: Backend sends full notification object; frontend acknowledges.
+  - Chat Notifications (`CHAT_MESSAGE`): Display Toast notification only if user is not actively viewing the specific chat screen; do not create a persistent list item; update relevant notification badges.
+  - Caching: Implement local cache in AsyncStorage for the latest 100 notifications, pruning the oldest when the limit is exceeded.
+  - Actions: Frontend will call specific business logic endpoints (e.g., `/invitations/:id/accept`) provided by the backend.
+
+### Files Modified/Created (Planned)
+- State Management:
+  - `src/store/useNotificationStore.ts` (creation or major update)
+- API Client:
+  - Update/create functions for new notification endpoints.
+- WebSocket Handling:
+  - Update `src/websocket/WebSocketManager.ts` for new notification types and chat logic.
+- UI Components:
+  - `src/components/notifications/NotificationBell.tsx` (integrate unread count)
+  - `src/components/notifications/NotificationList.tsx` (integrate fetching/pagination)
+  - `src/components/notifications/NotificationItem.tsx` (handle types, metadata, actions)
+  - `src/components/notifications/NotificationToast.tsx` (implement chat strategy)
+- Caching Logic:
+  - Implement within store or dedicated utility.
+
 ## Project Structure
 
 ### Core Dependencies
@@ -179,3 +289,62 @@
 1. Set up fastlane for iOS and Android certificate management
 2. Implement Sentry for error tracking
 3. Configure app signing and versioning strategy
+
+## Updates
+
+- March 14, 2023, 16:00 UTC: Simplified CreateTripModal and PlacesAutocomplete components by removing excessive memoization, debug logging, and performance optimizations. Introduced a reusable AutocompleteRow component to modularize row rendering in PlacesAutocomplete.
+
+## March 18, 2025, 15:30 UTC
+- Added map troubleshooting guide for Android
+- Fixed map rendering issue on Android physical devices
+
+## Map Configuration Guide
+
+### Android Google Maps API Key Setup
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Select your project
+3. Navigate to APIs & Services > Credentials
+4. Find your Android Maps API key
+5. Click Edit
+6. Add the SHA-1 certificate fingerprints:
+   - For debug builds: Get your debug SHA-1 with:
+     ```
+     cd android && ./gradlew signingReport
+     ```
+   - For production builds: Add the signing key SHA-1 fingerprint
+
+7. Make sure your API key has these APIs enabled:
+   - Maps SDK for Android
+   - Places API
+   - Geocoding API
+
+### Common Issues
+- **Blank map on Android**: Usually caused by missing SHA-1 certificate in API key restrictions
+- **Map loads on iOS but not Android**: Different configuration requirements between platforms
+- **Map crashes on Android**: Check logcat for specific error messages
+
+### Configuration Best Practices
+- Use separate API keys for iOS and Android
+- Restrict API keys by app package name and SHA-1 fingerprint
+- For production, create separate keys for debug and release builds
+
+## June 10, 2025, 15:45 UTC - Implemented Comprehensive Notification System
+
+Enhanced the app's notification system to support all backend event types:
+
+- Extended `notification.ts` with interfaces for all notification types:
+  - Trip invites, updates and status changes
+  - Todo creation, updates, and completion
+  - Member addition, removal, and role changes
+  - Weather updates and alerts
+  - Chat messages and reactions
+  - Location updates
+
+- Updated `useNotificationStore` with handlers for all event types
+- Improved the `WebSocketManager` to route all events to the notification store
+- Enhanced notification UI components to display type-specific content:
+  - Added custom icons and content for each notification type
+  - Implemented appropriate navigation based on notification type
+  - Added user-friendly formatting and styling
+
+This implementation provides a complete real-time notification system that integrates with the backend's WebSocket-based event infrastructure, delivering a seamless user experience for all collaborative app features.

@@ -43,6 +43,9 @@ export default {
         googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_API_KEY_IOS,
         googlePlacesApiKey: process.env.EXPO_PUBLIC_GOOGLE_API_KEY_IOS
       },
+      associatedDomains: [
+        'applinks:nomadcrew.uk'
+      ],
       infoPlist: {
         UIBackgroundModes: [
           'remote-notification'

@@ -19,7 +19,7 @@ const ThemeContext = createContext<ThemeContextType | null>(null);
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemColorScheme = useColorScheme();
   const [mode, setMode] = React.useState<ThemeMode>('system');
-  const [isThemeLoaded, setIsThemeLoaded] = useState(false);
+  const [isThemeLoaded, setIsThemeLoaded] = useState(true);
   
   const isDark = React.useMemo(() => {
     if (mode === 'system') {
@@ -30,19 +30,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   
   // Create the base theme and then extend it with our compatibility layer
   const baseTheme = React.useMemo(() => createTheme({ isDark }), [isDark]);
-  const theme = React.useMemo(() => extendTheme(baseTheme), [baseTheme]);
+  const theme = React.useMemo(() => {
+    const extendedTheme = extendTheme(baseTheme);
+    // Add dark property directly to the theme
+    return {
+      ...extendedTheme,
+      dark: isDark
+    };
+  }, [baseTheme, isDark]);
   
   const toggleColorScheme = React.useCallback(() => {
     setMode(prev => prev === 'dark' ? 'light' : 'dark');
-  }, []);
-  
-  // Set theme as loaded after a short delay to ensure it's fully initialized
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsThemeLoaded(true);
-    }, 300);
-    
-    return () => clearTimeout(timer);
   }, []);
   
   const value = React.useMemo(() => ({

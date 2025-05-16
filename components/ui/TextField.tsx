@@ -175,11 +175,11 @@ export function TextField({
     
     return {
       container: {
-        width: '100%',
+        width: '100%' as const,
       },
       inputContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
         height: sizeMap[size].height,
         borderWidth: variant === 'outlined' ? 1 : 0,
         borderColor: getBorderColor(),
@@ -199,7 +199,7 @@ export function TextField({
         fontSize: sizeMap[size].labelSize,
         color: error ? errorColor : contentSecondary,
         marginBottom: 4,
-        fontWeight: '500',
+        fontWeight: '500' as const,
       },
       requiredStar: {
         color: errorColor,
@@ -208,7 +208,7 @@ export function TextField({
         flex: 1,
         fontSize: sizeMap[size].fontSize,
         color: disabled ? contentDisabled : contentPrimary,
-        height: '100%',
+        height: sizeMap[size].height,
         paddingVertical: 0,
       },
       helperText: {
@@ -234,14 +234,16 @@ export function TextField({
   const handleFocus = () => {
     setIsFocused(true);
     if (rest.onFocus) {
-      rest.onFocus();
+      const event = { nativeEvent: { text: value } };
+      rest.onFocus(event as any);
     }
   };
   
   const handleBlur = () => {
     setIsFocused(false);
     if (rest.onBlur) {
-      rest.onBlur();
+      const event = { nativeEvent: { text: value } };
+      rest.onBlur(event as any);
     }
   };
   

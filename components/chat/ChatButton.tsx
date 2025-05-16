@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, View, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useChatStore } from '@/src/store/useChatStore';
@@ -8,7 +8,7 @@ import { Theme } from '@/src/theme/types';
 interface ChatButtonProps {
   tripId: string;
   onPress: () => void;
-  style?: any;
+  style?: ViewStyle;
 }
 
 export const ChatButton: React.FC<ChatButtonProps> = ({ 

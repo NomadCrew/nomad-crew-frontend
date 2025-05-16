@@ -110,9 +110,9 @@ export function Badge({
   });
   
   return (
-    <View style={[styles.badge, style]} {...rest}>
+    <View style={[styles.badge as ViewStyle, style]} {...rest}>
       {!dot && label !== undefined && (
-        <Text style={[styles.text, textStyle]} numberOfLines={1}>
+        <Text style={[styles.text as TextStyle, textStyle]} numberOfLines={1}>
           {typeof label === 'number' && label > 99 ? '99+' : label}
         </Text>
       )}
