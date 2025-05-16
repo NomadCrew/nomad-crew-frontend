@@ -5,7 +5,7 @@ import { Crown, Shield, User, MoreVertical, UserPlus } from 'lucide-react-native
 import { Menu } from 'react-native-paper';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { Trip } from '@/src/types/trip';
-import { useAuthStore } from '@/src/store/useAuthStore';
+import { useAuthStore } from '@/src/features/auth';
 import { useTripStore } from '@/src/store/useTripStore';
 import { InviteModal } from './InviteModal';
 

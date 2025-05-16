@@ -2,7 +2,7 @@ import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, View, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { useChatStore } from '@/src/store/useChatStore';
+import { useChatStore } from '@/src/features/chat';
 import { Theme } from '@/src/theme/types';
 
 interface ChatButtonProps {

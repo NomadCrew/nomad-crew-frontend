@@ -1,16 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { useChatStore } from '@/src/store/useChatStore';
-import { useAuthStore } from '@/src/store/useAuthStore';
-import { ChatList } from '@/components/chat/ChatList';
-import { ChatInput } from '@/components/chat/ChatInput';
-import { ChatAuthError } from '@/components/chat/ChatAuthError';
+import { useChatStore } from '@/src/features/chat';
+import { useAuthStore } from '@/src/features/auth';
+import { ChatList, ChatInput, ChatAuthError } from '@/src/features/chat';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { logger } from '@/src/utils/logger';
 import { useTripStore } from '@/src/store/useTripStore';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-insets';
 import { Theme } from '@/src/theme/types';
 
 interface ChatScreenProps {
@@ -249,27 +247,15 @@ const styles = (theme: Theme) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme?.colors?.border?.default || '#E0E0E0',
-    backgroundColor: theme?.colors?.background?.elevated || '#FFFFFF',
-    zIndex: 10,
-    minHeight: 56,
+    padding: 10,
   },
   backButton: {
-    marginRight: 16,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 5,
   },
   headerTitle: {
     flex: 1,
     fontSize: 18,
-    fontWeight: '600',
-    color: theme?.colors?.content?.primary || '#1A1A1A',
+    fontWeight: 'bold',
   },
   content: {
     flex: 1,
@@ -283,31 +269,28 @@ const styles = (theme: Theme) => StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: 16,
+    marginTop: 10,
     fontSize: 16,
-    color: theme?.colors?.content?.secondary || '#666666',
+    fontWeight: 'bold',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
   },
   errorText: {
-    fontSize: 16,
-    color: theme?.colors?.error?.main || '#FF3B30',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  retryButton: {
-    backgroundColor: theme?.colors?.primary?.main || '#007AFF',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  retryText: {
-    color: '#FFFFFF',
+    marginBottom: 10,
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  retryButton: {
+    padding: 10,
+    backgroundColor: theme?.colors?.primary?.main,
+    borderRadius: 5,
+  },
+  retryText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
 }); 

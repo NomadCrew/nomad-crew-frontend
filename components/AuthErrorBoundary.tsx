@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { useAuthStore } from '@/src/store/useAuthStore';
+import { useAuthStore } from '@/src/features/auth';
 import { ThemedText } from '@/components/ThemedText';
 
 const MAX_INIT_TIME = 10000; // 10 seconds

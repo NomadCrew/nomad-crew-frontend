@@ -5,83 +5,83 @@
 - Received comprehensive refactoring and improvement guide for the NomadCrew frontend.
 - Initiated update of the memory bank to reflect the refactoring plan.
 - Created `src/features` and `src/navigation` directories.
-- Moved existing `src/auth` contents (`secure-unlimited-store.ts`) to `src/features/auth/`.
-- Created `src/features/auth/service.ts` and integrated `supabaseClient.ts` and `secure-token-manager.ts` logic into it. Deleted original files.
-- Attempted to move `src/store/useAuthStore.ts` to `src/features/auth/store.ts`. **CRITICAL ISSUE: New file is incomplete due to tool limitations in reading the full original file. Auth store is currently broken.** Original file deleted.
+- **Auth Module Refactor (Complete):**
+    - Moved existing `src/auth` contents to `src/features/auth/`.
+    - Created `src/features/auth/service.ts`, integrating `supabaseClient.ts` and `secure-token-manager.ts` logic. Deleted original files.
+    - Moved `src/store/useAuthStore.ts` to `src/features/auth/store.ts` (full content restored). Original file deleted.
+    - Abstracted direct Supabase calls from `store.ts` to methods in `service.ts`.
+    - Moved auth types from `src/types/auth.ts` to `src/features/auth/types.ts`. `ApiError` interface also moved. Original global `auth.ts` type file deleted.
+    - Created barrel file `src/features/auth/index.ts`.
+    - Updated all identified codebase imports for `useAuthStore` and `supabaseClient` to new paths.
+    - Refactored `registerPushToken` in `store.ts` to use `AuthService`.
+    - Reviewed `registerAuthHandlers` mechanism; current approach deemed acceptable.
+    - Finalized `src/features/auth/types.ts` by removing redundant custom `Session` interface.
+    - Verified `src/store/` and `src/types/` directories are not empty and should not be deleted.
+- **Chat Module Refactor (In Progress):**
+    - Moved `screens/chat/ChatScreen.tsx` to `src/features/chat/screens/ChatScreen.tsx`.
+    - Moved `screens/chat/MobileChatScreen.tsx` to `src/features/chat/screens/MobileChatScreen.tsx`.
+    - Moved `components/chat/ChatButton.tsx` to `src/features/chat/components/ChatButton.tsx`.
+    - Moved `components/chat/ChatCard.tsx` to `src/features/chat/components/ChatCard.tsx`.
+    - Moved `components/chat/ChatMessage.tsx` to `src/features/chat/components/ChatMessage.tsx`.
+    - Moved `components/chat/ChatList.tsx` to `src/features/chat/components/ChatList.tsx`.
+    - Moved `components/chat/ChatInput.tsx` to `src/features/chat/components/ChatInput.tsx`.
+    - Moved `components/chat/ChatGroupItem.tsx` to `src/features/chat/components/ChatGroupItem.tsx`.
+    - Moved `components/chat/ChatGroupList.tsx` to `src/features/chat/components/ChatGroupList.tsx`.
+    - Moved `components/chat/ChatAuthError.tsx` to `src/features/chat/components/ChatAuthError.tsx`.
+    - Deleted old `components/chat/index.ts` and `components/chat/` directory (and orphaned files within).
+    - Moved `src/store/useChatStore.ts` to `src/features/chat/store.ts`.
+    - Moved `src/services/chatService.ts` to `src/features/chat/service.ts`.
+    - Moved chat-related types from `src/types/chat.ts` to `src/features/chat/types.ts`. Original global `chat.ts` type file deleted.
+    - Created `src/features/chat/index.ts` barrel file.
+    - Updated all imports for moved chat files throughout the codebase.
+    - Deleted old `screens/chat/` directory and orphaned screen files.
 
 ## 🧠 Next Steps
 
 1.  **Project Structure Refactor (Ongoing):**
-    *   **Current:** Transitioning to a feature-first directory structure (`src/features/...`).
-        *   **Resolve CRITICAL ISSUE:** Obtain full content of original `useAuthStore.ts` and correctly populate `src/features/auth/store.ts`.
-        *   Once `store.ts` is complete: Abstract Supabase calls from `src/features/auth/store.ts` to `src/features/auth/service.ts`.
-        *   Create `src/features/auth/types.ts` and move auth-specific types.
-        *   Create `src/features/auth/index.ts` (barrel file).
-        *   Update all codebase imports for `useAuthStore` and other moved auth utilities/types.
-        *   Identify and move other core features (e.g., `chat`, `trips`, `todos`, `notifications`) into their respective `src/features/[featureName]/` directories, following a similar process (move files, then refactor structure within the feature module).
+    *   **Immediate Task: Refactor Barrel Files:** Update all imports currently using barrel files (`src/features/auth/index.ts`, `src/features/chat/index.ts`) to use direct imports from specific modules. Subsequently, delete these barrel files.
+    *   **Next Feature:** Identify and move the `trips` module to `src/features/trips/`. Refactor its internal structure.
+    *   Follow with `todos`, and `notifications` modules.
+    *   Consolidate global directories (`components`, `hooks`, `services`, `store`, `types`, `utils`) under `src/`, ensuring they only contain truly shared, non-feature-specific code.
     *   Organize `app/` (Expo Router) to mirror feature groupings.
     *   Clean up obsolete files (e.g., `app/(tabs)-bkp/`, `TestScreen`).
-2.  **SOLID Principles Implementation:**
-    *   Refactor components and hooks to adhere to SRP (e.g., extract data-fetching from `ChatScreen` into `useChatSession` hook).
+2.  **SOLID Principles Implementation (Post-Structure Refactor):**
+    *   Begin applying SOLID principles systematically to the newly structured feature modules.
+    *   Refactor components and hooks to adhere to SRP.
     *   Ensure Open/Closed principle is followed for extensions.
     *   Apply Liskov Substitution and Interface Segregation.
-    *   Implement Dependency Inversion (e.g., decouple `useTripStore` from `useAuthStore`, abstract `WebSocketManager`).
-3.  **State Management (Zustand) Enhancements:**
-    *   Implement selective state selection using selectors in all components.
-    *   Refactor stores to use a dedicated service layer for API calls (e.g., `tripService`, `todoService`).
-    *   Standardize persistence using Zustand's `persist` middleware (e.g., for chat store).
-    *   Introduce derived state/selector functions in stores.
-    *   Consider Zustand middleware (Redux DevTools, immer) for debugging.
-4.  **Design Patterns Adoption:**
-    *   Implement Container/Presenter pattern consistently.
-    *   Expand service abstraction layer (`TripService`, `TodoService`, `AuthService`).
-    *   Organize and create new custom hooks (form hooks, feature-specific hooks).
-    *   Use barrel files (`index.ts`) for cleaner module exports.
-5.  **Coding Standards & Tooling Enforcement:**
-    *   Customize and enforce ESLint rules strictly.
-    *   Integrate and configure Prettier for code formatting.
-    *   Adhere to TypeScript best practices (avoid `any`, use utility types, discriminated unions).
-    *   Maintain JSDoc/TSDoc comments.
-    *   Set up Git hooks (Husky) for pre-commit/pre-push checks.
-6.  **Navigation System Refinement (Expo Router):**
-    *   Consolidate routing with a proper root layout (`app/_layout.tsx`) including global providers.
-    *   Implement tab and stack navigation structure.
-    *   Ensure deep linking configuration is robust and test thoroughly.
-    *   Implement guarded routes for authentication.
-    *   Remove redundant navigation code.
+    *   Implement Dependency Inversion.
+3.  **State Management Refinement (Zustand):**
+    *   Review all Zustand stores (`useTripStore`, `useTodoStore`, `useChatStore`, `useLocationStore`) after they are moved into their respective feature folders.
+    *   Ensure stores are focused and don't manage unrelated state.
+    *   Abstract asynchronous logic (API calls) from stores into feature services.
+4.  **Navigation System Refinement (Expo Router):**
+    *   Consolidate routing with a proper root layout (`app/_layout.tsx`).
+    *   Implement typed routes.
+    *   Review and improve deep linking setup (e.g., `nomadcrew://auth/callback`).
+5.  **Component Refactoring & UI System:**
+    *   Review and refactor shared components in `src/components/`.
+    *   Ensure consistent use of React Native Paper and the custom theme system.
+    *   Implement responsive design practices using Flexbox and `useWindowDimensions`.
+6.  **API Service Layer & Data Fetching:**
+    *   Standardize API interaction through feature-specific services.
+    *   Refactor `WebSocketManager` and SSE logic, potentially abstracting them into a shared real-time service or integrating them into feature services.
 7.  **Performance Optimization:**
-    *   Refactor lists to use FlashList (e.g., `ChatList`).
-    *   Implement pagination, windowing, and item memoization for lists.
-    *   Use `React.memo` and `useMemo` judiciously.
-    *   Explore lazy loading for heavy modules/screens.
-    *   Optimize assets and images.
-    *   Address memory management (unsubscribe listeners, efficient data storage).
-    *   Enhance offline support and caching strategies.
-8.  **Feature Module Refactoring (Examples: Chat, Trips):**
-    *   Restructure Chat module into `src/features/chat/`.
-    *   Refactor `useChatStore` (separation, selectors, service delegation).
-    *   Improve Chat components (e.g., `ChatScreen`, `ChatList`).
-    *   Restructure Trip module into `src/features/trips/`.
-    *   Refactor `CreateTripModal` (form hook, separation of concerns).
-    *   Improve `useTripStore` (decouple from auth, use `tripService`).
-9.  **Testing Strategy Implementation:**
-    *   Write unit tests for pure functions and utilities.
-    *   Develop store tests for Zustand logic (mocking services).
-    *   Implement component tests (RNTL) for rendering and interaction.
-    *   Create integration tests for critical flows (MSW for API mocking).
-    *   Set up E2E tests (Detox) for major user workflows.
-    *   Ensure tests for persistence logic.
-    *   Aim for defined code coverage goals.
-10. **TypeScript & Typing Enhancements:**
-    *   Achieve full type coverage, eliminate `any`.
-    *   Use utility types and discriminated unions effectively.
-    *   Migrate any remaining JS code to TS.
-    *   Enforce strict linting for types.
+    *   Identify and apply optimizations (FlashList, lazy loading, memoization) as part of feature refactoring.
+8.  **Testing Strategy:**
+    *   Establish Jest unit test setup.
+    *   Begin writing unit tests for services, stores, and critical utility functions.
+9.  **Coding Standards & Tooling Setup:**
+    *   Customize and enforce ESLint rules strictly.
+    *   Integrate and configure Prettier.
+    *   Set up Git hooks (Husky).
 
 ## ❗ Active Decisions / Context
 
-- The project is undergoing a major refactor based on the consultant's "NomadCrew Frontend Refactor & Improvement Guide".
-- The primary goal is to elevate the codebase to a production-grade standard, focusing on modularity, maintainability, performance, and testability.
-- All new code and refactored code must adhere to the principles and patterns outlined in the guide.
-- The "memory bank" files are being updated to reflect this new direction and serve as the source of truth for development patterns and project status.
-- **CRITICAL ISSUE:** `src/features/auth/store.ts` is incomplete due to file reading limitations. Auth functionality is broken until resolved. 
+-   The refactor is following the feature-first structure outlined in the provided guide.
+-   The `auth` module is the first to undergo this refactoring.
+-   Tool limitations with reading large files were encountered for `useAuthStore.ts` but resolved by the user providing full content.
+-   `secure-unlimited-store.ts` remains within `src/features/auth/` as it seems specific to auth token management.
+-   The process involves moving files, then refactoring their internal structure (service, store, types), then updating imports.
+
+-   **New Rule: No Barrel Files for Application Imports.** To optimize bundle size and build times, internal application imports must be direct. Existing barrel files (`auth`, `chat`) will be refactored. See [article](https://dev.to/tassiofront/barrel-files-and-why-you-should-stop-using-them-now-bc4).

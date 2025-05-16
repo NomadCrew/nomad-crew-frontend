@@ -49,9 +49,27 @@ export const secureTokenManager = new SecureTokenManager();
 // This will be expanded with login, logout, signUp, etc.
 // These methods would typically interact with the `supabase` client.
 
+export const refreshSupabaseSession = async () => {
+  return supabase.auth.refreshSession();
+};
+
+/**
+ * Registers the given push token for the currently authenticated user.
+ */
+export const registerPushTokenService = async (pushToken: string) => {
+  // The `api` object here would be the global api client instance.
+  // This assumes the api client is already configured with necessary base URL and auth headers.
+  // We might need to import `api` from `@/src/api/api-client` here, or pass it as an argument
+  // if we want to strictly avoid global imports in services, though often services do import the client.
+  // For now, assuming `api` can be imported and used if it's appropriately set up.
+  // If api client is not directly accessible, this function might need to be part of a class that gets api client injected.
+  const { api } = await import('@/src/api/api-client'); // Dynamically importing to resolve if api client is set up
+  return api.post('/users/push-token', { token: pushToken });
+};
+
 // Example (to be expanded based on existing useAuthStore logic):
 // export const signInWithEmail = async (email, password) => { ... supabase.auth.signInWithPassword ... }
 // export const signOut = async () => { ... supabase.auth.signOut ... }
 
 // For now, service.ts exports the initialized supabase client and the token manager.
-// Actual auth functions (login, signup) will be added by migrating logic from useAuthStore. 
+// Actual auth functions (login, signup) will be added by migrating logic from useAuthStore.

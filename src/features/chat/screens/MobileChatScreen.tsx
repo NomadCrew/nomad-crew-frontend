@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { useChatStore } from '@/src/store/useChatStore';
-import { useAuthStore } from '@/src/store/useAuthStore';
-import { ChatList } from '@/components/chat/ChatList';
-import { ChatInput } from '@/components/chat/ChatInput';
-import { ChatAuthError } from '@/components/chat/ChatAuthError';
+import { useChatStore } from '@/src/features/chat';
+import { useAuthStore } from '@/src/features/auth';
+import { ChatList, ChatInput, ChatAuthError } from '@/src/features/chat';
 import { WebSocketManager } from '@/src/websocket/WebSocketManager';
 import { Theme } from '@/src/theme/types';
 import { StatusBar } from 'expo-status-bar';
@@ -248,31 +246,27 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({
       <View style={styles.chatContainer}>
         {isLoadingMessages && messages.length === 0 ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme?.colors?.primary?.main} />
+            <ActivityIndicator size="large" color={theme?.colors?.content?.primary || '#1A1A1A'} />
             <Text style={styles.loadingText}>Loading messages...</Text>
           </View>
-        ) : messages.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>No messages yet. Start the conversation!</Text>
-          </View>
         ) : (
-          <ChatList
-            messages={messages}
-            isLoading={isLoadingMessages}
-            hasMore={hasMore}
-            onLoadMore={() => fetchMoreMessages(tripId)}
-            onRefresh={handleRefresh}
-            isRefreshing={isRefreshing}
-            typingUsers={currentTypingUsers}
-            tripId={tripId}
-          />
+          <>
+            {messages.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>No messages found</Text>
+              </View>
+            ) : (
+              <ChatList
+                messages={messages}
+                currentTypingUsers={currentTypingUsers}
+                onRefresh={handleRefresh}
+                isRefreshing={isRefreshing}
+                onSendMessage={handleSendMessage}
+                onTypingStatusChange={handleTypingStatusChange}
+              />
+            )}
+          </>
         )}
-        
-        <ChatInput 
-          tripId={tripId} 
-          onSend={handleSendMessage} 
-          onTypingStatusChange={handleTypingStatusChange}
-        />
       </View>
     </SafeAreaView>
   );

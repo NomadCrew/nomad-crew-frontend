@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { useChatStore } from '@/src/store/useChatStore';
+import { useChatStore } from '@/src/features/chat';
 import { formatRelativeTime } from '@/src/utils/dateUtils';
-import { _Theme } from '@/src/theme/types';
-import { _Ionicons } from '@expo/vector-icons';
 import { MessageSquare } from 'lucide-react-native';
 import { useThemedStyles } from '@/src/theme/utils';
 

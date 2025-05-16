@@ -8,7 +8,7 @@ import {
   RefreshControl
 } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { ChatGroup } from '@/src/types/chat';
+import { ChatGroup } from '@/src/features/chat';
 import { ChatGroupItem } from './ChatGroupItem';
 import { Theme } from '@/src/theme/types';
 

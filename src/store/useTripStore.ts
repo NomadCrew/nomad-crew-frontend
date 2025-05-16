@@ -15,7 +15,7 @@ import { useTodoStore } from '@/src/store/useTodoStore';
 import { mapWeatherCode } from '@/src/utils/weather';
 import { apiClient } from '@/src/api/api-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAuthStore } from '@/src/store/useAuthStore';
+import { useAuthStore } from '@/src/features/auth';
 import { logger } from '@/src/utils/logger';
 
 interface TripState {

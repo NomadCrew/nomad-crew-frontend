@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 // import { supabase } from '@/src/auth/supabaseClient'; // Old import
-import { supabase } from '@/src/features/auth/service'; // New import
+import { supabase, signOut as supabaseSignOut, refreshSupabaseSession, registerPushTokenService } from '@/src/features/auth/service'; // New import
 import type { AuthState, LoginCredentials, RegisterCredentials, User, AuthStatus } from '@/src/types/auth'; // Path might need update if types/auth.ts is moved
 import { Session } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -238,6 +238,26 @@ export const useAuthStore = create<AuthState>((set, get) => {
       // ... (rest of the register function and other store methods are missing)
       set({loading: false}); // Placeholder
       } catch (e) { set({loading:false, error: e.message}); throw e;}
+    },
+
+    registerPushToken: async () => {
+      try {
+        const { status } = await Notifications.getPermissionsAsync();
+        if (status !== 'granted') {
+          return;
+        }
+        const token = await Notifications.getExpoPushTokenAsync({
+          projectId: process.env.EXPO_PUBLIC_PROJECT_ID
+        });
+        set({ pushToken: token.data });
+        const { user } = get();
+        if (user) {
+          // await api.post('/users/push-token', { token: token.data }); // Old direct call
+          await registerPushTokenService(token.data); // Use service method
+        }
+      } catch (error) {
+        console.error('Failed to register push token:', error);
+      }
     }
     // ... (other methods like login, logout, handleGoogleSignInSuccess, etc., are missing)
   };

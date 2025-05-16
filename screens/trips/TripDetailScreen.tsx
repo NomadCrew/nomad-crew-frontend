@@ -16,11 +16,11 @@ import { useLocationStore } from '@/src/store/useLocationStore';
 import { TripDetailHeader } from '@/components/trips/TripDetailHeader';
 import { QuickActions } from '@/components/trips/QuickActions';
 import { StatusBar } from 'expo-status-bar';
-import { useChatStore } from '@/src/store/useChatStore';
+import { useChatStore } from '@/src/features/chat';
 import { TripStats } from '@/components/trips/TripStats';
 import { useThemedStyles } from '@/src/theme/utils';
 import { isChatEvent } from '@/src/types/events';
-import { ChatCard } from '@/components/chat/ChatCard';
+import { ChatCard } from '@/src/features/chat';
 import { logger } from '@/src/utils/logger';
 
 interface TripDetailScreenProps {

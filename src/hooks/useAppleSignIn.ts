@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
-import { supabase } from '@/src/auth/supabaseClient';
-import { useAuthStore } from '@/src/store/useAuthStore';
+import { supabase } from '@/src/features/auth';
+import { useAuthStore } from '@/src/features/auth';
 import Constants from 'expo-constants';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useState, useEffect } from 'react';

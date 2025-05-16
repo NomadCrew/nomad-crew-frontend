@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Loader2, ArrowLeft } from 'lucide-react-native';
-import { useAuthStore } from '@/src/store/useAuthStore';
+import { useAuthStore } from '@/src/features/auth';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useTheme } from '@/src/theme/ThemeProvider';
