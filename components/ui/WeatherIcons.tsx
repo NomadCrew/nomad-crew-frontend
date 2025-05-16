@@ -14,10 +14,12 @@ export type WeatherCondition =
   | 'snowy'
   | 'stormy';
 
-export const WeatherIcons: Record<WeatherCondition, React.JSX.Element> = {
-  clear: <Sun size={24} color="#fff" />,
-  cloudy: <Cloud size={24} color="#fff" />,
-  rainy: <CloudRain size={24} color="#fff" />,
-  snowy: <CloudSnow size={24} color="#fff" />,
-  stormy: <CloudLightning size={24} color="#fff" />,
+export type WeatherIconComponent = typeof Sun | typeof Cloud | typeof CloudRain | typeof CloudSnow | typeof CloudLightning;
+
+export const WeatherIcons: Record<WeatherCondition, WeatherIconComponent> = {
+  clear: Sun,
+  cloudy: Cloud,
+  rainy: CloudRain,
+  snowy: CloudSnow,
+  stormy: CloudLightning,
 };

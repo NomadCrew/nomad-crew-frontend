@@ -6,8 +6,6 @@ import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { MapTest } from '@/components/location/MapTest';
-import { AlertCircle } from 'lucide-react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
 
 export default function TabTwoScreen() {
@@ -27,26 +25,6 @@ export default function TabTwoScreen() {
       <ThemedView style={styles.titleContainer}>
         <ThemedText type="title">Explore</ThemedText>
       </ThemedView>
-      
-      {/* Google Maps Test */}
-      <ThemedView style={styles.mapTestContainer}>
-        <ThemedText type="subtitle" style={styles.mapTestTitle}>Google Maps Test</ThemedText>
-        
-        <ThemedView style={styles.noteContainer}>
-          <AlertCircle size={20} color={theme.colors.status.warning.content} />
-          <ThemedText style={styles.noteText}>
-            If the map doesn't load, there may be an issue with the Google Maps API key configuration. 
-            Check the API key restrictions in Google Cloud Console to ensure they match your app's package name 
-            (com.nomadcrew.app.dev) and SHA-1 fingerprint.
-          </ThemedText>
-        </ThemedView>
-        
-        <ThemedView style={styles.mapContainer}>
-          <MapTest />
-        </ThemedView>
-      </ThemedView>
-      
-      <ThemedText style={styles.sectionDivider}>Example Features</ThemedText>
       
       <Collapsible title="File-based routing">
         <ThemedText>
@@ -79,17 +57,7 @@ export default function TabTwoScreen() {
           <ThemedText type="link">Learn more</ThemedText>
         </ExternalLink>
       </Collapsible>
-      <Collapsible title="Custom fonts">
-        <ThemedText>
-          Open <ThemedText type="defaultSemiBold">app/_layout.tsx</ThemedText> to see how to load{' '}
-          <ThemedText style={{ fontFamily: 'SpaceMono' }}>
-            custom fonts such as this one.
-          </ThemedText>
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/versions/latest/sdk/font">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
+      
       <Collapsible title="Light and dark mode components">
         <ThemedText>
           This template has light and dark mode support. The{' '}
@@ -131,34 +99,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginBottom: 16,
-  },
-  mapTestContainer: {
-    marginBottom: 24,
-  },
-  mapTestTitle: {
-    marginBottom: 12,
-  },
-  mapContainer: {
-    height: 400,
-    marginTop: 16,
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  noteContainer: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255, 204, 0, 0.1)',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'flex-start',
-  },
-  noteText: {
-    flex: 1,
-    marginLeft: 12,
-    fontSize: 14,
-  },
-  sectionDivider: {
-    fontWeight: 'bold',
-    marginBottom: 16,
-    marginTop: 8,
-  },
+  }
 });

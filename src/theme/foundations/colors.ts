@@ -129,12 +129,28 @@ export const colorTokens = {
         content: isDark ? colorTokens.red[300] : colorTokens.red[800],
         background: isDark ? colorTokens.red[800] : colorTokens.red[100],
         border: isDark ? colorTokens.red[700] : colorTokens.red[300],
+        main: isDark ? colorTokens.red[400] : colorTokens.red[500],
       },
       success: {
         surface: isDark ? colorTokens.green[800] : colorTokens.green[50],
         content: isDark ? colorTokens.green[200] : colorTokens.green[800],
         background: isDark ? colorTokens.green[700] : colorTokens.green[100],
         border: isDark ? colorTokens.green[800] : colorTokens.green[300],
+        main: isDark ? colorTokens.green[400] : colorTokens.green[500],
+      },
+      warning: {
+        surface: isDark ? colorTokens.yellow[900] : colorTokens.yellow[50],
+        content: isDark ? colorTokens.yellow[300] : colorTokens.yellow[800],
+        background: isDark ? colorTokens.yellow[800] : colorTokens.yellow[100],
+        border: isDark ? colorTokens.yellow[700] : colorTokens.yellow[300],
+        main: isDark ? colorTokens.yellow[400] : colorTokens.yellow[500],
+      },
+      info: {
+        surface: isDark ? colorTokens.blue[900] : colorTokens.blue[50],
+        content: isDark ? colorTokens.blue[300] : colorTokens.blue[800],
+        background: isDark ? colorTokens.blue[800] : colorTokens.blue[100],
+        border: isDark ? colorTokens.blue[700] : colorTokens.blue[300],
+        main: isDark ? colorTokens.blue[400] : colorTokens.blue[500],
       },
       planning: {
         background: isDark ? colorTokens.orange[800] : colorTokens.orange[100],
@@ -144,6 +160,34 @@ export const colorTokens = {
         background: isDark ? colorTokens.gray[800] : colorTokens.gray[100],
         content: isDark ? colorTokens.gray[200] : colorTokens.gray[800]
       },
+    },
+    // Add missing direct error/warning/success/info properties
+    error: {
+      surface: isDark ? colorTokens.red[900] : colorTokens.red[50],
+      main: isDark ? colorTokens.red[400] : colorTokens.red[500],
+    },
+    success: {
+      surface: isDark ? colorTokens.green[800] : colorTokens.green[50],
+      main: isDark ? colorTokens.green[400] : colorTokens.green[500],
+    },
+    warning: {
+      surface: isDark ? colorTokens.yellow[900] : colorTokens.yellow[50],
+      main: isDark ? colorTokens.yellow[400] : colorTokens.yellow[500],
+    },
+    info: {
+      surface: isDark ? colorTokens.blue[900] : colorTokens.blue[50],
+      main: isDark ? colorTokens.blue[400] : colorTokens.blue[500],
+    },
+    // Add disabled state
+    disabled: {
+      background: isDark ? colorTokens.gray[800] : colorTokens.gray[200],
+      text: isDark ? colorTokens.gray[600] : colorTokens.gray[400],
+      border: isDark ? colorTokens.gray[700] : colorTokens.gray[300],
+    },
+    outlined: {
+      background: 'transparent',
+      text: isDark ? colorTokens.orange[400] : colorTokens.orange[700],
+      border: isDark ? colorTokens.orange[700] : colorTokens.orange[300],
     },
     border: {
       default: isDark ? colorTokens.gray[700] : colorTokens.pastel.darkCoral,

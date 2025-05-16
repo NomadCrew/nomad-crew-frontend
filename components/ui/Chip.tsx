@@ -208,7 +208,7 @@ export function Chip({
   const content = (
     <>
       {startIcon && <View style={styles.startIcon}>{startIcon}</View>}
-      <Text style={[styles.label, textStyle]} numberOfLines={1}>
+      <Text style={[styles.label as TextStyle, textStyle]} numberOfLines={1}>
         {label}
       </Text>
       {endIcon && <View style={styles.endIcon}>{endIcon}</View>}
@@ -223,7 +223,7 @@ export function Chip({
   if (onPress && !disabled) {
     return (
       <TouchableOpacity
-        style={[styles.chip, style]}
+        style={[styles.chip as ViewStyle, style]}
         onPress={onPress}
         activeOpacity={0.7}
       >
@@ -232,7 +232,7 @@ export function Chip({
     );
   }
   
-  return <View style={[styles.chip, style]}>{content}</View>;
+  return <View style={[styles.chip as ViewStyle, style]}>{content}</View>;
 }
 
 export default React.memo(Chip); 

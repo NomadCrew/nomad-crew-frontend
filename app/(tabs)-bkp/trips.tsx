@@ -6,7 +6,10 @@ import {
   TextInput,
   Dimensions,
   Animated,
-  ScrollView
+  ScrollView,
+  Pressable,
+  View,
+  Platform
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -168,33 +171,37 @@ export default function TripsScreen() {
   return (
     
     <SafeAreaView style={styles(theme, screenWidth).container}>
-      <ThemedView style={styles(theme, screenWidth).header}>
-        {/* Header Title */}
-        <Avatar 
-            source={useAuthStore.getState().user?.profilePicture}
-            initials={useAuthStore.getState().user?.username?.substring(0, 2) || ""}
-            size="md"
-            style={styles(theme).avatar}
-          />
-
-        {/* Animated Search Bar */}
-        <Animated.View style={[styles(theme).searchBar, { width: searchWidth }]}>
-          <TouchableOpacity onPress={toggleSearch} style={styles(theme).searchIcon}>
-            <Ionicons
-              name={searchExpanded ? 'close-outline' : 'search-outline'}
-              size={20}
-              color={theme.colors.content.primary}
-            />
-          </TouchableOpacity>
-          {searchExpanded && (
-            <TextInput
-              style={styles(theme).searchInput}
-              onBlur={toggleSearch}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-          )}
-        </Animated.View>
+      <ThemedView style={styles(theme).header}>
+        <ThemedText style={styles(theme).headerText}>
+          Trips
+        </ThemedText>
+        <ThemedView style={styles(theme).headerActions}>
+          <Animated.View style={{ width: searchWidth }}>
+            {searchExpanded ? (
+              <TextInput
+                style={styles(theme).searchInput}
+                placeholder="Search trips..."
+                placeholderTextColor={theme.colors.content.secondary}
+                autoFocus
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                onBlur={() => {
+                  if (!searchQuery) {
+                    toggleSearch();
+                  }
+                }}
+              />
+            ) : (
+              <TouchableOpacity onPress={toggleSearch} style={styles(theme).iconButton}>
+                <Ionicons
+                  name="search"
+                  size={24}
+                  color={theme.colors.content.primary}
+                />
+              </TouchableOpacity>
+            )}
+          </Animated.View>
+        </ThemedView>
       </ThemedView>
 
       {/* Tabs Section */}
@@ -263,21 +270,23 @@ export default function TripsScreen() {
         )}
       </ScrollView>
 
-      {/* FAB */}
-      <TouchableOpacity style={styles(theme).fab} onPress={handleCreateTrip}>
-        <Ionicons
-          name="add-outline"
-          size={24}
-          color="#FFFFFF"
-        />
-      </TouchableOpacity>
-
       {/* Create Trip Modal */}
       <CreateTripModal
         visible={isCreateModalVisible}
         onClose={handleModalClose}
         onSubmit={handleTripSubmit}
       />
+
+      {/* Add Trip FAB */}
+      <Pressable 
+        onPress={handleCreateTrip}
+        style={({ pressed }) => [
+          styles(theme).createTripFab,
+          { opacity: pressed ? 0.8 : 1 }
+        ]}
+      >
+        <Ionicons name="add" size={28} color="#FFFFFF" />
+      </Pressable>
     </SafeAreaView>
   );
 }
@@ -297,7 +306,7 @@ const styles = (theme: Theme, screenWidth?: number) =>
       backgroundColor: theme.colors.surface.variant,
       paddingTop: theme.spacing.layout.section.padding,
     },
-    title: {
+    headerText: {
       ...theme.typography.heading.h1,
       color: '#FFFFFF',
       marginBottom: theme.spacing.inset.sm,
@@ -305,20 +314,11 @@ const styles = (theme: Theme, screenWidth?: number) =>
       flexShrink: 0,
       flexGrow: 0,
     },
-    searchBar: {
+    headerActions: {
       flexDirection: 'row',
       alignItems: 'center',
-      borderWidth: 1,
-      borderColor: theme.colors.border.default,
-      borderRadius: theme.spacing.inset.sm * 2,
-      height: 36,
-      overflow: 'hidden',
-      backgroundColor: '#2C2C2C',
-      marginBottom: theme.spacing.inset.sm,
     },
-    searchIcon: {
-      justifyContent: 'center',
-      alignItems: 'center',
+    iconButton: {
       padding: theme.spacing.inset.sm,
     },
     searchInput: {
@@ -350,31 +350,12 @@ const styles = (theme: Theme, screenWidth?: number) =>
       color: theme.colors.primary.main,
       fontWeight: theme.typography.button.medium.fontWeight,
     },
-    fab: {
-      position: 'absolute',
-      bottom: theme.spacing.layout.section.padding + 80,
-      right: theme.spacing.layout.section.padding,
-      backgroundColor: theme.colors.primary.main,
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      justifyContent: 'center',
-      alignItems: 'center',
-      shadowColor: '#000',
-      shadowOpacity: 0.15,
-      shadowOffset: { width: 0, height: 4 },
-      shadowRadius: 1,
-      elevation: 5,
-    },
     listContainer: {
       flex: 1,
       paddingTop: 0,
     },
     listContentContainer: {
       flexGrow: 1,
-    },
-    avatar: {
-      marginRight: theme.spacing.inline.sm,
     },
     emptyContainer: {
       flex: 1,
@@ -386,5 +367,28 @@ const styles = (theme: Theme, screenWidth?: number) =>
       ...theme.typography.body.large,
       color: theme.colors.content.secondary,
       textAlign: 'center',
+    },
+    createTripFab: {
+      position: 'absolute',
+      bottom: 80, // Position above the tab bar
+      right: theme.spacing.inset.md,
+      backgroundColor: theme.colors.primary.main,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      justifyContent: 'center',
+      alignItems: 'center',
+      ...Platform.select({
+        ios: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.3,
+          shadowRadius: 3,
+        },
+        android: {
+          elevation: 5,
+        },
+      }),
+      zIndex: 10,
     },
   });

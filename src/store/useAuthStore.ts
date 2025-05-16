@@ -7,6 +7,24 @@ import { logger } from '@/src/utils/logger';
 import { authApi } from '@/src/api/auth-api';
 import { ERROR_CODES, ERROR_MESSAGES } from '@/src/api/constants';
 import { registerAuthHandlers } from '@/src/api/api-client';
+import * as Notifications from 'expo-notifications';
+import { api } from '@/src/api/api-client';
+
+// API Error interface for better type safety
+interface ApiError extends Error {
+  response?: {
+    data?: {
+      code?: string;
+      message?: string;
+      login_required?: boolean;
+      [key: string]: unknown;
+    };
+    status?: number;
+  };
+  status?: number;
+  code?: string;
+  [key: string]: unknown;
+}
 
 /**
  * Attempt to recover a session from Supabase.
@@ -38,6 +56,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
     isVerifying: false,
     status: 'unauthenticated' as AuthStatus,
     refreshToken: null,
+    pushToken: null,
 
     /**
      * Called on app start to recover session
@@ -78,19 +97,25 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
     /**
      * Refresh the authentication session
-     * First tries to use the backend's refresh endpoint
-     * Falls back to Supabase refresh if needed
+     * Relies solely on Supabase for token refresh.
      */
     refreshSession: async () => {
       try {
-        logger.debug('AUTH', 'Refreshing session');
+        logger.debug('AUTH', 'Refreshing session using Supabase');
         
-        // Get the current refresh token
-        const refreshToken = get().refreshToken;
-        
-        if (!refreshToken) {
-          logger.debug('AUTH', 'No refresh token available, attempting to recover session');
-          // Try to recover session from Supabase
+        // Get the current refresh token from Supabase's perspective by trying to get a new session
+        // This also handles the case where there's no local refresh token but Supabase might have one.
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError) {
+          logger.error('AUTH', 'Error getting current session for refresh:', sessionError);
+          throw sessionError; // Propagate error to be caught by outer catch
+        }
+
+        if (!sessionData.session?.refresh_token) {
+          logger.debug('AUTH', 'No active session or refresh token available from Supabase. Attempting to recover session as a final step.');
+          // Try to recover session from Supabase if getSession didn't yield a refresh token
+          // This handles cases where the SDK might recover a session if getSession didn't fully.
           const recoveredSession = await recoverSession();
           
           if (recoveredSession) {
@@ -110,98 +135,57 @@ export const useAuthStore = create<AuthState>((set, get) => {
               refreshToken: recoveredSession.refresh_token,
               status: 'authenticated'
             });
-            
             return;
           }
-          
-          // If no refresh token and no recovered session, we need to re-authenticate
-          throw new Error('No refresh token available and session recovery failed');
+          logger.warn('AUTH', 'No refresh token available and session recovery failed during refresh process.');
+          throw new Error('No refresh token available and session recovery failed.');
         }
         
-        // Try to refresh using the backend's refresh endpoint
-        try {
-          logger.debug('AUTH', 'Attempting to refresh token using backend endpoint');
-          
-          const { access_token, refresh_token, expires_in } = await authApi.refreshToken(refreshToken);
-          
-          if (!access_token || !refresh_token) {
-            throw new Error('Invalid response from refresh endpoint');
-          }
-          
-          logger.debug('AUTH', 'Token refreshed successfully via backend', {
-            expiresIn: expires_in
-          });
-          
-          // Keep the same user data but update tokens
-          set({
-            token: access_token,
-            refreshToken: refresh_token,
-            status: 'authenticated'
-          });
-          
-          return;
-        } catch (backendRefreshError: any) {
-          // Check for specific error codes from the backend
-          const errorData = backendRefreshError.response?.data;
-          
-          if (errorData?.code === ERROR_CODES.INVALID_REFRESH_TOKEN || 
-              errorData?.login_required === true) {
-            logger.error('AUTH', 'Refresh token is invalid or expired:', errorData);
-            // Clear auth state and throw specific error
-            set({
-              user: null,
-              token: null,
-              refreshToken: null,
-              status: 'unauthenticated'
-            });
-            throw new Error(ERROR_MESSAGES.INVALID_REFRESH_TOKEN);
-          }
-          
-          // For other errors, try Supabase refresh as fallback
-          logger.debug('AUTH', 'Backend refresh failed, falling back to Supabase:', backendRefreshError);
-        }
+        // At this point, sessionData.session.refresh_token should be valid if one exists.
+        // We can proceed to call refreshSession with it, or rely on supabase.auth.refreshSession() 
+        // which implicitly uses the stored refresh token.
+        // Using supabase.auth.refreshSession() is simpler and aligns with SDK's intended use.
         
-        // Fallback to Supabase refresh
-        logger.debug('AUTH', 'Attempting to refresh via Supabase');
-        const { data, error } = await supabase.auth.refreshSession();
+        logger.debug('AUTH', 'Attempting to refresh via Supabase refreshSession()');
+        const { data, error } = await supabase.auth.refreshSession(); // This uses the stored refresh token
         
         if (error) {
           logger.error('AUTH', 'Supabase session refresh error:', error);
           
           // If Supabase refresh fails, try one last attempt to recover session
-          logger.debug('AUTH', 'Attempting to recover session as last resort');
-          const recoveredSession = await recoverSession();
+          // This might help if the refresh token was just invalidated but a session still exists somehow
+          logger.debug('AUTH', 'Attempting to recover session as last resort after refreshSession failure');
+          const finalRecoveredSession = await recoverSession();
           
-          if (recoveredSession) {
-            logger.debug('AUTH', 'Session recovered successfully');
+          if (finalRecoveredSession) {
+            logger.debug('AUTH', 'Session recovered successfully after refreshSession failure');
             const user: User = {
-              id: recoveredSession.user.id,
-              email: recoveredSession.user.email ?? '',
-              username: recoveredSession.user.user_metadata?.username ?? '',
-              firstName: recoveredSession.user.user_metadata?.firstName,
-              lastName: recoveredSession.user.user_metadata?.lastName,
-              profilePicture: recoveredSession.user.user_metadata?.avatar_url,
+              id: finalRecoveredSession.user.id,
+              email: finalRecoveredSession.user.email ?? '',
+              username: finalRecoveredSession.user.user_metadata?.username ?? '',
+              firstName: finalRecoveredSession.user.user_metadata?.firstName,
+              lastName: finalRecoveredSession.user.user_metadata?.lastName,
+              profilePicture: finalRecoveredSession.user.user_metadata?.avatar_url,
             };
             
             set({
               user,
-              token: recoveredSession.access_token,
-              refreshToken: recoveredSession.refresh_token,
+              token: finalRecoveredSession.access_token,
+              refreshToken: finalRecoveredSession.refresh_token,
               status: 'authenticated'
             });
-            
             return;
           }
           
           // If all refresh attempts fail, clear auth state and throw error
+          logger.error('AUTH', 'All Supabase refresh and recovery attempts failed.');
           set({
             user: null,
             token: null,
             refreshToken: null,
             status: 'unauthenticated'
           });
-          
-          throw new Error(ERROR_MESSAGES.REFRESH_FAILED);
+          throw new Error(ERROR_MESSAGES.REFRESH_FAILED); // Use a defined error message
         }
     
         const { session } = data;
@@ -228,17 +212,22 @@ export const useAuthStore = create<AuthState>((set, get) => {
           });
     
         } else {
-          throw new Error('Failed to refresh session - no session returned');
+          // This case should ideally be caught by the error in supabase.auth.refreshSession()
+          logger.warn('AUTH', 'Supabase refreshSession returned no session and no error.');
+          throw new Error('Failed to refresh session - no session returned from Supabase');
         }
       } catch (error: any) {
-        logger.error('AUTH', 'Refresh session error:', error);
+        logger.error('AUTH', 'Critical refresh session error:', error.message);
         // Clear auth state on critical errors
         set({
           user: null,
           token: null,
           refreshToken: null,
-          status: 'unauthenticated'
+          status: 'unauthenticated',
+          error: error.message || ERROR_MESSAGES.REFRESH_FAILED, // Store the error message
         });
+        // Re-throw the error so the caller (e.g., api-client) can handle it
+        // This is important for the api-client to know that refresh failed and trigger logout.
         throw error;
       }
     },
@@ -269,9 +258,10 @@ export const useAuthStore = create<AuthState>((set, get) => {
           error: null
         });
         return;
-      } catch (error: any) {
+      } catch (error: unknown) {
+        console.error('[Auth] Registration error:', error);
         set({
-          error: error.message,
+          error: error instanceof Error ? error.message : 'Registration failed',
           loading: false
         });
         throw error;
@@ -316,10 +306,10 @@ export const useAuthStore = create<AuthState>((set, get) => {
           isVerifying: false,
         });
     
-      } catch (error: any) {
-        logger.error('AUTH', 'Login failed:', error);
+      } catch (error: unknown) {
+        console.error('[Auth] Login failed:', error);
         set({
-          error: error.message || 'Login failed',
+          error: error instanceof Error ? error.message : 'Login failed',
           loading: false,
         });
         throw error;
@@ -404,7 +394,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
           accessToken: data.session.access_token.substring(0, 10) + '...',
           refreshToken: data.session.refresh_token ? data.session.refresh_token.substring(0, 10) + '...' : 'none'
         });
-      } catch (error: any) {
+      } catch (error: ApiError) {
         console.error('AUTH: Google sign-in error:', error);
         set({
           error: error.message || 'Google sign-in failed',
@@ -441,7 +431,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
           isVerifying: false
         });
 
-      } catch (error: any) {
+      } catch (error: ApiError) {
         console.error('AUTH: Apple sign-in error:', error);
         set({
           error: error.message || 'Apple sign-in failed',
@@ -508,6 +498,32 @@ export const useAuthStore = create<AuthState>((set, get) => {
      */
     setFirstTimeDone: async () => {
       set({ isFirstTime: false });
+    },
+
+    registerPushToken: async () => {
+      try {
+        // Check if we already have permission
+        const { status } = await Notifications.getPermissionsAsync();
+        if (status !== 'granted') {
+          return;
+        }
+
+        // Get the token
+        const token = await Notifications.getExpoPushTokenAsync({
+          projectId: process.env.EXPO_PUBLIC_PROJECT_ID // Add this to your env
+        });
+
+        // Store it locally
+        set({ pushToken: token.data });
+
+        // Send it to the backend
+        const { user } = get();
+        if (user) {
+          await api.post('/users/push-token', { token: token.data });
+        }
+      } catch (error) {
+        console.error('Failed to register push token:', error);
+      }
     }
   };
 

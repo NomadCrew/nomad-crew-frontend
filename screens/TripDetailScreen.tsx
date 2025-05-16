@@ -1,9 +1,19 @@
 import { ChatCard } from '@/components/chat/ChatCard';
 import { View, Text, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '@/src/types/navigation';
 
-export const TripDetailScreen = ({ trip }) => {
-  const navigation = useNavigation();
+interface TripDetailScreenProps {
+  trip: {
+    id: string;
+    name: string;
+    [key: string]: any;
+  };
+}
+
+export const TripDetailScreen = ({ trip }: TripDetailScreenProps) => {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   
   const handleNavigateToChat = () => {
     navigation.navigate('Chat', { tripId: trip.id });

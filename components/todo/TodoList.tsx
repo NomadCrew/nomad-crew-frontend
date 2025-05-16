@@ -82,6 +82,7 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
           // Either use the onAnimationFinish callback or a timeout as fallback:
           setTimeout(() => setShowCompletionAnimation(false), 2000);
         }
+        return updatedTodo;
       }}
       onDelete={() => deleteTodo(item.id)}
       disabled={loading}
@@ -252,7 +253,7 @@ const styles = (theme: Theme) => StyleSheet.create({
     position: 'absolute',
     bottom: theme.spacing.inset.md,
     right: theme.spacing.inset.md,
-    backgroundColor: theme.colors.surface.main,
+    backgroundColor: theme.colors.surface.default,
     width: 56,
     height: 56,
     borderRadius: 28,

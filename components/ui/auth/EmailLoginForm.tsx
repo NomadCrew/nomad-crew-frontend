@@ -7,6 +7,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { getInputStyles, getButtonStyles } from '@/src/theme/styles';
 import { useTripStore } from '@/src/store/useTripStore';
+import { Theme } from '@/src/theme/ThemeProvider';
 
 interface EmailLoginFormProps {
   onClose: () => void; // Callback to close the modal or navigate back
@@ -162,7 +163,7 @@ export default function EmailLoginForm({ onClose }: EmailLoginFormProps) {
   );
 }
 
-const styles = (theme) =>
+const styles = (theme: Theme) =>
   StyleSheet.create({
     container: {
       flex: 1,

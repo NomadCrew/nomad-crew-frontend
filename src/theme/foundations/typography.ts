@@ -59,6 +59,15 @@ export const letterSpacing = {
 
 // Create typography styles based on font family
 export const createTypography = (baseFontFamily = 'Manrope') => ({
+  // Font size tokens
+  size: {
+    xs: scale.xs,
+    sm: scale.sm,
+    md: scale.base,
+    lg: scale.lg,
+    xl: scale.xl,
+  },
+  
   // Display text styles
   display: {
     large: {

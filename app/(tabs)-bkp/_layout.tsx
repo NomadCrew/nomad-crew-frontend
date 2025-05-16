@@ -2,17 +2,27 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@/src/theme';
-import { Platform } from 'react-native';
+import { Platform, View } from 'react-native';
+import { NotificationBadge } from '@/src/components/notifications';
+import { useNotificationStore } from '@/src/store/useNotificationStore';
 
 export default function TabLayout() {
   const { theme } = useTheme();
+  const { unreadCount } = useNotificationStore();
   
   return (
     <Tabs
       screenOptions={({ route }) => ({
         tabBarActiveTintColor: theme.colors.primary.main,
         tabBarInactiveTintColor: theme.colors.content.tertiary,
-        headerShown: false,
+        headerShown: true,
+        headerStyle: {
+          backgroundColor: theme.colors.surface.variant,
+          borderBottomWidth: 0,
+          elevation: 0,
+          shadowOpacity: 0,
+        },
+        headerTitle: '',
         tabBarStyle: {
           position: 'absolute',
           left: 16,
@@ -57,6 +67,9 @@ export default function TabLayout() {
             case 'explore':
               iconName = focused ? 'compass' : 'compass-outline';
               break;
+            case 'notifications':
+              iconName = focused ? 'notifications' : 'notifications-outline';
+              break;
             case 'profile':
               iconName = focused ? 'person' : 'person-outline';
               break;
@@ -71,6 +84,13 @@ export default function TabLayout() {
       <Tabs.Screen name="index" options={{ href: null }} />
       <Tabs.Screen name="trips" options={{ title: 'Trips' }} />
       <Tabs.Screen name="explore" options={{ title: 'Explore' }} />
+      <Tabs.Screen 
+        name="notifications" 
+        options={{ 
+          title: 'Notifications',
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+        }} 
+      />
       <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
     </Tabs>
   );

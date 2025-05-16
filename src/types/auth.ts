@@ -25,6 +25,12 @@ export interface User {
   
   export type AuthStatus = 'unauthenticated' | 'authenticated' | 'verifying';
   
+  export interface Session {
+    access_token: string;
+    refresh_token: string;
+    user: User;
+  }
+  
   export interface AuthState {
     user: User | null;
     token: string | null;
@@ -34,6 +40,7 @@ export interface User {
     isInitialized: boolean;
     isFirstTime: boolean;
     isVerifying: boolean;
+    pushToken: string | null;
     register: (credentials: RegisterCredentials) => Promise<void>;
     login: (credentials: LoginCredentials) => Promise<void>;
     logout: () => Promise<void>;

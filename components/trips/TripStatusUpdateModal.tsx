@@ -236,7 +236,7 @@ const styles = (theme: Theme) => StyleSheet.create({
     marginBottom: theme.spacing.stack.md,
   },
   modalTitle: {
-    ...theme.typography.heading.medium,
+    ...theme.typography.heading.h2,
     color: theme.colors.content.primary,
   },
   modalSubtitle: {
@@ -277,7 +277,7 @@ const styles = (theme: Theme) => StyleSheet.create({
   },
   disabledStatusOption: {
     opacity: 0.6,
-    backgroundColor: theme.colors.surface.disabled,
+    backgroundColor: theme.colors.surface.variant,
   },
   statusTextContainer: {
     flex: 1,
