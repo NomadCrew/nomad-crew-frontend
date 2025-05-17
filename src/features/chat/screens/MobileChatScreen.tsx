@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { useChatStore } from '../store';
+import { useChatStore } from '@/src/features/chat/store';
 import { useAuthStore } from '@/src/features/auth/store';
+import { useTripStore } from '@/src/features/trips/store';
+import { Trip } from '@/src/features/trips/types';
 import { ChatList, ChatInput, ChatAuthError } from '../components';
 import { WebSocketManager } from '@/src/websocket/WebSocketManager';
 import { Theme } from '@/src/theme/types';
@@ -11,7 +13,6 @@ import { StatusBarStyle } from 'expo-status-bar/build/StatusBar.types';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemedStyles } from '@/src/theme/utils';
 import { logger } from '@/src/utils/logger';
-import { useTripStore } from '@/src/store/useTripStore';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface MobileChatScreenProps {

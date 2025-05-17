@@ -6,7 +6,7 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import type { Theme } from '@/src/theme/types';
 import { TripStatusBadge } from './TripStatusBadge';
 import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { Trip } from '@/src/types/trip';
+import { Trip } from '@/src/features/trips/types'; // Updated path
 
 interface TripCardProps {
   trip: Trip;
@@ -100,7 +100,7 @@ export const TripCard: React.FC<TripCardProps> = ({
     style={[styles.container, style, animatedStyle]}
   >
     <ImageBackground
-      source={trip.backgroundImageUrl ? { uri: trip.backgroundImageUrl } : require('@/assets/images/splash.png')}
+      source={trip.backgroundImageUrl ? { uri: trip.backgroundImageUrl } : require('@/assets/images/splash.png')} // Updated path
       style={styles.backgroundImage}
       imageStyle={styles.backgroundImageStyle}
     >
@@ -199,4 +199,4 @@ const makeStyles = (theme: Theme) => StyleSheet.create({
     textShadowOffset: { width: -1, height: 1 },
     textShadowRadius: 10,
   },
-});
+}); 

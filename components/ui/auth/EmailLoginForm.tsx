@@ -6,8 +6,9 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { getInputStyles, getButtonStyles } from '@/src/theme/styles';
-import { useTripStore } from '@/src/store/useTripStore';
+import { useTripStore } from '@/src/features/trips/store';
 import { Theme } from '@/src/theme/ThemeProvider';
+import { API_PATHS } from '@/src/utils/api-paths';
 
 interface EmailLoginFormProps {
   onClose: () => void; // Callback to close the modal or navigate back

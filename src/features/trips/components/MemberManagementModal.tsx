@@ -4,10 +4,10 @@ import { Modal, Portal, Text, Button, List, Avatar, Chip, Surface, IconButton, D
 import { Crown, Shield, User, MoreVertical, UserPlus } from 'lucide-react-native';
 import { Menu } from 'react-native-paper';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { Trip } from '@/src/types/trip';
+import { Trip } from '@/src/features/trips/types'; // Updated path
 import { useAuthStore } from '@/src/features/auth/store';
-import { useTripStore } from '@/src/store/useTripStore';
-import { InviteModal } from './InviteModal';
+import { useTripStore } from '@/src/features/trips/store'; // Updated path
+import { InviteModal } from './InviteModal'; // Path should be correct after InviteModal is moved
 
 interface MemberManagementModalProps {
   visible: boolean;
@@ -248,270 +248,149 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
           displayName = 'You';
         }
       } else {
-        // For other users without names
+        // For other members, use a generic name if no name is available
         displayName = `Member ${item.userId.substring(0, 4)}`;
       }
     }
 
-    // Create a single description text that shows only the role
-    // Since Owner = Creator, we don't need to show Creator separately
-    // And "You" is already shown in the title
-    const descriptionText = getRoleLabel(memberRole);
-
     return (
-      <List.Item
-        title={isCurrentUser 
-          ? `You${displayName && displayName !== 'You' ? ` (${displayName})` : ''}`
-          : displayName || `User ${item.userId.substring(0, 6)}`
-        }
-        titleStyle={isCurrentUser ? styles.currentUserTitle : undefined}
-        description={descriptionText}
-        descriptionStyle={styles.descriptionText}
-        left={props => (
-          <Avatar.Text 
-            {...props} 
-            size={40} 
-            label={getInitials(item.userId, item.name)} 
-            style={styles.avatar}
-          />
-        )}
-        right={props => 
-          canManageThisMember ? (
-            <Menu
-              visible={menuVisible === item.userId}
-              onDismiss={() => setMenuVisible(null)}
-              anchor={
-                <IconButton
-                  {...props}
-                  icon={({size, color}) => <MoreVertical size={size} color={color} />}
-                  onPress={() => setMenuVisible(item.userId)}
-                />
-              }
-            >
-              {memberRole !== 'owner' && (
-                <Menu.Item
-                  onPress={() => handleRoleChange(item.userId, 'owner')}
-                  title="Make Owner"
-                  leadingIcon={({size, color}) => <RoleIcon size={size} color={color} />}
-                  disabled={loading}
-                />
-              )}
-              {memberRole !== 'admin' && (
-                <Menu.Item
-                  onPress={() => handleRoleChange(item.userId, 'admin')}
-                  title="Make Admin"
-                  leadingIcon={({size, color}) => <RoleIcon size={size} color={color} />}
-                  disabled={loading}
-                />
-              )}
-              {memberRole !== 'member' && (
-                <Menu.Item
-                  onPress={() => handleRoleChange(item.userId, 'member')}
-                  title="Make Member"
-                  leadingIcon={({size, color}) => <RoleIcon size={size} color={color} />}
-                  disabled={loading}
-                />
-              )}
-              <Divider />
-              <Menu.Item
-                onPress={() => handleRemoveMember(item.userId)}
-                title="Remove"
-                leadingIcon="delete"
-                disabled={loading}
+      <Surface style={styles.memberItemSurface} elevation={1}>
+        <List.Item
+          title={displayName}
+          description={isCurrentUser ? 'You' : getRoleLabel(memberRole)}
+          left={() => (
+            <Avatar.Text 
+              size={40} 
+              label={getInitials(item.userId, item.name)} 
+              style={{ backgroundColor: theme.colors.primaryContainer }} 
+              color={theme.colors.onPrimaryContainer} 
+            />
+          )}
+          right={() => (
+            <View style={styles.memberActionsContainer}>
+              <RoleIcon 
+                color={theme.colors.onSurfaceVariant} 
+                size={20} 
+                style={{ marginRight: canManageThisMember ? 8 : 0 }} 
               />
-            </Menu>
-          ) : null
-        }
-      />
+              {canManageThisMember && (
+                <Menu
+                  visible={menuVisible === item.userId}
+                  onDismiss={() => setMenuVisible(null)}
+                  anchor={<IconButton icon={MoreVertical} onPress={() => setMenuVisible(item.userId)} />}
+                >
+                  {isOwner && memberRole !== 'owner' && (
+                    <Menu.Item onPress={() => handleRoleChange(item.userId, 'owner')} title="Make Owner" />
+                  )}
+                  {canManageMembers && memberRole !== 'admin' && (
+                     <Menu.Item onPress={() => handleRoleChange(item.userId, 'admin')} title="Make Admin" />
+                  )}
+                  {canManageMembers && memberRole !== 'member' && (
+                     <Menu.Item onPress={() => handleRoleChange(item.userId, 'member')} title="Make Member" />
+                  )}
+                  <Divider />
+                  <Menu.Item onPress={() => handleRemoveMember(item.userId)} title="Remove from Trip" titleStyle={{ color: theme.colors.error }} />
+                </Menu>
+              )}
+            </View>
+          )}
+          style={styles.listItem}
+        />
+      </Surface>
     );
   };
 
-  // Render pending invitations
   const renderInvitationItem = ({ item }: { item: TripInvitation }) => (
     <List.Item
       title={item.email}
-      description={`Invited • ${item.status}`}
-      descriptionStyle={styles.descriptionText}
-      left={props => (
-        <Avatar.Icon
-          {...props}
-          size={40}
-          icon="email"
-          style={styles.avatar}
-        />
-      )}
-      right={props => (
-        <IconButton
-          {...props}
-          icon="close"
-          onPress={() => {}}
-        />
-      )}
+      description={`Status: ${item.status}`}
+      left={() => <List.Icon icon="email-outline" />}
+      // Optionally add actions for invitations (e.g., resend, revoke)
     />
   );
-
-  // Prepare invitations array with null check
-  const invitations = trip.invitations || [];
 
   return (
     <Portal>
       <Modal
         visible={visible}
         onDismiss={onClose}
-        contentContainerStyle={styles.modalContainer}
+        contentContainerStyle={[
+          styles.modalContainer,
+          { backgroundColor: theme.colors.surface }, 
+        ]}
       >
-        <Surface style={styles.modalContent}>
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-          >
-            <View style={styles.header}>
-              <Text variant="headlineSmall" style={styles.title}>
-                Trip Members
-              </Text>
-              <IconButton
-                icon="close"
-                onPress={onClose}
-                style={styles.closeButton}
-              />
-            </View>
+        <View style={styles.header}>
+          <Text variant="headlineSmall">Manage Members</Text>
+          <IconButton icon={UserPlus} size={24} onPress={() => setShowInviteModal(true)} />
+        </View>
 
-            {canManageMembers && (
-              <Button
-                mode="outlined"
-                icon={({size, color}) => <UserPlus size={size} color={color} />}
-                onPress={() => setShowInviteModal(true)}
-                style={styles.inviteButton}
-              >
-                Invite Members
-              </Button>
-            )}
-
-            <Divider style={styles.divider} />
-
-            {members.length > 0 ? (
-              <List.Section style={styles.listSection}>
-                <Text variant="titleMedium" style={styles.sectionTitle}>
-                  Members ({members.length})
-                </Text>
-                {members.map((member, index) => (
-                  <React.Fragment key={member.userId}>
-                    {renderMemberItem({ item: member })}
-                    {index < members.length - 1 && <Divider />}
-                  </React.Fragment>
-                ))}
-              </List.Section>
-            ) : (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No members yet</Text>
-                {canManageMembers && (
-                  <Button
-                    mode="contained"
-                    onPress={() => setShowInviteModal(true)}
-                    style={styles.emptyButton}
-                  >
-                    Invite Members
-                  </Button>
-                )}
+        <ScrollView style={styles.scrollView}>
+          {/* Render members */}
+          <List.Section title="Members">
+            {members.map((member) => (
+              <View key={member.userId}>
+                {renderMemberItem({ item: member })}
               </View>
-            )}
+            ))}
+          </List.Section>
 
-            {invitations.length > 0 && (
-              <>
-                <Divider style={styles.divider} />
-                <List.Section style={styles.listSection}>
-                  <Text variant="titleMedium" style={styles.sectionTitle}>
-                    Pending Invitations ({invitations.length})
-                  </Text>
-                  {invitations.map((invitation, index) => (
-                    <React.Fragment key={invitation.email}>
-                      {renderInvitationItem({ item: invitation })}
-                      {index < invitations.length - 1 && <Divider />}
-                    </React.Fragment>
-                  ))}
-                </List.Section>
-              </>
-            )}
-          </ScrollView>
-        </Surface>
+          {/* Render invitations */}
+          {trip.invitations && trip.invitations.length > 0 && (
+            <List.Section title="Pending Invitations">
+              {trip.invitations.map((invitation) => (
+                <View key={invitation.token}> 
+                  {renderInvitationItem({ item: invitation })}
+                </View>
+              ))}
+            </List.Section>
+          )}
+        </ScrollView>
+
+        <Button onPress={onClose} mode="outlined" style={styles.closeButton}>
+          Close
+        </Button>
+        
+        {/* Invite Modal (nested) */}
+        <InviteModal 
+          visible={showInviteModal} 
+          onClose={() => setShowInviteModal(false)} 
+          tripId={trip.id} 
+        />
       </Modal>
-
-      <InviteModal
-        visible={showInviteModal}
-        onClose={() => setShowInviteModal(false)}
-        tripId={trip.id}
-      />
     </Portal>
   );
 };
 
 const styles = StyleSheet.create({
   modalContainer: {
-    padding: 0,
-    margin: 0,
-  },
-  modalContent: {
     margin: 20,
     borderRadius: 12,
-    maxHeight: '80%',
-    width: '90%',
-    alignSelf: 'center',
-  },
-  scrollContent: {
-    flexGrow: 1,
+    padding: 20,
+    maxHeight: '85%', // Prevent modal from taking full screen
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    marginBottom: 16,
   },
-  title: {
-    fontWeight: 'bold',
+  scrollView: {
+    // Styles for the scroll view if needed
+  },
+  memberItemSurface: {
+    borderRadius: 8,
+    marginBottom: 8,
+    // backgroundColor will be set by Surface based on theme
+  },
+  listItem: {
+    // Removed fixed height to allow dynamic content
+    // paddingVertical: 12, // Adjusted padding
+  },
+  memberActionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   closeButton: {
-    margin: 0,
-  },
-  inviteButton: {
-    margin: 16,
-  },
-  divider: {
-    marginVertical: 8,
-  },
-  listSection: {
-    paddingHorizontal: 16,
-  },
-  sectionTitle: {
-    marginBottom: 8,
-    fontWeight: 'bold',
-  },
-  avatar: {
-    marginVertical: 8,
-    backgroundColor: '#666666',
-  },
-  emptyContainer: {
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-  },
-  emptyText: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 16,
-    color: '#999',
-  },
-  emptyButton: {
-    marginTop: 16,
-  },
-  descriptionText: {
-    fontSize: 14,
-    color: '#666666',
-  },
-  currentUserTitle: {
-    fontWeight: 'bold',
-  },
-  listContent: {
-    paddingBottom: 8,
+    marginTop: 20,
   },
 }); 

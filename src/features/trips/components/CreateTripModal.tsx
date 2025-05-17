@@ -4,9 +4,9 @@ import { Portal, Modal, Text as PaperText, Button, useTheme, TextInput } from 'r
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
 import { useAuthStore } from '@/src/features/auth/store';
-import { Trip } from '@/src/types/trip';
-import { PlaceDetailsWithFullText } from '@/src/types/places';
-import CustomPlacesAutocomplete from '@/components/PlacesAutocomplete';
+import { Trip } from '@/src/features/trips/types'; // Updated path
+import { PlaceDetailsWithFullText } from '@/src/types/places'; // Path remains, assuming global type
+import CustomPlacesAutocomplete from '@/components/PlacesAutocomplete'; // Path remains, assuming global component
 
 interface CreateTripModalProps {
   visible: boolean;
@@ -249,25 +249,23 @@ export default function CreateTripModal({
                   mode="date"
                   display="default"
                   onChange={handleDateChange}
-                  minimumDate={
-                    showDatePicker === 'end'
-                      ? new Date(trip.startDate)
-                      : undefined
-                  }
                 />
               ) : null}
-
-              {/* Submit button */}
-              <Button
-                mode="contained"
-                onPress={handleSubmit}
-                loading={loading}
-                style={[styles.submitButton, { backgroundColor: '#FF8A01' }]}
-                labelStyle={{ color: '#FFFFFF' }}
-              >
-                Create Trip
-              </Button>
             </ScrollView>
+          </View>
+
+          {/* Submit button */}
+          <View style={styles.buttonContainer}>
+            <Button 
+              mode="contained" 
+              onPress={handleSubmit} 
+              loading={loading}
+              disabled={loading}
+              style={styles.submitButton}
+              labelStyle={styles.submitButtonLabel}
+            >
+              Create Trip
+            </Button>
           </View>
         </View>
       </Modal>
@@ -278,74 +276,92 @@ export default function CreateTripModal({
 const styles = StyleSheet.create({
   modalOuterContainer: {
     flex: 1,
-    justifyContent: 'flex-end',
-    margin: 0,
+    justifyContent: 'flex-end', // Align modal to the bottom
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)', // Semi-transparent background
   },
   modalContent: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
     width: '100%',
-    padding: 16,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingTop: 10, 
+    paddingBottom: Platform.OS === 'ios' ? 30 : 20, // More padding for iOS home indicator
+    elevation: 5, 
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
   dragHandleWrapper: {
     alignItems: 'center',
-    marginBottom: 8,
+    paddingVertical: 8, 
   },
   dragHandle: {
     width: 40,
-    height: 4,
-    borderRadius: 2,
+    height: 5,
+    borderRadius: 2.5,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   closeButton: {
-    padding: 8,
+    padding: 8, // Make it easier to tap
   },
   formContainer: {
-    flex: 1,
-    position: 'relative',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 24,
+    flex: 1, // Allow this container to take remaining space for scrolling
+    justifyContent: 'flex-start',
   },
   textInput: {
-    marginTop: 12,
+    marginBottom: 12,
+    backgroundColor: 'transparent', // Assuming theme handles actual input background
   },
   autocompleteWrapperOuter: {
-    position: 'relative',
-    zIndex: 9999,
-    elevation: 999,
-    marginTop: 12,
+    // This wrapper helps manage the absolute positioning context for the suggestions list
+    // if it were to overflow. For now, it mainly sets a zIndex if needed.
+    // zIndex: 1, // Uncomment if suggestions are hidden behind other elements
+    // No specific styling needed if CustomPlacesAutocomplete handles its own dropdown positioning well
   },
   autocompleteWrapper: {
-    position: 'relative',
-    zIndex: 9999,
-    elevation: 999,
+    // This inner wrapper can be used if specific layout for the input itself is needed
+    // separate from its dropdown, e.g. if you wanted to add an icon next to it.
+  },
+  scrollView: {
+    flex: 1, // Ensure ScrollView takes available space
+  },
+  scrollContent: {
+    paddingBottom: 20, // Space at the bottom of scrollable content
   },
   dateRow: {
     flexDirection: 'row',
-    marginTop: 16,
-    zIndex: 1,
+    justifyContent: 'space-between',
+    marginBottom: 16,
   },
   dateField: {
     flex: 1,
   },
   dateDisplay: {
-    padding: 16,
-    borderRadius: 8,
     borderWidth: 1,
+    borderRadius: 4,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
     justifyContent: 'center',
+    minHeight: 50, // Align height with TextInput
+  },
+  buttonContainer: {
+    paddingTop: 16, // Space above the button
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(0,0,0,0.1)', // Subtle separator
   },
   submitButton: {
-    marginTop: 24,
-    borderRadius: 8,
-    paddingVertical: 6,
-  }
-});
+    borderRadius: 30, // Fully rounded button
+    paddingVertical: 8,
+  },
+  submitButtonLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+}); 

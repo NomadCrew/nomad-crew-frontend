@@ -1,9 +1,10 @@
 import React from 'react';
 import { Modal, StyleSheet, View, Dimensions, TouchableOpacity } from 'react-native';
 import { GroupLiveMap } from './GroupLiveMap';
-import { Trip } from '@/src/types/trip';
+import { Trip } from '@/src/features/trips/types';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { Theme } from '@/src/theme/types';
+import { Portal, IconButton } from 'react-native-paper';
 
 interface GroupLiveMapModalProps {
   visible: boolean;

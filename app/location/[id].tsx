@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
-import { useTripStore } from '@/src/store/useTripStore';
+import { useTripStore } from '@/src/features/trips/store';
 import { View, StyleSheet, Text, Pressable } from 'react-native';
 import { GroupLiveMap } from '@/components/location/GroupLiveMap';
 import { useRouter } from 'expo-router';
@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 import { logger } from '@/src/utils/logger';
 import { api } from '@/src/api/api-client';
 import { API_PATHS } from '@/src/utils/api-paths';
-import { Trip } from '@/src/types/trip';
+import { Trip } from '@/src/features/trips/types';
 import { Theme } from '@/src/theme/types';
 
 export default function LocationScreen() {

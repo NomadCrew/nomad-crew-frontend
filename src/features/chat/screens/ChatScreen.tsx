@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { useChatStore } from '../store';
+import { useChatStore } from '@/src/features/chat/store';
 import { useAuthStore } from '@/src/features/auth/store';
 import { ChatList, ChatInput, ChatAuthError } from '../components';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { logger } from '@/src/utils/logger';
-import { useTripStore } from '@/src/store/useTripStore';
+import { useTripStore } from '@/src/features/trips/store';
 import { useSafeAreaInsets } from 'react-native-safe-area-insets';
 import { Theme } from '@/src/theme/types';
+import { useLocalSearchParams, router } from 'expo-router';
 
 interface ChatScreenProps {
   tripId: string;

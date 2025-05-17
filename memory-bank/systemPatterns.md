@@ -59,8 +59,11 @@ All new and refactored code must strive to adhere to SOLID principles:
     *   **Actions:** Store actions handle state transitions. Side effects within actions delegate to services.
     *   **Middleware:** Use `persist` for AsyncStorage persistence, `devtools` for debugging.
     *   **Derived State:** Computed values are derived within selectors or stored if computationally expensive.
-*   **Barrel Files (`index.ts`):**
-    *   Used within feature modules (`src/features/[featureName]/index.ts`) and shared component directories (`src/components/index.ts`) to simplify import paths and clearly define public APIs of modules.
+*   **Direct Imports (No Barrel Files for Application Code):**
+    *   To optimize bundle size, improve tree-shaking, and enhance build/test performance, **barrel files (e.g., `index.ts` files that re-export multiple modules from a directory) MUST NOT be used for importing modules within the application code.**
+    *   Always prefer direct imports from the specific file where a module is defined (e.g., `import { MyComponent } from '@/src/features/chat/components/MyComponent';` instead of `import { MyComponent } from '@/src/features/chat';`).
+    *   This rule is based on observed negative impacts on final bundle sizes and test execution times.
+    *   Note: This rule applies to internal application imports. External library entry points (which often act as barrel files) are consumed as designed by the library authors.
 
 ## 4. Navigation Pattern (Expo Router)
 *   File-based routing via `app/` directory.

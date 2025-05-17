@@ -1,4 +1,3 @@
-// components/trips/TripStats.tsx
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Surface, Text } from 'react-native-paper';
@@ -75,4 +74,4 @@ export const TripStats: React.FC = () => {
       </View>
     </Surface>
   );
-};
+}; 
