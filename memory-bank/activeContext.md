@@ -2,6 +2,14 @@
 
 ## ✅ Recent Changes
 
+- **Notifications Module Refactor (Complete):**
+    - Moved `useNotificationStore.ts` to `src/features/notifications/store/`.
+    - Moved notification components (`NotificationBadge.tsx`, `NotificationBell.tsx`, `NotificationItem.tsx`, `NotificationList.tsx`, `NotificationProvider.tsx`, `NotificationTestButton.tsx`, `NotificationToast.tsx`) from `src/components/notifications/` to `src/features/notifications/components/`.
+    - Moved `useTestNotifications.ts` hook from `src/hooks/` to `src/features/notifications/hooks/`.
+    - Moved `notification.ts` types from `src/types/` to `src/features/notifications/types/`.
+    - Updated all relevant import paths.
+    - Deleted original files and old `src/components/notifications/index.ts` barrel file.
+    - Corrected unused type imports in `NotificationProvider.tsx`.
 - **WebSocket Event Handling:** Refined WebSocket `onMessage` handler in `TripDetailScreen.tsx` to correctly parse and route `ServerEvent` and `Notification` types to their respective stores, resolving linter errors.
 - **Todos Module Refactor (Complete):**
     - Moved `useTodoStore.ts` to `src/features/todos/store.ts`.
@@ -56,14 +64,26 @@
     - Updated imports in `app/trip/[id].tsx` to point to new store and screen locations.
     - Updated all identified outdated imports for trip types, store, screens, and components throughout the codebase.
     - Corrected an import path for `ChatCard` in `src/features/trips/screens/TripDetailScreen.tsx`.
+- **Location Module Refactor (Complete):**
+    - Created `src/features/location/` and subdirectories `store/`, `types/`, `components/`, `screens/`.
+    - Moved `src/store/useLocationStore.ts` to `src/features/location/store/useLocationStore.ts`.
+    - Extracted `MemberLocation` and `LocationState` interfaces to `src/features/location/types/index.ts`.
+    - Updated `useLocationStore.ts` to import new types and updated its `useAuthStore` import path.
+    - Moved `components/location/LocationSharingToggle.tsx` to `src/features/location/components/LocationSharingToggle.tsx` and updated its `useLocationStore` import.
+    - Moved `components/location/GroupLiveMapModal.tsx` to `src/features/location/components/GroupLiveMapModal.tsx`.
+    - Moved `components/location/GroupLiveMap.tsx` to `src/features/location/components/GroupLiveMap.tsx`, updated its imports for `useLocationStore` and `LocationSharingToggle`, and removed unused `LiveLocation`/`UserLocation` type imports.
+    - Moved `app/location/[id].tsx` to `src/features/location/screens/LocationScreen.tsx` and updated its internal imports.
+    - Updated `app/location/[id].tsx` (Expo Router file) to export the screen from its new location.
+    - Updated `src/features/trips/screens/TripDetailScreen.tsx` to import `useLocationStore` from its new path.
+    - Deleted old `src/store/useLocationStore.ts` and files from `components/location/`. The `components/location` directory might remain empty.
 
 ## 🧠 Next Steps
 
 1.  **~~Chat Module Refactor: Plan and execute refactoring for the chat module into `src/features/chat/`.~~ (DONE - Covered previously)**
 2.  **Project Structure Refactor (Ongoing):**
     *   **~~Next Feature: Identify and move the `todos` module to `src/features/todos/`.~~ (DONE)**
-    *   **Next Feature:** Identify and move the `location` store (`src/store/useLocationStore.ts`) and related components/screens (e.g., `app/location/`, `components/location/`) to `src/features/location/`. Refactor its internal structure (store, types, components, services if applicable).
-    *   Follow with the `notifications` module (`src/store/useNotificationStore.ts`, `src/components/notifications/`, etc.).
+    *   **~~Next Feature: Identify and move the `location` store (`src/store/useLocationStore.ts`) and related components/screens (e.g., `app/location/`, `components/location/`) to `src/features/location/`. Refactor its internal structure (store, types, components, services if applicable).~~ (DONE)**
+    *   **~~Next Feature: Identify and move the `notifications` module (`src/store/useNotificationStore.ts`, `src/components/notifications/`, etc.) to `src/features/notifications/`.~~ (DONE)**
     *   Consolidate global directories (`components`, `hooks`, `services`, `store`, `types`, `utils`) under `src/`, ensuring they only contain truly shared, non-feature-specific code.
     *   Organize `app/` (Expo Router) to mirror feature groupings.
     *   Clean up obsolete files (e.g., `app/(tabs)-bkp/`, `TestScreen`).
@@ -86,4 +106,3 @@
 -   The refactor is following the feature-first structure outlined in the provided guide.
 -   Modules are moved, then internal structures refactored, then imports updated.
 -   **Rule: No Barrel Files for Application Imports.** Internal application imports must be direct.
--   `useTodoStore` and `useLocationStore` are still in `src/store/` as their respective features haven't been refactored yet. Their imports in other features point to the old paths for now.

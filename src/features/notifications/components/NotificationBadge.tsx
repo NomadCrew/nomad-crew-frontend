@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Badge, useTheme } from 'react-native-paper';
-import { useNotificationStore } from '../../store/useNotificationStore';
+import { useNotificationStore } from '../store/useNotificationStore';
 
 interface NotificationBadgeProps {
   size?: number;

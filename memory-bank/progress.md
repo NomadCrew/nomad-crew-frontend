@@ -24,8 +24,8 @@
         *   [x] **Trips Module:** Moved to `src/features/trips/` (Completed).
         *   [x] **Todos Module:** Moved to `src/features/todos/` (Completed: store, types, components moved; imports updated; old files deleted).
         *   [x] **Chat Module:** Moved to `src/features/chat/` (Completed).
-        *   [ ] **Location Module:** Plan and move `src/store/useLocationStore.ts` and related files to `src/features/location/`.
-        *   [ ] **Notifications Module:** Plan and move to `src/features/notifications/`.
+        *   [x] **Location Module:** Plan and move `src/store/useLocationStore.ts` and related files to `src/features/location/`. (Completed: store, types, components, screens moved; imports updated; old files/dirs cleaned up).
+        *   [x] **Notifications Module:** Plan and move to `src/features/notifications/`. (Completed: store, types, components, hooks moved; imports updated; old files/dirs cleaned up).
         *   [x] **Refactor Existing Barrel Files:** Updated imports from `auth` and `chat` feature barrel files to use direct paths, then delete the barrel files. (Trips module was created without one, adhering to new rule).
         *   [x] **Post-Refactor Stability Check:** Addressed lint errors after `trips` module refactor. Lint passes with 0 errors.
         *   [x] **WebSocket Event Handling Fix:** Corrected event parsing and routing in `TripDetailScreen.tsx`. Lint passes with 0 errors.

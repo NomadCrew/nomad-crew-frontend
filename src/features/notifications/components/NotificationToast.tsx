@@ -17,9 +17,9 @@ import {
   isWeatherNotification,
   isChatNotification,
   isLocationNotification
-} from '../../types/notification';
+} from '../types/notification';
 import { router } from 'expo-router';
-import { useNotificationStore } from '../../store/useNotificationStore';
+import { useNotificationStore } from '../store/useNotificationStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface NotificationToastProps {
