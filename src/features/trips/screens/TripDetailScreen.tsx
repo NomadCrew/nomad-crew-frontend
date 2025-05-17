@@ -1,4 +1,3 @@
-// screens/trips/TripDetailScreen.tsx
 import React, { useEffect, useState, useMemo } from 'react';
 import { View, ScrollView, useWindowDimensions, SafeAreaView, StyleSheet, ViewStyle } from 'react-native';
 import { router } from 'expo-router';
@@ -6,21 +5,21 @@ import { useTheme } from '@/src/theme/ThemeProvider';
 import { BentoGrid } from '@/components/ui/BentoGrid';
 import { TodoList } from '@/components/todo/TodoList';
 import { BentoCarousel } from '@/components/ui/BentoCarousel';
-import { Trip } from '@/src/types/trip';
+import { Trip } from '@/src/features/trips/types';
 import { AddTodoModal } from '@/components/todo/AddTodoModal';
-import { InviteModal } from '@/components/trips/InviteModal';
+import { InviteModal } from '@/src/features/trips/components/InviteModal';
 import { WebSocketManager } from '@/src/websocket/WebSocketManager';
-import { useTripStore } from '@/src/store/useTripStore';
+import { useTripStore } from '@/src/features/trips/store';
 import { useTodoStore } from '@/src/store/useTodoStore';
 import { useLocationStore } from '@/src/store/useLocationStore';
-import { TripDetailHeader } from '@/components/trips/TripDetailHeader';
-import { QuickActions } from '@/components/trips/QuickActions';
+import { TripDetailHeader } from '@/src/features/trips/components/TripDetailHeader';
+import { QuickActions } from '@/src/features/trips/components/QuickActions';
 import { StatusBar } from 'expo-status-bar';
 import { useChatStore } from '@/src/features/chat/store';
-import { TripStats } from '@/components/trips/TripStats';
+import { TripStats } from '@/src/features/trips/components/TripStats';
 import { useThemedStyles } from '@/src/theme/utils';
 import { isChatEvent } from '@/src/types/events';
-import { ChatCard } from '@/src/features/chat/components';
+import { ChatCard } from '@/src/features/chat/components/ChatCard';
 import { logger } from '@/src/utils/logger';
 
 interface TripDetailScreenProps {
@@ -37,7 +36,6 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
   const { connectToChat, disconnectFromChat, fetchMessages } = useChatStore();
 
   const styles = useThemedStyles((theme) => {
-    // Safely access theme properties with fallbacks
     const backgroundDefault = theme?.colors?.background?.default || '#FFFFFF';
     const spacingStackXl = theme?.spacing?.stack?.xl || 40;
     const breakpointDesktop = theme?.breakpoints?.desktop || 1024;
@@ -59,17 +57,14 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
     };
   });
 
-  // Calculate responsive dimensions
   const GRID_MARGIN = theme.spacing.layout.screen.padding;
   const GRID_GAP = theme.spacing.layout.section.gap;
   const MAX_WIDTH = Math.min(screenWidth, theme.breakpoints.desktop);
   const CONTENT_WIDTH = MAX_WIDTH - (GRID_MARGIN * 2);
   
-  // Base and tall card heights
   const BASE_CARD_HEIGHT = 180;
   const TALL_CARD_HEIGHT = (BASE_CARD_HEIGHT * 2) + GRID_GAP;
   
-  // Calculate card width based on available space
   const CARD_WIDTH = (CONTENT_WIDTH - GRID_GAP) / 2;
 
   const containerWidth = Math.min(screenWidth, theme.breakpoints.desktop);
@@ -126,22 +121,17 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
   }, [carouselItems, trip, tripId, CARD_WIDTH, TALL_CARD_HEIGHT, BASE_CARD_HEIGHT, setShowInviteModal]);
 
   useEffect(() => {
-    // Set up WebSocket connection for the entire trip experience
     logger.info('Trip Detail Screen', `Setting up WebSocket connection for trip ${tripId}`);
     const manager = WebSocketManager.getInstance();
     
-    // Check if already connected
     const isConnectedBefore = manager.isConnected();
     logger.info('Trip Detail Screen', `WebSocket connection status before connect: ${isConnectedBefore ? 'connected' : 'disconnected'}`);
     
-    // Connect to WebSocket and set up event handlers for all trip-related features
     manager.connect(tripId, {
       onMessage: (event) => {
-        // Handle all types of events at the trip level
         useTripStore.getState().handleTripEvent(event);
         useTodoStore.getState().handleTodoEvent(event);
         
-        // Handle chat events
         if (isChatEvent(event)) {
           useChatStore.getState().handleChatEvent(event);
         }
@@ -153,13 +143,10 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
       logger.error('UI', `Failed to connect to WebSocket for trip ${tripId}:`, error);
     });
     
-    // Initialize chat data for this trip
     connectToChat(tripId);
     
-    // Fetch messages for this trip
     fetchMessages(tripId);
     
-    // Start location tracking if location sharing is enabled
     if (isLocationSharingEnabled) {
       startLocationTracking(tripId);
     }
@@ -171,7 +158,6 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
     };
   }, [tripId, isLocationSharingEnabled, connectToChat, fetchMessages]);
 
-  // Effect to handle changes in location sharing preference
   useEffect(() => {
     if (isLocationSharingEnabled) {
       startLocationTracking(tripId);
@@ -213,4 +199,4 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
       />
     </SafeAreaView>
   );
-}
+} 

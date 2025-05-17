@@ -9,9 +9,9 @@ import {
 import { ArrowLeft, Bookmark } from 'lucide-react-native';
 import { format } from 'date-fns';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { ThemedText } from '@/components/ThemedText';
-import type { Trip } from '@/src/types/trip';
-import { WeatherIcon } from '../ui/WeatherIcon';
+import { ThemedText } from '@/src/components/ThemedText';
+import type { Trip } from '@/src/features/trips/types';
+import { WeatherIcon } from '@/components/ui/WeatherIcon';
 import { WeatherCondition } from '@/src/utils/weather';
 import { TripStatusBadge } from './TripStatusBadge';
 import { Theme } from '@/src/theme/types';
@@ -20,9 +20,10 @@ interface TripHeaderProps {
   trip: Trip;
   onBack: () => void;
   onBookmark?: () => void;
+  containerWidth?: number; // Added for consistency with TripDetailScreen import
 }
 
-export const TripHeader = ({
+export const TripDetailHeader = ({ // Renamed export
   trip,
   onBack,
   onBookmark,
@@ -181,4 +182,4 @@ const styles = (theme: Theme) =>
       fontSize: 16,
       fontWeight: '500',
     } as TextStyle,
-  });
+  }); 

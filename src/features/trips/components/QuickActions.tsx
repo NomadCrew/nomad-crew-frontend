@@ -4,7 +4,7 @@ import { Surface } from 'react-native-paper';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useAuthStore } from '@/src/features/auth/store';
 import { Theme } from '@/src/theme/types';
-import { Trip } from '@/src/types/trip';
+import { Trip } from '@/src/features/trips/types'; // Updated path
 import { ArrowLeft, ArrowRight, MapPin, Users, UserPlus, Activity, MessageSquare } from 'lucide-react-native';
 import { MemberManagementModal } from './MemberManagementModal';
 import { TripStatusUpdateModal } from './TripStatusUpdateModal';
@@ -257,52 +257,46 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
 
 const styles = (theme: Theme) => StyleSheet.create({
   actionsCard: {
-    height: '100%',
-    width: '100%',
-    paddingVertical: theme.spacing.inset.sm,
-    backgroundColor: theme.colors.surface.variant,
-    borderRadius: 24,
+    borderRadius: theme.shape.borderRadius.medium,
+    marginVertical: theme.spacing.layout.section.gap,
+    backgroundColor: theme.colors.surface.main, // Ensure card background
+    overflow: 'hidden', // Needed for fade effect or if children exceed bounds
   },
   fadeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing.inset.xs,
+    paddingHorizontal: theme.spacing.layout.card.padding.horizontal,
+  },
+  arrow: {
+    paddingHorizontal: theme.spacing.xs,
   },
   actionButtons: {
     flexDirection: 'row',
-    flexGrow: 1,
+    paddingVertical: theme.spacing.layout.card.padding.vertical, 
   },
   scrollContent: {
-    paddingHorizontal: theme.spacing.inset.xs,
-    justifyContent: 'space-around',
+    alignItems: 'center', // Vertically align items in scroll view if needed
   },
   actionItem: {
     alignItems: 'center',
-    marginHorizontal: theme.spacing.stack.xs,
-    width: 50,
+    justifyContent: 'center',
+    paddingHorizontal: theme.spacing.m, // Increased spacing between items
+    minWidth: 80, // Ensure items have enough space
+    height: 70, // Fixed height for consistency
   },
   iconContainer: {
     width: 38,
     height: 38,
-    borderRadius: 19,
-    backgroundColor: theme.colors.surface.default,
-    justifyContent: 'center',
+    borderRadius: theme.shape.borderRadius.large, // More rounded icon background
+    backgroundColor: theme.colors.primary.container, // Use primary container color
     alignItems: 'center',
-    shadowColor: 'rgba(0, 0, 0, 0.2)',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.5,
-    elevation: 2,
-    marginBottom: theme.spacing.stack.xs
+    justifyContent: 'center',
+    marginBottom: theme.spacing.xs,
   },
   actionLabel: {
-    ...theme.typography.body.small,
-    color: theme.colors.content.secondary,
+    fontSize: 12,
+    color: theme.colors.content.primary,
     textAlign: 'center',
-    marginTop: 2,
-    fontSize: 11,
+    marginTop: 4, // Spacing between icon and label
   },
-  arrow: {
-    marginHorizontal: 5,
-  },
-});
+}); 

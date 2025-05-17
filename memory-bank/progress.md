@@ -11,7 +11,7 @@
 1.  **Project Structure Refactor:**
     *   [x] Transition to a feature-first directory structure (`src/features/...`).
         *   [x] Create `src/features` and `src/navigation` directories.
-        *   [x] **Auth Module:** Moved to `src/features/auth/`.
+        *   [x] **Auth Module:** Moved to `src/features/auth/` (Completed: types, store, service, imports, barrel file deleted).
         *   [x] **Auth Module:** `service.ts` created; `supabaseClient` & `secure-token-manager` integrated.
         *   [x] **Auth Module:** `store.ts` (full content) moved & `supabaseClient` import updated.
         *   [x] **Auth Module:** Direct Supabase calls in `store.ts` abstracted to `service.ts` methods.
@@ -22,7 +22,7 @@
         *   [x] **Auth Module:** Reviewed `registerAuthHandlers` in `store.ts` (current approach acceptable).
         *   [x] **Auth Module:** Finalized `types.ts` (removed redundant custom `Session`).
         *   [x] **Auth Module:** Verified `src/store` and `src/types` not empty.
-        *   [x] **Chat Module:** Moved to `src/features/chat/` & refactor (service, store, types, etc.).
+        *   [x] **Chat Module:** Moved to `src/features/chat/` (Completed: types, store, service, components, screens, imports, barrel file deleted).
             *   [x] Created `src/features/chat/` and subdirectories `screens/` and `components/`.
             *   [x] Moved `screens/chat/ChatScreen.tsx` to `src/features/chat/screens/ChatScreen.tsx`.
             *   [x] Moved `screens/chat/MobileChatScreen.tsx` to `src/features/chat/screens/MobileChatScreen.tsx`.
@@ -41,9 +41,10 @@
             *   [x] Created `src/features/chat/index.ts` barrel file.
             *   [x] Updated all chat-related imports throughout the codebase.
             *   [x] Deleted old `screens/chat/` directory (and orphaned files).
-        *   [x] **Refactor Existing Barrel Files:** Update imports from `auth` and `chat` feature barrel files to use direct paths, then delete the barrel files.
-        *   [ ] **Trips Module:** Move to `src/features/trips/` & refactor.
+        *   [x] **Trips Module:** Moved to `src/features/trips/` (Completed: types, store, components, screens, imports).
+        *   [x] **Refactor Existing Barrel Files:** Updated imports from `auth` and `chat` feature barrel files to use direct paths, then delete the barrel files. (Trips module was created without one, adhering to new rule).
         *   [ ] **Todos Module:** Move to `src/features/todos/` & refactor.
+        *   [ ] **Location Module/Store:** Consider refactoring `useLocationStore` and related components/screens into `src/features/location/` or a shared services/stores structure if not a full feature.
         *   [ ] **Notifications Module:** Move to `src/features/notifications/` & refactor.
         *   [ ] Consolidate global directories (`components`, `hooks`, `services`, `store`, `types`, `utils`) under `src/`.
     *   [ ] Organize `app/` (Expo Router) to mirror feature groupings.
@@ -74,18 +75,12 @@
     *   [ ] Implement Container/Presenter pattern.
     *   [ ] Expand service abstraction layer.
     *   [ ] Organize and create new custom hooks.
-    *   [x] Use barrel files (`index.ts`).
+    *   [x] Use barrel files (`index.ts`) - **Reverted: Rule is NO barrel files for internal app code.**
 
 ### Phase 3: Feature-Specific Refactoring
-7.  **Feature Module Refactoring (Chat):**
-    *   [ ] Restructure Chat module into `src/features/chat/`.
-    *   [ ] Refactor `useChatStore`.
-    *   [ ] Improve Chat components.
-8.  **Feature Module Refactoring (Trips):**
-    *   [ ] Restructure Trip module into `src/features/trips/`.
-    *   [ ] Refactor `CreateTripModal`.
-    *   [ ] Improve `useTripStore`.
-9.  **(Placeholder for other features: Todos, Notifications, etc.)**
+7.  **Feature Module Refactoring (Chat - DONE, covered by Phase 1)**
+8.  **Feature Module Refactoring (Trips - DONE, covered by Phase 1)**
+9.  **(Placeholder for other features: Todos, Notifications, Location etc.)**
     *   [ ] Apply similar refactoring to other feature modules.
 
 ### Phase 4: Quality Assurance & Optimization
@@ -111,4 +106,4 @@
 14. **Final Review & Cleanup:**
     *   [ ] Review all refactored code against the guide.
     *   [ ] Perform final linting and testing pass.
-    *   [ ] Remove any dead code or temporary artifacts. 
+    *   [ ] Remove any dead code or temporary artifacts.

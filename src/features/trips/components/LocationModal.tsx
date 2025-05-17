@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { router } from 'expo-router';
-import { useTripStore } from '@/src/store/useTripStore';
+import { useTripStore } from '@/src/features/trips/store'; // Updated path
 
 interface LocationModalProps {
   tripId: string;

@@ -103,4 +103,4 @@ export interface PlaceDetails {
   formattedAddress: string;
   name: string;
   placeId: string;
-}
+} 

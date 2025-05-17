@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, Text, ViewStyle, TextStyle } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { TripStatus } from '@/src/types/trip';
+import { TripStatus } from '@/src/features/trips/types'; // Updated path
 import type { Theme } from '@/src/theme/types';
 import { logger } from '@/src/utils/logger';
 
@@ -89,4 +89,4 @@ const makeStyles = (theme: Theme) => StyleSheet.create({
     largeText: {
         fontSize: theme.typography.button.medium.fontSize,
     },
-});
+}); 

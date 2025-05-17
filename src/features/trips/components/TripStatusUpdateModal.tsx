@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { View, StyleSheet, Modal, Pressable, Text, ActivityIndicator } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { Theme } from '@/src/theme/types';
-import { Trip, TripStatus } from '@/src/types/trip';
-import { useTripStore } from '@/src/store/useTripStore';
+import { Trip, TripStatus } from '@/src/features/trips/types'; // Updated path
+import { useTripStore } from '@/src/features/trips/store'; // Updated path
 import { TripStatusBadge } from './TripStatusBadge';
 import { X, AlertCircle } from 'lucide-react-native';
 
@@ -249,65 +249,71 @@ const styles = (theme: Theme) => StyleSheet.create({
   },
   rulesContainer: {
     flexDirection: 'row',
-    backgroundColor: theme.colors.surface.variant,
-    padding: theme.spacing.inset.md,
-    borderRadius: theme.spacing.inset.sm,
-    marginBottom: theme.spacing.stack.lg,
-    gap: theme.spacing.stack.sm,
     alignItems: 'flex-start',
+    backgroundColor: theme.colors.surface.containerHighest, // Subtle background for rules
+    borderRadius: theme.shape.borderRadius.medium,
+    padding: theme.spacing.inset.md,
+    marginBottom: theme.spacing.stack.lg,
   },
   rulesText: {
     ...theme.typography.body.small,
     color: theme.colors.content.secondary,
-    flex: 1,
+    marginLeft: theme.spacing.stack.xs,
+    flexShrink: 1, // Allow text to wrap
   },
   statusOptionsContainer: {
-    gap: theme.spacing.stack.md,
+    // No specific styles needed, items will space themselves
   },
   statusOption: {
-    padding: theme.spacing.inset.md,
-    borderRadius: theme.spacing.inset.sm,
-    backgroundColor: theme.colors.surface.variant,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.stack.md,
+    paddingVertical: theme.spacing.inset.md,
+    paddingHorizontal: theme.spacing.inset.sm,
+    marginBottom: theme.spacing.stack.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.outline.default,
+    borderRadius: theme.shape.borderRadius.medium,
+    backgroundColor: theme.colors.surface.default,
   },
   selectedStatusOption: {
-    backgroundColor: theme.colors.primary.hover,
+    borderColor: theme.colors.primary.main,
+    backgroundColor: theme.colors.primary.containerSoft,
   },
   disabledStatusOption: {
-    opacity: 0.6,
-    backgroundColor: theme.colors.surface.variant,
+    opacity: 0.5,
+    backgroundColor: theme.colors.surface.disabled,
   },
   statusTextContainer: {
-    flex: 1,
+    marginLeft: theme.spacing.stack.sm,
+    flex: 1, // Allow text to take remaining space
   },
   statusDescription: {
-    ...theme.typography.body.medium,
+    ...theme.typography.body.largeBold,
     color: theme.colors.content.primary,
   },
   disabledText: {
     color: theme.colors.content.disabled,
   },
   invalidReasonText: {
-    ...theme.typography.caption,
-    color: theme.colors.status.error.content,
-    marginTop: 4,
+    ...theme.typography.body.small,
+    color: theme.colors.feedback.error.main,
+    marginTop: theme.spacing.stack.xxs,
   },
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: theme.spacing.stack.md,
-    gap: theme.spacing.stack.sm,
   },
   loadingText: {
-    ...theme.typography.body.small,
+    ...theme.typography.body.medium,
     color: theme.colors.content.secondary,
+    marginLeft: theme.spacing.stack.xs,
   },
   errorText: {
-    ...theme.typography.body.small,
-    color: theme.colors.status.error.content,
+    ...theme.typography.body.medium,
+    color: theme.colors.feedback.error.main,
+    textAlign: 'center',
     marginTop: theme.spacing.stack.md,
   },
 }); 

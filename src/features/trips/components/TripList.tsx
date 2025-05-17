@@ -1,11 +1,11 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, ViewStyle } from 'react-native';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { ThemedView } from '@/components/ThemedView';
-import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/src/components/ThemedView';
+import { ThemedText } from '@/src/components/ThemedText';
 import { TripCard } from './TripCard';
-import { Trip } from '@/src/types/trip';
-import { useTripStore } from '@/src/store/useTripStore';
+import { Trip } from '@/src/features/trips/types';
+import { useTripStore } from '@/src/features/trips/store';
 
 interface TripSection {
   title: string;
@@ -153,4 +153,4 @@ const styles = StyleSheet.create({
     shadowOpacity: 0,
     borderWidth: 0,
   },
-});
+}); 

@@ -4,11 +4,12 @@ import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useLocationStore } from '@/src/store/useLocationStore';
 import { useAuthStore } from '@/src/features/auth/store';
-import { Trip } from '@/src/types/trip';
+import { Trip } from '@/src/features/trips/types';
 import { AlertCircle, Info } from 'lucide-react-native';
 import { LocationSharingToggle } from './LocationSharingToggle';
 import { Surface } from 'react-native-paper';
 import { Theme } from '@/src/theme/types';
+import { LiveLocation, UserLocation } from '@/src/types/location';
 
 const DEFAULT_COORDINATES = {
   latitude: 37.7749,

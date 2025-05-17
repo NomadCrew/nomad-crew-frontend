@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
 import { Portal, Modal, TextInput, Button, useTheme, RadioButton, Text } from 'react-native-paper';
-import { useTripStore } from '@/src/store/useTripStore';
+import { useTripStore } from '@/src/features/trips/store'; // Updated path
 import { useAuthStore } from '@/src/features/auth/store';
-import { Trip } from '@/src/types/trip';
+import { Trip } from '@/src/features/trips/types'; // Updated path
 
 interface InviteModalProps {
   visible: boolean;
