@@ -2,7 +2,8 @@
 
 ## ✅ Recent Changes
 
-- **Todos Module Refactor:**
+- **WebSocket Event Handling:** Refined WebSocket `onMessage` handler in `TripDetailScreen.tsx` to correctly parse and route `ServerEvent` and `Notification` types to their respective stores, resolving linter errors.
+- **Todos Module Refactor (Complete):**
     - Moved `useTodoStore.ts` to `src/features/todos/store.ts`.
     - Moved `todo.ts` (types) to `src/features/todos/types.ts`.
     - Moved `AddTodoModal.tsx`, `TodoErrorBoundary.tsx`, `TodoItem.tsx`, `TodoList.tsx` from `components/todo/` to `src/features/todos/components/`.
@@ -56,18 +57,18 @@
     - Updated all identified outdated imports for trip types, store, screens, and components throughout the codebase.
     - Corrected an import path for `ChatCard` in `src/features/trips/screens/TripDetailScreen.tsx`.
 
-## �� Next Steps
+## 🧠 Next Steps
 
-1.  **Chat Module Refactor:** Plan and execute refactoring for the chat module into `src/features/chat/`.
-2.  **Verify Application Build & Run (Post-Refactor):** After all major refactoring, perform a full build and run the application on a device/emulator to ensure stability and catch any runtime errors introduced by the refactoring.
-3.  **Address Lint Warnings:** Systematically go through the 226 remaining lint warnings and fix them.
-4.  **Project Structure Refactor (Ongoing):**
-    *   **Next Feature:** Identify and move the `todos` module to `src/features/todos/`. Refactor its internal structure (store, types, components, services if applicable).
-    *   Follow with the `location` store and related components/screens (consider if it's a full "feature" or more of a shared concern).
-    *   Follow with the `notifications` module.
+1.  **~~Chat Module Refactor: Plan and execute refactoring for the chat module into `src/features/chat/`.~~ (DONE - Covered previously)**
+2.  **Project Structure Refactor (Ongoing):**
+    *   **~~Next Feature: Identify and move the `todos` module to `src/features/todos/`.~~ (DONE)**
+    *   **Next Feature:** Identify and move the `location` store (`src/store/useLocationStore.ts`) and related components/screens (e.g., `app/location/`, `components/location/`) to `src/features/location/`. Refactor its internal structure (store, types, components, services if applicable).
+    *   Follow with the `notifications` module (`src/store/useNotificationStore.ts`, `src/components/notifications/`, etc.).
     *   Consolidate global directories (`components`, `hooks`, `services`, `store`, `types`, `utils`) under `src/`, ensuring they only contain truly shared, non-feature-specific code.
     *   Organize `app/` (Expo Router) to mirror feature groupings.
     *   Clean up obsolete files (e.g., `app/(tabs)-bkp/`, `TestScreen`).
+3.  **Verify Application Build & Run (Post-Refactor):** After all major refactoring (including Location and Notifications), perform a full build and run the application on a device/emulator to ensure stability and catch any runtime errors introduced by the refactoring.
+4.  **Address Lint Warnings:** Systematically go through the remaining lint warnings and fix them.
 5.  **SOLID Principles Implementation (Post-Structure Refactor):**
     *   Begin applying SOLID principles systematically to the newly structured feature modules.
 6.  **State Management Refinement (Zustand):**

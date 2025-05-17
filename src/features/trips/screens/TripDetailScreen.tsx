@@ -18,8 +18,9 @@ import { StatusBar } from 'expo-status-bar';
 import { useChatStore } from '@/src/features/chat/store';
 import { TripStats } from '@/src/features/trips/components/TripStats';
 import { useThemedStyles } from '@/src/theme/utils';
-import { isChatEvent } from '@/src/types/events';
-import { ChatCard } from '@/src/features/chat/components/ChatCard';
+import { BaseEventSchema, ServerEvent, isChatEvent, isServerEvent, isTodoEvent, isTripEvent, isWeatherEvent, isMemberEvent, isMemberInviteEvent } from '@/src/types/events';
+import { ZodNotificationSchema, Notification, isTripInvitationNotification } from '@/src/types/notification';
+import { useNotificationStore } from '@/src/store/useNotificationStore';
 import { logger } from '@/src/utils/logger';
 
 interface TripDetailScreenProps {
@@ -33,7 +34,7 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
   const [showAddTodo, setShowAddTodo] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const { isLocationSharingEnabled, startLocationTracking, stopLocationTracking } = useLocationStore();
-  const { connectToChat, disconnectFromChat, fetchMessages } = useChatStore();
+  const { connectToChat, fetchMessages } = useChatStore();
 
   const styles = useThemedStyles((theme) => {
     const backgroundDefault = theme?.colors?.background?.default || '#FFFFFF';
@@ -118,7 +119,7 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
         position: 'right' as const,
       },
     ];
-  }, [carouselItems, trip, tripId, CARD_WIDTH, TALL_CARD_HEIGHT, BASE_CARD_HEIGHT, setShowInviteModal]);
+  }, [carouselItems, trip, tripId, CARD_WIDTH, TALL_CARD_HEIGHT, setShowInviteModal]);
 
   useEffect(() => {
     logger.info('Trip Detail Screen', `Setting up WebSocket connection for trip ${tripId}`);
@@ -128,13 +129,41 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
     logger.info('Trip Detail Screen', `WebSocket connection status before connect: ${isConnectedBefore ? 'connected' : 'disconnected'}`);
     
     manager.connect(tripId, {
-      onMessage: (event) => {
-        useTripStore.getState().handleTripEvent(event);
-        useTodoStore.getState().handleTodoEvent(event);
-        
-        if (isChatEvent(event)) {
-          useChatStore.getState().handleChatEvent(event);
+      onMessage: (rawEvent: unknown) => {
+        const serverEventParseResult = BaseEventSchema.safeParse(rawEvent);
+        if (serverEventParseResult.success) {
+          const eventData = serverEventParseResult.data;
+          if (isServerEvent(eventData)) {
+            logger.debug('WS', 'TripDetailScreen: Confirmed ServerEvent', eventData);
+
+            useTripStore.getState().handleTripEvent(eventData);
+
+            if (isChatEvent(eventData)) {
+              useChatStore.getState().handleChatEvent(eventData);
+            }
+          } else {
+            logger.warn('WS', 'TripDetailScreen: Parsed as ServerEvent by Zod, but failed isServerEvent guard:', eventData);
+            const notificationParseResult = ZodNotificationSchema.safeParse(rawEvent);
+            if (notificationParseResult.success) {
+                const notification = notificationParseResult.data;
+                logger.debug('WS', 'TripDetailScreen: Fallback - Received Notification after ServerEvent parse mismatch', notification);
+                useNotificationStore.getState().handleIncomingNotification(notification);
+            } else {
+                logger.error('WS', 'TripDetailScreen: Unknown event structure after failing ServerEvent specific guard:', rawEvent);
+            }
+          }
+          return;
         }
+
+        const notificationParseResult = ZodNotificationSchema.safeParse(rawEvent);
+        if (notificationParseResult.success) {
+          const notification = notificationParseResult.data;
+          logger.debug('WS', 'TripDetailScreen: Received Notification', notification);
+          useNotificationStore.getState().handleIncomingNotification(notification);
+          return;
+        }
+        
+        logger.error('WS', 'TripDetailScreen: Received completely unknown event from WebSocket', rawEvent);
       }
     }).then(() => {
       const isConnectedAfter = manager.isConnected();
@@ -144,7 +173,6 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
     });
     
     connectToChat(tripId);
-    
     fetchMessages(tripId);
     
     if (isLocationSharingEnabled) {
@@ -154,17 +182,18 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
     return () => {
       logger.info('Trip Detail Screen', `Cleaning up WebSocket connection for trip ${tripId}`);
       manager.disconnect();
-      stopLocationTracking();
     };
-  }, [tripId, isLocationSharingEnabled, connectToChat, fetchMessages]);
+  }, [tripId, connectToChat, fetchMessages, isLocationSharingEnabled, startLocationTracking]);
 
   useEffect(() => {
     if (isLocationSharingEnabled) {
+      logger.info('TripDetailScreen', `Starting location tracking for trip ${tripId} (state change)`);
       startLocationTracking(tripId);
     } else {
+      logger.info('TripDetailScreen', `Stopping location tracking for trip ${tripId} (state change)`);
       stopLocationTracking();
     }
-  }, [isLocationSharingEnabled, tripId]);
+  }, [isLocationSharingEnabled, tripId, startLocationTracking, stopLocationTracking]);
 
   return (
     <SafeAreaView style={styles.container}>
