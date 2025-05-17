@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Portal, Modal, TextInput, Button, useTheme } from 'react-native-paper';
-import { useTodoStore } from '@/src/store/useTodoStore';
+import { useTodoStore } from '../store';
 
 interface AddTodoModalProps {
   visible: boolean;

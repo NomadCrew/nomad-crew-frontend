@@ -1,14 +1,18 @@
 // AppInitializer.tsx
+import { useEffect } from 'react';
+import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
+import { useAuthStore } from '../src/features/auth/store'; // Adjusted path
+
 export default function AppInitializer({ children }: { children: React.ReactNode }) {
-  // ...
+  const { initialize: initializeAuth } = useAuthStore(); // Get initialize from store
   const [fontsLoaded, fontError] = useFonts({ /* ... */ });
 
   useEffect(() => {
     const initApp = async () => {
       if (fontsLoaded) { // <--- Condition
-        await initialize();
-        await ExpoSplashScreen.hideAsync();
-        await SplashScreen.hideAsync();
+        await initializeAuth(); // Call initialize from store
+        await SplashScreen.hideAsync(); // Use imported SplashScreen
         // Children are rendered regardless of this effect,
         // but this effect controls when the app is truly "ready"
       }
@@ -17,7 +21,7 @@ export default function AppInitializer({ children }: { children: React.ReactNode
     if (fontsLoaded) {
       initApp();
     }
-  }, [fontsLoaded, initialize]);
+  }, [fontsLoaded, initializeAuth]); // Add initializeAuth to dependency array
 
   // ... (deep link and notification logic) ...
 

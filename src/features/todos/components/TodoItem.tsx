@@ -18,7 +18,7 @@ import Animated, {
   } from 'react-native-reanimated';
   import { Check, Trash2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { Todo } from '@/src/types/todo';
+import { Todo } from '../types'; // Corrected relative path
 import { useTheme } from '@/src/theme/ThemeProvider';
 import LottieView from 'lottie-react-native';
 
@@ -248,40 +248,16 @@ const deleteIndicatorStyle = useAnimatedStyle(() => {
               ref={textRef}
               style={[
                 styles.text,
-                textStyle
+                textStyle,
               ]}
               onLayout={onTextLayout}
-              numberOfLines={1}
             >
               {todo.text}
             </Animated.Text>
-            <Text style={styles.timestamp}>
-              {new Date(todo.createdAt).toLocaleDateString(undefined, {
-                month: 'short',
-                day: 'numeric'
-              })}
-            </Text>
           </Animated.View>
-          <Animated.View style={styles.statusIndicator}>
-            {todo.status === 'COMPLETE' ? (
-              <View style={styles.checkContainer}>
-                <Check  
-                  size={16} 
-                  color={theme.colors.status.success.content} 
-                />
-              </View>
-            ) : (
-              <View style={[
-                styles.dot, 
-                { borderColor: theme.colors.status.planning.background }
-              ]} />
-            )}
+          <Animated.View style={deleteIndicatorStyle}>
+            <Trash2 color={theme.colors.status.error.content} size={20} />
           </Animated.View>
-        </Animated.View>
-        
-        {/* Delete indicator */}
-        <Animated.View style={deleteIndicatorStyle}>
-          <Trash2 size={20} color={theme.colors.status.error.background} />
         </Animated.View>
       </View>
     </GestureDetector>
@@ -290,53 +266,22 @@ const deleteIndicatorStyle = useAnimatedStyle(() => {
 
 const styles = StyleSheet.create({
   itemWrapper: {
-    position: 'relative',
-    marginVertical: 6,
+    marginBottom: 10,
   },
   container: {
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.08)',
-    ...NO_SHADOW,
+    justifyContent: 'space-between',
+    ...NO_SHADOW, // Ensure no shadow
   },
   textContainer: {
     flex: 1,
-    overflow: 'hidden',
-    paddingVertical: 2,
   },
   text: {
     fontSize: 16,
     fontWeight: '500',
-    letterSpacing: 0.2,
   },
-  timestamp: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 4,
-  },
-  statusIndicator: {
-    marginLeft: 12,
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkContainer: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#4CAF50',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: 2,
-    backgroundColor: 'transparent',
-  },
-});
+}); 

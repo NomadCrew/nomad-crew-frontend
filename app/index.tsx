@@ -9,10 +9,11 @@
     SplashScreen.preventAutoHideAsync();
 
     function TestScreen() {
+      const { theme, mode, toggleColorScheme } = useTheme();
+
       try {
-        const { theme, mode, toggleColorScheme } = useTheme();
-        // If we reach here, useTheme worked.
-        SplashScreen.hideAsync(); // Hide splash if theme is accessible
+        // Hide splash screen ASAP, but after potential theme access
+        SplashScreen.hideAsync();
         return (
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background.default }}>
             <Text style={{ color: theme.colors.content.primary }}>Theme mode: {mode}</Text>

@@ -114,14 +114,6 @@ export function useInputPerformance(options = {}) {
     // Performance styles that can be applied to containers
     containerStyle: performantInputStyles.container,
     inputStyle: performantInputStyles.input,
-    // Callback optimization helper
-    optimizeCallback: (callback: (...args: any[]) => void) => {
-      return useCallback((...args: any[]) => {
-        if (callback) {
-          callback(...args);
-        }
-      }, [callback]);
-    }
   };
 }
 
