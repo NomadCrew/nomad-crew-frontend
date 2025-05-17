@@ -2,26 +2,44 @@
     import React from 'react';
     import { View, Text, Button } from 'react-native';
     import { useTheme } from '@/src/theme/ThemeProvider';
-    import { SplashScreen } from 'expo-router';
+    import { SplashScreen, Stack } from 'expo-router';
+    import AppInitializer from './AppInitializer';
+    import { GestureHandlerRootView } from 'react-native-gesture-handler';
+    import { PaperProvider } from 'react-native-paper';
+    import { ThemeProvider as CustomThemeProvider } from '@/src/theme/ThemeProvider';
+    import AuthErrorBoundary from '@/components/AuthErrorBoundary';
 
-    export default function TestScreen() {
+    export default function RootLayout() {
+      const { theme, mode, toggleColorScheme } = useTheme();
+
       try {
-        // Hide splash screen ASAP, but after potential theme access
-        SplashScreen.hideAsync(); 
-        const { theme, mode, toggleColorScheme } = useTheme();
-        
+        SplashScreen.hideAsync();
+
         return (
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background.default }}>
-            <Text style={{ color: theme.colors.content.primary }}>Theme mode: {mode}</Text>
-            <Text style={{ color: theme.colors.content.primary }}>Test Screen: Theme loaded!</Text>
-            <Button title="Toggle Theme" onPress={toggleColorScheme} />
-          </View>
+          <AuthErrorBoundary>
+            <AppInitializer>
+              <CustomThemeProvider>
+                <PaperProvider>
+                  <GestureHandlerRootView style={{ flex: 1 }}>
+                    <Stack>
+                      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                      <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
+                      <Stack.Screen name="chat/[tripId]" options={{ title: 'Chat' }} />
+                      <Stack.Screen name="trip/[id]" options={{ title: 'Trip Details' }} />
+                      <Stack.Screen name="invite/[id]" options={{ title: 'Join Trip' }} />
+                    </Stack>
+                  </GestureHandlerRootView>
+                </PaperProvider>
+              </CustomThemeProvider>
+            </AppInitializer>
+          </AuthErrorBoundary>
         );
       } catch (e: any) {
-        SplashScreen.hideAsync(); // Ensure splash is hidden to see error
+        SplashScreen.hideAsync();
         return (
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <Text>Error using theme in TestScreen (app/index.tsx):</Text>
+            <Text>Error in RootLayout:</Text>
             <Text>{e.message}</Text>
           </View>
         );

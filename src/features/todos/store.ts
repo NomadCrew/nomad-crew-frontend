@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { api } from '@/src/api/api-client';
-import { Todo, CreateTodoInput, UpdateTodoInput, TodosResponse } from '@/src/types/todo';
+import { Todo, CreateTodoInput, UpdateTodoInput, TodosResponse } from './types'; // Corrected path
 import { API_PATHS } from '@/src/utils/api-paths';
 import { 
   ServerEvent,
@@ -160,4 +160,4 @@ export const useTodoStore = create<TodoState>((set, get) => ({
       });
     }
   },
-}));
+})); 

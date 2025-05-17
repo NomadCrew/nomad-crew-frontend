@@ -3,14 +3,14 @@ import { View, ScrollView, useWindowDimensions, SafeAreaView, StyleSheet, ViewSt
 import { router } from 'expo-router';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { BentoGrid } from '@/components/ui/BentoGrid';
-import { TodoList } from '@/components/todo/TodoList';
+import { TodoList } from '@/src/features/todos/components/TodoList';
 import { BentoCarousel } from '@/components/ui/BentoCarousel';
 import { Trip } from '@/src/features/trips/types';
-import { AddTodoModal } from '@/components/todo/AddTodoModal';
+import { AddTodoModal } from '@/src/features/todos/components/AddTodoModal';
 import { InviteModal } from '@/src/features/trips/components/InviteModal';
 import { WebSocketManager } from '@/src/websocket/WebSocketManager';
 import { useTripStore } from '@/src/features/trips/store';
-import { useTodoStore } from '@/src/store/useTodoStore';
+import { useTodoStore } from '@/src/features/todos/store';
 import { useLocationStore } from '@/src/store/useLocationStore';
 import { TripDetailHeader } from '@/src/features/trips/components/TripDetailHeader';
 import { QuickActions } from '@/src/features/trips/components/QuickActions';

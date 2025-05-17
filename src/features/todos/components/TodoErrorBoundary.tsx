@@ -84,4 +84,4 @@ const styles = (theme: Theme) => StyleSheet.create({
   button: {
     minWidth: 120,
   },
-});
+}); 

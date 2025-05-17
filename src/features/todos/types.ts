@@ -38,4 +38,4 @@ export interface UpdateTodoResponse extends Todo {}
 export interface DeleteTodoResponse {
   id: string;
   success: boolean;
-}
+} 

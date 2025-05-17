@@ -11,7 +11,7 @@ import {
 } from './types'; // Updated import path
 import { API_PATHS } from '@/src/utils/api-paths';
 import { ServerEvent, isTripEvent, isTodoEvent, isWeatherEvent, isMemberInviteEvent, isMemberEvent } from '@/src/types/events';
-import { useTodoStore } from '@/src/store/useTodoStore';
+import { useTodoStore } from '@/src/features/todos/store';
 import { mapWeatherCode } from '@/src/utils/weather';
 import { apiClient } from '@/src/api/api-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';

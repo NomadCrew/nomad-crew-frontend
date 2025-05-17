@@ -4,10 +4,10 @@ import { Text, Surface, Button } from 'react-native-paper';
 import { FlashList } from '@shopify/flash-list';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { Theme } from '@/src/theme/types';
-import { useTodoStore } from '@/src/store/useTodoStore';
+import { useTodoStore } from '../store';
 import { TodoItem } from './TodoItem';
 import { TodoErrorBoundary } from './TodoErrorBoundary';
-import { Todo } from '@/src/types/todo';
+import { Todo } from '../types';
 import { getColorForUUID } from '@/src/utils/uuidToColor';
 import LottieView from 'lottie-react-native';
 import { Plus } from 'lucide-react-native';
@@ -251,39 +251,18 @@ const styles = (theme: Theme) => StyleSheet.create({
   },
   addTodoFab: {
     position: 'absolute',
-    bottom: theme.spacing.inset.md,
-    right: theme.spacing.inset.md,
+    bottom: 20,
+    right: 20,
     backgroundColor: theme.colors.surface.default,
+    borderRadius: 28,
     width: 56,
     height: 56,
-    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: theme.colors.primary.main,
-    shadowColor: 'transparent',
-    shadowOpacity: 0,
-    shadowOffset: { width: 0, height: 0 },
-    shadowRadius: 0,
-    elevation: 0,
-    zIndex: 5,
+    elevation: 4, // For Android shadow
+    shadowColor: '#000', // For iOS shadow
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
-  connectionBanner: {
-    padding: theme.spacing.inset.sm,
-    backgroundColor: theme.colors.content.secondary,
-    marginBottom: theme.spacing.stack.sm,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.08)',
-    shadowColor: 'transparent',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    elevation: 0,
-  },
-  connectionText: {
-    ...theme.typography.body.small,
-    color: theme.colors.content.primary,
-    textAlign: 'center',
-  },
-});
+}); 

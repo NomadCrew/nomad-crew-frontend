@@ -2,6 +2,21 @@
 
 ## ✅ Recent Changes
 
+- **Todos Module Refactor:**
+    - Moved `useTodoStore.ts` to `src/features/todos/store.ts`.
+    - Moved `todo.ts` (types) to `src/features/todos/types.ts`.
+    - Moved `AddTodoModal.tsx`, `TodoErrorBoundary.tsx`, `TodoItem.tsx`, `TodoList.tsx` from `components/todo/` to `src/features/todos/components/`.
+    - Updated all relevant import paths across the codebase.
+    - Deleted old files from `src/store/`, `src/types/`, and `components/todo/`.
+- **Linting/Stability Check (Post-Trips Refactor):**
+    - Fixed import errors in `app/AppInitializer.tsx`.
+    - Fixed conditional hook call errors in `app/index.tsx` and `app/_layout.tsx`.
+    - Refactored `app/_layout.tsx` to a standard `RootLayout` structure.
+    - Fixed incorrect `useCallback` usage in `components/ui/PerformanceWrapper.tsx`.
+    - Corrected array type style in `src/api/api-client.ts`.
+    - Lint command passes with 0 errors (226 warnings remain).
+- Corrected import path for `ChatScreen` and `MobileChatScreen` in `app/chat/[tripId].tsx`.
+- Corrected logger module in `app/chat/[tripId].tsx` from 'Chat Route' to 'CHAT'.
 - Received comprehensive refactoring and improvement guide for the NomadCrew frontend.
 - Initiated update of the memory bank to reflect the refactoring plan.
 - Created `src/features` and `src/navigation` directories.
@@ -41,28 +56,28 @@
     - Updated all identified outdated imports for trip types, store, screens, and components throughout the codebase.
     - Corrected an import path for `ChatCard` in `src/features/trips/screens/TripDetailScreen.tsx`.
 
-## 🧠 Next Steps
+## �� Next Steps
 
-1.  **Verify Application Stability:**
-    *   Ensure the application builds and runs correctly after the `trips` feature refactor.
-    *   Address any new linting errors or type issues that may have arisen.
-2.  **Project Structure Refactor (Ongoing):**
+1.  **Chat Module Refactor:** Plan and execute refactoring for the chat module into `src/features/chat/`.
+2.  **Verify Application Build & Run (Post-Refactor):** After all major refactoring, perform a full build and run the application on a device/emulator to ensure stability and catch any runtime errors introduced by the refactoring.
+3.  **Address Lint Warnings:** Systematically go through the 226 remaining lint warnings and fix them.
+4.  **Project Structure Refactor (Ongoing):**
     *   **Next Feature:** Identify and move the `todos` module to `src/features/todos/`. Refactor its internal structure (store, types, components, services if applicable).
     *   Follow with the `location` store and related components/screens (consider if it's a full "feature" or more of a shared concern).
     *   Follow with the `notifications` module.
     *   Consolidate global directories (`components`, `hooks`, `services`, `store`, `types`, `utils`) under `src/`, ensuring they only contain truly shared, non-feature-specific code.
     *   Organize `app/` (Expo Router) to mirror feature groupings.
     *   Clean up obsolete files (e.g., `app/(tabs)-bkp/`, `TestScreen`).
-3.  **SOLID Principles Implementation (Post-Structure Refactor):**
+5.  **SOLID Principles Implementation (Post-Structure Refactor):**
     *   Begin applying SOLID principles systematically to the newly structured feature modules.
-4.  **State Management Refinement (Zustand):**
+6.  **State Management Refinement (Zustand):**
     *   Review all Zustand stores after they are moved into their respective feature folders.
-5.  **Navigation System Refinement (Expo Router).**
-6.  **Component Refactoring & UI System.**
-7.  **API Service Layer & Data Fetching.**
-8.  **Performance Optimization.**
-9.  **Testing Strategy.**
-10. **Coding Standards & Tooling Setup.**
+7.  **Navigation System Refinement (Expo Router).**
+8.  **Component Refactoring & UI System.**
+9.  **API Service Layer & Data Fetching.**
+10. **Performance Optimization.**
+11. **Testing Strategy.**
+12. **Coding Standards & Tooling Setup.**
 
 
 ## ❗ Active Decisions / Context
