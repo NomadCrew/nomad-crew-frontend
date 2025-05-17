@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Text, Switch, Pressable, Alert } from 'react-native';
 import { Surface } from 'react-native-paper';
 import { useTheme } from '@/src/theme/ThemeProvider';
-import { useLocationStore } from '@/src/store/useLocationStore';
+import { useLocationStore } from '../store/useLocationStore';
 import { Theme } from '@/src/theme/types';
 import { MapPin, Info, AlertCircle } from 'lucide-react-native';
 import * as Location from 'expo-location';
@@ -248,35 +248,28 @@ export const LocationSharingToggle: React.FC = () => {
             </Text>
           )}
         </View>
-        
+
         <Pressable onPress={showLocationInfo} style={currentStyles.infoButton}>
-          <Info size={18} color={getSecondaryColor()} />
+          <Info size={20} color={getSecondaryColor()} />
         </Pressable>
-        
+
         <Switch
-          value={isLocationSharingEnabled}
-          onValueChange={handleToggleLocationSharing}
-          disabled={isToggling || permissionStatus === 'denied'}
           trackColor={{ 
-            false: getSafeColor(theme?.colors?.surface?.variant, DEFAULT_COLORS.surfaceVariant), 
-            true: getPrimaryLightColor() 
+            false: getDisabledColor(), 
+            true: getPrimaryLightColor()
           }}
-          thumbColor={
-            isLocationSharingEnabled 
-              ? getPrimaryColor() 
-              : getDisabledColor()
-          }
+          thumbColor={isLocationSharingEnabled ? getPrimaryColor() : getSafeColor(theme?.colors?.surface?.default, DEFAULT_COLORS.surface)}
+          ios_backgroundColor={getDisabledColor()}
+          onValueChange={handleToggleLocationSharing}
+          value={isLocationSharingEnabled}
+          disabled={isToggling}
         />
       </View>
-      
+
       {permissionStatus === 'denied' && (
-        <Pressable 
-          style={currentStyles.settingsButton}
-          onPress={() => Linking.openSettings()}
-        >
-          <Text style={currentStyles.settingsButtonText}>
-            Open Settings to Enable Location
-          </Text>
+        <Pressable style={currentStyles.settingsButton} onPress={() => Linking.openSettings()}>
+           <AlertCircle size={16} color={getSafeColor(theme?.colors?.status?.warning?.content, DEFAULT_COLORS.warning)} />
+          <Text style={currentStyles.settingsButtonText}>Open Settings to Enable Location</Text>
         </Pressable>
       )}
     </Surface>

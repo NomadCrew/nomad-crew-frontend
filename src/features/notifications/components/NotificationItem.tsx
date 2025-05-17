@@ -18,10 +18,10 @@ import {
   isWeatherNotification,
   isChatNotification,
   isLocationNotification
-} from '../../types/notification';
-import { useNotificationStore } from '../../store/useNotificationStore';
+} from '../types/notification';
+import { useNotificationStore } from '../store/useNotificationStore';
 import { router } from 'expo-router';
-import { weatherCodeToName } from '../../utils/weather';
+import { weatherCodeToName } from '../../../utils/weather';
 
 interface NotificationItemProps {
   notification: Notification;
@@ -253,10 +253,10 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
   const renderMember = (member: MemberNotification) => {
     const getTitle = () => {
       switch (member.type) {
-        case 'MEMBER_ADDED': return 'New Member Added';
-        case 'MEMBER_REMOVED': return 'Member Removed';
-        case 'MEMBER_ROLE_UPDATED': return 'Member Role Changed';
-        default: return 'Member Update';
+        case 'MEMBER_JOINED': return 'New Member Joined';
+        case 'MEMBER_LEFT': return 'Member Left';
+        case 'MEMBER_ROLE_CHANGED': return 'Member Role Changed';
+        default: return 'Member Activity';
       }
     };
     
@@ -264,55 +264,40 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
       <View>
         <Text variant="titleMedium">{getTitle()}</Text>
         <Text variant="bodyMedium">
-          {member.type === 'MEMBER_ADDED' ? (
-            <>
-              <Text style={{ fontWeight: 'bold' }}>{member.memberName}</Text> was added to{' '}
-              <Text style={{ fontWeight: 'bold' }}>{member.tripName}</Text>
-              {member.data?.actorName && ` by ${member.data.actorName}`}
-            </>
-          ) : member.type === 'MEMBER_REMOVED' ? (
-            <>
-              <Text style={{ fontWeight: 'bold' }}>{member.memberName}</Text> was removed from{' '}
-              <Text style={{ fontWeight: 'bold' }}>{member.tripName}</Text>
-              {member.data?.actorName && ` by ${member.data.actorName}`}
-            </>
-          ) : (
-            <>
-              <Text style={{ fontWeight: 'bold' }}>{member.memberName}</Text>'s role was changed to{' '}
-              <Text style={{ fontWeight: 'bold' }}>{member.data?.role}</Text>
-              {member.data?.previousRole && ` from ${member.data.previousRole}`}
-            </>
-          )}
+          <Text style={{ fontWeight: 'bold' }}>{member.memberName}</Text>
+          {member.type === 'MEMBER_JOINED' && ' has joined the trip!'}
+          {member.type === 'MEMBER_LEFT' && ' has left the trip.'}
+          {member.type === 'MEMBER_ROLE_CHANGED' && `'s role was changed to ${member.data.newRole}`}
         </Text>
+        {member.data.changedByName && (
+          <Text variant="bodySmall" style={styles.detailText}>
+            By {member.data.changedByName}
+          </Text>
+        )}
       </View>
     );
   };
 
   const renderWeather = (weather: WeatherNotification) => {
-    if (weather.type === 'WEATHER_ALERT') {
-      return (
-        <View>
-          <Text variant="titleMedium" style={{ color: theme.colors.error }}>
-            Weather Alert!
-          </Text>
-          <Text variant="bodyMedium">
-            {weather.data.alertMessage || `${weather.data.alertType} alert for ${weather.tripLocation}`}
-          </Text>
-          <Text variant="bodySmall" style={styles.detailText}>
-            Severity: {weather.data.alertSeverity}
-          </Text>
-        </View>
-      );
-    }
+    const getTitle = () => {
+      switch (weather.type) {
+        case 'WEATHER_ALERT': return 'Weather Alert!';
+        case 'WEATHER_UPDATE': return 'Weather Update';
+        default: return 'Weather Info';
+      }
+    };
     
     return (
       <View>
-        <Text variant="titleMedium">Weather Update</Text>
+        <Text variant="titleMedium">{getTitle()}</Text>
         <Text variant="bodyMedium">
-          Current weather in <Text style={{ fontWeight: 'bold' }}>{weather.tripLocation}</Text>:{' '}
-          {weather.data.weatherCode && weatherCodeToName(weather.data.weatherCode)}
-          {weather.data.temperature && `, ${weather.data.temperature}°C`}
+          {weather.data.location}: {weather.data.temp}°C, {weatherCodeToName(weather.data.weatherCode)}
         </Text>
+        {weather.type === 'WEATHER_ALERT' && weather.data.alertDetails && (
+          <Text variant="bodySmall" style={[styles.detailText, { color: theme.colors.error }]}>
+            {weather.data.alertDetails}
+          </Text>
+        )}
       </View>
     );
   };
@@ -322,13 +307,12 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
       <View>
         <Text variant="titleMedium">New Message</Text>
         <Text variant="bodyMedium">
-          <Text style={{ fontWeight: 'bold' }}>{chat.senderName}</Text> sent a message
+          <Text style={{ fontWeight: 'bold' }}>{chat.senderName}</Text> in{' '}
+          <Text style={{ fontWeight: 'bold' }}>{chat.tripName}</Text>
         </Text>
-        {chat.data.messagePreview && (
-          <Text variant="bodyMedium" style={styles.message} numberOfLines={2}>
-            "{chat.data.messagePreview}"
-          </Text>
-        )}
+        <Text variant="bodyMedium" style={styles.message} numberOfLines={2} ellipsizeMode="tail">
+          {chat.messageText}
+        </Text>
       </View>
     );
   };
@@ -338,43 +322,36 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
       <View>
         <Text variant="titleMedium">Location Update</Text>
         <Text variant="bodyMedium">
-          <Text style={{ fontWeight: 'bold' }}>{location.memberName}</Text> is now at{' '}
-          {location.data.locationName || 'a new location'}
+          {location.type === 'LOCATION_SHARED' ? 
+            `${location.memberName} started sharing their location.` :
+            `${location.memberName} stopped sharing their location.`
+          }
         </Text>
       </View>
     );
   };
 
   return (
-    <Surface
-      style={[
-        styles.container,
-        !notification.isRead && { backgroundColor: theme.colors.primaryContainer }
-      ]}
-      elevation={1}
-    >
-      <TouchableOpacity
-        style={styles.content}
-        onPress={handlePress}
-        activeOpacity={0.7}
-      >
-        <View style={styles.leftContent}>
+    <Surface style={[styles.container, { backgroundColor: notification.isRead ? theme.colors.surface : theme.colors.primaryContainer }]} elevation={1}>
+      <TouchableOpacity onPress={handlePress} style={styles.touchableContent}>
+        <View style={styles.iconContainer}>
           <Avatar.Icon 
-            size={40} 
             icon={getNotificationIcon()} 
-            style={{ backgroundColor: theme.colors.surfaceVariant }} 
-            color={getIconColor()} 
+            size={40} 
+            style={{ backgroundColor: 'transparent' }} 
+            color={getIconColor()}
           />
         </View>
-        
-        <View style={styles.mainContent}>
+        <View style={styles.contentContainer}>
           {renderContent()}
-          <Text variant="labelSmall" style={styles.time}>
-            {formattedTime}
-          </Text>
+          <Text variant="bodySmall" style={styles.timestamp}>{formattedTime}</Text>
         </View>
+        {!notification.isRead && (
+          <View style={styles.unreadIndicatorContainer}>
+            <View style={[styles.unreadIndicator, { backgroundColor: theme.colors.primary }]} />
+          </View>
+        )}
       </TouchableOpacity>
-      
       <Divider />
     </Surface>
   );
@@ -382,23 +359,50 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 4,
+    marginBottom: 8,
     borderRadius: 8,
-    overflow: 'hidden',
   },
-  content: {
+  touchableContent: {
     flexDirection: 'row',
-    padding: 16,
+    padding: 12,
   },
-  leftContent: {
-    marginRight: 16,
+  iconContainer: {
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  mainContent: {
+  contentContainer: {
     flex: 1,
   },
-  time: {
+  unreadIndicatorContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingLeft: 8,
+  },
+  unreadIndicator: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  message: {
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+  todoText: {
+    marginTop: 2,
+  },
+  detailText: {
+    marginTop: 2,
+    opacity: 0.8,
+  },
+  statusText: {
     marginTop: 8,
-    opacity: 0.6,
+    fontWeight: 'bold',
+  },
+  timestamp: {
+    marginTop: 4,
+    opacity: 0.7,
+    alignSelf: 'flex-end',
   },
   actionButtons: {
     flexDirection: 'row',
@@ -406,21 +410,5 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     marginRight: 8,
-  },
-  message: {
-    fontStyle: 'italic',
-    marginTop: 4,
-  },
-  todoText: {
-    fontWeight: 'bold',
-    marginTop: 4,
-  },
-  statusText: {
-    marginTop: 8,
-    fontStyle: 'italic',
-  },
-  detailText: {
-    marginTop: 4,
-    opacity: 0.8,
   },
 }); 

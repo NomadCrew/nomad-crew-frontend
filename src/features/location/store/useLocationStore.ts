@@ -2,20 +2,10 @@ import { create } from 'zustand';
 import * as Location from 'expo-location';
 import { api } from '@/src/api/api-client';
 import { API_PATHS } from '@/src/utils/api-paths';
-import { useAuthStore } from './useAuthStore';
+import { useAuthStore } from '@/src/features/auth/store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logger } from '@/src/utils/logger';
-
-export interface MemberLocation {
-  userId: string;
-  name?: string;
-  location: {
-    latitude: number;
-    longitude: number;
-    accuracy?: number;
-    timestamp: number;
-  };
-}
+import { MemberLocation, LocationState } from '../types';
 
 // Mock data for testing while backend endpoints are being implemented
 const MOCK_MODE = true; // Set to false when backend is ready
@@ -43,33 +33,6 @@ const generateMockMemberLocations = (
   return mockLocations;
 };
 
-interface LocationState {
-  // Settings
-  isLocationSharingEnabled: boolean;
-  setLocationSharingEnabled: (enabled: boolean) => Promise<void>;
-  
-  // Current user's location
-  currentLocation: Location.LocationObject | null;
-  locationError: string | null;
-  isTrackingLocation: boolean;
-  
-  // Trip member locations
-  memberLocations: Record<string, Record<string, MemberLocation>>;
-  
-  // Location tracking subscription
-  locationSubscription: Location.LocationSubscription | null;
-  
-  // Actions
-  startLocationTracking: (tripId: string) => Promise<void>;
-  stopLocationTracking: () => void;
-  updateLocation: (location: Location.LocationObject) => Promise<void>;
-  
-  // Member location management
-  getMemberLocations: (tripId: string) => Promise<MemberLocation[]>;
-  updateMemberLocation: (tripId: string, memberLocation: MemberLocation) => void;
-  clearMemberLocations: (tripId: string) => void;
-}
-
 export const useLocationStore = create<LocationState>((set, get) => ({
   // Settings
   isLocationSharingEnabled: false,
@@ -95,7 +58,7 @@ export const useLocationStore = create<LocationState>((set, get) => ({
       if (enabled && !get().isTrackingLocation) {
         // Find active trip ID from another store or context if needed
         // For now, just use a placeholder
-        const activeTripId = 'current-trip';
+        const activeTripId = 'current-trip'; // TODO: This needs a proper way to get current trip context
         get().startLocationTracking(activeTripId);
       } else if (!enabled && get().isTrackingLocation) {
         get().stopLocationTracking();
@@ -248,67 +211,78 @@ export const useLocationStore = create<LocationState>((set, get) => ({
         } else {
           logger.debug('No current location, using default coordinates for mock data');
           // Default mock locations if no current location
-          locations = generateMockMemberLocations(37.7749, -122.4194); // San Francisco
+          locations = generateMockMemberLocations(34.0522, -118.2437); // Default to LA
         }
       } else {
-        // Real API call
-        logger.debug('Making API call to get member locations');
-        const response = await api.get<MemberLocation[]>(API_PATHS.location.byTrip(tripId));
+        // Fetch actual locations from backend
+        const response = await api.get<MemberLocation[]>(API_PATHS.location.members(tripId));
         locations = response.data;
       }
+
+      // Update state with fetched/mocked locations for the specific tripId
+      set(state => ({
+        memberLocations: {
+          ...state.memberLocations,
+          [tripId]: locations.reduce((acc, loc) => {
+            acc[loc.userId] = loc;
+            return acc;
+          }, {} as Record<string, MemberLocation>)
+        }
+      }));
       
-      logger.debug('Received member locations:', locations);
-      
-      // Update store
-      const memberLocationsMap = { ...get().memberLocations };
-      memberLocationsMap[tripId] = {};
-      
-      locations.forEach(location => {
-        memberLocationsMap[tripId][location.userId] = location;
-      });
-      
-      set({ memberLocations: memberLocationsMap });
+      logger.debug('Successfully fetched/mocked member locations for trip:', tripId, locations);
       return locations;
-    } catch (error) {
-      logger.error('Failed to get member locations', error);
       
-      // In case of error, return empty array but don't disrupt the UI
+    } catch (error) {
+      logger.error('Failed to get member locations for trip:', tripId, error);
+      // Set empty array for this tripId in case of error to avoid stale data
+      set(state => ({
+        memberLocations: {
+          ...state.memberLocations,
+          [tripId]: {}
+        }
+      }));
       return [];
     }
   },
-  
+
   updateMemberLocation: (tripId: string, memberLocation: MemberLocation) => {
-    set(state => {
-      const memberLocationsMap = { ...state.memberLocations };
-      
-      if (!memberLocationsMap[tripId]) {
-        memberLocationsMap[tripId] = {};
-      }
-      
-      memberLocationsMap[tripId][memberLocation.userId] = memberLocation;
-      
-      return { memberLocations: memberLocationsMap };
-    });
+    logger.debug('Updating single member location for trip:', tripId, memberLocation);
+    set(state => ({
+      memberLocations: {
+        ...state.memberLocations,
+        [tripId]: {
+          ...state.memberLocations[tripId],
+          [memberLocation.userId]: memberLocation,
+        },
+      },
+    }));
+  },
+
+  clearMemberLocations: (tripId: string) => {
+    logger.debug('Clearing member locations for trip:', tripId);
+    set(state => ({
+      memberLocations: {
+        ...state.memberLocations,
+        [tripId]: {},
+      },
+    }));
   },
   
-  clearMemberLocations: (tripId: string) => {
-    set(state => {
-      const memberLocationsMap = { ...state.memberLocations };
-      delete memberLocationsMap[tripId];
-      return { memberLocations: memberLocationsMap };
-    });
-  }
+  // Initialize store from AsyncStorage
+  async init() {
+    try {
+      const storedValue = await AsyncStorage.getItem('locationSharingEnabled');
+      if (storedValue !== null) {
+        const isEnabled = JSON.parse(storedValue);
+        set({ isLocationSharingEnabled: isEnabled });
+        logger.debug('Initialized locationSharingEnabled from storage:', isEnabled);
+      }
+    } catch (error) {
+      logger.error('Failed to load location sharing preference from storage', error);
+    }
+  },
 }));
 
-// Initialize location sharing preference from storage
-AsyncStorage.getItem('locationSharingEnabled')
-  .then(value => {
-    if (value !== null) {
-      const enabled = JSON.parse(value);
-      logger.debug('Loaded location sharing preference from storage:', enabled);
-      useLocationStore.setState({ isLocationSharingEnabled: enabled });
-    }
-  })
-  .catch(error => {
-    logger.error('Failed to load location sharing preference', error);
-  }); 
+// Call init function to load initial state from AsyncStorage
+useLocationStore.getState().init(); 

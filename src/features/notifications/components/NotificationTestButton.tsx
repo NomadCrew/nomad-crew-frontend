@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button } from 'react-native-paper';
-import { useTestNotifications } from '../../hooks/useTestNotifications';
+import { useTestNotifications } from '../hooks/useTestNotifications';
 
 export const NotificationTestButton: React.FC = () => {
   const { 

@@ -253,27 +253,23 @@ export const useNotificationStore = create<NotificationState>()(
       declineTripInvitation: async (notification: TripInvitationNotification) => {
         if (get().isHandlingAction) return;
         if (!isTripInvitationNotification(notification)) {
-           logger.warn('declineTripInvitation called with non-invite notification:', notification);
-           return;
+          logger.warn('declineTripInvitation called with non-invite notification:', notification);
+          return;
         }
 
         set({ isHandlingAction: true, error: null });
         const inviteId = notification.metadata.inviteId;
 
         try {
-          // POST to the backend's business logic endpoint for declining
           await apiClient.post(`/api/invitations/${inviteId}/decline`);
-
-          // Success! Similar to accept, rely on backend for subsequent state updates via WS.
           logger.info(`Declined trip invitation: ${inviteId}`);
 
-          // Optional: Remove the notification locally after declining
           set(state => ({
-            notifications: state.notifications.filter(n => n.id !== notification.id),
-            // Adjust unreadCount if it was unread
+            notifications: state.notifications.map(n =>
+              n.id === notification.id ? { ...n, read: true, metadata: { ...n.metadata, status: 'declined' } } : n
+            ),
             unreadCount: !notification.read ? Math.max(0, state.unreadCount - 1) : state.unreadCount,
           }));
-
         } catch (err: any) {
           const errorMessage = err.response?.data?.message || err.message || 'Failed to decline trip invitation';
           set({ error: errorMessage });
@@ -287,89 +283,86 @@ export const useNotificationStore = create<NotificationState>()(
         set({ latestChatMessageToast: null });
       },
 
-      clearNotifications: () => {
-        AsyncStorage.removeItem(STORAGE_KEY)
-          .catch(err => logger.error('Failed to clear notifications', err));
-        set({ notifications: [], unreadCount: 0, offset: 0, hasMore: true, error: null });
-      }
+      // Ensure all notifications are cleared from Zustand and AsyncStorage
+      clearNotifications: async () => {
+        try {
+          // Clear from Zustand state
+          set({
+            notifications: [],
+            unreadCount: 0,
+            latestChatMessageToast: null,
+            isFetching: false,
+            isFetchingUnreadCount: false,
+            isMarkingRead: false,
+            isHandlingAction: false,
+            error: null,
+            offset: 0,
+            hasMore: true, // Reset pagination
+          });
+          // Clear from AsyncStorage
+          await AsyncStorage.removeItem(STORAGE_KEY);
+          logger.info('All notifications cleared from state and storage.');
+        } catch (error) {
+          logger.error('Error clearing notifications:', error);
+          set({ error: 'Failed to clear notifications from storage.' });
+        }
+      },
     }),
     {
       name: STORAGE_KEY,
       storage: createJSONStorage(() => AsyncStorage),
+      // Only persist a subset of the state
       partialize: (state) => ({
-        notifications: state.notifications,
+        notifications: state.notifications.slice(0, NOTIFICATION_LIMIT), // Persist only limited notifications
+        // Do NOT persist unreadCount, fetch on load
+        // Do NOT persist loading/error states
+        // Do NOT persist latestChatMessageToast (it's transient)
+        // Do NOT persist offset/hasMore (re-evaluate on load)
       }),
-      onRehydrateStorage: () => (state) => {
-         if (state) {
-            state.setHasHydrated(true);
-            logger.info('Notification store rehydrated from AsyncStorage.');
-         } else {
-            logger.warn('Notification store rehydration resulted in null state.');
-            useNotificationStore.setState({ hasHydrated: true });
-         }
+      onRehydrateStorage: (state) => {
+        logger.info('Notification store rehydrated from AsyncStorage');
+        return (draft, error) => {
+          if (error) {
+            logger.error('An error occurred during notification store rehydration:', error);
+          }
+          if (draft) {
+            draft.setHasHydrated(true);
+            // Fetch latest unread count after rehydration
+            // Delay slightly to allow initial app setup
+            setTimeout(() => {
+              draft.fetchUnreadCount();
+              // Potentially fetch initial notifications if the list is empty, or rely on user action.
+              // For now, we won't auto-fetch list on rehydrate to save API calls, user can pull-to-refresh.
+            }, 500);
+          }
+        };
       },
+      // Versioning can be added here if schema changes occur
+      // version: 1,
+      // migrate: (persistedState, version) => { ... }
     }
   )
 );
 
-// --- Post-Hydration Initial Data Fetching ---
-// We use a flag to ensure this runs only once after hydration completes.
-let hydrationCompleted = false;
-const unsubscribe = useNotificationStore.subscribe((state) => {
-  // Check if hydration is complete AND we haven't run this logic yet
-  if (state.hasHydrated && !hydrationCompleted) {
-    hydrationCompleted = true; // Mark as completed to prevent re-running
-    logger.info('Notification store hydration complete. Fetching initial data...');
+/**
+ * Selector to get the latest unread chat message notification for toast display.
+ */
+export const selectLatestChatMessageToast = (state: NotificationState) => state.latestChatMessageToast;
 
-    // Use a microtask to delay execution slightly, ensuring the current state
-    // update cycle finishes and we get the truly latest state after hydration.
-    queueMicrotask(() => {
-       const currentState = useNotificationStore.getState(); // Get latest state inside microtask
-
-        // Fetch the accurate unread count from the server first
-        currentState.fetchUnreadCount().then(() => {
-          // After getting the count, fetch the first page of notifications
-          // only if the persisted list is empty. Adjust this condition if needed
-          // (e.g., fetch always, fetch if data is older than X).
-          if (currentState.notifications.length === 0) {
-             logger.info('No persisted notifications found, fetching first page.');
-             currentState.fetchNotifications(); // Fetch initial page (offset 0)
-          } else {
-             logger.info(`Loaded ${currentState.notifications.length} notifications from storage.`);
-             // If notifications were loaded, we might still want to refresh the count
-             // based on potentially missed WS messages while offline.
-             // fetchUnreadCount() already ran, so the count should be accurate.
-          }
-        }).catch(error => {
-            logger.error('Error during post-hydration fetchUnreadCount:', error);
-        });
-    });
-
-    // Optional: Unsubscribe after running once if we don't need to listen for further state changes here.
-    // However, keeping it subscribed is harmless.
-    // unsubscribe();
+/**
+ * Helper function to handle incoming server events that might contain notifications.
+ * This can be called from a WebSocket manager or similar event source.
+ */
+export const handleIncomingServerEventForNotifications = (event: ServerEvent) => {
+  if (event.type === 'NOTIFICATION' && event.payload) {
+    const notification = event.payload as Notification; // Assume payload is a Notification
+    useNotificationStore.getState().handleIncomingNotification(notification);
+  } else if (event.type === 'CHAT_MESSAGE_RECEIVED' && event.payload) {
+    // Convert CHAT_MESSAGE_RECEIVED to a ChatMessageNotification structure if needed
+    // This assumes your backend sends a specific structure for chat messages that maps to ChatMessageNotification
+    // For now, assuming the event.payload is already in the correct ChatMessageNotification format or similar enough.
+    // If not, a transformation function would be needed here.
+    const chatNotification = event.payload as ChatMessageNotification; // This might need adjustment
+    useNotificationStore.getState().handleIncomingNotification(chatNotification);
   }
-});
-
-// --- WebSocket Integration Hook (Example - Keep for reference) ---
-/*
-import React, { useEffect } from 'react';
-import { useWebSocket } from './useWebSocket'; // Your WebSocket hook/manager
-import { useNotificationStore } from './useNotificationStore';
-import { Notification } from '../types/notification';
-
-const useNotificationWebSocket = () => {
-  const handleIncomingNotification = useNotificationStore(state => state.handleIncomingNotification);
-  const { lastJsonMessage } = useWebSocket(); // Assuming your hook provides the last message
-
-  useEffect(() => {
-    if (lastJsonMessage) {
-      // TODO: Add strong type checking/validation here (e.g., using Zod)
-      const notification = lastJsonMessage as Notification; // Replace with validation
-      if (notification && notification.id && notification.type) { // Basic check
-         handleIncomingNotification(notification);
-      }
-    }
-  }, [lastJsonMessage, handleIncomingNotification]);
-};
-*/ 
+}; 

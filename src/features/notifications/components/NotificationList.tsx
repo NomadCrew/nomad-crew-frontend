@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { Text, Button, ActivityIndicator, useTheme } from 'react-native-paper';
-import { useNotificationStore } from '../../store/useNotificationStore';
+import { useNotificationStore } from '../store/useNotificationStore';
 import { NotificationItem } from './NotificationItem';
 import { FlashList } from '@shopify/flash-list';
 

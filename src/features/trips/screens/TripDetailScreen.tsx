@@ -11,7 +11,7 @@ import { InviteModal } from '@/src/features/trips/components/InviteModal';
 import { WebSocketManager } from '@/src/websocket/WebSocketManager';
 import { useTripStore } from '@/src/features/trips/store';
 import { useTodoStore } from '@/src/features/todos/store';
-import { useLocationStore } from '@/src/store/useLocationStore';
+import { useLocationStore } from '@/src/features/location/store/useLocationStore';
 import { TripDetailHeader } from '@/src/features/trips/components/TripDetailHeader';
 import { QuickActions } from '@/src/features/trips/components/QuickActions';
 import { StatusBar } from 'expo-status-bar';

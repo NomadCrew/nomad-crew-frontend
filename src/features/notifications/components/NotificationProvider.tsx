@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { useNotificationStore } from '../../store/useNotificationStore';
+import { useNotificationStore } from '../store/useNotificationStore';
 import { NotificationToast } from './NotificationToast';
-import { Notification, TripInviteEvent, isTripInviteEvent } from '../../types/notification';
+import { Notification } from '../types/notification';
 
 interface NotificationProviderProps {
   children: React.ReactNode;
