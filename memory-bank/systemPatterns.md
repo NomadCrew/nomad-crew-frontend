@@ -10,7 +10,6 @@ The primary architectural pattern is **Feature-First**.
     src/
     ├── features/
     │   ├── [featureName]/  (e.g., chat, trips, auth)
-    │   │   ├── index.ts            # Barrel file for public exports
     │   │   ├── components/         # UI components specific to this feature
     │   │   ├── screens/            # Screen components (if distinct from containers)
     │   │   ├── containers/         # Container components (logic-heavy)
