@@ -11,7 +11,7 @@ import { format } from 'date-fns';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { ThemedText } from '@/src/components/ThemedText';
 import type { Trip } from '@/src/features/trips/types';
-import { WeatherIcon } from '@/components/ui/WeatherIcon';
+import { WeatherIcon } from '@/src/components/ui/WeatherIcon';
 import { WeatherCondition } from '@/src/utils/weather';
 import { TripStatusBadge } from './TripStatusBadge';
 import { Theme } from '@/src/theme/types';

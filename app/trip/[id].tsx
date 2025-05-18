@@ -1,7 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useTripStore } from '@/src/features/trips/store';
 import TripDetailScreen from '@/src/features/trips/screens/TripDetailScreen';
-import { LoadingScreen } from '@/components/LoadingScreen';
+import LoadingScreen from '@/src/components/common/LoadingScreen';
 
 export default function TripDetailsRoute() {
   const { id } = useLocalSearchParams();

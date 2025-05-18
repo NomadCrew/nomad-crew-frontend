@@ -1,5 +1,5 @@
-import { WebSocketStatus, ServerEvent, isServerEvent } from '../types/events';
-import { logger } from '../utils/logger';
+import { WebSocketStatus, ServerEvent, isServerEvent } from './types';
+import { logger } from '../../utils/logger';
 
 interface ConnectionConfig {
   url: string;

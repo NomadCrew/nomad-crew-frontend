@@ -8,7 +8,7 @@ import { BentoCarousel } from '@/components/ui/BentoCarousel';
 import { Trip } from '@/src/features/trips/types';
 import { AddTodoModal } from '@/src/features/todos/components/AddTodoModal';
 import { InviteModal } from '@/src/features/trips/components/InviteModal';
-import { WebSocketManager } from '@/src/websocket/WebSocketManager';
+import { WebSocketManager } from '@/src/features/websocket/WebSocketManager';
 import { useTripStore } from '@/src/features/trips/store';
 import { useTodoStore } from '@/src/features/todos/store';
 import { useLocationStore } from '@/src/features/location/store/useLocationStore';
@@ -19,8 +19,8 @@ import { useChatStore } from '@/src/features/chat/store';
 import { TripStats } from '@/src/features/trips/components/TripStats';
 import { useThemedStyles } from '@/src/theme/utils';
 import { BaseEventSchema, ServerEvent, isChatEvent, isServerEvent, isTodoEvent, isTripEvent, isWeatherEvent, isMemberEvent, isMemberInviteEvent } from '@/src/types/events';
-import { ZodNotificationSchema, Notification, isTripInvitationNotification } from '@/src/types/notification';
-import { useNotificationStore } from '@/src/store/useNotificationStore';
+import { ZodNotificationSchema, Notification, isTripInvitationNotification } from '@/src/features/notifications/types/notification';
+import { useNotificationStore } from '@/src/features/notifications/store/useNotificationStore';
 import { logger } from '@/src/utils/logger';
 
 interface TripDetailScreenProps {

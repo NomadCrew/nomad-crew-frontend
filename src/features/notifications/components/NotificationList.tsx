@@ -12,12 +12,12 @@ interface NotificationListProps {
 export const NotificationList: React.FC<NotificationListProps> = ({ onItemPress }) => {
   const theme = useTheme();
   const { 
-    notifications, 
-    unreadCount, 
-    loading, 
-    error, 
-    fetchNotifications, 
-    markAllAsRead 
+    notifications,
+    unreadCount,
+    isFetching: loading,
+    error,
+    fetchNotifications,
+    markAllNotificationsRead: markAllAsRead
   } = useNotificationStore();
 
   useEffect(() => {

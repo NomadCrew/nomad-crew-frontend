@@ -3,7 +3,7 @@ import { useTripStore } from '@/src/features/trips/store';
 import { View, StyleSheet, Text, Pressable } from 'react-native';
 import { GroupLiveMap } from '@/components/location/GroupLiveMap';
 import { useRouter } from 'expo-router';
-import { LoadingScreen } from '@/components/LoadingScreen';
+import LoadingScreen from '@/src/components/common/LoadingScreen';
 import { StatusBar } from 'expo-status-bar';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useEffect, useState } from 'react';
@@ -12,9 +12,14 @@ import { api } from '@/src/api/api-client';
 import { API_PATHS } from '@/src/utils/api-paths';
 import { Trip } from '@/src/features/trips/types';
 import { Theme } from '@/src/theme/types';
-import LocationScreen from '@/src/features/location/screens/LocationScreen';
+import LocationDetailScreen from '@/src/features/location/screens/LocationScreen';
 
-export default LocationScreen;
+export default function LocationRoute() {
+  const { id } = useLocalSearchParams();
+  // Add your location screen component logic here
+  
+  return <LocationDetailScreen locationId={id as string} />;
+}
 
 const styles = (theme: Theme) => StyleSheet.create({
   container: {

@@ -3,7 +3,7 @@ import { useTripStore } from '@/src/features/trips/store';
 import { View, StyleSheet, Text, Pressable } from 'react-native';
 import { GroupLiveMap } from '../components/GroupLiveMap';
 import { useRouter } from 'expo-router';
-import { LoadingScreen } from '@/src/components/LoadingScreen';
+import { LoadingScreen } from '@/src/features/common/components/LoadingScreen';
 import { StatusBar } from 'expo-status-bar';
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useEffect, useState } from 'react';
