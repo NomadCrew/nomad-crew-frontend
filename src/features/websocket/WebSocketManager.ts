@@ -1,13 +1,13 @@
 import { WebSocketConnection } from './WebSocketConnection';
-import { WebSocketStatus, ServerEvent, BaseEventSchema, isLocationEvent, isChatEvent } from '../types/events';
-import { useAuthStore } from '../features/auth/store';
-import { API_CONFIG } from '../api/env';
+import { WebSocketStatus, ServerEvent, BaseEventSchema, isLocationEvent, isChatEvent } from './types';
+import { useAuthStore } from '../auth/store';
+import { API_CONFIG } from '../../api/env';
 import { jwtDecode } from 'jwt-decode';
-import { logger } from '../utils/logger';
-import { useLocationStore } from '../features/location/store/useLocationStore';
-import { useNotificationStore } from '../features/notifications/store/useNotificationStore';
-import { ZodNotificationSchema, Notification } from '../features/notifications/types/notification';
-import { useTripStore } from '../features/trips/store';
+import { logger } from '../../utils/logger';
+import { useLocationStore } from '../location/store/useLocationStore';
+import { useNotificationStore } from '../notifications/store/useNotificationStore';
+import { ZodNotificationSchema, Notification } from '../notifications/types/notification';
+import { useTripStore } from '../trips/store';
 import { ZodError } from 'zod';
 
 interface ConnectionCallbacks {
@@ -191,7 +191,7 @@ export class WebSocketManager {
 
   private handleChatEvent(event: ServerEvent): void {
     // Forward the chat event to the chat store
-    const { useChatStore } = require('../features/chat/store');
+    const { useChatStore } = require('../chat/store');
     
     // Add detailed logging of the raw event
     logger.debug('WS', 'Received chat event type:', event.type);

@@ -4,7 +4,7 @@ import { chatService } from './service';
 import { useAuthStore } from '@/src/features/auth/store';
 import { logger } from '@/src/utils/logger';
 import { ServerEvent } from '@/src/types/events';
-import { WebSocketManager } from '@/src/websocket/WebSocketManager';
+import { WebSocketManager } from '@/src/features/websocket/WebSocketManager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '@/src/api/api-client';
 import { API_PATHS } from '@/src/utils/api-paths';

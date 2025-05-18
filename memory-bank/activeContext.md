@@ -2,107 +2,124 @@
 
 ## ✅ Recent Changes
 
+- **Implemented Authentication System:**
+  - Implemented `AuthGuard` component for route protection based on authentication status
+  - Created `AuthProvider` to manage auth state and deep linking for authentication flows
+  - Added token refresh mechanism and proper redirection based on auth status
+  - Integrated auth guards into the app's root layout for comprehensive protection
+  - Implemented deep link handling for authentication callbacks
+  - Set up proper authentication initialization with error handling
+
+- **Updated API Endpoints with Version Prefix:**
+  - Added the `/v1` prefix to all API endpoint calls in the notification store.
+  - Updated invitation endpoints to use the correct version path.
+  - This should resolve the 404 errors when calling the API.
+
+- **Fixed Chat Routing and API Endpoints:**
+  - Fixed routing warning by updating chat route in app/_layout.tsx to use the correct name.
+  - Updated notification API endpoints to match the documented API on `docs.nomadcrew.uk`.
+  - Modified the fetchUnreadCount function to use the main notifications endpoint with a status filter.
+  - Updated markNotificationRead and markAllNotificationsRead to use the correct endpoints.
+
+- **Fixed API Client Error in Notifications:**
+  - Fixed issue where `apiClient.get` was being used instead of `api.get` in the notifications store.
+  - Updated import in the NotificationStore to include both `apiClient` and `api`.
+  - Replaced all instances of `apiClient.get/post/patch` with `api.get/post/patch` in the notification store.
+  - Fixed the property names in NotificationList component to match the actual store properties.
+  - This resolves the error: `[fetchUnreadCount failed:] [TypeError: _apiClient.apiClient.get is not a function (it is undefined)]`
+
+- **Fixed Zod Discriminated Union Error:**
+  - Identified and fixed a Zod schema error in `src/features/notifications/types/notification.ts`.
+  - Replaced the fallback `z.string()` with `z.literal('UNKNOWN')` in the ZodNotificationSchema.
+  - Added a dedicated NotificationTypeEnum to define all notification types as a Zod enum.
+  - Updated the GenericNotification type and added an isGenericNotification type guard.
+  - This resolved the error: "A discriminator value for key 'type' could not be extracted from all schema options".
+
+- **Fixed Import Issues for Component Building:**
+  - Created `src/components/ThemedText.tsx` component to resolve missing imports.
+  - Created `src/components/ThemedView.tsx` component for consistent UI components.
+  - Created `src/components/ui/WeatherIcon.tsx` component using the existing WeatherCondition type.
+  - Fixed imports in `src/features/trips/components/TripDetailHeader.tsx` to use the correct paths.
+  - Updated import in `components/HelloWave.tsx` to point to the new component location.
+
+- **Fixed App Navigation Structure:**
+  - Created the missing `app/(tabs)` directory structure.
+  - Implemented a proper tab navigation setup in `app/(tabs)/_layout.tsx`.
+  - Created basic tab screens for Trips, Profile, Location, and Notifications.
+  - Fixed root `_layout.tsx` to properly nest navigation and providers.
+  - Created the LoadingScreen component in src/components/common/ directory.
+  - Updated imports in dependent files to use the new component paths.
+
+- **WebSocket Module Refactor (Complete):**
+  - Created `src/features/websocket/` directory.
+  - Moved `src/websocket/WebSocketManager.ts` to `src/features/websocket/WebSocketManager.ts`.
+  - Moved `src/websocket/WebSocketConnection.ts` to `src/features/websocket/WebSocketConnection.ts`.
+  - Created `src/features/websocket/types.ts` with WebSocket-specific types and re-exports from global events.ts.
+  - Updated import paths in WebSocketManager and WebSocketConnection.
+  - Updated references to WebSocketManager throughout the codebase to use the new path.
+  - Fixed TypeScript linter error related to untyped err parameter.
+
+- **Cleanup of Obsolete Files & Directories:**
+  - Deleted empty directories: `components/location/`, `components/todo/`, `components/chat/`.
+  - Removed obsolete backup directory `app/(tabs)-bkp/`.
+  - Replaced `app/index.tsx` TestScreen implementation with a proper redirect to the main app.
+  - Removed app/notifications.tsx (now handled in the tabs structure).
+
+- **Global Utilities Consolidation:**
+  - Moved `src/utils/notifications.ts` to `src/features/notifications/utils/notifications.ts`. Deleted the original file.
+  - Deleted redundant `components/trips/TripDetailHeader.tsx` file (already exists in `src/features/trips/components/`).
+  - Removed empty `components/trips/` directory.
+
 - **Notifications Module Refactor (Complete):**
-    - Moved `useNotificationStore.ts` to `src/features/notifications/store/`.
-    - Moved notification components (`NotificationBadge.tsx`, `NotificationBell.tsx`, `NotificationItem.tsx`, `NotificationList.tsx`, `NotificationProvider.tsx`, `NotificationTestButton.tsx`, `NotificationToast.tsx`) from `src/components/notifications/` to `src/features/notifications/components/`.
-    - Moved `useTestNotifications.ts` hook from `src/hooks/` to `src/features/notifications/hooks/`.
-    - Moved `notification.ts` types from `src/types/` to `src/features/notifications/types/`.
-    - Updated all relevant import paths.
-    - Deleted original files and old `src/components/notifications/index.ts` barrel file.
-    - Corrected unused type imports in `NotificationProvider.tsx`.
-- **WebSocket Event Handling:** Refined WebSocket `onMessage` handler in `TripDetailScreen.tsx` to correctly parse and route `ServerEvent` and `Notification` types to their respective stores, resolving linter errors.
+  - Moved `useNotificationStore.ts` to `src/features/notifications/store/`.
+  - Moved notification components (`NotificationBadge.tsx`, `NotificationBell.tsx`, `NotificationItem.tsx`, `NotificationList.tsx`, `NotificationProvider.tsx`, `NotificationTestButton.tsx`, `NotificationToast.tsx`) from `src/components/notifications/` to `src/features/notifications/components/`.
+  - Moved `useTestNotifications.ts` hook from `src/hooks/` to `src/features/notifications/hooks/`.
+  - Moved `notification.ts` types from `src/types/` to `src/features/notifications/types/`.
+  - Updated all relevant import paths.
+  - Deleted original files and old `src/components/notifications/index.ts` barrel file.
+  - Corrected unused type imports in `NotificationProvider.tsx`.
+
+- **WebSocket Event Handling:** 
+  - Refined WebSocket `onMessage` handler in `TripDetailScreen.tsx` to correctly parse and route `ServerEvent` and `Notification` types to their respective stores, resolving linter errors.
+
 - **Todos Module Refactor (Complete):**
-    - Moved `useTodoStore.ts` to `src/features/todos/store.ts`.
-    - Moved `todo.ts` (types) to `src/features/todos/types.ts`.
-    - Moved `AddTodoModal.tsx`, `TodoErrorBoundary.tsx`, `TodoItem.tsx`, `TodoList.tsx` from `components/todo/` to `src/features/todos/components/`.
-    - Updated all relevant import paths across the codebase.
-    - Deleted old files from `src/store/`, `src/types/`, and `components/todo/`.
+  - Moved `useTodoStore.ts` to `src/features/todos/store.ts`.
+  - Moved `todo.ts` (types) to `src/features/todos/types.ts`.
+  - Moved `AddTodoModal.tsx`, `TodoErrorBoundary.tsx`, `TodoItem.tsx`, `TodoList.tsx` from `components/todo/` to `src/features/todos/components/`.
+  - Updated all relevant import paths across the codebase.
+  - Deleted old files from `src/store/`, `src/types/`, and `components/todo/`.
+
 - **Linting/Stability Check (Post-Trips Refactor):**
-    - Fixed import errors in `app/AppInitializer.tsx`.
-    - Fixed conditional hook call errors in `app/index.tsx` and `app/_layout.tsx`.
-    - Refactored `app/_layout.tsx` to a standard `RootLayout` structure.
-    - Fixed incorrect `useCallback` usage in `components/ui/PerformanceWrapper.tsx`.
-    - Corrected array type style in `src/api/api-client.ts`.
-    - Lint command passes with 0 errors (226 warnings remain).
+  - Fixed import errors in `app/AppInitializer.tsx`.
+  - Fixed conditional hook call errors in `app/index.tsx` and `app/_layout.tsx`.
+  - Refactored `app/_layout.tsx` to a standard `RootLayout` structure.
+  - Fixed incorrect `useCallback` usage in `components/ui/PerformanceWrapper.tsx`.
+  - Corrected array type style in `src/api/api-client.ts`.
+  - Lint command passes with 0 errors (226 warnings remain).
+
 - Corrected import path for `ChatScreen` and `MobileChatScreen` in `app/chat/[tripId].tsx`.
 - Corrected logger module in `app/chat/[tripId].tsx` from 'Chat Route' to 'CHAT'.
 - Received comprehensive refactoring and improvement guide for the NomadCrew frontend.
 - Initiated update of the memory bank to reflect the refactoring plan.
 - Created `src/features` and `src/navigation` directories.
-- **Auth Module Refactor (Complete):**
-    - Moved existing `src/auth` contents to `src/features/auth/`.
-    - Created `src/features/auth/service.ts`, integrating `supabaseClient.ts` and `secure-token-manager.ts` logic. Deleted original files.
-    - Moved `src/store/useAuthStore.ts` to `src/features/auth/store.ts` (full content restored). Original file deleted.
-    - Abstracted direct Supabase calls from `store.ts` to methods in `service.ts`.
-    - Moved auth types from `src/types/auth.ts` to `src/features/auth/types.ts`. `ApiError` interface also moved. Original global `auth.ts` type file deleted.
-    - Created barrel file `src/features/auth/index.ts`.
-    - Updated all identified codebase imports for `useAuthStore` and `supabaseClient` to new paths.
-    - Refactored `registerPushToken` in `store.ts` to use `AuthService`.
-    - Reviewed `registerAuthHandlers` mechanism; current approach deemed acceptable.
-    - Finalized `src/features/auth/types.ts` by removing redundant custom `Session` interface.
-    - Verified `src/store/` and `src/types/` directories are not empty and should not be deleted.
-- **Chat Module Refactor (Complete):**
-    - Moved `screens/chat/ChatScreen.tsx` to `src/features/chat/screens/ChatScreen.tsx`.
-    - Moved `screens/chat/MobileChatScreen.tsx` to `src/features/chat/screens/MobileChatScreen.tsx`.
-    - Moved chat components from `components/chat/` to `src/features/chat/components/`.
-    - Deleted old `components/chat/index.ts` and `components/chat/` directory.
-    - Moved `src/store/useChatStore.ts` to `src/features/chat/store.ts`.
-    - Moved `src/services/chatService.ts` to `src/features/chat/service.ts`.
-    - Moved chat-related types from `src/types/chat.ts` to `src/features/chat/types.ts`. Original global `chat.ts` type file deleted.
-    - Updated all imports for moved chat files throughout the codebase.
-    - Deleted old `screens/chat/` directory.
-- **Barrel File Refactor (Auth & Chat Complete):** Updated all imports previously using `src/features/auth/index.ts` and `src/features/chat/index.ts` to use direct module paths. Deleted both barrel files.
-- **Trips Module Refactor (Complete):**
-    - Created `src/features/trips/` and subdirectories `screens/`, `components/`.
-    - Moved `src/types/trip.ts` to `src/features/trips/types.ts`.
-    - Moved `src/store/useTripStore.ts` to `src/features/trips/store.ts`.
-    - Moved `screens/trips/TripDetailScreen.tsx` (larger one) to `src/features/trips/screens/TripDetailScreen.tsx`.
-    - Deleted `screens/TripDetailScreen.tsx` (smaller, unused one).
-    - Moved all components from `components/trips/` to `src/features/trips/components/`.
-    - Deleted `components/trips/` directory.
-    - Renamed `src/features/trips/components/TripHeader.tsx` to `TripDetailHeader.tsx`.
-    - Updated imports in `app/trip/[id].tsx` to point to new store and screen locations.
-    - Updated all identified outdated imports for trip types, store, screens, and components throughout the codebase.
-    - Corrected an import path for `ChatCard` in `src/features/trips/screens/TripDetailScreen.tsx`.
-- **Location Module Refactor (Complete):**
-    - Created `src/features/location/` and subdirectories `store/`, `types/`, `components/`, `screens/`.
-    - Moved `src/store/useLocationStore.ts` to `src/features/location/store/useLocationStore.ts`.
-    - Extracted `MemberLocation` and `LocationState` interfaces to `src/features/location/types/index.ts`.
-    - Updated `useLocationStore.ts` to import new types and updated its `useAuthStore` import path.
-    - Moved `components/location/LocationSharingToggle.tsx` to `src/features/location/components/LocationSharingToggle.tsx` and updated its `useLocationStore` import.
-    - Moved `components/location/GroupLiveMapModal.tsx` to `src/features/location/components/GroupLiveMapModal.tsx`.
-    - Moved `components/location/GroupLiveMap.tsx` to `src/features/location/components/GroupLiveMap.tsx`, updated its imports for `useLocationStore` and `LocationSharingToggle`, and removed unused `LiveLocation`/`UserLocation` type imports.
-    - Moved `app/location/[id].tsx` to `src/features/location/screens/LocationScreen.tsx` and updated its internal imports.
-    - Updated `app/location/[id].tsx` (Expo Router file) to export the screen from its new location.
-    - Updated `src/features/trips/screens/TripDetailScreen.tsx` to import `useLocationStore` from its new path.
-    - Deleted old `src/store/useLocationStore.ts` and files from `components/location/`. The `components/location` directory might remain empty.
 
 ## 🧠 Next Steps
 
-1.  **~~Chat Module Refactor: Plan and execute refactoring for the chat module into `src/features/chat/`.~~ (DONE - Covered previously)**
-2.  **Project Structure Refactor (Ongoing):**
-    *   **~~Next Feature: Identify and move the `todos` module to `src/features/todos/`.~~ (DONE)**
-    *   **~~Next Feature: Identify and move the `location` store (`src/store/useLocationStore.ts`) and related components/screens (e.g., `app/location/`, `components/location/`) to `src/features/location/`. Refactor its internal structure (store, types, components, services if applicable).~~ (DONE)**
-    *   **~~Next Feature: Identify and move the `notifications` module (`src/store/useNotificationStore.ts`, `src/components/notifications/`, etc.) to `src/features/notifications/`.~~ (DONE)**
-    *   Consolidate global directories (`components`, `hooks`, `services`, `store`, `types`, `utils`) under `src/`, ensuring they only contain truly shared, non-feature-specific code.
-    *   Organize `app/` (Expo Router) to mirror feature groupings.
-    *   Clean up obsolete files (e.g., `app/(tabs)-bkp/`, `TestScreen`).
-3.  **Verify Application Build & Run (Post-Refactor):** After all major refactoring (including Location and Notifications), perform a full build and run the application on a device/emulator to ensure stability and catch any runtime errors introduced by the refactoring.
-4.  **Address Lint Warnings:** Systematically go through the remaining lint warnings and fix them.
-5.  **SOLID Principles Implementation (Post-Structure Refactor):**
-    *   Begin applying SOLID principles systematically to the newly structured feature modules.
-6.  **State Management Refinement (Zustand):**
-    *   Review all Zustand stores after they are moved into their respective feature folders.
-7.  **Navigation System Refinement (Expo Router).**
-8.  **Component Refactoring & UI System.**
-9.  **API Service Layer & Data Fetching.**
-10. **Performance Optimization.**
-11. **Testing Strategy.**
-12. **Coding Standards & Tooling Setup.**
+1. Test the authentication system:
+   - Verify auth guards redirect unauthenticated users to login
+   - Test session refresh mechanism
+   - Validate deep linking for auth callbacks (OAuth, email verification)
+   - Test user session persistence across app restarts
 
+2. Enhance authentication user experience:
+   - Add clear error handling and user feedback for authentication failures
+   - Create Toast/Alert components for auth errors
+   - Improve error messages and recovery options
 
-## ❗ Active Decisions / Context
+3. Complete testing of the application on device/emulator to verify authentication guards and routing are working properly.
 
--   The refactor is following the feature-first structure outlined in the provided guide.
--   Modules are moved, then internal structures refactored, then imports updated.
--   **Rule: No Barrel Files for Application Imports.** Internal application imports must be direct.
+4. Refine the deep linking implementation for authentication flows:
+   - Test the auth/callback handling for OAuth and email verification
+   - Add support for additional authentication scenarios (password reset, invitation acceptance)
+
+5. Continue with Phase 2 of the refactoring plan: Core Logic & Pattern Implementation.

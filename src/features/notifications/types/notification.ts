@@ -46,6 +46,15 @@ const NotificationBaseSchema = z.object({
   createdAt: IsoTimestampSchema,
 });
 
+// Define known notification types as a Zod enum
+const NotificationTypeEnum = z.enum([
+  'TRIP_INVITATION',
+  'CHAT_MESSAGE',
+  'MEMBER_ADDED',
+  'TRIP_UPDATE',
+  'UNKNOWN' // Added for fallback case
+]);
+
 // --- Zod Schema for Discriminated Union (for WebSocket Validation) ---
 // Define individual schemas for each notification type extending the base
 
@@ -66,13 +75,9 @@ export const ZodNotificationSchema = z.discriminatedUnion('type', [
     type: z.literal('TRIP_UPDATE'), // Example
     metadata: TripUpdateMetadataSchema,
   }),
-  // Add other specific notification types here using the same pattern
-  // ...
-
-  // Fallback for generic/unknown types (if backend might send undefined types)
-  // Use cautiously, maybe log these instead of processing directly
+  // Fallback for generic/unknown types
   NotificationBaseSchema.extend({
-    type: z.string(), // Allows any string not matched above
+    type: z.literal('UNKNOWN'), // Changed from z.string() to z.literal('UNKNOWN')
     metadata: z.record(z.unknown()), // Allows any metadata shape
   }),
 ]);
@@ -88,8 +93,7 @@ export type TripInvitationNotification = Extract<Notification, { type: 'TRIP_INV
 export type ChatMessageNotification = Extract<Notification, { type: 'CHAT_MESSAGE' }>;
 export type MemberAddedNotification = Extract<Notification, { type: 'MEMBER_ADDED' }>;
 export type TripUpdateNotification = Extract<Notification, { type: 'TRIP_UPDATE' }>;
-export type GenericNotification = Extract<Notification, { type: string }>; // Matches the fallback
-
+export type GenericNotification = Extract<Notification, { type: 'UNKNOWN' }>; // Updated to match the literal
 
 // --- Type Guards (Using Zod refine or simple checks) ---
 
@@ -119,6 +123,11 @@ export const isTripUpdateNotification = (
  return notification.type === 'TRIP_UPDATE';
 };
 
+export const isGenericNotification = (
+ notification: Notification
+): notification is GenericNotification => {
+ return notification.type === 'UNKNOWN';
+};
 
 // --- API Payloads --- (Keep as is)
 export interface MarkNotificationsReadPayload {

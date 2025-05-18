@@ -10,9 +10,9 @@ import {
   isChatMessageNotification,
   isTripInvitationNotification
 } from '../types/notification';
-import { ServerEvent } from '../types/events';
-import { apiClient } from '../api/api-client';
-import { logger } from '../utils/logger';
+import { ServerEvent } from '@/src/types/events';
+import { apiClient, api } from '@/src/api/api-client';
+import { logger } from '@/src/utils/logger';
 
 const NOTIFICATION_LIMIT = 100; // Max notifications to keep in state/storage
 const API_PAGE_LIMIT = 20; // How many notifications to fetch per API call
@@ -72,8 +72,11 @@ export const useNotificationStore = create<NotificationState>()(
         if (get().isFetchingUnreadCount) return;
         set({ isFetchingUnreadCount: true, error: null });
         try {
-          const response = await apiClient.get<{ count: number }>('/api/notifications/count?status=unread');
-          set({ unreadCount: response.data.count });
+          // Get all notifications with status=unread and use the response length as the count
+          const response = await api.get<Notification[]>('/v1/notifications', {
+            params: { status: 'unread' }
+          });
+          set({ unreadCount: response.data.length });
         } catch (err: any) {
           const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch unread count';
           set({ error: errorMessage });
@@ -94,7 +97,7 @@ export const useNotificationStore = create<NotificationState>()(
         const currentOffset = options.loadMore ? offset : 0;
 
         try {
-          const response = await apiClient.get<Notification[]>('/api/notifications', {
+          const response = await api.get<Notification[]>('/v1/notifications', {
             params: { limit, offset: currentOffset },
           });
           const fetchedNotifications = response.data || [];
@@ -126,7 +129,8 @@ export const useNotificationStore = create<NotificationState>()(
 
         set({ isMarkingRead: true, error: null });
         try {
-          await apiClient.patch(`/api/notifications/${notificationId}`);
+          // Use the correct endpoint for marking a single notification as read
+          await api.patch(`/v1/notifications/${notificationId}/read`);
 
           set(state => ({
             notifications: state.notifications.map(n =>
@@ -149,8 +153,8 @@ export const useNotificationStore = create<NotificationState>()(
         if (get().isMarkingRead || get().unreadCount === 0) return;
         set({ isMarkingRead: true, error: null });
         try {
-          const payload: MarkNotificationsReadPayload = { status: 'read' };
-          await apiClient.patch('/api/notifications', payload);
+          // Use the correct endpoint for marking all notifications as read
+          await api.patch('/v1/notifications/read-all');
 
           set(state => ({
             notifications: state.notifications.map(n => ({ ...n, isRead: true })),
@@ -224,7 +228,7 @@ export const useNotificationStore = create<NotificationState>()(
 
         try {
           // POST to the backend's business logic endpoint for accepting
-          await apiClient.post(`/api/invitations/${inviteId}/accept`);
+          await api.post(`/v1/invitations/${inviteId}/accept`);
 
           // Success! We rely on the backend to potentially send a follow-up
           // WebSocket message (e.g., MEMBER_ADDED or TRIP_UPDATE) to reflect the change.
@@ -261,7 +265,7 @@ export const useNotificationStore = create<NotificationState>()(
         const inviteId = notification.metadata.inviteId;
 
         try {
-          await apiClient.post(`/api/invitations/${inviteId}/decline`);
+          await api.post(`/v1/invitations/${inviteId}/decline`);
           logger.info(`Declined trip invitation: ${inviteId}`);
 
           set(state => ({

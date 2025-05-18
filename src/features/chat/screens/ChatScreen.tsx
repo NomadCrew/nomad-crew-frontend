@@ -3,12 +3,14 @@ import { View, StyleSheet, Text, TouchableOpacity, ActivityIndicator } from 'rea
 import { useTheme } from '@/src/theme/ThemeProvider';
 import { useChatStore } from '@/src/features/chat/store';
 import { useAuthStore } from '@/src/features/auth/store';
-import { ChatList, ChatInput, ChatAuthError } from '../components';
+import { ChatList } from '../components/ChatList';
+import { ChatInput } from '../components/ChatInput';
+import { ChatAuthError } from '../components/ChatAuthError';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { logger } from '@/src/utils/logger';
 import { useTripStore } from '@/src/features/trips/store';
-import { useSafeAreaInsets } from 'react-native-safe-area-insets';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Theme } from '@/src/theme/types';
 import { useLocalSearchParams, router } from 'expo-router';
 
