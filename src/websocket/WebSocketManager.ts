@@ -1,4 +1,4 @@
-import { WebSocketConnection } from './WebSocketConnection';
+import { WebSocketConnection } from '../features/websocket/WebSocketConnection';
 import { WebSocketStatus, ServerEvent, BaseEventSchema, isLocationEvent, isChatEvent } from '../types/events';
 import { useAuthStore } from '../features/auth/store';
 import { API_CONFIG } from '../api/env';
@@ -7,7 +7,6 @@ import { logger } from '../utils/logger';
 import { useLocationStore } from '../features/location/store/useLocationStore';
 import { useNotificationStore } from '../features/notifications/store/useNotificationStore';
 import { ZodNotificationSchema, Notification } from '../features/notifications/types/notification';
-import { useTripStore } from '../features/trips/store';
 import { ZodError } from 'zod';
 
 interface ConnectionCallbacks {

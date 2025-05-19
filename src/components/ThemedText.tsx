@@ -1,8 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { Text, TextProps, StyleSheet } from 'react-native';
-import { useTheme } from '@/src/theme/ThemeProvider';
-import { Typography } from '@/src/theme/foundations/typography';
-import { SemanticColors } from '@/src/theme/foundations/colors';
+import React from 'react';
+import { Text, TextProps } from 'react-native';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { createStyles, useThemedStyles } from '@/src/theme/utils';
 import { logger } from '@/src/utils/logger';
 
@@ -45,7 +43,7 @@ export function ThemedText({
   minTouchSize,
   ...rest 
 }: ThemedTextProps) {
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
 
   // Use our new utility to create styles
   const styles = useThemedStyles(() => ({

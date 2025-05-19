@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Portal, Modal, TextInput, Button, useTheme } from 'react-native-paper';
+import { Portal, Modal, TextInput, Button } from 'react-native-paper';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { useTodoStore } from '../store';
 
 interface AddTodoModalProps {
@@ -12,7 +13,7 @@ interface AddTodoModalProps {
 export const AddTodoModal = ({ visible, onClose, tripId }: AddTodoModalProps) => {
   const [text, setText] = useState('');
   const { createTodo } = useTodoStore();
-  const theme = useTheme();
+  const theme = useAppTheme().theme;
 
   const handleSubmit = async () => {
     if (!text.trim()) return;
@@ -31,12 +32,9 @@ export const AddTodoModal = ({ visible, onClose, tripId }: AddTodoModalProps) =>
       <Modal
         visible={visible}
         onDismiss={onClose}
-        contentContainerStyle={[
-          styles.modalContainer,
-          { backgroundColor: theme.colors.background }
-        ]}
+        contentContainerStyle={styles.modalContainer}
       >
-        <View style={styles.content}>
+        <View style={[styles.content, { backgroundColor: theme.colors.background }]}>
           <TextInput
             label="To Do"
             value={text}
@@ -61,6 +59,7 @@ const styles = StyleSheet.create({
   modalContainer: {
     margin: 20,
     borderRadius: 8,
+    overflow: 'hidden',
   },
   content: {
     padding: 20,

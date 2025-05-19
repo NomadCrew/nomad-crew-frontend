@@ -5,7 +5,7 @@ import { GroupLiveMap } from '../components/GroupLiveMap';
 import { useRouter } from 'expo-router';
 import { LoadingScreen } from '@/src/features/common/components/LoadingScreen';
 import { StatusBar } from 'expo-status-bar';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { useEffect, useState } from 'react';
 import { logger } from '@/src/utils/logger';
 import { api } from '@/src/api/api-client';
@@ -17,7 +17,7 @@ export default function LocationScreen() {
   const { id } = useLocalSearchParams();
   const { trips, fetchTrips } = useTripStore();
   const router = useRouter();
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   const [loading, setLoading] = useState(true);
   const [tripData, setTripData] = useState<Trip | null>(null);
   const [error, setError] = useState<string | null>(null);

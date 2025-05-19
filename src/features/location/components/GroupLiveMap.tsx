@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, InteractionManager, Platform, Pressable, ActivityIndicator } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { useLocationStore } from '../store/useLocationStore'; // Updated
 import { useAuthStore } from '@/src/features/auth/store';
 import { Trip } from '@/src/features/trips/types';
@@ -25,7 +25,7 @@ interface GroupLiveMapProps {
 }
 
 export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isStandalone = false }) => {
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   const mapRef = useRef<MapView>(null);
   const { user } = useAuthStore();
   const {

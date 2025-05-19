@@ -6,6 +6,7 @@ import { useAuthStore } from '@/src/features/auth/store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logger } from '@/src/utils/logger';
 import { MemberLocation, LocationState } from '../types';
+import { useTripStore } from '@/src/features/trips/store';
 
 // Mock data for testing while backend endpoints are being implemented
 const MOCK_MODE = true; // Set to false when backend is ready
@@ -56,10 +57,15 @@ export const useLocationStore = create<LocationState>((set, get) => ({
       
       // If enabling, start tracking if not already tracking
       if (enabled && !get().isTrackingLocation) {
-        // Find active trip ID from another store or context if needed
-        // For now, just use a placeholder
-        const activeTripId = 'current-trip'; // TODO: This needs a proper way to get current trip context
-        get().startLocationTracking(activeTripId);
+        // Get the active trip ID from the trip store if available
+        const tripStore = useTripStore.getState();
+        const activeTripId = tripStore.selectedTrip?.id;
+        
+        if (activeTripId) {
+          get().startLocationTracking(activeTripId);
+        } else {
+          logger.warn('No active trip found for location tracking');
+        }
       } else if (!enabled && get().isTrackingLocation) {
         get().stopLocationTracking();
       }

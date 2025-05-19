@@ -5,7 +5,7 @@ import { GroupLiveMap } from '@/components/location/GroupLiveMap';
 import { useRouter } from 'expo-router';
 import LoadingScreen from '@/src/components/common/LoadingScreen';
 import { StatusBar } from 'expo-status-bar';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { useEffect, useState } from 'react';
 import { logger } from '@/src/utils/logger';
 import { api } from '@/src/api/api-client';

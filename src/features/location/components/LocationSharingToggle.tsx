@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Text, Switch, Pressable, Alert } from 'react-native';
 import { Surface } from 'react-native-paper';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { useLocationStore } from '../store/useLocationStore';
 import { Theme } from '@/src/theme/types';
 import { MapPin, Info, AlertCircle } from 'lucide-react-native';
@@ -30,7 +30,7 @@ const getSafeColor = (themeColor: string | undefined, fallback: string): string 
 };
 
 export const LocationSharingToggle: React.FC = () => {
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   const { isLocationSharingEnabled, setLocationSharingEnabled } = useLocationStore();
   const [isToggling, setIsToggling] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState<Location.PermissionStatus | null>(null);

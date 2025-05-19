@@ -56,13 +56,14 @@ export interface AuthState {
     register: (credentials: RegisterCredentials) => Promise<void>;
     login: (credentials: LoginCredentials) => Promise<void>;
     logout: () => Promise<void>;
+    signOut: () => Promise<void>;
     initialize: () => Promise<void>;
     setFirstTimeDone: () => Promise<void>;
-    handleGoogleSignInSuccess: (response: GoogleSignInResponse) => Promise<void>;
-    // Use SupabaseSession here as it's what handleAppleSignInSuccess in the store seems to use from its direct import
-    handleAppleSignInSuccess: (session: SupabaseSession) => Promise<void>; 
+    handleGoogleSignInSuccess: (session: SupabaseSession) => Promise<void>;
+    handleAppleSignInSuccess: (session: SupabaseSession) => Promise<void>;
     refreshToken: string | null;
     refreshSession: () => Promise<void>;
+    registerPushToken: () => Promise<void>;
 }
 
 export interface AuthTokens {

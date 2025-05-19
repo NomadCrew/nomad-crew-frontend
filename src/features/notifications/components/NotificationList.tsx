@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import { Text, Button, ActivityIndicator, useTheme } from 'react-native-paper';
+import { Text, Button, ActivityIndicator } from 'react-native-paper';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { useNotificationStore } from '../store/useNotificationStore';
 import { NotificationItem } from './NotificationItem';
 import { FlashList } from '@shopify/flash-list';
@@ -10,7 +11,7 @@ interface NotificationListProps {
 }
 
 export const NotificationList: React.FC<NotificationListProps> = ({ onItemPress }) => {
-  const theme = useTheme();
+  const theme = useAppTheme().theme;
   const { 
     notifications,
     unreadCount,

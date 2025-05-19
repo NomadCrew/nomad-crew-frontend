@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { View, ScrollView, useWindowDimensions, SafeAreaView, StyleSheet, ViewStyle } from 'react-native';
 import { router } from 'expo-router';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { BentoGrid } from '@/components/ui/BentoGrid';
 import { TodoList } from '@/src/features/todos/components/TodoList';
 import { BentoCarousel } from '@/components/ui/BentoCarousel';
@@ -29,7 +29,7 @@ interface TripDetailScreenProps {
 
 export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
   const { id: tripId } = trip;
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   const { width: screenWidth } = useWindowDimensions();
   const [showAddTodo, setShowAddTodo] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);

@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Platform, Pressable, Alert, ScrollView, Dimensions } from 'react-native';
-import { Portal, Modal, Text as PaperText, Button, useTheme, TextInput } from 'react-native-paper';
+import { Portal, Modal, Button, TextInput } from 'react-native-paper';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
 import { useAuthStore } from '@/src/features/auth/store';
-import { Trip } from '@/src/features/trips/types'; // Updated path
-import { PlaceDetailsWithFullText } from '@/src/types/places'; // Path remains, assuming global type
-import CustomPlacesAutocomplete from '@/components/PlacesAutocomplete'; // Path remains, assuming global component
+import { Trip } from '@/src/features/trips/types';
+import { PlaceDetailsWithFullText } from '@/src/types/places';
+import CustomPlacesAutocomplete from '@/components/PlacesAutocomplete';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { ThemedText } from '@/src/components/ThemedText';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 
 interface CreateTripModalProps {
   visible: boolean;
@@ -19,10 +22,8 @@ export default function CreateTripModal({
   onClose,
   onSubmit,
 }: CreateTripModalProps) {
-  const theme = useTheme();
+  const theme = useAppTheme().theme;
   const authStore = useAuthStore();
-  
-  // Initialize trip data with defaults
   const [trip, setTrip] = useState<Partial<Trip>>({
     id: '',
     name: '',
@@ -33,24 +34,16 @@ export default function CreateTripModal({
     status: 'PLANNING',
     createdBy: authStore.user?.id || '',
   });
-
-  // Date picker visibility state
   const [showDatePicker, setShowDatePicker] = useState<'start' | 'end' | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Handle date selection
   function handleDateChange(event: DateTimePickerEvent, selectedDate?: Date) {
-    if (Platform.OS === 'android') {
-      setShowDatePicker(null);
-    }
-
+    if (Platform.OS === 'android') setShowDatePicker(null);
     if (!selectedDate || !showDatePicker) return;
-
     const dateKey = showDatePicker === 'start' ? 'startDate' : 'endDate';
     setTrip((prev) => ({ ...prev, [dateKey]: selectedDate.toISOString() }));
   }
 
-  // Form validation
   function validateForm() {
     if (!trip.name?.trim()) {
       Alert.alert('Validation Error', 'Please enter a trip name.');
@@ -67,13 +60,10 @@ export default function CreateTripModal({
     return true;
   }
 
-  // Handle form submission
   async function handleSubmit() {
     if (!validateForm()) return;
-
     setLoading(true);
     try {
-      // Get a random inspirational quote
       const quotes = [
         "The journey of a thousand miles begins with a single step. - Lao Tzu",
         "Travel far, travel wide, travel deep. - Unknown",
@@ -82,7 +72,6 @@ export default function CreateTripModal({
         "Not all who wander are lost. - J.R.R. Tolkien",
       ];
       const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-
       await onSubmit(trip as Trip);
       Alert.alert('Trip Created!', `Your trip to ${trip.destination?.address} is ready!\n\n${randomQuote}`);
       onClose();
@@ -93,15 +82,11 @@ export default function CreateTripModal({
     }
   }
 
-  // Handle place selection from autocomplete
-  function handlePlaceSelected(details: PlaceDetailsWithFullText) {    
-    console.log('Place selected:', details.name || details.formattedAddress);
-    
+  function handlePlaceSelected(details: PlaceDetailsWithFullText) {
     if (!details || !details.placeId) {
       Alert.alert('Error', 'Please select a valid destination');
       return;
     }
-    
     setTrip(prev => ({
       ...prev,
       destination: {
@@ -115,10 +100,8 @@ export default function CreateTripModal({
     }));
   }
 
-  // Format dates for display
   const formattedStartDate = trip.startDate ? format(new Date(trip.startDate), 'MMM dd, yyyy') : '';
   const formattedEndDate = trip.endDate ? format(new Date(trip.endDate), 'MMM dd, yyyy') : '';
-
   const windowHeight = Dimensions.get('window').height;
 
   return (
@@ -128,50 +111,35 @@ export default function CreateTripModal({
         onDismiss={onClose}
         contentContainerStyle={styles.modalOuterContainer}
       >
-        {/* Full-screen tappable background */}
-        <Pressable 
-          style={StyleSheet.absoluteFill} 
-          onPress={onClose}
-        />
-        
-        {/* Modal content */}
-        <View 
-          style={[
-            styles.modalContent, 
-            { 
-              backgroundColor: theme.colors.background,
-              height: windowHeight * 0.7 // Limit height to 70% of screen
-            }
-          ]}
-        >
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close modal background" />
+        <View style={[styles.modalContent, { backgroundColor: theme.colors.background, height: windowHeight * 0.7 }]}> 
           {/* Drag handle */}
           <View style={styles.dragHandleWrapper}>
             <View style={[styles.dragHandle, { backgroundColor: theme.colors.outlineVariant }]} />
           </View>
-          
           {/* Header */}
           <View style={styles.headerRow}>
-            <PaperText variant="titleLarge" style={{ color: theme.colors.onSurface }}>
-              New Trip
-            </PaperText>
-            <Pressable onPress={onClose} style={styles.closeButton}>
-              <PaperText style={{ fontSize: 18, color: theme.colors.onSurfaceVariant }}>✕</PaperText>
+            <ThemedText variant="title.large" color="content.primary" style={{ flex: 1 }}>New Trip</ThemedText>
+            <Pressable onPress={onClose} style={styles.closeButton} accessibilityLabel="Close modal">
+              <MaterialCommunityIcons name="close" size={24} color={theme.colors.content.secondary} />
             </Pressable>
           </View>
-          
           {/* Form Container */}
           <View style={styles.formContainer}>
             {/* Trip name field */}
+            <ThemedText variant="label.medium" color="content.secondary" style={styles.label}>Trip Name</ThemedText>
             <TextInput
               mode="outlined"
-              label="Trip Name"
               placeholder="Trip Name"
               value={trip.name}
               onChangeText={(text) => setTrip((prev) => ({ ...prev, name: text }))}
               style={styles.textInput}
+              accessibilityLabel="Trip Name"
+              autoFocus
+              returnKeyType="next"
             />
-
-            {/* Destination search in its own container with higher z-index */}
+            {/* Destination search */}
+            <ThemedText variant="label.medium" color="content.secondary" style={styles.label}>Destination</ThemedText>
             <View style={styles.autocompleteWrapperOuter}>
               <View style={styles.autocompleteWrapper}>
                 <CustomPlacesAutocomplete
@@ -181,88 +149,68 @@ export default function CreateTripModal({
                 />
               </View>
             </View>
-
-            {/* Scrollable content */}
-            <ScrollView 
-              style={[styles.scrollView, { marginTop: 12 }]}
-              contentContainerStyle={styles.scrollContent}
-              keyboardShouldPersistTaps="handled"
-              nestedScrollEnabled={true}
-            >
-              {/* Description field */}
-              <TextInput
-                mode="outlined"
-                label="Description"
-                placeholder="Description"
-                value={trip.description}
-                onChangeText={(text) => setTrip((prev) => ({ ...prev, description: text }))}
-                multiline={true}
-                numberOfLines={4}
-                style={[styles.textInput, { height: 100 }]}
-              />
-
-              {/* Date picker row */}
-              <View style={styles.dateRow}>
-                <View style={[styles.dateField, { marginRight: 8 }]}>
-                  <PaperText variant="labelMedium" style={{ marginBottom: 4, color: theme.colors.onSurface }}>
-                    Start Date
-                  </PaperText>
-                  <Pressable
-                    onPress={() => setShowDatePicker('start')}
-                    style={[styles.dateDisplay, { 
-                      borderColor: theme.colors.outline,
-                      backgroundColor: theme.colors.surface
-                    }]}
-                  >
-                    <PaperText style={{ color: theme.colors.onSurface }}>
-                      {formattedStartDate}
-                    </PaperText>
-                  </Pressable>
-                </View>
-
-                <View style={styles.dateField}>
-                  <PaperText variant="labelMedium" style={{ marginBottom: 4, color: theme.colors.onSurface }}>
-                    End Date
-                  </PaperText>
-                  <Pressable
-                    onPress={() => setShowDatePicker('end')}
-                    style={[styles.dateDisplay, { 
-                      borderColor: theme.colors.outline,
-                      backgroundColor: theme.colors.surface
-                    }]}
-                  >
-                    <PaperText style={{ color: theme.colors.onSurface }}>
-                      {formattedEndDate}
-                    </PaperText>
-                  </Pressable>
-                </View>
+            {/* Description field */}
+            <ThemedText variant="label.medium" color="content.secondary" style={styles.label}>Description</ThemedText>
+            <TextInput
+              mode="outlined"
+              placeholder="Description"
+              value={trip.description}
+              onChangeText={(text) => setTrip((prev) => ({ ...prev, description: text }))}
+              multiline={true}
+              numberOfLines={4}
+              style={[styles.textInput, { height: 100 }]}
+              accessibilityLabel="Description"
+            />
+            {/* Date picker row */}
+            <View style={styles.dateRow}>
+              <View style={[styles.dateField, { marginRight: 8 }]}> 
+                <ThemedText variant="label.medium" color="content.secondary" style={styles.label}>Start Date</ThemedText>
+                <Pressable
+                  onPress={() => setShowDatePicker('start')}
+                  style={[styles.dateDisplay, { borderColor: theme.colors.outline, backgroundColor: theme.colors.surface }]}
+                  accessibilityLabel="Select start date"
+                >
+                  <View style={styles.dateDisplayContent}>
+                    <MaterialCommunityIcons name="calendar" size={20} color={theme.colors.primary} style={{ marginRight: 6 }} />
+                    <ThemedText color="content.primary">{formattedStartDate}</ThemedText>
+                  </View>
+                </Pressable>
               </View>
-
-              {/* Date picker */}
-              {showDatePicker && trip.startDate && trip.endDate ? (
-                <DateTimePicker
-                  value={
-                    showDatePicker === 'start'
-                      ? new Date(trip.startDate)
-                      : new Date(trip.endDate)
-                  }
-                  mode="date"
-                  display="default"
-                  onChange={handleDateChange}
-                />
-              ) : null}
-            </ScrollView>
+              <View style={styles.dateField}>
+                <ThemedText variant="label.medium" color="content.secondary" style={styles.label}>End Date</ThemedText>
+                <Pressable
+                  onPress={() => setShowDatePicker('end')}
+                  style={[styles.dateDisplay, { borderColor: theme.colors.outline, backgroundColor: theme.colors.surface }]}
+                  accessibilityLabel="Select end date"
+                >
+                  <View style={styles.dateDisplayContent}>
+                    <MaterialCommunityIcons name="calendar" size={20} color={theme.colors.primary} style={{ marginRight: 6 }} />
+                    <ThemedText color="content.primary">{formattedEndDate}</ThemedText>
+                  </View>
+                </Pressable>
+              </View>
+            </View>
+            {/* Date picker */}
+            {showDatePicker && trip.startDate && trip.endDate ? (
+              <DateTimePicker
+                value={showDatePicker === 'start' ? new Date(trip.startDate) : new Date(trip.endDate)}
+                mode="date"
+                display="default"
+                onChange={handleDateChange}
+              />
+            ) : null}
           </View>
-
           {/* Submit button */}
           <View style={styles.buttonContainer}>
-            <Button 
-              mode="contained" 
-              onPress={handleSubmit} 
+            <Button
+              mode="contained"
+              onPress={handleSubmit}
               loading={loading}
               disabled={loading}
-              style={styles.submitButton}
-              labelStyle={styles.submitButtonLabel}
+              style={[styles.submitButton, { backgroundColor: theme.colors.primary.main }]}
+              labelStyle={[styles.submitButtonLabel, { color: theme.colors.primary.onPrimary }]}
+              accessibilityLabel="Create Trip"
+              contentStyle={{ height: 48 }}
             >
               Create Trip
             </Button>
@@ -276,26 +224,27 @@ export default function CreateTripModal({
 const styles = StyleSheet.create({
   modalOuterContainer: {
     flex: 1,
-    justifyContent: 'flex-end', // Align modal to the bottom
+    justifyContent: 'flex-end',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)', // Semi-transparent background
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   modalContent: {
     width: '100%',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 20,
-    paddingTop: 10, 
-    paddingBottom: Platform.OS === 'ios' ? 30 : 20, // More padding for iOS home indicator
-    elevation: 5, 
+    paddingTop: 10,
+    paddingBottom: Platform.OS === 'ios' ? 30 : 20,
+    elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
+    overflow: 'hidden',
   },
   dragHandleWrapper: {
     alignItems: 'center',
-    paddingVertical: 8, 
+    paddingVertical: 8,
   },
   dragHandle: {
     width: 40,
@@ -309,32 +258,22 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   closeButton: {
-    padding: 8, // Make it easier to tap
+    padding: 8,
   },
   formContainer: {
-    flex: 1, // Allow this container to take remaining space for scrolling
+    flex: 1,
     justifyContent: 'flex-start',
   },
+  label: {
+    marginBottom: 4,
+    marginLeft: 2,
+  },
   textInput: {
-    marginBottom: 12,
-    backgroundColor: 'transparent', // Assuming theme handles actual input background
+    marginBottom: 16,
+    backgroundColor: 'transparent',
   },
-  autocompleteWrapperOuter: {
-    // This wrapper helps manage the absolute positioning context for the suggestions list
-    // if it were to overflow. For now, it mainly sets a zIndex if needed.
-    // zIndex: 1, // Uncomment if suggestions are hidden behind other elements
-    // No specific styling needed if CustomPlacesAutocomplete handles its own dropdown positioning well
-  },
-  autocompleteWrapper: {
-    // This inner wrapper can be used if specific layout for the input itself is needed
-    // separate from its dropdown, e.g. if you wanted to add an icon next to it.
-  },
-  scrollView: {
-    flex: 1, // Ensure ScrollView takes available space
-  },
-  scrollContent: {
-    paddingBottom: 20, // Space at the bottom of scrollable content
-  },
+  autocompleteWrapperOuter: {},
+  autocompleteWrapper: {},
   dateRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -349,15 +288,19 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 10,
     justifyContent: 'center',
-    minHeight: 50, // Align height with TextInput
+    minHeight: 50,
+  },
+  dateDisplayContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   buttonContainer: {
-    paddingTop: 16, // Space above the button
+    paddingTop: 16,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(0,0,0,0.1)', // Subtle separator
+    borderTopColor: 'rgba(0,0,0,0.1)',
   },
   submitButton: {
-    borderRadius: 30, // Fully rounded button
+    borderRadius: 30,
     paddingVertical: 8,
   },
   submitButtonLabel: {

@@ -19,7 +19,7 @@ import Animated, {
   import { Check, Trash2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { Todo } from '../types'; // Corrected relative path
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import LottieView from 'lottie-react-native';
 
 // Constants
@@ -102,7 +102,7 @@ export const TodoItem = ({
     });  
 
   // Animated styles
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
 
 const containerStyle = useAnimatedStyle(() => {
   const swipeProgress = Math.abs(translateX.value) / SWIPE_THRESHOLD;

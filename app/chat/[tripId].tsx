@@ -3,7 +3,7 @@ import { View, StyleSheet, useWindowDimensions, Text } from 'react-native';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { ChatScreen } from '@/src/features/chat/screens/ChatScreen';
 import { MobileChatScreen } from '@/src/features/chat/screens/MobileChatScreen';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { useChatStore } from '@/src/features/chat/store';
 import { StatusBar } from 'expo-status-bar';
 import { logger } from '@/src/utils/logger';
@@ -13,7 +13,7 @@ export default function ChatRoute() {
   const params = useLocalSearchParams<{ tripId: string }>();
   const tripId = params.tripId;
   const { width } = useWindowDimensions();
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   const { fetchMessages, initializeStore } = useChatStore();
   
   // Log the tripId for debugging

@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Badge, useTheme } from 'react-native-paper';
+import { Badge } from 'react-native-paper';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { useNotificationStore } from '../store/useNotificationStore';
 
 interface NotificationBadgeProps {
@@ -12,7 +13,7 @@ export const NotificationBadge: React.FC<NotificationBadgeProps> = ({
   size = 20,
   maxCount = 99,
 }) => {
-  const theme = useTheme();
+  const theme = useAppTheme().theme;
   const { unreadCount } = useNotificationStore();
   
   if (unreadCount === 0) {

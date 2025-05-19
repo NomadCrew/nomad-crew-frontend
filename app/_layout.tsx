@@ -5,9 +5,18 @@
     import AppInitializer from './AppInitializer';
     import { GestureHandlerRootView } from 'react-native-gesture-handler';
     import { PaperProvider } from 'react-native-paper';
-    import { ThemeProvider } from '@/src/theme/ThemeProvider';
+    import { ThemeProvider, useCurrentAppTheme } from '@/src/theme/ThemeProvider';
+    import { createPaperTheme } from '@/src/theme/paper-adapter';
     import AuthErrorBoundary from '@/components/AuthErrorBoundary';
     import { AuthProvider } from '@/src/features/auth/components/AuthProvider';
+
+    function Providers({ children }: { children: React.ReactNode }) {
+      // Get the current semantic theme
+      const theme = useCurrentAppTheme();
+      // Memoize the Paper theme
+      const paperTheme = React.useMemo(() => createPaperTheme(theme), [theme]);
+      return <PaperProvider theme={paperTheme}>{children}</PaperProvider>;
+    }
 
     export default function RootLayout() {
       try {
@@ -16,7 +25,7 @@
         return (
           <GestureHandlerRootView style={{ flex: 1 }}>
             <ThemeProvider>
-              <PaperProvider>
+              <Providers>
                 <AuthErrorBoundary>
                   <AppInitializer>
                     <AuthProvider>
@@ -32,7 +41,7 @@
                     </AuthProvider>
                   </AppInitializer>
                 </AuthErrorBoundary>
-              </PaperProvider>
+              </Providers>
             </ThemeProvider>
           </GestureHandlerRootView>
         );

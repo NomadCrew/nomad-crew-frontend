@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { useChatStore } from '@/src/features/chat/store';
 import { useAuthStore } from '@/src/features/auth/store';
 import { useTripStore } from '@/src/features/trips/store';
@@ -26,7 +26,7 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({
   tripId, 
   onBack 
 }) => {
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [authError, setAuthError] = useState(false);
   

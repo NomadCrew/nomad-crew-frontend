@@ -11,9 +11,9 @@ import {
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useAuthStore } from '@/src/features/auth/store';
-import { ThemedText } from '@/components/ThemedText';
+import { ThemedText } from '@/src/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { getInputStyles } from '@/src/theme/styles';
 import { Theme } from '@/src/theme/types';
 
@@ -27,7 +27,7 @@ export default function RegisterScreen() {
   });
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
   const { register, loading, error, isVerifying } = useAuthStore();
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
 
   // Use shared input styles
   const inputStyles = getInputStyles(theme);

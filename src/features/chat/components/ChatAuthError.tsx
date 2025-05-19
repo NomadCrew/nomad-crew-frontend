@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { Theme } from '@/src/theme/types';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -9,7 +9,7 @@ interface ChatAuthErrorProps {
 }
 
 export const ChatAuthError: React.FC<ChatAuthErrorProps> = ({ onRetry }) => {
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   
   return (
     <View style={styles(theme).container}>

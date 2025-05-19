@@ -23,18 +23,6 @@ export class BaseApiClient {
     // Request logging interceptor
     this.api.interceptors.request.use(
       (config) => {
-        if (__DEV__) {
-          logger.debug('API', 'Request initiated:', {
-            method: config.method?.toUpperCase(),
-            url: config.url,
-            data: config.data,
-            headers: { 
-              ...config.headers,
-              Authorization: config.headers.Authorization ? config.headers.Authorization: undefined,
-              apikey: config.headers.apikey ? config.headers.apikey : undefined 
-            },
-          });
-        }
         return config;
       },
       (error) => {
@@ -48,12 +36,6 @@ export class BaseApiClient {
     // Response logging and error handling interceptor
     this.api.interceptors.response.use(
       (response) => {
-        if (__DEV__) {
-          logger.debug('API', 'Response received:', {
-            status: response.status,
-            data: response.data,
-          });
-        }
         return response;
       },
       (error: AxiosError) => {

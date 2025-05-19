@@ -2,9 +2,9 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { router } from 'expo-router';
 import { StyleSheet, TextInput, Pressable, KeyboardAvoidingView, Platform, Alert} from 'react-native';
 import { useAuthStore } from '@/src/features/auth/store';
-import { ThemedText } from '@/components/ThemedText';
+import { ThemedText } from '@/src/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { getInputStyles, getButtonStyles } from '@/src/theme/styles';
 import { useTripStore } from '@/src/features/trips/store';
 import { Theme } from '@/src/theme/ThemeProvider';
@@ -19,7 +19,7 @@ export default function EmailLoginForm({ onClose }: EmailLoginFormProps) {
   const [password, setPassword] = useState('');
   const [focusedInput, setFocusedInput] = useState<'email' | 'password' | null>(null);
   const { login, loading, isVerifying } = useAuthStore();
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   const { checkPendingInvitations } = useTripStore.getState();
 
   // Memoize styles to prevent recalculation on every keystroke

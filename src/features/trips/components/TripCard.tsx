@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Pressable, View, Text, Platform, ViewStyle, ImageBackground, StyleProp } from 'react-native';
 import { differenceInDays, formatDistanceToNow, isAfter, isBefore, format } from 'date-fns';
 import { CalendarClock, Users, MapPin, Clock } from 'lucide-react-native';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import type { Theme } from '@/src/theme/types';
 import { TripStatusBadge } from './TripStatusBadge';
 import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
@@ -52,7 +52,7 @@ export const TripCard: React.FC<TripCardProps> = ({
   onPress,
   style,
 }) => {
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   const [pressed, setPressed] = useState(false);
 
   const animatedStyle = useAnimatedStyle(() => ({

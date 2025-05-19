@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
-import { Portal, Modal, TextInput, Button, useTheme, RadioButton, Text } from 'react-native-paper';
+import { Portal, Modal, TextInput, Button, RadioButton, Text } from 'react-native-paper';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { useTripStore } from '@/src/features/trips/store'; // Updated path
 import { useAuthStore } from '@/src/features/auth/store';
 import { Trip } from '@/src/features/trips/types'; // Updated path
@@ -15,7 +16,7 @@ export const InviteModal = ({ visible, onClose, tripId }: InviteModalProps) => {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'member' | 'admin'>('member');
   const [loading, setLoading] = useState(false);
-  const theme = useTheme();
+  const theme = useAppTheme().theme;
   const { user } = useAuthStore();
   const { trips, inviteMember } = useTripStore();
   
@@ -47,12 +48,9 @@ export const InviteModal = ({ visible, onClose, tripId }: InviteModalProps) => {
       <Modal
         visible={visible}
         onDismiss={onClose}
-        contentContainerStyle={[
-          styles.modalContainer,
-          { backgroundColor: theme.colors.background }
-        ]}
+        contentContainerStyle={[styles.modalContainer, { overflow: 'hidden' }]}
       >
-        <View style={styles.content}>
+        <View style={[styles.content, { backgroundColor: theme.colors.background }]}>
           <TextInput
             label="Email"
             value={email}
@@ -98,6 +96,7 @@ const styles = StyleSheet.create({
     padding: 20,
     margin: 20,
     borderRadius: 8,
+    overflow: 'hidden',
   },
   content: {
     gap: 16,

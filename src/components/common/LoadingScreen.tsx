@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 
 export function LoadingScreen() {
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   
   return (
     <View 

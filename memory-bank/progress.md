@@ -55,6 +55,7 @@
         *   [x] **Refactor Existing Barrel Files:** Updated imports from `auth` and `chat` feature barrel files to use direct paths, then delete the barrel files. (Trips module was created without one, adhering to new rule).
         *   [x] **Post-Refactor Stability Check:** Addressed lint errors after `trips` module refactor. Lint passes with 0 errors.
         *   [x] **WebSocket Event Handling Fix:** Corrected event parsing and routing in `TripDetailScreen.tsx`. Lint passes with 0 errors.
+        *   [x] **Auth Module:** Code cleanup (removed SecureTokenManager, secure-unlimited-store) and API client integration (`registerAuthHandlers`) completed.
     *   [x] Organize `app/` (Expo Router) to mirror feature groupings.
         *   [x] Cleaned up obsolete files: Removed `app/(tabs)-bkp/` directory.
         *   [x] Replaced `app/index.tsx` TestScreen with proper app redirect.
@@ -84,7 +85,7 @@
     *   [x] Consolidate routing with a proper root layout (`app/_layout.tsx`) including global providers.
     *   [x] Implement tab and stack navigation structure.
     *   [x] Implement guarded routes for authentication.
-    *   [ ] Test authentication system thoroughly.
+    *   [ ] Test authentication system thoroughly. (Infrastructure improved, full testing pending)
     *   [ ] Ensure deep linking configuration is robust.
     *   [ ] Remove redundant navigation code.
 
@@ -124,7 +125,7 @@
     *   [ ] Create integration tests (MSW).
     *   [ ] Set up E2E tests (Detox).
 15. **TypeScript & Typing Enhancements (Iterative):**
-    *   [~] Achieve full type coverage, eliminate `any`.
+    *   [+] Achieve full type coverage, eliminate `any`. (Progress made in `auth/store.ts` and `auth/types.ts`)
         *   [x] Fixed Zod schema in notifications for better type safety
         *   [ ] Continue improving type coverage elsewhere
     *   [ ] Enforce strict linting for types.
@@ -138,3 +139,21 @@
     *   [ ] Review all refactored code against the guide.
     *   [ ] Perform final linting and testing pass.
     *   [ ] Remove any dead code or temporary artifacts.
+
+### Current Next Steps
+1.  **Resolve Persistent Linter Errors (if any):**
+    *   Address any remaining linter errors, particularly "Cannot find module..." errors. This might involve restarting the TypeScript server or verifying the `node_modules` integrity.
+2.  [x] **Address Codebase Comments:**
+    *   [x] Systematically reviewed and addressed `TODO`, `FIXME`, and other relevant comments left in the codebase from previous refactoring efforts.
+    *   [x] Moved `getUserDisplayName` from trips store to a proper utility file in auth feature.
+    *   [x] Fixed the temporary activeTripId hardcoding in location store.
+    *   [x] Removed and documented the deprecated DateSeparator logic in ChatList component.
+3.  **Backend: Push Token Deregistration Endpoint:**
+    *   (Backend Task) Implement the backend endpoint (e.g., `/users/push-token/deregister`) that the `logout` function in `useAuthStore` calls.
+4.  **Thorough Testing & Validation (Authentication):**
+    *   Test all authentication flows: email/password (login, register), Google Sign-In, Apple Sign-In.
+    *   Verify token persistence in SecureStore and correct behavior across app restarts.
+    *   Test `onAuthStateChange` listener scenarios.
+    *   Confirm 401 interceptor correctly refreshes token and retries requests.
+    *   Test logout thoroughly: SecureStore cleared, push token deregistered (verify backend), state reset.
+    *   Test error handling for all auth operations.

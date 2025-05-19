@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { ChatMessageWithStatus } from '../types';
 import { useAuthStore } from '@/src/features/auth/store';
 import { formatRelativeTime } from '@/src/utils/dateUtils';
@@ -17,7 +17,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   messageWithStatus, 
   showAvatar = true 
 }) => {
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   const { user } = useAuthStore();
   
   // Safely extract message data with fallbacks
