@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import Svg, { Path } from 'react-native-svg';
 
 interface GoogleIconProps {
@@ -9,7 +9,7 @@ interface GoogleIconProps {
 }
 
 const GoogleIcon = (props: GoogleIconProps) => {
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   const size = props.size || 24; 
   
   return (

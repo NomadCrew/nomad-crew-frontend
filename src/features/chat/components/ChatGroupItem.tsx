@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { ChatGroup } from '../types';
 import { formatRelativeTime } from '@/src/utils/dateUtils';
 import { Theme } from '@/src/theme/types';
@@ -17,7 +17,7 @@ export const ChatGroupItem: React.FC<ChatGroupItemProps> = ({
   onPress,
   isSelected = false
 }) => {
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   
   const handlePress = () => {
     onPress(group.id);

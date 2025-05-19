@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Surface, Text, Avatar, useTheme } from 'react-native-paper';
+import { Surface, Text, Avatar } from 'react-native-paper';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { 
   Notification, 
   TripInviteNotification, 
@@ -33,7 +34,7 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
   duration = 5000,
   onDismiss,
 }) => {
-  const theme = useTheme();
+  const theme = useAppTheme().theme;
   const insets = useSafeAreaInsets();
   const notificationStore = useNotificationStore();
   const translateY = useRef(new Animated.Value(-100)).current;

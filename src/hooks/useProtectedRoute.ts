@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/src/features/auth/store';
 import { useOnboarding } from '@/src/providers/OnboardingProvider';

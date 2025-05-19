@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Pressable, Text, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { Surface } from 'react-native-paper';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { useAuthStore } from '@/src/features/auth/store';
 import { Theme } from '@/src/theme/types';
 import { Trip } from '@/src/features/trips/types'; // Updated path
@@ -28,7 +28,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   onLocationPress,
   onChatPress,
 }) => {
-  const { theme } = useTheme();
+  const theme = useAppTheme().theme;
   const authStore = useAuthStore();
   const userId = authStore.user?.id;
   const [showMemberModal, setShowMemberModal] = useState(false);

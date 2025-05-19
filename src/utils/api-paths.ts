@@ -16,6 +16,7 @@ export const API_PATHS = {
     create: createApiPath('users'),
     me: createApiPath('users/me'),
     byId: (id: string) => createApiPath(`users/${id}`),
+    onboard: createApiPath('users/onboard'),
   },
   trips: {
     list: createApiPath('trips'),

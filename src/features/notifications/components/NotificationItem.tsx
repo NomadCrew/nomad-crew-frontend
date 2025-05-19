@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { Text, Button, Surface, Avatar, useTheme, Divider, Icon } from 'react-native-paper';
+import { Text, Button, Surface, Avatar, Divider, Icon } from 'react-native-paper';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { formatDistanceToNow } from 'date-fns';
 import { 
   Notification, 
@@ -32,7 +33,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
   notification, 
   onPress 
 }) => {
-  const theme = useTheme();
+  const theme = useAppTheme().theme;
   const notificationStore = useNotificationStore();
   
   const formattedTime = React.useMemo(() => {

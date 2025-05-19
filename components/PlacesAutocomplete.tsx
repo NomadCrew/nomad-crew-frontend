@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Platform, Text, TextInput, FlatList, TouchableOpacity } from 'react-native';
-import { useTheme } from 'react-native-paper';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { GooglePlacesAutocomplete, GooglePlacesAutocompleteRef } from 'react-native-google-places-autocomplete';
 import type { PlaceDetailsWithFullText } from '@/src/types/places';
 import { AutocompleteRow } from '@/components/shared/AutocompleteRow';
@@ -19,25 +19,14 @@ export default function CustomPlacesAutocomplete({
   initialValue = '',
   country,
 }: PlacesAutocompleteProps) {
-  const theme = useTheme();
+  const { theme } = useAppTheme();
   const [query, setQuery] = useState(initialValue);
   const [predictions, setPredictions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
   // Get platform-specific API key
-  const apiKey = Platform.select({
-    ios: process.env.EXPO_PUBLIC_GOOGLE_API_KEY_IOS,
-    android: process.env.EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID,
-    default: process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY
-  });
-
-  // Log API key info once on mount
-  useEffect(() => {
-    console.log(`[Places API Debug] Platform: ${Platform.OS}`);
-    console.log(`[Places API Debug] API Key available: ${!!apiKey}`);
-    console.log(`[Places API Debug] API Key value: ${apiKey?.substring(0, 10)}...`);
-    setQuery(initialValue);
-  }, [initialValue]);
+  // const apiKey = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
+  const apiKey = "AIzaSyDDYvGkXG81s9357ZRXdJkH34DuDz9QIMQ";
 
   // Function to search places
   const searchPlaces = async (text: string) => {
@@ -48,7 +37,6 @@ export default function CustomPlacesAutocomplete({
 
     try {
       setIsLoading(true);
-      console.log(`[Places API Debug] Searching for: "${text}"`);
       
       // Create the direct API URL for autocomplete
       const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${apiKey}&language=en&types=geocode|establishment${country ? `&components=country:${country}` : ''}`;
@@ -58,6 +46,14 @@ export default function CustomPlacesAutocomplete({
       
       if (data.status === 'OK') {
         console.log(`[Places API Debug] Found ${data.predictions.length} predictions`);
+        data.predictions.forEach((prediction, idx) => {
+          console.log(`[Places API Debug] Prediction #${idx + 1}:`, {
+            description: prediction.description,
+            place_id: prediction.place_id,
+            main_text: prediction.structured_formatting?.main_text,
+            secondary_text: prediction.structured_formatting?.secondary_text,
+          });
+        });
         setPredictions(data.predictions);
       } else {
         console.warn(`[Places API Debug] API status: ${data.status}`);
@@ -88,8 +84,8 @@ export default function CustomPlacesAutocomplete({
       const data = await response.json();
       
       if (data.status === 'OK') {
-        console.log('[Places API Debug] Got place details');
         const details = data.result;
+        console.log('[Places API Debug] Got place details', details);
         
         const placeDetails: PlaceDetailsWithFullText = {
           addressComponents: details.address_components?.map((component: any) => component.long_name) || [],
@@ -129,12 +125,12 @@ export default function CustomPlacesAutocomplete({
     <View style={styles.container}>
       <TextInput
         style={[styles.textInput, { 
-          color: theme.colors.onSurface,
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.outline
+          color: theme.colors.content.onSurface,
+          backgroundColor: theme.colors.surface.default,
+          borderColor: theme.colors.border.default
         }]}
         placeholder={placeholder}
-        placeholderTextColor={theme.colors.outline}
+        placeholderTextColor={theme.colors.border.default}
         value={query}
         onChangeText={(text) => {
           setQuery(text);
@@ -144,8 +140,8 @@ export default function CustomPlacesAutocomplete({
       
       {predictions.length > 0 && (
         <View style={[styles.listContainer, { 
-          backgroundColor: theme.colors.background,
-          borderColor: theme.colors.outline 
+          backgroundColor: theme.colors.background.default,
+          borderColor: theme.colors.border.default 
         }]}>
           <FlatList
             data={predictions}
@@ -153,10 +149,10 @@ export default function CustomPlacesAutocomplete({
             keyboardShouldPersistTaps="always"
             renderItem={({ item }) => (
               <TouchableOpacity
-                style={[styles.predictionItem, { backgroundColor: theme.colors.surface }]}
+                style={[styles.predictionItem, { backgroundColor: theme.colors.surface.default }]}
                 onPress={() => handlePlaceSelect(item.place_id, item.description)}
               >
-                <Text style={{ color: theme.colors.onSurface }}>{item.description}</Text>
+                <Text style={{ color: theme.colors.content.onSurface }}>{item.description}</Text>
               </TouchableOpacity>
             )}
           />
@@ -164,8 +160,8 @@ export default function CustomPlacesAutocomplete({
       )}
       
       {isLoading && (
-        <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
-          <Text style={{ color: theme.colors.primary }}>Loading...</Text>
+        <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background.default }]}>
+          <Text style={{ color: theme.colors.primary.main }}>Loading...</Text>
         </View>
       )}
     </View>

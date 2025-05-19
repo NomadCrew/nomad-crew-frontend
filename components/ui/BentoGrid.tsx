@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, useWindowDimensions } from 'react-native';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 
 interface BentoItem {
   id: string | number;
@@ -14,7 +14,7 @@ interface BentoGridProps {
 }
 
 export const BentoGrid: React.FC<BentoGridProps> = ({ items }) => {
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   const { width: screenWidth } = useWindowDimensions();
   
   // Calculate responsive dimensions

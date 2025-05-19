@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Modal, Pressable, Text, ActivityIndicator } from 'react-native';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { Theme } from '@/src/theme/types';
 import { Trip, TripStatus } from '@/src/features/trips/types'; // Updated path
 import { useTripStore } from '@/src/features/trips/store'; // Updated path
@@ -18,7 +18,7 @@ export const TripStatusUpdateModal: React.FC<TripStatusUpdateModalProps> = ({
   onClose,
   trip,
 }) => {
-  const { theme } = useTheme();
+  const theme = useAppTheme().theme;
   const { updateTripStatus } = useTripStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -125,7 +125,7 @@ export const TripStatusUpdateModal: React.FC<TripStatusUpdateModalProps> = ({
       onRequestClose={onClose}
     >
       <View style={styles(theme).modalOverlay}>
-        <View style={styles(theme).modalContent}>
+        <View style={[styles(theme).modalContent, { backgroundColor: theme.colors.background }]}>
           <View style={styles(theme).modalHeader}>
             <Text style={styles(theme).modalTitle}>Update Trip Status</Text>
             <Pressable 
@@ -223,11 +223,12 @@ const styles = (theme: Theme) => StyleSheet.create({
     padding: theme.spacing.inset.lg,
   },
   modalContent: {
-    backgroundColor: theme.colors.surface.default,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: theme.spacing.inset.md,
     padding: theme.spacing.inset.lg,
     width: '100%',
     maxWidth: 500,
+    overflow: 'hidden',
   },
   modalHeader: {
     flexDirection: 'row',

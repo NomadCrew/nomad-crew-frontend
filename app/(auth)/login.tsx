@@ -6,9 +6,9 @@ import {
   Modal,
   Image
 } from 'react-native';
-import { ThemedText } from '@/components/ThemedText';
+import { ThemedText } from '@/src/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { useGoogleSignIn } from '@/src/hooks/useGoogleSignIn';
 import { useAppleSignIn } from '@/src/hooks/useAppleSignIn';
 import EmailLoginForm from '@/components/ui/auth/EmailLoginForm';
@@ -18,8 +18,8 @@ import { Divider } from 'react-native-paper';
 
 export default function LoginScreen() {
   const [isEmailModalVisible, setEmailModalVisible] = useState(false);
-  const { theme } = useTheme();
-  const handleGoogleSignIn = useGoogleSignIn();
+  const { theme } = useAppTheme();
+  const { signIn: handleGoogleSignIn } = useGoogleSignIn();
   const handleAppleSignIn = useAppleSignIn();
 
   return (

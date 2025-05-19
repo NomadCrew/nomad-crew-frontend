@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, ActivityIndicator, Pressable } from 'react-native';
 import { Text, Surface, Button } from 'react-native-paper';
 import { FlashList } from '@shopify/flash-list';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { Theme } from '@/src/theme/types';
 import { useTodoStore } from '../store';
 import { TodoItem } from './TodoItem';
@@ -29,7 +29,7 @@ export const TodoList = ({ tripId, onAddTodoPress }: TodoListProps) => {
 };
 
 const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   const [showCompletionAnimation, setShowCompletionAnimation] = useState(false);
   const animationRef = React.useRef<LottieView>(null);
   const { 

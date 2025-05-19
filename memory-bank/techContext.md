@@ -56,6 +56,18 @@ This document outlines the technology stack, key libraries, and development prac
     *   Auth state managed in `useAuthStore`.
 *   **Protected Routes:** Implemented using Expo Router layouts or custom hooks (`useProtectedRoute`).
 
+### User Onboarding & Backend Profile Sync (2024)
+
+- **Onboarding API Call:** After any successful Supabase authentication (email/password or social login), the frontend immediately calls the backend endpoint `/v1/users/onboard`.
+    - The Supabase JWT is sent in the `Authorization: Bearer <token>` header (no body required).
+    - The backend idempotently upserts the user and returns the canonical user profile (enriched with backend data).
+    - Zustand's `user` state is updated with this backend profile, which becomes the source of truth for user data in the app.
+    - This ensures:
+        - All users are registered/synced in the backend after any login/signup.
+        - The frontend always has the latest backend-enriched profile (e.g., username, avatar, custom fields).
+        - The onboarding endpoint is safe to call on every login (idempotent).
+    - See: `src/api/api-client.ts` (`onboardUser`), `src/features/auth/store.ts` (login/register/social handlers).
+
 ## 7. Data Fetching & API Communication
 *   **Axios:** HTTP client for REST API calls to the custom backend.
     *   Centralized `apiClient` instance with interceptors for request/response manipulation (e.g., adding auth tokens, error handling).
@@ -112,4 +124,35 @@ This document outlines the technology stack, key libraries, and development prac
     *   To optimize bundle size, improve tree-shaking, and enhance build/test performance, **barrel files (e.g., `index.ts` files that re-export multiple modules from a directory) MUST NOT be used for importing modules within the application code.**
     *   Always prefer direct imports from the specific file where a module is defined (e.g., `import { MyComponent } from '@/src/features/chat/components/MyComponent';` instead of `import { MyComponent } from '@/src/features/chat';`).
     *   This rule is based on observed negative impacts on final bundle sizes and test execution times. For more details, see: [Barrel files and why you should STOP using them now](https://dev.to/tassiofront/barrel-files-and-why-you-should-stop-using-them-now-bc4).
-    *   Note: This rule applies to internal application imports. External library entry points (which often act as barrel files) are consumed as designed by the library authors. 
+    *   Note: This rule applies to internal application imports. External library entry points (which often act as barrel files) are consumed as designed by the library authors.
+
+## Authentication and Session Management (v2 - October 2023)
+
+The application employs a robust authentication strategy centered around Supabase, with a strong emphasis on secure token storage using Expo SecureStore.
+
+### Core Principles:
+- **Primary Token Storage:** Expo SecureStore is used for storing the JWT access token due to its hardware-backed encryption and the token size being within limits (approx 1KB < 2KB limit). Key: `supabase_access_token`.
+- **Supabase Session Management:** The Supabase JS client manages its own session persistence (including the refresh token) internally using `AsyncStorage`. This is configured in `src/features/auth/service.ts` and is essential for Supabase's `autoRefreshToken: true` functionality. Application code does not directly interact with Supabase's `AsyncStorage` data.
+- **State Synchronization:**
+    - `useAuthStore` (Zustand): Manages global client-side auth state (user, token, status).
+    - `supabase.auth.onAuthStateChange`: A listener is set up in `useAuthStore` to react to `SIGNED_IN`, `SIGNED_OUT`, `TOKEN_REFRESHED`, and `USER_UPDATED` events. This ensures the Zustand store and the SecureStore (for the access token) are kept in sync with Supabase's state.
+- **API Authentication:**
+    - All protected API calls include the access token (retrieved from SecureStore) in the `Authorization: Bearer <token>` header.
+    - An Axios interceptor in `src/api/api-client.ts` handles 401 Unauthorized responses. On a 401, it attempts to refresh the session via `useAuthStore.getState().refreshSession()` and then retries the original request with the new token.
+- **Logout Process:**
+    1. Deregister push token from the backend (via an API call like `/users/push-token/deregister`).
+    2. Call `supabase.auth.signOut()`.
+    3. Delete the access token from `Expo SecureStore`.
+    4. Reset auth state in `useAuthStore` (user, token, status to unauthenticated, etc.).
+- **Social Logins (Google & Apple):**
+    - Hooks (`useGoogleSignIn.ts`, `useAppleSignIn.ts`) manage the platform-specific sign-in flow to obtain an `id_token` (Google) or `identityToken` (Apple).
+    - These tokens are then used with `supabase.auth.signInWithIdToken()`.
+    - Upon successful Supabase authentication, the hook saves the `access_token` to `Expo SecureStore` and calls a handler in `useAuthStore` (e.g., `handleGoogleSignInSuccess(session)`) to update the global state.
+- **Deprecated Custom Encryption for AsyncStorage (for Auth Tokens):** The previous approach of `secure-unlimited-store.ts` for custom encryption over AsyncStorage for auth tokens is no longer the primary strategy for access tokens, as they fit within Expo SecureStore. This module might be repurposed or removed.
+
+### Key Files:
+- `src/features/auth/store.ts`: Core auth logic, `onAuthStateChange` listener, SecureStore interactions.
+- `src/features/auth/service.ts`: Supabase client initialization.
+- `src/hooks/useGoogleSignIn.ts`, `src/hooks/useAppleSignIn.ts`: Social login flows.
+- `src/api/api-client.ts`: Axios instance with auth interceptors.
+- `expo-secure-store`: Native module for encrypted storage. 

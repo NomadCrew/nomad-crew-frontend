@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { useTheme } from './ThemeProvider';
+import { useAppTheme } from './ThemeProvider';
 import { logger } from '../utils/logger';
 import { Theme } from './types';
 
@@ -27,7 +27,7 @@ export function createStyles<T extends StyleSheet.NamedStyles<T> | StyleSheet.Na
 export function useThemeAndStyles<T extends StyleSheet.NamedStyles<T> | StyleSheet.NamedStyles<any>>(
   createStyles: (theme: Theme) => T
 ) {
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   
   const styles = useMemo(() => {
     return StyleSheet.create(createStyles(theme));
@@ -46,7 +46,7 @@ export function useThemeAndStyles<T extends StyleSheet.NamedStyles<T> | StyleShe
 export function useThemedStyles<T extends Record<string, any>>(
   stylesFn: (theme: Theme) => T
 ): T {
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   
   // Create a safe version of the theme that handles undefined properties
   const safeTheme = useMemo(() => {

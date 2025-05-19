@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { ArrowLeft, Bookmark } from 'lucide-react-native';
 import { format } from 'date-fns';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { ThemedText } from '@/src/components/ThemedText';
 import type { Trip } from '@/src/features/trips/types';
 import { WeatherIcon } from '@/src/components/ui/WeatherIcon';
@@ -28,7 +28,7 @@ export const TripDetailHeader = ({ // Renamed export
   onBack,
   onBookmark,
 }: TripHeaderProps) => {
-  const { theme } = useTheme();
+  const theme = useAppTheme().theme;
   const startDateString = format(new Date(trip.startDate), 'MMM dd');
   const endDateString = format(new Date(trip.endDate), 'MMM dd');
   const weatherCondition = trip.weatherCondition as WeatherCondition | undefined;

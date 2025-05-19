@@ -7,7 +7,7 @@ import {
   Text,
   RefreshControl
 } from 'react-native';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { ChatGroup } from '../types';
 import { ChatGroupItem } from './ChatGroupItem';
 import { Theme } from '@/src/theme/types';
@@ -29,7 +29,7 @@ export const ChatGroupList: React.FC<ChatGroupListProps> = ({
   onRefresh,
   isRefreshing = false
 }) => {
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
 
   const renderItem = ({ item }: { item: ChatGroup }) => {
     return (

@@ -1,5 +1,18 @@
 # Active Context
 
+## ✅ Recent Changes / Decisions (as of Current Date)
+
+- **API Client Integration Confirmed:**
+    - Reviewed `src/api/api-client.ts` and confirmed its existing interceptor logic for 401s and token refresh is robust.
+    - Ensured `registerAuthHandlers` is now called in `src/features/auth/store.ts` to properly connect the auth store with the API client, enabling the interceptors.
+- **Auth Code Cleanup Completed:**
+    - Deleted deprecated `src/features/auth/secure-unlimited-store.ts`.
+    - Removed the superseded `SecureTokenManager` class from `src/features/auth/service.ts`.
+- **Linter Errors Addressed in Auth Store:**
+    - Corrected import paths in `src/features/auth/store.ts`.
+    - Added explicit types for `onAuthStateChange` parameters (`event`, `session`) and `set` callback parameters (`prevState`).
+    - Updated `src/features/auth/types.ts` by adding `registerPushToken` to the `AuthState` interface to resolve type errors.
+
 ## ✅ Recent Changes
 
 - **Implemented Authentication System:**
@@ -103,23 +116,47 @@
 - Initiated update of the memory bank to reflect the refactoring plan.
 - Created `src/features` and `src/navigation` directories.
 
+- **Addressed TODO Comments in Codebase:**
+  - Moved `getUserDisplayName` from `trips/store.ts` to `auth/utils.ts` for better code organization
+  - Improved location tracking in `location/store/useLocationStore.ts` by getting active trip ID from the trip store
+  - Removed commented-out DateSeparator logic in `chat/components/ChatList.tsx` with documentation about the better approach
+
+## ✅ Recent Changes / Decisions (as of October 26, 2023)
+
+- **Finalized Authentication Strategy:** Shifted to primarily using `expo-secure-store` for JWT access token storage, leveraging its hardware-backed encryption. Supabase client will continue to use its internal `AsyncStorage` for its own session and refresh token management.
+- **Custom AsyncStorage Encryption (for Auth Tokens) Deprioritized:** The `secure-unlimited-store.ts` and `SecureTokenManager` for encrypting auth tokens in AsyncStorage are no longer the primary approach for access tokens, as they fit in SecureStore. These may be removed or repurposed.
+- **Social Login Hooks Updated:** `useGoogleSignIn.ts` and `useAppleSignIn.ts` now integrate with `expo-secure-store` for saving the access token post-Supabase authentication and call new handlers in `useAuthStore` (`handleGoogleSignInSuccess`, `handleAppleSignInSuccess`).
+- **`useAuthStore` Enhancements:** 
+    - Integrated `expo-secure-store` for all access token operations (save on login/refresh, load on init, delete on logout).
+    - Added `handleGoogleSignInSuccess` and `handleAppleSignInSuccess` methods.
+    - Implemented a comprehensive `logout` method including push token deregistration (frontend part) and SecureStore cleanup.
+    - Added `supabase.auth.onAuthStateChange` listener to keep store and SecureStore synced with Supabase events (`SIGNED_IN`, `SIGNED_OUT`, `TOKEN_REFRESHED`, `USER_UPDATED`).
+
 ## 🧠 Next Steps
 
-1. Test the authentication system:
-   - Verify auth guards redirect unauthenticated users to login
-   - Test session refresh mechanism
-   - Validate deep linking for auth callbacks (OAuth, email verification)
-   - Test user session persistence across app restarts
+1.  **Resolve Persistent Linter Errors (if any):**
+    *   Address any remaining linter errors, particularly "Cannot find module..." errors. This might involve restarting the TypeScript server or verifying the `node_modules` integrity.
+2.  ✅ **Address Codebase Comments:**
+    *   Systematically reviewed and addressed `TODO`, `FIXME`, and other relevant comments left in the codebase.
+    *   Moved `getUserDisplayName` from trips store to a proper utility file in auth feature.
+    *   Fixed the temporary activeTripId hardcoding in location store.
+    *   Removed and documented the deprecated DateSeparator logic in ChatList component.
+3.  **Backend: Push Token Deregistration Endpoint:**
+    *   (Backend Task) Implement the backend endpoint (e.g., `/users/push-token/deregister`) that the `logout` function in `useAuthStore` calls.
+4.  **Thorough Testing & Validation (Authentication):**
+    *   Test all authentication flows: email/password (login, register), Google Sign-In, Apple Sign-In.
+    *   Verify token persistence in SecureStore and correct behavior across app restarts.
+    *   Test `onAuthStateChange` listener scenarios.
+    *   Confirm 401 interceptor correctly refreshes token and retries requests.
+    *   Test logout thoroughly: SecureStore cleared, push token deregistered (verify backend), state reset.
+    *   Test error handling for all auth operations.
+5.  **Review `registerAuthHandlers` (Final Check):**
+    *   After full testing, give a final confirmation that the `registerAuthHandlers` integration and functionality are as expected.
+6.  **Documentation Finalization:** Update internal developer documentation.
 
-2. Enhance authentication user experience:
-   - Add clear error handling and user feedback for authentication failures
-   - Create Toast/Alert components for auth errors
-   - Improve error messages and recovery options
-
-3. Complete testing of the application on device/emulator to verify authentication guards and routing are working properly.
-
-4. Refine the deep linking implementation for authentication flows:
-   - Test the auth/callback handling for OAuth and email verification
-   - Add support for additional authentication scenarios (password reset, invitation acceptance)
-
-5. Continue with Phase 2 of the refactoring plan: Core Logic & Pattern Implementation.
+## ❗ Active Decisions / Context
+- The API client interceptor in `src/api/api-client.ts` is considered sufficient for 401 handling and token refresh.
+- Primary focus shifting to resolving codebase comments and then thorough testing of the auth system.
+- The `registerAuthHandlers` function in `src/api/api-client.ts` is essential and has been correctly integrated with `useAuthStore`.
+- `secure-unlimited-store.ts` and `SecureTokenManager` have been removed as they are obsolete.
+- `expo-secure-store` is the standard for access token storage, managed within `useAuthStore`.

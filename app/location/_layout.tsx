@@ -1,8 +1,8 @@
 import { Stack } from 'expo-router';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 
 export default function LocationLayout() {
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
 
   return (
     <Stack

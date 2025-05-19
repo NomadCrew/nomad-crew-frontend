@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { api } from '@/src/api/api-client';
+import { api } from '../../api/api-client';
 import {
   Trip,
   CreateTripInput,
@@ -8,15 +8,15 @@ import {
   UpdateTripStatusRequest,
   UpdateTripStatusResponse,
   WeatherForecast,
-} from './types'; // Updated import path
+} from './types';
 import { API_PATHS } from '@/src/utils/api-paths';
-import { ServerEvent, isTripEvent, isTodoEvent, isWeatherEvent, isMemberInviteEvent, isMemberEvent } from '@/src/types/events';
+import { ServerEvent } from '@/src/types/events';
 import { useTodoStore } from '@/src/features/todos/store';
 import { mapWeatherCode } from '@/src/utils/weather';
-import { apiClient } from '@/src/api/api-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '@/src/features/auth/store';
 import { logger } from '@/src/utils/logger';
+import { getUserDisplayName } from '../auth/utils';
 
 interface TripState {
   trips: Trip[];
@@ -63,19 +63,22 @@ export const useTripStore = create<TripState>((set, get) => ({
         throw new Error('User must be logged in to create a trip');
       }
 
-      const response = await api.post<Trip>(API_PATHS.trips.create, {
-        ...tripData,
-        destination: {
-          address: tripData.destination.address,
-          coordinates: tripData.destination.coordinates,
-          placeId: tripData.destination.placeId
-        },
-        status: 'PLANNING' as TripStatus,
-      });
-      
+      // Transform payload to match backend expectations
+      const payload = {
+        name: tripData.name,
+        description: tripData.description,
+        destinationPlaceId: tripData.destination.placeId,
+        destinationAddress: tripData.destination.address,
+        destinationName: tripData.destination.address, // fallback if no name field
+        destinationLatitude: tripData.destination.coordinates?.lat,
+        destinationLongitude: tripData.destination.coordinates?.lng,
+        startDate: (tripData.startDate instanceof Date ? tripData.startDate.toISOString() : tripData.startDate),
+        endDate: (tripData.endDate instanceof Date ? tripData.endDate.toISOString() : tripData.endDate),
+      };
+
+      const response = await api.post<Trip>(API_PATHS.trips.create, payload);
       // Get the best available name for the user
       const userName = getUserDisplayName(currentUser);
-      
       // Ensure the trip has the creator as a member with owner role
       const tripWithOwner = {
         ...response.data,
@@ -88,7 +91,6 @@ export const useTripStore = create<TripState>((set, get) => ({
           }
         ]
       } as Trip;
-      
       set(state => ({
         trips: [...state.trips, tripWithOwner],
         loading: false,
@@ -617,22 +619,4 @@ export const useTripStore = create<TripState>((set, get) => ({
   },
 }));
 
-// Helper function to get a display name for the user
-// TODO: This should be moved to a more appropriate utility file or user service
-// and potentially use a more robust way to get user's name (e.g., from profile)
-function getUserDisplayName(user: any): string {
-  if (!user) return 'Unknown User';
-  // Try to get name from user_metadata, then raw_user_meta_data, then email
-  const name = user.user_metadata?.full_name || 
-               user.user_metadata?.name ||
-               user.raw_user_meta_data?.full_name ||
-               user.raw_user_meta_data?.name;
-  
-  if (name) return name;
-  
-  if (user.email) {
-    return user.email.split('@')[0]; // Fallback to part of email
-  }
-  
-  return `User ${user.id?.substring(0, 4) || ''}`; // Fallback to part of ID
-} 
+// Import getUserDisplayName from auth utilsimport { getUserDisplayName } from '../auth/utils'; 

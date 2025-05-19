@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, Text, StyleSheet } from 'react-native';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 
 interface GooglePlacePrediction {
   description: string;
@@ -16,7 +16,7 @@ interface AutocompleteRowProps {
 }
 
 export function AutocompleteRow({ data }: AutocompleteRowProps) {
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   return (
     <Pressable
       style={({ pressed }) => [

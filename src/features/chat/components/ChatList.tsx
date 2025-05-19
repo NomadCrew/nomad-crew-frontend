@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useCallback, useMemo } from 'react';
 import { View, FlatList, StyleSheet, ActivityIndicator, Text } from 'react-native';
 import { ChatMessage } from './ChatMessage';
 import { ChatMessageWithStatus } from '../types';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { useAuth } from '@/src/hooks/useAuth';
 import { useThemedStyles } from '@/src/theme/utils';
 import { logger } from '@/src/utils/logger';
@@ -31,7 +31,7 @@ export const ChatList: React.FC<ChatListProps> = ({
 }) => {
   logger.debug('UI', `Rendering ChatList with ${messages.length} messages`);
   
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   const { user } = useAuth();
   const flatListRef = useRef<FlatList>(null);
   const { markAsRead, getLastReadMessageId } = useChatStore();
@@ -278,48 +278,8 @@ export const ChatList: React.FC<ChatListProps> = ({
   );
 };
 
-// TODO: Re-evaluate the DateSeparator logic, possibly removing or simplifying it.
-// interface DateSeparatorProps {
-//   leadingItem: ChatMessageWithStatus;
-// }
-
-// const DateSeparator: React.FC<DateSeparatorProps> = ({ leadingItem }) => {
-//   const { theme } = useTheme();
-//   const styles = useThemedStyles((theme) => StyleSheet.create({
-//     dateSeparator: {
-//       alignItems: 'center',
-//       marginVertical: 16,
-//     },
-//     dateSeparatorLine: {
-//       height: 1,
-//       backgroundColor: theme.colors.border.default,
-//       opacity: 0.3,
-//       width: '100%',
-//       position: 'absolute',
-//     },
-//     dateSeparatorText: {
-//       backgroundColor: theme.colors.background.default,
-//       paddingHorizontal: 12,
-//       fontSize: 12,
-//       color: theme.colors.content.tertiary,
-//       fontWeight: '500',
-//     }
-//   }));
-
-//   const messageDate = new Date(leadingItem.message.created_at || 0);
-  
-//   // Only show date separator if it's a new day
-//   // This logic needs access to the *previous* item, not `leadingItem` if it means the current.
-//   // FlatList's ItemSeparatorComponent provides `leadingItem` (the item *before* the separator)
-//   // and `trailingItem` (the item *after* the separator).
-//   // This needs careful re-evaluation.
-
-//   return (
-//     <View style={styles.dateSeparator}>
-//       <View style={styles.dateSeparatorLine} />
-//       <Text style={styles.dateSeparatorText}>
-//         {messageDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}
-//       </Text>
-//     </View>
-//   );
-// }; 
+// We've removed the DateSeparator component in favor of a simpler approach
+// If date separators are needed, a better approach would be to:
+// 1. Process the message data before rendering to insert date separator items in the array
+// 2. Use a renderItem function that can handle both message and separator types
+// 3. This avoids the complexity of the FlatList ItemSeparatorComponent which is limited in this case 

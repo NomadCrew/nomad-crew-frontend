@@ -3,14 +3,14 @@ import { router } from 'expo-router';
 import { useEffect } from 'react';
 import { Linking } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
-import { ThemedText } from '@/components/ThemedText';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { ThemedText } from '@/src/components/ThemedText';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { useAuthStore } from '@/src/features/auth/store';
 import { supabase } from '@/src/features/auth/service';
 import { Theme } from '@/src/theme/types';
 
 export default function VerifyEmailScreen() {
-    const { theme } = useTheme();
+    const { theme } = useAppTheme();
     const { isVerifying } = useAuthStore();
   
     useEffect(() => {

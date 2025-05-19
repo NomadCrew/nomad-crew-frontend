@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, ViewStyle } from 'react-native';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { ThemedView } from '@/src/components/ThemedView';
 import { ThemedText } from '@/src/components/ThemedText';
 import { TripCard } from './TripCard';
@@ -37,7 +37,7 @@ const GHOST_CARD: Trip = {
 };
 
 export function TripList({ onTripPress, style, trips: propTrips }: Props) {
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   const { trips: storeTrips } = useTripStore();
   
   const trips = propTrips || storeTrips;

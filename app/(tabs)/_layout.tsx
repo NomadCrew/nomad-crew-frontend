@@ -1,10 +1,10 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { Home, MapPin, Bell, User } from 'lucide-react-native';
 
 export default function TabsLayout() {
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
 
   return (
     <Tabs

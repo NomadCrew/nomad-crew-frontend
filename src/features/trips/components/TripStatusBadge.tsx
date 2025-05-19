@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, View, Text, ViewStyle, TextStyle } from 'react-native';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { TripStatus } from '@/src/features/trips/types'; // Updated path
 import type { Theme } from '@/src/theme/types';
 import { logger } from '@/src/utils/logger';
@@ -18,7 +18,7 @@ export const TripStatusBadge: React.FC<TripStatusBadgeProps> = ({
     style,
     textStyle,
 }) => {
-    const { theme } = useTheme();
+    const theme = useAppTheme().theme;
     const styles = makeStyles(theme);
 
     const getStatusColorAndBackground = (status: TripStatus, theme: Theme) => {

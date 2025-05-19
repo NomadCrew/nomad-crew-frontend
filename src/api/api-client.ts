@@ -5,6 +5,7 @@ import { API_PATHS } from '@/src/utils/api-paths';
 import { logger } from '@/src/utils/logger';
 import { ERROR_CODES, ERROR_MESSAGES } from './constants';
 import { isTokenExpiringSoon } from '@/src/utils/token';
+import type { User } from '@/src/features/auth/types';
 
 // Token refresh lock mechanism
 let isRefreshing = false;
@@ -70,7 +71,7 @@ export class ApiClient extends BaseApiClient {
       async (config) => {
         // Skip auth for public endpoints that might exist on the backend (e.g., health checks, public data)
         // Auth-specific backend endpoints (login, register, refresh) are removed as Supabase handles these.
-        const publicBackendPaths = [
+        const publicBackendPaths: string[] = [
           // Add any known public backend paths here if necessary, for example:
           // '/v1/public/some-data',
           // API_PATHS.auth.validate, // If validate is a public check, otherwise remove
@@ -274,3 +275,13 @@ export class ApiClient extends BaseApiClient {
 // Singleton
 export const apiClient = ApiClient.getInstance();
 export const api = apiClient.getAxiosInstance();
+
+/**
+ * Calls the backend onboarding endpoint to upsert the user using the Supabase JWT.
+ * Returns the user profile from the backend.
+ */
+export async function onboardUser(): Promise<User> {
+  const api = ApiClient.getInstance();
+  const response = await api.getAxiosInstance().post<User>(API_PATHS.users.onboard);
+  return response.data;
+}

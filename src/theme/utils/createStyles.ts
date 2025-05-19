@@ -35,7 +35,7 @@ export type StyleProp = ViewStyle | TextStyle | ImageStyle;
  * }));
  * 
  * // In your component:
- * const { theme } = useTheme();
+ * const { theme } = useAppTheme();
  * const styles = useStyles(theme);
  */
 export function createStyles<T extends StylesObject>(

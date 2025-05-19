@@ -1,8 +1,8 @@
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { LucideIcon } from 'lucide-react-native';
-import { useTheme } from '@/src/theme/ThemeProvider';
-import { ThemedText } from '@/components/ThemedText';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
+import { ThemedText } from '@/src/components/ThemedText';
 import type { Theme } from '@/src/theme/types';
 
 interface IconButtonProps {
@@ -18,7 +18,7 @@ export const IconButton = ({
   size = 24,
   label 
 }: IconButtonProps) => {
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   
   return (
     <View style={styles(theme).container}>

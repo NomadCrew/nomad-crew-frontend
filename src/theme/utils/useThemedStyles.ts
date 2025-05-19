@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useTheme } from '../ThemeProvider';
+import { useAppTheme } from '../ThemeProvider';
 import { StylesFunction, StylesObject } from './createStyles';
 
 /**
@@ -28,7 +28,7 @@ import { StylesFunction, StylesObject } from './createStyles';
 export function useThemedStyles<T extends StylesObject>(
   stylesFunc: StylesFunction<T>
 ) {
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   
   // Memoize the styles to prevent unnecessary re-renders
   const styles = useMemo(() => stylesFunc(theme), [stylesFunc, theme]);

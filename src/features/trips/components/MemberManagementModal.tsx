@@ -3,7 +3,7 @@ import { View, StyleSheet, Alert, ScrollView } from 'react-native';
 import { Modal, Portal, Text, Button, List, Avatar, Chip, Surface, IconButton, Divider } from 'react-native-paper';
 import { Crown, Shield, User, MoreVertical, UserPlus } from 'lucide-react-native';
 import { Menu } from 'react-native-paper';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { Trip } from '@/src/features/trips/types'; // Updated path
 import { useAuthStore } from '@/src/features/auth/store';
 import { useTripStore } from '@/src/features/trips/store'; // Updated path
@@ -31,7 +31,7 @@ type TripInvitation = {
 };
 
 export const MemberManagementModal = ({ visible, onClose, trip }: MemberManagementModalProps) => {
-  const { theme } = useTheme();
+  const theme = useAppTheme().theme;
   const { user } = useAuthStore();
   const { updateMemberRole, removeMember } = useTripStore();
   const [menuVisible, setMenuVisible] = useState<string | null>(null);
@@ -314,48 +314,44 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
       <Modal
         visible={visible}
         onDismiss={onClose}
-        contentContainerStyle={[
-          styles.modalContainer,
-          { backgroundColor: theme.colors.surface }, 
-        ]}
+        contentContainerStyle={[styles.modalContainer, { overflow: 'hidden' }]}
       >
-        <View style={styles.header}>
-          <Text variant="headlineSmall">Manage Members</Text>
-          <IconButton icon={UserPlus} size={24} onPress={() => setShowInviteModal(true)} />
-        </View>
-
-        <ScrollView style={styles.scrollView}>
-          {/* Render members */}
-          <List.Section title="Members">
-            {members.map((member) => (
-              <View key={member.userId}>
-                {renderMemberItem({ item: member })}
-              </View>
-            ))}
-          </List.Section>
-
-          {/* Render invitations */}
-          {trip.invitations && trip.invitations.length > 0 && (
-            <List.Section title="Pending Invitations">
-              {trip.invitations.map((invitation) => (
-                <View key={invitation.token}> 
-                  {renderInvitationItem({ item: invitation })}
+        <View style={[styles.content, { backgroundColor: theme.colors.background }]}> 
+          <View style={styles.header}>
+            <Text variant="headlineSmall">Manage Members</Text>
+            <IconButton icon={UserPlus} size={24} onPress={() => setShowInviteModal(true)} />
+          </View>
+          <ScrollView style={styles.scrollView}>
+            {/* Render members */}
+            <List.Section title="Members">
+              {members.map((member) => (
+                <View key={member.userId}>
+                  {renderMemberItem({ item: member })}
                 </View>
               ))}
             </List.Section>
-          )}
-        </ScrollView>
 
-        <Button onPress={onClose} mode="outlined" style={styles.closeButton}>
-          Close
-        </Button>
-        
-        {/* Invite Modal (nested) */}
-        <InviteModal 
-          visible={showInviteModal} 
-          onClose={() => setShowInviteModal(false)} 
-          tripId={trip.id} 
-        />
+            {/* Render invitations */}
+            {trip.invitations && trip.invitations.length > 0 && (
+              <List.Section title="Pending Invitations">
+                {trip.invitations.map((invitation) => (
+                  <View key={invitation.token}> 
+                    {renderInvitationItem({ item: invitation })}
+                  </View>
+                ))}
+              </List.Section>
+            )}
+          </ScrollView>
+          <Button onPress={onClose} mode="outlined" style={styles.closeButton}>
+            Close
+          </Button>
+          {/* Invite Modal (nested) */}
+          <InviteModal 
+            visible={showInviteModal} 
+            onClose={() => setShowInviteModal(false)} 
+            tripId={trip.id} 
+          />
+        </View>
       </Modal>
     </Portal>
   );
@@ -366,7 +362,8 @@ const styles = StyleSheet.create({
     margin: 20,
     borderRadius: 12,
     padding: 20,
-    maxHeight: '85%', // Prevent modal from taking full screen
+    maxHeight: '85%',
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',
@@ -392,5 +389,8 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     marginTop: 20,
+  },
+  content: {
+    // Styles for the content container
   },
 }); 

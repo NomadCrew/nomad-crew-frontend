@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Surface, Text, Button } from 'react-native-paper';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { Theme } from '@/src/theme/types';
 import { logger } from '@/src/utils/logger';
 
@@ -45,7 +45,7 @@ export class TodoErrorBoundary extends React.Component<Props, State> {
 }
 
 const TodoErrorFallback = ({ onRetry }: { onRetry: () => void }) => {
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   
   return (
     <Surface style={styles(theme).container}>

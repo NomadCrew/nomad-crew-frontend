@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet, Keyboard, ActivityIndicator, Platform } from 'react-native';
 import { Send } from 'lucide-react-native';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { useChatStore } from '../store';
 import { useThemedStyles } from '@/src/theme/utils';
 import { logger } from '@/src/utils/logger';
@@ -13,7 +13,7 @@ interface ChatInputProps {
 export const ChatInput: React.FC<ChatInputProps> = ({ tripId }) => {
   logger.debug('CHAT', `Rendering ChatInput for trip ${tripId}`);
   
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   const { sendMessage, setTypingStatus, isSending } = useChatStore();
   const [message, setMessage] = useState('');
   const inputRef = useRef<TextInput>(null);
