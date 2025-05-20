@@ -29,20 +29,23 @@ export const AuthGuard = ({ children }: AuthGuardProps) => {
       setIsCheckingAuth(true);
       
       try {
-        // Get the first segment to determine if we're in an auth route
+        // Get the first segment to determine if we're in an auth or onboarding route
         const firstSegment = segments[0];
         const isAuthGroup = firstSegment === '(auth)';
+        const isOnboardingGroup = firstSegment === '(onboarding)'; // Check for onboarding group
         
-        // If we have a user and token, but we're in auth group, redirect to main app
-        if (user && token && isAuthGroup) {
-          logger.debug('AUTH-GUARD', 'User is authenticated but on auth route, redirecting to app');
+        // If we have a user and token, but we're in auth group or onboarding group (and onboarding is complete),
+        // redirect to main app. If onboarding is not complete, user should stay in onboarding.
+        // This part might need refinement based on how onboarding completion is tracked and when to exit onboarding.
+        if (user && token && (isAuthGroup || isOnboardingGroup)) { // Simplified for now
+          logger.debug('AUTH-GUARD', 'User is authenticated but on auth/onboarding route, redirecting to app');
           router.replace('/(tabs)/trips');
           return;
         }
         
-        // If we don't have a user or token, and we're not in auth group, try to refresh
-        if ((!user || !token) && !isAuthGroup) {
-          logger.debug('AUTH-GUARD', 'User not authenticated, attempting refresh');
+        // If we don't have a user or token, and we're not in auth group or onboarding group, try to refresh
+        if ((!user || !token) && !isAuthGroup && !isOnboardingGroup) {
+          logger.debug('AUTH-GUARD', 'User not authenticated and not in auth/onboarding, attempting refresh');
           
           if (refreshToken) {
             try {

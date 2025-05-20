@@ -2,6 +2,12 @@
 
 ## 🚀 What Works (Completed Tasks)
 
+- **Startup Crash & Navigation Flow Resolved:**
+  - Fixed critical app startup crash by addressing font loading issues in `app/AppInitializer.tsx` (correcting Manrope paths, temporarily disabling Inter fonts).
+  - Resolved navigation conflicts between `OnboardingGate` and `AuthGuard`:
+    - `OnboardingGate` (`src/components/common/OnboardingGate.tsx`) updated to use `useSegments` for accurate detection of `(auth)` and `(onboarding)` layout groups, allowing necessary auth-related navigation during first-time use.
+    - `AuthGuard` (`src/features/auth/components/AuthGuard.tsx`) modified to prevent premature redirection away from `(onboarding)` routes for unauthenticated users.
+  - Confirmed initial app flow now correctly directs new users to onboarding screens before attempting authentication redirects.
 - Initial setup of memory bank files.
 - Received and processed the comprehensive refactoring guide.
 - Created basic component structure and fixed import issues:
@@ -29,72 +35,48 @@
   - Integrated guards into the app's root layout
   - Added support for authentication-related deep links
   - Set up robust error handling for authentication flows
+- Fixed import path for `ChatScreen` and `MobileChatScreen` in `app/chat/[tripId].tsx`.
+- Corrected logger module in `app/chat/[tripId].tsx` from 'Chat Route' to 'CHAT'.
+- Received comprehensive refactoring and improvement guide for the NomadCrew frontend.
+- Initiated update of the memory bank to reflect the refactoring plan.
+- Created `src/features` and `src/navigation` directories.
+- **Central Data Normalization (Adapter Pattern) Adopted:**
+  - All backend data will be normalized through a dedicated adapter function before entering Zustand state or UI.
+  - First implementation will be for trips: create a `TripAdapter` (e.g., `normalizeTrip`) and refactor trip store/service to use it.
 
 ## 🎯 What's Left (Pending Tasks)
 
 ### Phase 1: Foundational Refactoring
-1.  **Project Structure Refactor:**
-    *   [x] Transition to a feature-first directory structure (`src/features/...`).
-        *   [x] Create `src/features` and `src/navigation` directories.
-        *   [x] **Auth Module:** Moved to `src/features/auth/` (Completed).
-        *   [x] **Auth Module:** `service.ts` created; `supabaseClient` & `secure-token-manager` integrated.
-        *   [x] **Auth Module:** `store.ts` (full content) moved & `supabaseClient` import updated.
-        *   [x] **Auth Module:** Direct Supabase calls in `store.ts` abstracted to `service.ts` methods.
-        *   [x] **Auth Module:** Auth-specific types moved to `src/features/auth/types.ts`; old global type file deleted.
-        *   [x] **Auth Module:** Codebase imports for `useAuthStore` and `supabaseClient` updated.
-        *   [x] **Auth Module:** Refactored API calls in `store.ts` (e.g., `registerPushToken`) into `AuthService`.
-        *   [x] **Auth Module:** Reviewed `registerAuthHandlers` in `store.ts` (current approach acceptable).
-        *   [x] **Auth Module:** Finalized `types.ts` (removed redundant custom `Session`).
-        *   [x] **Auth Module:** Verified `src/store` and `src/types` not empty.
-        *   [x] **Trips Module:** Moved to `src/features/trips/` (Completed).
-        *   [x] **Todos Module:** Moved to `src/features/todos/` (Completed: store, types, components moved; imports updated; old files deleted).
-        *   [x] **Chat Module:** Moved to `src/features/chat/` (Completed).
-        *   [x] **Location Module:** Plan and move `src/store/useLocationStore.ts` and related files to `src/features/location/`. (Completed: store, types, components, screens moved; imports updated; old files/dirs cleaned up).
-        *   [x] **Notifications Module:** Plan and move to `src/features/notifications/`. (Completed: store, types, components, hooks moved; imports updated; old files/dirs cleaned up).
-        *   [x] **Global Utilities Consolidation:** Moved feature-specific utilities from global directories to their feature folders (`notifications.ts` to notifications feature).
-        *   [x] **Refactor Existing Barrel Files:** Updated imports from `auth` and `chat` feature barrel files to use direct paths, then delete the barrel files. (Trips module was created without one, adhering to new rule).
-        *   [x] **Post-Refactor Stability Check:** Addressed lint errors after `trips` module refactor. Lint passes with 0 errors.
-        *   [x] **WebSocket Event Handling Fix:** Corrected event parsing and routing in `TripDetailScreen.tsx`. Lint passes with 0 errors.
-        *   [x] **Auth Module:** Code cleanup (removed SecureTokenManager, secure-unlimited-store) and API client integration (`registerAuthHandlers`) completed.
-    *   [x] Organize `app/` (Expo Router) to mirror feature groupings.
-        *   [x] Cleaned up obsolete files: Removed `app/(tabs)-bkp/` directory.
-        *   [x] Replaced `app/index.tsx` TestScreen with proper app redirect.
-        *   [x] Created new tab structure in `app/(tabs)` with basic screen components.
-        *   [x] Removed old `app/notifications.tsx` and created a new one within the tabs structure.
-    *   [x] Clean up obsolete files (e.g., `app/(tabs)-bkp/`, `TestScreen`).
+1.  **Project Structure Refactor:** (Largely complete, minor items may remain under specific features)
 2.  **Application Testing:**
-    *   [x] Fix build issues related to imports:
-        *   [x] Fixed direct imports in Chat components (no barrel files)
-        *   [x] Created common components directory and moved LoadingScreen
-        *   [x] Fixed imports in WebSocketManager to reference feature folders
-        *   [x] Resolved import paths in notification store
-        *   [x] Created missing UI components (ThemedText, ThemedView, WeatherIcon)
-        *   [x] Fixed Zod discriminated union error in notification types
-        *   [x] Created proper tab navigation structure
-        *   [x] Fixed API client error with fetchUnreadCount by using api.get instead of apiClient.get
-        *   [x] Fixed chat routing in app/_layout.tsx
-        *   [x] Updated notification API endpoints to match the documented API
-        *   [x] Added API version prefix (/v1) to all endpoints
-    *   [ ] Test application on device/emulator after resolving import issues.
+    *   [x] Fix build issues related to imports (Covered by crash fix)
+    *   [x] Test application on device/emulator after resolving import issues (Crash resolved, basic navigation works)
+    *   [ ] **Thorough Testing & Validation (Authentication & Onboarding):** (Moved from `activeContext.md` - now a primary focus)
+        *   Test all authentication flows: email/password (login, register), Google Sign-In, Apple Sign-In.
+        *   Verify token persistence in SecureStore and correct behavior across app restarts.
+        *   Test `onAuthStateChange` listener scenarios.
+        *   Confirm 401 interceptor correctly refreshes token and retries requests.
+        *   Test logout thoroughly: SecureStore cleared, push token deregistered (verify backend), state reset.
+        *   Test error handling for all auth operations.
+        *   Test the complete onboarding flow now that navigation is unblocked. Ensure `isFirstTime` flag in `OnboardingProvider` is correctly set/reset.
     *   [ ] Verify full application functionality after refactoring.
 3.  **Coding Standards & Tooling Setup:**
     *   [ ] Customize and enforce ESLint rules strictly.
     *   [ ] Integrate and configure Prettier for code formatting.
     *   [ ] Set up Git hooks (Husky) for pre-commit/pre-push checks.
-4.  **Navigation System Refinement (Expo Router):**
+4.  **Navigation System Refinement (Expo Router):** (Largely addressed by recent fixes, pending full testing)
     *   [x] Consolidate routing with a proper root layout (`app/_layout.tsx`) including global providers.
     *   [x] Implement tab and stack navigation structure.
     *   [x] Implement guarded routes for authentication.
-    *   [ ] Test authentication system thoroughly. (Infrastructure improved, full testing pending)
     *   [ ] Ensure deep linking configuration is robust.
     *   [ ] Remove redundant navigation code.
 
 ### Phase 2: Core Logic & Pattern Implementation
 5.  **SOLID Principles Implementation (Iterative):**
-    *   [ ] Refactor key components/hooks for SRP (e.g., `ChatScreen` -> `useChatSession`).
+    *   [ ] Refactor key components/hooks for SRP.
     *   [ ] Ensure Open/Closed principle.
     *   [ ] Apply Liskov Substitution & Interface Segregation.
-    *   [ ] Implement Dependency Inversion (e.g., stores & services).
+    *   [ ] Implement Dependency Inversion.
 6.  **State Management (Zustand) Enhancements (Iterative):**
     *   [ ] Implement selective state selection using selectors.
     *   [ ] Refactor stores to use a dedicated service layer.
@@ -104,7 +86,6 @@
     *   [ ] Implement Container/Presenter pattern.
     *   [ ] Expand service abstraction layer.
     *   [ ] Organize and create new custom hooks.
-    *   [x] Use barrel files (`index.ts`) - **Reverted: Rule is NO barrel files for internal app code.**
 
 ### Phase 3: Feature-Specific Refactoring
 8.  **Feature Module Refactoring (Chat - DONE, covered by Phase 1)**
@@ -148,6 +129,7 @@
     *   [x] Moved `getUserDisplayName` from trips store to a proper utility file in auth feature.
     *   [x] Fixed the temporary activeTripId hardcoding in location store.
     *   [x] Removed and documented the deprecated DateSeparator logic in ChatList component.
+    *   [ ] Implement central data normalization for trips (TripAdapter): create adapter and refactor trip store/service to use it.
 3.  **Backend: Push Token Deregistration Endpoint:**
     *   (Backend Task) Implement the backend endpoint (e.g., `/users/push-token/deregister`) that the `logout` function in `useAuthStore` calls.
 4.  **Thorough Testing & Validation (Authentication):**
@@ -157,3 +139,12 @@
     *   Confirm 401 interceptor correctly refreshes token and retries requests.
     *   Test logout thoroughly: SecureStore cleared, push token deregistered (verify backend), state reset.
     *   Test error handling for all auth operations.
+
+### Further Next Steps (from activeContext.md)
+- **Address Inter Fonts:** Decide strategy (variable/static) and implement in `AppInitializer.tsx`.
+- **Investigate API Calls for Unauthenticated Users:** Review `fetchUnreadCount` and similar calls.
+- **Implement Central Data Normalization for Trips:** Create `TripAdapter` and refactor trip store/service.
+- **Backend: Push Token Deregistration Endpoint:** (Backend Task).
+- **Review `registerAuthHandlers` (Final Check):** Post-testing confirmation.
+- **Documentation Finalization:** Update developer docs.
+- **Resolve Persistent Linter Errors (if any).**

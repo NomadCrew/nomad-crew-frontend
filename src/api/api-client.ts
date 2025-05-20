@@ -280,8 +280,8 @@ export const api = apiClient.getAxiosInstance();
  * Calls the backend onboarding endpoint to upsert the user using the Supabase JWT.
  * Returns the user profile from the backend.
  */
-export async function onboardUser(): Promise<User> {
+export async function onboardUser(username: string): Promise<User> {
   const api = ApiClient.getInstance();
-  const response = await api.getAxiosInstance().post<User>(API_PATHS.users.onboard);
+  const response = await api.getAxiosInstance().post<User>(API_PATHS.users.onboard, { username });
   return response.data;
 }

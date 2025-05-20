@@ -2,6 +2,12 @@
 
 ## ✅ Recent Changes / Decisions (as of Current Date)
 
+- **Startup Crash & Navigation Flow Fixed:**
+    - Resolved app startup crash previously caused by a combination of font loading errors and navigation conflicts between `OnboardingGate` and `AuthGuard`.
+    - Corrected font loading paths in `app/AppInitializer.tsx` for Manrope fonts and temporarily commented out Inter fonts (due to missing static files) to allow bundling.
+    - Modified `src/components/common/OnboardingGate.tsx` to correctly use `useSegments` (from Expo Router) instead of `usePathname` for accurately detecting if a route belongs to the `(auth)` or `(onboarding)` layout groups. This ensures the gate allows navigation to necessary auth screens during the first-time flow.
+    - Updated `src/features/auth/components/AuthGuard.tsx` to prevent premature redirection from `(onboarding)` routes for unauthenticated users. This ensures the onboarding flow is presented to new users before any login prompts from the guard.
+    - Confirmed that Expo Router's `usePathname()` returns a canonical path (e.g., `/login`), while `useSegments()` returns an array including layout group segments (e.g., `['(auth)', 'login']`), making `useSegments()` essential for route guards that need to be aware of layout groups.
 - **API Client Integration Confirmed:**
     - Reviewed `src/api/api-client.ts` and confirmed its existing interceptor logic for 401s and token refresh is robust.
     - Ensured `registerAuthHandlers` is now called in `src/features/auth/store.ts` to properly connect the auth store with the API client, enabling the interceptors.
@@ -12,6 +18,10 @@
     - Corrected import paths in `src/features/auth/store.ts`.
     - Added explicit types for `onAuthStateChange` parameters (`event`, `session`) and `set` callback parameters (`prevState`).
     - Updated `src/features/auth/types.ts` by adding `registerPushToken` to the `AuthState` interface to resolve type errors.
+- **Central Data Normalization (Adapter Pattern) Adopted:**
+    - All backend data will be normalized through a dedicated adapter function before entering Zustand state or UI.
+    - This ensures type safety, prevents UI errors, and centralizes backend quirks handling.
+    - First implementation will be for trips: create a `TripAdapter` (e.g., `normalizeTrip`) and refactor trip store/service to use it.
 
 ## ✅ Recent Changes
 
@@ -132,31 +142,35 @@
     - Implemented a comprehensive `logout` method including push token deregistration (frontend part) and SecureStore cleanup.
     - Added `supabase.auth.onAuthStateChange` listener to keep store and SecureStore synced with Supabase events (`SIGNED_IN`, `SIGNED_OUT`, `TOKEN_REFRESHED`, `USER_UPDATED`).
 
-## 🧠 Next Steps
+## �� Next Steps
 
-1.  **Resolve Persistent Linter Errors (if any):**
-    *   Address any remaining linter errors, particularly "Cannot find module..." errors. This might involve restarting the TypeScript server or verifying the `node_modules` integrity.
-2.  ✅ **Address Codebase Comments:**
-    *   Systematically reviewed and addressed `TODO`, `FIXME`, and other relevant comments left in the codebase.
-    *   Moved `getUserDisplayName` from trips store to a proper utility file in auth feature.
-    *   Fixed the temporary activeTripId hardcoding in location store.
-    *   Removed and documented the deprecated DateSeparator logic in ChatList component.
-3.  **Backend: Push Token Deregistration Endpoint:**
-    *   (Backend Task) Implement the backend endpoint (e.g., `/users/push-token/deregister`) that the `logout` function in `useAuthStore` calls.
-4.  **Thorough Testing & Validation (Authentication):**
+1.  **Address Inter Fonts:**
+    *   Decide on the strategy for Inter fonts (use variable fonts `Inter-VariableFont_opsz,wght.ttf` or add static `.otf`/`.ttf` files to `assets/fonts/Inter/static/`).
+    *   Implement the chosen strategy in `app/AppInitializer.tsx`.
+2.  **Thorough Testing & Validation (Authentication & Onboarding):**
     *   Test all authentication flows: email/password (login, register), Google Sign-In, Apple Sign-In.
     *   Verify token persistence in SecureStore and correct behavior across app restarts.
     *   Test `onAuthStateChange` listener scenarios.
     *   Confirm 401 interceptor correctly refreshes token and retries requests.
     *   Test logout thoroughly: SecureStore cleared, push token deregistered (verify backend), state reset.
     *   Test error handling for all auth operations.
-5.  **Review `registerAuthHandlers` (Final Check):**
+    *   Test the complete onboarding flow now that navigation is unblocked. Ensure `isFirstTime` flag in `OnboardingProvider` is correctly set/reset.
+3.  **Investigate API Calls for Unauthenticated Users:**
+    *   Review API calls like `fetchUnreadCount` that might be triggered for unauthenticated users (e.g., on the login screen or during initial app load before full auth state is settled).
+    *   Ensure these calls are either deferred until authentication or handled gracefully if made by unauthenticated users.
+4.  **Implement Central Data Normalization for Trips:**
+    *   Create `src/features/trips/adapters/normalizeTrip.ts` with a normalization function for trip data.
+    *   Refactor trip store/service to use this adapter for all trip data entering the app state/UI.
+5.  **Backend: Push Token Deregistration Endpoint:**
+    *   (Backend Task) Implement the backend endpoint (e.g., `/users/push-token/deregister`) that the `logout` function in `useAuthStore` calls.
+6.  **Review `registerAuthHandlers` (Final Check):**
     *   After full testing, give a final confirmation that the `registerAuthHandlers` integration and functionality are as expected.
-6.  **Documentation Finalization:** Update internal developer documentation.
+7.  **Documentation Finalization:** Update internal developer documentation based on recent changes and learnings.
+8.  **Resolve Persistent Linter Errors (if any):**
+    *   Address any remaining linter errors.
 
 ## ❗ Active Decisions / Context
+- The combined use of `app/index.tsx` for initial onboarding/app redirection, `OnboardingGate` (using `useSegments`) for protecting non-onboarding/non-auth routes during first-time use, and `AuthGuard` for general route protection and auth redirects is the current established pattern.
+- `useSegments` is preferred over `usePathname` in route guards when layout group awareness is needed.
 - The API client interceptor in `src/api/api-client.ts` is considered sufficient for 401 handling and token refresh.
-- Primary focus shifting to resolving codebase comments and then thorough testing of the auth system.
-- The `registerAuthHandlers` function in `src/api/api-client.ts` is essential and has been correctly integrated with `useAuthStore`.
-- `secure-unlimited-store.ts` and `SecureTokenManager` have been removed as they are obsolete.
 - `expo-secure-store` is the standard for access token storage, managed within `useAuthStore`.

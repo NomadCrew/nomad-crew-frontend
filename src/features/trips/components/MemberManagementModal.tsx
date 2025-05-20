@@ -38,6 +38,11 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
   const [loading, setLoading] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
 
+  // Debug: Log if trip.members is not an array
+  if (!Array.isArray(trip.members)) {
+    console.error('[DEBUG] MemberManagementModal: trip.members is not an array:', trip.members, trip);
+  }
+
   // Debug trip data when modal becomes visible
   useEffect(() => {
     if (visible) {
@@ -47,8 +52,7 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
 
   // Ensure members array exists and includes the creator as owner if empty
   const members = React.useMemo(() => {
-    // If members array exists, use it as a starting point
-    const membersList = trip.members && trip.members.length > 0 
+    const membersList = Array.isArray(trip.members) && trip.members.length > 0 
       ? [...trip.members] 
       : [];
     

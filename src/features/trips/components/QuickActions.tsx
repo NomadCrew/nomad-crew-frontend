@@ -222,6 +222,10 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
               }
               
               // Make sure all members have names
+              if (!Array.isArray(tripCopy.members)) {
+                console.error('[DEBUG] QuickActions: tripCopy.members is not an array:', tripCopy.members, tripCopy);
+                tripCopy.members = [];
+              }
               tripCopy.members = tripCopy.members.map(member => {
                 if (!member.name) {
                   // If member is current user, use their info

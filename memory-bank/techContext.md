@@ -45,6 +45,8 @@ This document outlines the technology stack, key libraries, and development prac
     *   Deep linking support via `scheme` in `app.config.js`.
     *   `useLocalSearchParams`, `useGlobalSearchParams` for accessing route params.
     *   `router.push`, `router.replace`, `router.back` for programmatic navigation.
+    *   `usePathname()` returns the canonical path (e.g., `/login` for a route file `app/(auth)/login.tsx`).
+    *   `useSegments()` returns an array of path segments, including layout group segments (e.g., `['(auth)', 'login']` for `app/(auth)/login.tsx`). This is crucial for route guards that need to identify if a path belongs to a specific layout group.
 
 ## 6. Authentication & Authorization
 *   **Supabase:** Backend-as-a-Service for authentication.

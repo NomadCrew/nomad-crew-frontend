@@ -1,3 +1,5 @@
+console.log('[LoginScreen] Rendering');
+
 import { useState } from 'react';
 import {
   StyleSheet,

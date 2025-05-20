@@ -23,6 +23,13 @@ export default function OnboardingLayout() {
             headerBackVisible: false,
           }} 
         />
+        <Stack.Screen 
+          name="username" 
+          options={{ 
+            gestureEnabled: false,
+            headerBackVisible: false,
+          }} 
+        />
       </Stack>
     );
   }

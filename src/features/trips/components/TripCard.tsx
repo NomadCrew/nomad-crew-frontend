@@ -65,6 +65,12 @@ export const TripCard: React.FC<TripCardProps> = ({
     return <View style={[styles.container, styles.ghostCard, style]} />;
   }
 
+  // Defensive: log and fallback if trip.members is not an array
+  if (!Array.isArray(trip.members)) {
+    console.error('[TripCard] trip.members is not an array:', trip.id, trip.members, trip);
+  }
+  const participantCount = Array.isArray(trip.members) ? trip.members.length : 1;
+
   const timing = getTripTiming(trip.startDate, trip.endDate);
   const duration = getDurationString(trip.startDate, trip.endDate);
 
@@ -119,7 +125,7 @@ export const TripCard: React.FC<TripCardProps> = ({
           <InfoRow icon={MapPin} text={trip.destination.address} lightText />
           <InfoRow icon={CalendarClock} text={timing} lightText />
           <InfoRow icon={Clock} text={duration} lightText />
-          <InfoRow icon={Users} text={`${trip.participantCount || 1} ${(trip.participantCount || 1) !== 1 ? 's' : ''}`} />
+          <InfoRow icon={Users} text={`${participantCount} ${participantCount !== 1 ? 's' : ''}`} />
         </View>
       </View>
     </ImageBackground>

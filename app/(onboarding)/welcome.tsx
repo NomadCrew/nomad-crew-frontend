@@ -1,28 +1,51 @@
+console.log('[OnboardingWelcomeScreen] Rendering');
+
 import React from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View, SafeAreaView } from 'react-native';
 import { router } from 'expo-router';
 import { OnboardingCarousel } from '@/components/onboarding/OnboardingCarousel';
 import { useOnboarding } from '@/src/providers/OnboardingProvider';
 import { ONBOARDING_SLIDES } from '@/src/constants/onboarding';
+import { TravelVanAnimation } from '@/src/components/TravelVanAnimation';
 
 export default function WelcomeScreen() {
   const { setFirstTimeDone } = useOnboarding();
 
   const handleComplete = async () => {
     try {
+      console.log('[OnboardingWelcomeScreen] Completing onboarding');
       await setFirstTimeDone();
-      router.replace('/(auth)/login');
+      console.log('[OnboardingWelcomeScreen] Navigating to username screen');
+      router.replace('/(onboarding)/username');
     } catch (error) {
-      // Navigation error occurred
+      console.error('[OnboardingWelcomeScreen] Error completing onboarding:', error);
     }
   };
 
+  console.log('[OnboardingWelcomeScreen] Rendering content');
+  
   return (
-    <OnboardingCarousel 
-      slides={ONBOARDING_SLIDES} 
-      onComplete={handleComplete}
-    />
+    <SafeAreaView style={styles.container}>
+        <OnboardingCarousel 
+          slides={ONBOARDING_SLIDES} 
+          onComplete={handleComplete}
+        />
+    </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({});
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  content: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  animation: {
+    marginTop: 32,
+    marginBottom: 12,
+  }
+});
