@@ -42,10 +42,21 @@ export function TripList({ onTripPress, style, trips: propTrips }: Props) {
   
   const trips = propTrips || storeTrips;
 
+  // Defensive normalization: ensure every trip has a valid members array
+  const safeTrips = trips.map(trip => {
+    if (!Array.isArray(trip.members)) {
+      console.error('[TripList] Malformed members array:', trip.id, trip.members, trip);
+    }
+    return {
+      ...trip,
+      members: Array.isArray(trip.members) ? trip.members : [],
+    };
+  });
+
   const sections = useMemo(() => {
     const now = new Date();
   
-    const activeTrips = trips.filter(trip => {
+    const activeTrips = safeTrips.filter(trip => {
       const startDate = new Date(trip.startDate);
       const endDate = new Date(trip.endDate);
       return (
@@ -54,7 +65,7 @@ export function TripList({ onTripPress, style, trips: propTrips }: Props) {
       );
     });
   
-    const upcomingTrips = trips.filter(trip => {
+    const upcomingTrips = safeTrips.filter(trip => {
       const startDate = new Date(trip.startDate);
       return (
         (trip.status === 'PLANNING' || trip.status === 'ACTIVE') &&
@@ -62,7 +73,7 @@ export function TripList({ onTripPress, style, trips: propTrips }: Props) {
       );
     });
   
-    const pastTrips = trips.filter(trip => {
+    const pastTrips = safeTrips.filter(trip => {
       const endDate = new Date(trip.endDate);
       return (
         (trip.status === 'COMPLETED' || trip.status === 'CANCELLED') ||
@@ -84,7 +95,7 @@ export function TripList({ onTripPress, style, trips: propTrips }: Props) {
     }
   
     return sections;
-  }, [trips]);
+  }, [safeTrips]);
 
   return (
     <ThemedView style={[styles.container, style]}>

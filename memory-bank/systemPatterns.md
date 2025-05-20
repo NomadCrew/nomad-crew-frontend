@@ -72,6 +72,7 @@ All new and refactored code must strive to adhere to SOLID principles:
 *   Programmatic navigation via `expo-router`'s `router` object.
 *   Deep linking configured via `app.config.js` and handled by Expo Router.
 *   Guarded routes implemented using layouts or higher-order components/hooks checking auth state.
+    *   **Note on Guards and Layout Groups:** When implementing guards (like `AuthGuard` or `OnboardingGate`) that need to make decisions based on whether a route is within a layout group (e.g., `(auth)`, `(onboarding)`), use `useSegments()` from Expo Router. `usePathname()` returns a canonical path that excludes layout group prefixes (e.g., `/login` for `app/(auth)/login.tsx`), whereas `useSegments()` provides an array of segments including the group (e.g., `['(auth)', 'login']`), allowing for accurate group detection.
 
 ## 5. Error Handling Strategy
 *   **API Errors:** `apiClient` (Axios instance) uses interceptors to handle common HTTP errors (e.g., 401 for logout, 403 for forbidden). Standardized error shapes from API responses.
@@ -83,4 +84,30 @@ All new and refactored code must strive to adhere to SOLID principles:
 *   Managed primarily through Zustand store actions and services.
 *   Promises (`async/await`) for handling asynchronous flows.
 *   Loading states (`isLoading`, `isSubmitting`) maintained in stores and used by UI to provide feedback.
-*   Real-time updates via WebSockets, managed by a `WebSocketManager` (or feature-specific socket services) and integrated with Zustand stores. 
+*   Real-time updates via WebSockets, managed by a `WebSocketManager` (or feature-specific socket services) and integrated with Zustand stores.
+
+## 7. Data Normalization & Adapter Pattern
+
+*   **Central Data Normalization (Adapter Pattern):**
+    *   All data received from backend APIs should be normalized/adapted through a dedicated adapter function before being stored in Zustand or passed to UI components.
+    *   **Why:**
+        *   Ensures consistent data shape and type safety throughout the app.
+        *   Prevents UI errors due to missing/null/incorrectly-typed fields (e.g., `members` being null instead of an array).
+        *   Centralizes logic for handling backend quirks, migrations, or version differences.
+    *   **How:**
+        *   Each feature module (e.g., trips, chat, notifications) should have an adapter (e.g., `TripAdapter`, `normalizeTrip`, `adaptTripFromApi`).
+        *   The adapter takes raw API data and returns a fully-typed, frontend-safe object.
+        *   All store actions and services must use the adapter before updating state or returning data to components.
+    *   **Example (Trips):**
+        *   `src/features/trips/adapters/normalizeTrip.ts`:
+        ```ts
+        export function normalizeTrip(raw: any): Trip {
+          return {
+            ...raw,
+            members: Array.isArray(raw.members) ? raw.members : [],
+            // ...other normalization logic
+          };
+        }
+        ```
+    *   **Recommendation:**
+        *   Refactor all major features to use this pattern for robust, maintainable, and error-resistant data handling. 

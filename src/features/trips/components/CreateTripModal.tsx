@@ -14,7 +14,7 @@ import { useAppTheme } from '@/src/theme/ThemeProvider';
 interface CreateTripModalProps {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (tripData: Trip) => Promise<void>;
+  onSubmit: (tripData: Trip) => Promise<Trip>;
 }
 
 export default function CreateTripModal({
@@ -72,11 +72,25 @@ export default function CreateTripModal({
         "Not all who wander are lost. - J.R.R. Tolkien",
       ];
       const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-      await onSubmit(trip as Trip);
-      Alert.alert('Trip Created!', `Your trip to ${trip.destination?.address} is ready!\n\n${randomQuote}`);
+      console.log('[CreateTripModal] handleSubmit trip before onSubmit:', trip);
+      if (trip && trip.members) {
+        console.log('[CreateTripModal] trip.members before onSubmit:', trip.members);
+      } else {
+        console.log('[CreateTripModal] trip.members is', trip ? trip.members : 'trip is undefined');
+      }
+      const createdTrip = await onSubmit(trip as Trip);
+      console.log('[CreateTripModal] createdTrip from backend:', createdTrip);
+      if (createdTrip && createdTrip.members) {
+        console.log('[CreateTripModal] createdTrip.members:', createdTrip.members);
+      } else {
+        console.log('[CreateTripModal] createdTrip.members is', createdTrip ? createdTrip.members : 'createdTrip is undefined');
+      }
+      Alert.alert('Trip Created!', `Your trip to ${createdTrip.destination?.address} is ready!\n\n${randomQuote}`);
       onClose();
     } catch (error) {
-      Alert.alert('Error', 'Failed to create trip. Please try again.');
+      Alert.alert('Error', 'Failed to create trip. Please try again.' + (error instanceof Error ? error.message : JSON.stringify(error)));
+      console.log('[CreateTripModal] Caught error:', error, error?.stack);
+      console.log('trip payload', trip);
     } finally {
       setLoading(false);
     }

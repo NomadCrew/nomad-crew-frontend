@@ -35,7 +35,7 @@ interface ApiError extends Error {
  */
 const recoverSession = async () => {
   try {
-    const { data: { session }, error } = await supabase.auth.getSession(); // Uses new supabase import
+    const { data: { session }, error } = await supabase.auth.getSession();
     if (error) throw error;
 
     // If there's a session, return it
@@ -287,7 +287,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
           console.log('Setting Zustand refreshToken after register:', data.session.refresh_token);
           // Onboard user with backend
           try {
-            user = await onboardUser();
+            user = await onboardUser(user.username || user.email?.split('@')[0] || '');
           } catch (onboardError) {
             logger.warn('AUTH', 'Onboarding failed after register:', onboardError);
             // Continue with Supabase user if onboarding fails
@@ -383,7 +383,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         console.log('Setting Zustand refreshToken after login:', data.session.refresh_token);
         // Onboard user with backend
         try {
-          user = await onboardUser();
+          user = await onboardUser(user.username || user.email?.split('@')[0] || '');
         } catch (onboardError) {
           logger.warn('AUTH', 'Onboarding failed after login:', onboardError);
           // Continue with Supabase user if onboarding fails
@@ -426,7 +426,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         };
         // Onboard user with backend
         try {
-          user = await onboardUser();
+          user = await onboardUser(user.username || user.email?.split('@')[0] || '');
         } catch (onboardError) {
           logger.warn('AUTH', 'Onboarding failed after Google sign-in:', onboardError);
         }
@@ -474,7 +474,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         };
         // Onboard user with backend
         try {
-          user = await onboardUser();
+          user = await onboardUser(user.username || user.email?.split('@')[0] || '');
         } catch (onboardError) {
           logger.warn('AUTH', 'Onboarding failed after Apple sign-in:', onboardError);
           // Continue with Supabase user if onboarding fails
