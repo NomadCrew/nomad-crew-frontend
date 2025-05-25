@@ -11,6 +11,8 @@ import { FAB, ActivityIndicator } from 'react-native-paper';
 import CreateTripModal from '@/src/features/trips/components/CreateTripModal';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useAuthStore } from '@/src/features/auth/store';
+import { logger } from '@/src/utils/logger';
 
 const TABS: { key: 'Active' | 'History' | 'Cancelled', label: string }[] = [
   { key: 'Active', label: 'Active' },
@@ -114,10 +116,17 @@ export default function TripsScreen() {
   const screenWidth = Dimensions.get('window').width;
   const searchWidth = useRef(new Animated.Value(40)).current;
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const { token, isInitialized } = useAuthStore();
 
   useEffect(() => {
-    fetchTrips();
-  }, [fetchTrips]);
+    logger.info('UI', 'TripsScreen useEffect: isInitialized:', isInitialized, 'token exists:', !!token);
+    if (isInitialized && token) {
+      logger.info('UI', 'TripsScreen: Calling fetchTrips()');
+      fetchTrips();
+    } else {
+      logger.info('UI', 'TripsScreen: Conditions not met to fetch trips.');
+    }
+  }, [fetchTrips, token, isInitialized]);
 
   const toggleSearch = () => {
     Animated.timing(searchWidth, {
@@ -132,15 +141,16 @@ export default function TripsScreen() {
     });
   };
 
-  // Filter trips based on active tab and search query
   const filteredTrips = React.useMemo(() => {
+    logger.info('UI', 'TripsScreen: Recalculating filteredTrips. Trips from store:', trips);
+    logger.info('UI', 'TripsScreen: tripsLoading state:', tripsLoading);
     let filtered = [...trips];
-    // Filter by search query
+
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter((trip) =>
         trip.name.toLowerCase().includes(query) ||
-        trip.destination?.address?.toLowerCase().includes(query)
+        (trip.destination?.address && trip.destination.address.toLowerCase().includes(query))
       );
     }
     const now = new Date();
@@ -160,7 +170,7 @@ export default function TripsScreen() {
       default:
         return filtered;
     }
-  }, [trips, activeTab, searchQuery]);
+  }, [trips, activeTab, searchQuery, tripsLoading]);
 
   const handleTripPress = (trip: Trip) => {
     router.push(`/trip/${trip.id}`);

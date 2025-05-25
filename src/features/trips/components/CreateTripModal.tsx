@@ -23,7 +23,7 @@ export default function CreateTripModal({
   onSubmit,
 }: CreateTripModalProps) {
   const theme = useAppTheme().theme;
-  const authStore = useAuthStore();
+  const { user: currentUser } = useAuthStore();
   const [trip, setTrip] = useState<Partial<Trip>>({
     id: '',
     name: '',
@@ -32,7 +32,16 @@ export default function CreateTripModal({
     startDate: new Date().toISOString(),
     endDate: new Date().toISOString(),
     status: 'PLANNING',
-    createdBy: authStore.user?.id || '',
+    createdBy: currentUser?.id || '',
+    members: currentUser?.id ? [
+      {
+        userId: currentUser.id,
+        role: 'owner',
+        name: currentUser.username || currentUser.email?.split('@')[0] || 'Owner',
+        joinedAt: new Date().toISOString(),
+      }
+    ] : [],
+    invitations: [],
   });
   const [showDatePicker, setShowDatePicker] = useState<'start' | 'end' | null>(null);
   const [loading, setLoading] = useState(false);
@@ -63,6 +72,24 @@ export default function CreateTripModal({
   async function handleSubmit() {
     if (!validateForm()) return;
     setLoading(true);
+    
+    const tripPayload: Partial<Trip> = {
+      ...trip,
+      createdBy: currentUser?.id || '',
+    };
+
+    if (currentUser && (!tripPayload.members || tripPayload.members.length === 0)) {
+      tripPayload.members = [{
+        userId: currentUser.id,
+        role: 'owner',
+        name: currentUser.username || currentUser.email?.split('@')[0] || 'Owner',
+        joinedAt: new Date().toISOString(),
+      }];
+    }
+    if (!tripPayload.invitations) {
+      tripPayload.invitations = [];
+    }
+
     try {
       const quotes = [
         "The journey of a thousand miles begins with a single step. - Lao Tzu",
@@ -72,13 +99,13 @@ export default function CreateTripModal({
         "Not all who wander are lost. - J.R.R. Tolkien",
       ];
       const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-      console.log('[CreateTripModal] handleSubmit trip before onSubmit:', trip);
-      if (trip && trip.members) {
-        console.log('[CreateTripModal] trip.members before onSubmit:', trip.members);
+      console.log('[CreateTripModal] handleSubmit trip before onSubmit:', tripPayload);
+      if (tripPayload && tripPayload.members) {
+        console.log('[CreateTripModal] tripPayload.members before onSubmit:', tripPayload.members);
       } else {
-        console.log('[CreateTripModal] trip.members is', trip ? trip.members : 'trip is undefined');
+        console.log('[CreateTripModal] tripPayload.members is', tripPayload ? tripPayload.members : 'tripPayload is undefined');
       }
-      const createdTrip = await onSubmit(trip as Trip);
+      const createdTrip = await onSubmit(tripPayload as Trip);
       console.log('[CreateTripModal] createdTrip from backend:', createdTrip);
       if (createdTrip && createdTrip.members) {
         console.log('[CreateTripModal] createdTrip.members:', createdTrip.members);
@@ -88,9 +115,16 @@ export default function CreateTripModal({
       Alert.alert('Trip Created!', `Your trip to ${createdTrip.destination?.address} is ready!\n\n${randomQuote}`);
       onClose();
     } catch (error) {
-      Alert.alert('Error', 'Failed to create trip. Please try again.' + (error instanceof Error ? error.message : JSON.stringify(error)));
-      console.log('[CreateTripModal] Caught error:', error, error?.stack);
-      console.log('trip payload', trip);
+      let errorMessage = 'Failed to create trip. Please try again.';
+      if (error instanceof Error) {
+        errorMessage += ` (${error.message})`;
+        console.log('[CreateTripModal] Caught error:', error.message, error.stack);
+      } else {
+        errorMessage += ` (${JSON.stringify(error)})`;
+        console.log('[CreateTripModal] Caught error (non-Error object):', error);
+      }
+      Alert.alert('Error', errorMessage);
+      console.log('trip payload', tripPayload);
     } finally {
       setLoading(false);
     }
@@ -129,7 +163,7 @@ export default function CreateTripModal({
         <View style={[styles.modalContent, { backgroundColor: theme.colors.background, height: windowHeight * 0.7 }]}> 
           {/* Drag handle */}
           <View style={styles.dragHandleWrapper}>
-            <View style={[styles.dragHandle, { backgroundColor: theme.colors.outlineVariant }]} />
+            <View style={[styles.dragHandle, { backgroundColor: theme.colors.outline }]} />
           </View>
           {/* Header */}
           <View style={styles.headerRow}>
@@ -181,11 +215,11 @@ export default function CreateTripModal({
                 <ThemedText variant="label.medium" color="content.secondary" style={styles.label}>Start Date</ThemedText>
                 <Pressable
                   onPress={() => setShowDatePicker('start')}
-                  style={[styles.dateDisplay, { borderColor: theme.colors.outline, backgroundColor: theme.colors.surface }]}
+                  style={[styles.dateDisplay, { borderColor: theme.colors.outline, backgroundColor: theme.colors.surface.default }]}
                   accessibilityLabel="Select start date"
                 >
                   <View style={styles.dateDisplayContent}>
-                    <MaterialCommunityIcons name="calendar" size={20} color={theme.colors.primary} style={{ marginRight: 6 }} />
+                    <MaterialCommunityIcons name="calendar" size={20} color={theme.colors.primary.main} style={{ marginRight: 6 }} />
                     <ThemedText color="content.primary">{formattedStartDate}</ThemedText>
                   </View>
                 </Pressable>
@@ -194,11 +228,11 @@ export default function CreateTripModal({
                 <ThemedText variant="label.medium" color="content.secondary" style={styles.label}>End Date</ThemedText>
                 <Pressable
                   onPress={() => setShowDatePicker('end')}
-                  style={[styles.dateDisplay, { borderColor: theme.colors.outline, backgroundColor: theme.colors.surface }]}
+                  style={[styles.dateDisplay, { borderColor: theme.colors.outline, backgroundColor: theme.colors.surface.default }]}
                   accessibilityLabel="Select end date"
                 >
                   <View style={styles.dateDisplayContent}>
-                    <MaterialCommunityIcons name="calendar" size={20} color={theme.colors.primary} style={{ marginRight: 6 }} />
+                    <MaterialCommunityIcons name="calendar" size={20} color={theme.colors.primary.main} style={{ marginRight: 6 }} />
                     <ThemedText color="content.primary">{formattedEndDate}</ThemedText>
                   </View>
                 </Pressable>
@@ -222,7 +256,7 @@ export default function CreateTripModal({
               loading={loading}
               disabled={loading}
               style={[styles.submitButton, { backgroundColor: theme.colors.primary.main }]}
-              labelStyle={[styles.submitButtonLabel, { color: theme.colors.primary.onPrimary }]}
+              labelStyle={[styles.submitButtonLabel, { color: theme.colors.onPrimary }]}
               accessibilityLabel="Create Trip"
               contentStyle={{ height: 48 }}
             >

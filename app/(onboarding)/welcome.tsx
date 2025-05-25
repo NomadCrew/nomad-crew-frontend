@@ -1,12 +1,9 @@
-console.log('[OnboardingWelcomeScreen] Rendering');
-
 import React from 'react';
 import { StyleSheet, View, SafeAreaView } from 'react-native';
 import { router } from 'expo-router';
 import { OnboardingCarousel } from '@/components/onboarding/OnboardingCarousel';
 import { useOnboarding } from '@/src/providers/OnboardingProvider';
 import { ONBOARDING_SLIDES } from '@/src/constants/onboarding';
-import { TravelVanAnimation } from '@/src/components/TravelVanAnimation';
 
 export default function WelcomeScreen() {
   const { setFirstTimeDone } = useOnboarding();
@@ -15,8 +12,8 @@ export default function WelcomeScreen() {
     try {
       console.log('[OnboardingWelcomeScreen] Completing onboarding');
       await setFirstTimeDone();
-      console.log('[OnboardingWelcomeScreen] Navigating to username screen');
-      router.replace('/(onboarding)/username');
+      console.log('[OnboardingWelcomeScreen] Navigating to login screen');
+      router.replace('/(auth)/login');
     } catch (error) {
       console.error('[OnboardingWelcomeScreen] Error completing onboarding:', error);
     }

@@ -95,6 +95,11 @@ export default function EmailLoginForm({ onClose }: EmailLoginFormProps) {
       }
       
       if (!error) {
+        const { user } = useAuthStore.getState();
+        if (!user?.username) {
+          router.replace('/(onboarding)/username');
+          return;
+        }
         await checkPendingInvitations();
         onClose();
       }

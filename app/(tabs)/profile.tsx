@@ -5,6 +5,7 @@ import { ThemedView } from '@/src/components/ThemedView';
 import { ThemedText } from '@/src/components/ThemedText';
 import { useAuthStore } from '@/src/features/auth/store';
 import { Button } from 'react-native-paper';
+import { Avatar } from '@/components/ui/Avatar';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -23,10 +24,15 @@ export default function ProfileScreen() {
       <ThemedView style={styles.content}>
         {user && (
           <>
+            <Avatar user={user} size="xl" style={styles.avatar} />
             <ThemedText variant="body.large" style={styles.email}>
               {user.email}
             </ThemedText>
-            
+            {user.username && (
+              <ThemedText variant="body.medium" style={styles.username}>
+                @{user.username}
+              </ThemedText>
+            )}
             <Button 
               mode="contained" 
               onPress={handleSignOut}
@@ -58,5 +64,12 @@ const styles = StyleSheet.create({
   },
   button: {
     width: '80%',
+  },
+  avatar: {
+    marginBottom: 16,
+  },
+  username: {
+    marginBottom: 24,
+    color: '#888',
   },
 }); 

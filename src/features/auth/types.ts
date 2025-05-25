@@ -64,6 +64,8 @@ export interface AuthState {
     refreshToken: string | null;
     refreshSession: () => Promise<void>;
     registerPushToken: () => Promise<void>;
+    needsUsername: boolean;
+    setNeedsUsername: (value: boolean) => void;
 }
 
 export interface AuthTokens {

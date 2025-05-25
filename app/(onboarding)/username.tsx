@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { TextInput, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { useAuthStore } from '@/src/features/auth/store';
-import { onboardUser } from '@/src/api/api-client';
+import { onboardUser, getCurrentUserProfile } from '@/src/api/api-client';
 import { router } from 'expo-router';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { ThemedText } from '@/src/components/ThemedText';
 import { ThemedView } from '@/src/components/ThemedView';
+import { TravelVanAnimation } from '@/src/components/TravelVanAnimation';
 
 const PUNS = [
   "Let's make it official! Pick a username your crew will remember.",
@@ -29,17 +30,55 @@ const PUNS = [
   "Type a name. Feel powerful. Become unstoppable.",
 ];
 
+const usernames = [
+  "xXx_SlayerBoi420_xXx",
+  "password123",
+  "toenail_collector",
+  "notavirus.exe",
+  "__underscore__king__",
+  "69_cheeseburgerz_69",
+  "i_luv_taxidermy",
+  "ur_mom_dot_com",
+  "flat_earth_daddy",
+  "emotional_baggage69",
+  "crustybagel",
+  "C0d3r_B0y_2008",
+  "grandmas_wrath",
+  "twerky_turtle",
+  "butter_fartz",
+  "sadboi.vibes.only",
+  "why_am_I_like_this",
+  "uncle_touchy",
+  "milkman_returns",
+  "secretnachos"
+];
+
 function getRandomPun() {
   return PUNS[Math.floor(Math.random() * PUNS.length)];
 }
 
+function getRandomUsername() {
+  return usernames[Math.floor(Math.random() * usernames.length)];
+}
+
+console.log('[UsernameStep] File loaded, starting UsernameStep component render');
+
 export default function UsernameStep() {
-  const { user, setUser } = useAuthStore();
-  const [username, setUsername] = useState(user?.username || user?.email?.split('@')[0] || '');
+  console.log('[UsernameStep] Inside UsernameStep function - rendering');
+  const user = useAuthStore((state) => state.user);
+  // @ts-ignore - Temporarily ignore for logging, AuthState type might be missing action signatures
+  const setUser = useAuthStore((state) => state.setUser);
+  // @ts-ignore - Temporarily ignore for logging, AuthState type might be missing action signatures
+  const setNeedsUsername = useAuthStore((state) => state.setNeedsUsername);
+  // Prefer current username, then email prefix, then random
+  const initialUsername = user?.username || user?.email?.split('@')[0] || getRandomUsername();
+  const [username, setUsername] = useState(initialUsername);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [pun] = useState(getRandomPun());
   const { theme } = useAppTheme();
+
+  const isUnchanged = username.trim() === initialUsername.trim();
 
   const handleSubmit = async () => {
     if (!username.trim()) {
@@ -49,12 +88,22 @@ export default function UsernameStep() {
     setLoading(true);
     setError('');
     try {
-      // Optionally: check username availability via API here
-      const updatedUser = await onboardUser(username.trim());
-      if (setUser) setUser(updatedUser);
+      // Only send username to backend when user submits
+      console.log('Submitting username to backend:', username.trim());
+      await onboardUser(username.trim());
+      // Fetch the updated user profile
+      const updatedUser = await getCurrentUserProfile();
+      console.log('Fetched backend user after setting username:', updatedUser);
+      setUser(updatedUser);
+      setNeedsUsername(false);
       router.replace('/(auth)/login');
-    } catch (e) {
-      setError('Failed to set username. Please try another.');
+    } catch (e: any) {
+      // If backend returns uniqueness error, show it
+      if (e?.response?.data?.message?.toLowerCase().includes('username')) {
+        setError('That username is taken. Please try another.');
+      } else {
+        setError('Failed to set username. Please try another.');
+      }
     } finally {
       setLoading(false);
     }
@@ -65,6 +114,7 @@ export default function UsernameStep() {
       <ThemedText variant="heading.h1" style={{ fontSize: 32, marginBottom: 8, textAlign: 'center' }}>
         👋 Welcome, Nomad!
       </ThemedText>
+      <TravelVanAnimation />
       <ThemedText variant="body.large" color="content.secondary" style={{ marginBottom: 20, textAlign: 'center', fontSize: 18 }}>
         {pun}
       </ThemedText>
@@ -75,7 +125,7 @@ export default function UsernameStep() {
         <TextInput
           value={username}
           onChangeText={setUsername}
-          placeholder="Username"
+          placeholder={initialUsername}
           autoCapitalize="none"
           style={[
             styles.input,
@@ -105,7 +155,9 @@ export default function UsernameStep() {
           {loading ? (
             <ActivityIndicator color={theme.colors.primary.text} />
           ) : (
-            <ThemedText color="primary.text" style={styles.buttonText}>Continue</ThemedText>
+            <ThemedText color="primary.text" style={styles.buttonText}>
+              {isUnchanged ? 'Keep this username' : 'Set username'}
+            </ThemedText>
           )}
         </Pressable>
       </ThemedView>

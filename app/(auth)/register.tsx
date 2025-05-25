@@ -35,6 +35,11 @@ export default function RegisterScreen() {
   const handleRegister = async () => {
     try {
       await register(formData);
+      const { user } = useAuthStore.getState();
+      if (user && !user.username) {
+        router.replace('/(onboarding)/username');
+        return;
+      }
       Alert.alert(
         "Registration Successful",
         "We've sent you a verification email. Please click the link in the email to verify and login again.",
@@ -69,7 +74,7 @@ export default function RegisterScreen() {
           {/* Username Input */}
           <TextInput
             style={[
-              inputStyles.states[focusedInput === 'username' ? 'focus' : 'idle'],
+              inputStyles.states[focusedInput === 'username' ? 'focus' : 'idle'].text,
               inputStyles.text,
             ]}
             placeholder="Username"
@@ -85,7 +90,7 @@ export default function RegisterScreen() {
           {/* Email Input */}
           <TextInput
             style={[
-              inputStyles.states[focusedInput === 'email' ? 'focus' : 'idle'],
+              inputStyles.states[focusedInput === 'email' ? 'focus' : 'idle'].text,
               inputStyles.text,
             ]}
             placeholder="Email"
@@ -103,7 +108,7 @@ export default function RegisterScreen() {
           {/* Password Input */}
           <TextInput
             style={[
-              inputStyles.states[focusedInput === 'password' ? 'focus' : 'idle'],
+              inputStyles.states[focusedInput === 'password' ? 'focus' : 'idle'].text,
               inputStyles.text,
             ]}
             placeholder="Password"
@@ -120,7 +125,7 @@ export default function RegisterScreen() {
           {/* First Name Input */}
           <TextInput
             style={[
-              inputStyles.states[focusedInput === 'firstName' ? 'focus' : 'idle'],
+              inputStyles.states[focusedInput === 'firstName' ? 'focus' : 'idle'].text,
               inputStyles.text,
             ]}
             placeholder="First Name (Optional)"
@@ -136,7 +141,7 @@ export default function RegisterScreen() {
           {/* Last Name Input */}
           <TextInput
             style={[
-              inputStyles.states[focusedInput === 'lastName' ? 'focus' : 'idle'],
+              inputStyles.states[focusedInput === 'lastName' ? 'focus' : 'idle'].text,
               inputStyles.text,
             ]}
             placeholder="Last Name (Optional)"

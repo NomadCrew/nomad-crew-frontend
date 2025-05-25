@@ -10,7 +10,7 @@ import { ERROR_CODES, ERROR_MESSAGES } from '@/src/api/constants'; // Path might
 import { registerAuthHandlers } from '@/src/api/api-client'; // This needs careful review for new service structure
 import * as Notifications from 'expo-notifications';
 import { api } from '@/src/api/api-client'; // This will likely be replaced by AuthService methods
-import { onboardUser } from '@/src/api/api-client';
+import { onboardUser, getCurrentUserProfile } from '@/src/api/api-client';
 
 const ACCESS_TOKEN_KEY = 'supabase_access_token'; // Added constant
 
@@ -61,6 +61,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
     status: 'unauthenticated' as AuthStatus,
     refreshToken: null,
     pushToken: null,
+    needsUsername: false,
 
     /**
      * Called on app start to recover session
@@ -79,24 +80,74 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
         if (session) { // If Supabase has an active session, its token is freshest
           logger.debug('AUTH', 'Supabase session restored', {
-          userId: session.user.id,
+            userId: session.user.id,
             expiresAt: session.expires_at,
-        });
+          });
           await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, session.access_token);
-        set({ 
-          user: {
-            id: session.user.id,
-            email: session.user.email ?? '',
-            username: session.user.user_metadata?.username ?? '',
-            firstName: session.user.user_metadata?.firstName,
-            lastName: session.user.user_metadata?.lastName,
-            profilePicture: session.user.user_metadata?.avatar_url,
-          },
+          set({ 
+            user: {
+              id: session.user.id,
+              email: session.user.email ?? '',
+              username: session.user.user_metadata?.username ?? '',
+              firstName: session.user.user_metadata?.firstName,
+              lastName: session.user.user_metadata?.lastName,
+              profilePicture: session.user.user_metadata?.avatar_url,
+            },
             token: session.access_token, // Use Supabase session's token
-          refreshToken: session.refresh_token,
+            refreshToken: session.refresh_token,
             status: 'authenticated',
             isInitialized: true,
+            needsUsername: false, // Initialize needsUsername to false
           });
+          // Immediately validate backend user profile
+          try {
+            const backendUser = await getCurrentUserProfile();
+            
+            if (backendUser) {
+              set(state => {
+                const supUser = state.user!; // User from Supabase session part
+
+                // Construct the new user object, ensuring it conforms to the User type
+                // User type is assumed to be: { id: string, email: string, username: string, firstName?: string, lastName?: string, profilePicture?: string, createdAt?: string, updatedAt?: string, appleUser?: boolean }
+                const mergedUser: User = {
+                  id: backendUser.id || supUser.id, // Prefer backend ID
+                  email: backendUser.email || supUser.email, // supUser.email is string. backendUser.email might be undefined.
+                  username: backendUser.username || supUser.username, // supUser.username is string. backendUser.username might be undefined.
+                  
+                  // Optional fields: prioritize backendUser if defined, else from supUser
+                  firstName: backendUser.firstName !== undefined ? backendUser.firstName : supUser.firstName,
+                  lastName: backendUser.lastName !== undefined ? backendUser.lastName : supUser.lastName,
+                  profilePicture: backendUser.profilePicture !== undefined ? backendUser.profilePicture : supUser.profilePicture,
+                  
+                  // Fields that are typically from the backend profile
+                  createdAt: backendUser.createdAt,
+                  updatedAt: backendUser.updatedAt,
+                  appleUser: backendUser.appleUser,
+                };
+                return { user: mergedUser };
+              });
+            }
+
+            if (!backendUser?.username) {
+              set({ needsUsername: true }); // Only set needsUsername, keep user object
+              console.warn('[AUTH] Session restored but backend user missing or username not set. needsUsername=true');
+            } else {
+              // If backend user has a username, ensure needsUsername is false
+              set({ needsUsername: false });
+            }
+          } catch (err: any) {
+            if (err?.response?.status === 404) {
+              set({ needsUsername: true }); // Only set needsUsername, keep user object
+              console.warn('[AUTH] Session restored but backend user not found. needsUsername=true');
+            } else {
+              // Handle other errors as needed
+              console.error('[AUTH] Error validating backend user profile on session restore:', err);
+              // Potentially set needsUsername to true here as well, as we don't know the state
+              // Or, keep it as is and rely on a loading/error state elsewhere.
+              // For now, let's assume if we can't fetch the profile, we might need username.
+              set({ needsUsername: true });
+            }
+          }
         } else if (initialToken) { // Fallback: No active Supabase session, but token found in SecureStore
           logger.debug('AUTH', 'Token found in SecureStore, attempting to validate by fetching user');
           // Attempt to set user from this token, Supabase might refresh or sign in
@@ -370,23 +421,13 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
         await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, data.session.access_token); // Store token
 
-        let user: User = {
-          id: data.session.user.id,
-          email: data.session.user.email ?? '',
-          username: data.session.user.user_metadata?.username ?? '',
-          firstName: data.session.user.user_metadata?.firstName,
-          lastName: data.session.user.user_metadata?.lastName,
-          profilePicture: data.session.user.user_metadata?.avatar_url,
-        };
-        console.log('Setting Zustand user after login:', user);
-        console.log('Setting Zustand token after login:', data.session.access_token);
-        console.log('Setting Zustand refreshToken after login:', data.session.refresh_token);
-        // Onboard user with backend
+        let user: User;
         try {
-          user = await onboardUser(user.username || user.email?.split('@')[0] || '');
-        } catch (onboardError) {
-          logger.warn('AUTH', 'Onboarding failed after login:', onboardError);
-          // Continue with Supabase user if onboarding fails
+          user = await getCurrentUserProfile();
+          console.log('Fetched backend user profile after login:', user);
+        } catch (profileError) {
+          logger.warn('AUTH', 'Failed to fetch backend user profile after login:', profileError);
+          throw profileError;
         }
         set({
           user,
@@ -396,6 +437,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
           status: 'authenticated',
           error: null,
         });
+        console.log('Final Zustand user after login:', user);
       } catch (e: any) {
         logger.error('AUTH', 'Login failed:', e.message);
         await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY); // Clear token on failure
@@ -416,35 +458,59 @@ export const useAuthStore = create<AuthState>((set, get) => {
         set({ loading: true, error: null, status: 'verifying' });
         console.log('Supabase Google sign-in session:', session);
         await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, session.access_token);
-        let user: User = {
-          id: session.user.id,
-          email: session.user.email ?? '',
-          username: session.user.user_metadata?.username ?? session.user.email?.split('@')[0] ?? 'User',
-          firstName: session.user.user_metadata?.firstName ?? session.user.user_metadata?.full_name?.split(' ')[0] ?? '',
-          lastName: session.user.user_metadata?.lastName ?? session.user.user_metadata?.full_name?.split(' ').slice(1).join(' ') ?? '',
-          profilePicture: session.user.user_metadata?.avatar_url ?? session.user.user_metadata?.picture ?? '',
-        };
-        // Onboard user with backend
+        let user: User | null = null;
+        let needsUsername = false;
         try {
-          user = await onboardUser(user.username || user.email?.split('@')[0] || '');
-        } catch (onboardError) {
-          logger.warn('AUTH', 'Onboarding failed after Google sign-in:', onboardError);
+          user = await getCurrentUserProfile();
+          console.log('[AUTH] Got backend user profile after Google sign-in:', user);
+        } catch (profileError: any) {
+          if (profileError?.response?.status === 404) {
+            console.warn('[AUTH] Backend user not found after Google sign-in, attempting onboarding...');
+            try {
+              const defaultUsername = session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'user';
+              user = await onboardUser(defaultUsername);
+              needsUsername = !user.username;
+              console.log('[AUTH] User onboarded after 404:', user);
+            } catch (onboardError) {
+              // Onboarding failed, force needsUsername
+              needsUsername = true;
+              user = null;
+              console.error('[AUTH] Onboarding failed after 404:', onboardError);
+            }
+          } else {
+            console.warn('[AUTH] Failed to fetch backend user profile after Google sign-in:', profileError);
+            // If it's a different error, still allow user to recover via username screen
+            needsUsername = true;
+            user = null;
+          }
         }
-        // Log what is being set in Zustand
-        console.log('Setting Zustand user after Google sign-in:', user);
-        console.log('Setting Zustand token after Google sign-in:', session.access_token);
-        console.log('Setting Zustand refreshToken after Google sign-in:', session.refresh_token);
+        if (!user?.username) {
+          needsUsername = true;
+          console.warn('[AUTH] User profile missing username after Google sign-in. needsUsername set to true.');
+        }
         set({
-          user,
+          user: needsUsername ? { // If needs username, construct user from session, merging parts of local user if available
+            id: session.user.id,
+            email: session.user.email ?? '',
+            username: session.user.user_metadata?.username ?? session.user.email?.split('@')[0] ?? 'User',
+            firstName: user?.firstName ?? session.user.user_metadata?.firstName ?? session.user.user_metadata?.full_name?.split(' ')[0] ?? '',
+            lastName: user?.lastName ?? session.user.user_metadata?.lastName ?? session.user.user_metadata?.full_name?.split(' ').slice(1).join(' ') ?? '',
+            profilePicture: user?.profilePicture ?? session.user.user_metadata?.avatar_url ?? session.user.user_metadata?.picture ?? '',
+            createdAt: user?.createdAt, // from local user (backend attempt) if exists
+            updatedAt: user?.updatedAt, // from local user (backend attempt) if exists
+            appleUser: user?.appleUser, // from local user (backend attempt) if exists
+          } : user!, // If not needsUsername, then local 'user' (backend) must be valid and complete
           token: session.access_token,
           refreshToken: session.refresh_token,
           loading: false,
           status: 'authenticated',
           error: null,
+          needsUsername,
         });
+        console.log('[AUTH] Final Zustand user after Google sign-in:', user, 'needsUsername:', needsUsername);
         get().registerPushToken();
       } catch (e: any) {
-        logger.error('AUTH', 'Error in handleGoogleSignInSuccess:', e.message);
+        console.error('[AUTH] Error in handleGoogleSignInSuccess:', e.message);
         await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
         set({
           loading: false,
@@ -453,6 +519,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
           user: null,
           token: null,
           refreshToken: null,
+          needsUsername: false,
         });
       }
     },
@@ -460,37 +527,58 @@ export const useAuthStore = create<AuthState>((set, get) => {
     handleAppleSignInSuccess: async (session: Session) => {
       try {
         set({ loading: true, error: null, status: 'verifying' });
-        // Token is already set in SecureStore by useAppleSignIn hook
         logger.debug('AUTH', 'Handling Apple Sign-In Success in store', { userId: session.user.id });
-
-        let user: User = {
-          id: session.user.id,
-          email: session.user.email ?? '',
-          // Apple often doesn't provide username, derive or prompt later if necessary
-          username: session.user.user_metadata?.username ?? session.user.email?.split('@')[0] ?? 'User',
-          firstName: session.user.user_metadata?.firstName ?? session.user.user_metadata?.full_name?.split(' ')[0] ?? '',
-          lastName: session.user.user_metadata?.lastName ?? session.user.user_metadata?.full_name?.split(' ').slice(1).join(' ') ?? '',
-          profilePicture: session.user.user_metadata?.avatar_url ?? '',
-        };
-        // Onboard user with backend
+        let user: User | null = null;
+        let needsUsername = false;
         try {
-          user = await onboardUser(user.username || user.email?.split('@')[0] || '');
-        } catch (onboardError) {
-          logger.warn('AUTH', 'Onboarding failed after Apple sign-in:', onboardError);
-          // Continue with Supabase user if onboarding fails
+          user = await getCurrentUserProfile();
+          console.log('[AUTH] Got backend user profile after Apple sign-in:', user);
+        } catch (profileError: any) {
+          if (profileError?.response?.status === 404) {
+            console.warn('[AUTH] Backend user not found after Apple sign-in, attempting onboarding...');
+            try {
+              const defaultUsername = session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'user';
+              user = await onboardUser(defaultUsername);
+              needsUsername = !user.username;
+              console.log('[AUTH] User onboarded after 404:', user);
+            } catch (onboardError) {
+              needsUsername = true;
+              user = null;
+              console.error('[AUTH] Onboarding failed after 404:', onboardError);
+            }
+          } else {
+            console.warn('[AUTH] Failed to fetch backend user profile after Apple sign-in:', profileError);
+            needsUsername = true;
+            user = null;
+          }
+        }
+        if (!user?.username) {
+          needsUsername = true;
+          console.warn('[AUTH] User profile missing username after Apple sign-in. needsUsername set to true.');
         }
         set({
-          user,
+          user: needsUsername ? { // If needs username, construct user from session, merging parts of local user if available
+            id: session.user.id,
+            email: session.user.email ?? '',
+            username: session.user.user_metadata?.username ?? session.user.email?.split('@')[0] ?? 'User',
+            firstName: user?.firstName ?? session.user.user_metadata?.firstName ?? session.user.user_metadata?.full_name?.split(' ')[0] ?? '',
+            lastName: user?.lastName ?? session.user.user_metadata?.lastName ?? session.user.user_metadata?.full_name?.split(' ').slice(1).join(' ') ?? '',
+            profilePicture: user?.profilePicture ?? session.user.user_metadata?.avatar_url ?? session.user.user_metadata?.picture ?? '',
+            createdAt: user?.createdAt, // from local user (backend attempt) if exists
+            updatedAt: user?.updatedAt, // from local user (backend attempt) if exists
+            appleUser: user?.appleUser, // from local user (backend attempt) if exists
+          } : user!, // If not needsUsername, then local 'user' (backend) must be valid and complete
           token: session.access_token,
           refreshToken: session.refresh_token,
           loading: false,
           status: 'authenticated',
           error: null,
+          needsUsername,
         });
-        // Potentially call registerPushToken here if not handled elsewhere on auth state change
+        console.log('[AUTH] Final Zustand user after Apple sign-in:', user, 'needsUsername:', needsUsername);
         get().registerPushToken(); 
       } catch (e: any) {
-        logger.error('AUTH', 'Error in handleAppleSignInSuccess:', e.message);
+        console.error('[AUTH] Error in handleAppleSignInSuccess:', e.message);
         await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY); // Ensure cleanup
         set({
           loading: false,
@@ -499,6 +587,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
           user: null,
           token: null,
           refreshToken: null,
+          needsUsername: false,
         });
         // Do not re-throw, hook will handle its own errors
       }
@@ -578,6 +667,10 @@ export const useAuthStore = create<AuthState>((set, get) => {
         logger.error('AUTH', 'Failed to set first time done flag:', e.message);
       }
     },
+
+    setUser: (user: User) => set({ user }),
+
+    setNeedsUsername: (value: boolean) => set({ needsUsername: value }),
   };
 
   // Setup Supabase onAuthStateChange listener
