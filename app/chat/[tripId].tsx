@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react';
 import { View, StyleSheet, useWindowDimensions, Text } from 'react-native';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
-import { ChatScreen } from '@/screens/chat/ChatScreen';
-import { MobileChatScreen } from '@/screens/chat/MobileChatScreen';
-import { useTheme } from '@/src/theme/ThemeProvider';
-import { useChatStore } from '@/src/store/useChatStore';
+import { ChatScreen } from '@/src/features/chat/screens/ChatScreen';
+import { MobileChatScreen } from '@/src/features/chat/screens/MobileChatScreen';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
+import { useChatStore } from '@/src/features/chat/store';
 import { StatusBar } from 'expo-status-bar';
 import { logger } from '@/src/utils/logger';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -13,7 +13,7 @@ export default function ChatRoute() {
   const params = useLocalSearchParams<{ tripId: string }>();
   const tripId = params.tripId;
   const { width } = useWindowDimensions();
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   const { fetchMessages, initializeStore } = useChatStore();
   
   // Log the tripId for debugging
@@ -30,9 +30,9 @@ export default function ChatRoute() {
     const loadPersistedData = async () => {
       try {
         await initializeStore();
-        logger.debug('Chat Route', 'Initialized store with persisted data');
+        logger.debug('CHAT', 'Initialized store with persisted data');
       } catch (error) {
-        logger.error('Chat Route', 'Failed to initialize store with persisted data:', error);
+        logger.error('CHAT', 'Failed to initialize store with persisted data:', error);
       }
     };
     

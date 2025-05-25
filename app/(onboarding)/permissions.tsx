@@ -9,9 +9,9 @@ import Animated, {
   BounceIn,
 } from 'react-native-reanimated';
 import { MapPin, Bell, CheckCircle2, XCircle } from 'lucide-react';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { ThemedView } from '@/components/ThemedView';
-import { ThemedText } from '@/components/ThemedText';
+import { ThemedText } from '@/src/components/ThemedText';
 import { useOnboarding } from '@/src/providers/OnboardingProvider';
 
 interface PermissionState {
@@ -20,7 +20,7 @@ interface PermissionState {
 }
 
 export default function PermissionsScreen() {
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   const { setFirstTimeDone } = useOnboarding();
   const [permissions, setPermissions] = useState<PermissionState>({
     location: null,

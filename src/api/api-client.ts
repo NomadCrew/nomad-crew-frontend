@@ -1,17 +1,20 @@
 import { BaseApiClient } from './base-client';
-import { supabase } from '@/src/auth/supabaseClient';
+import { supabase } from '@/src/features/auth/service';
 import { AxiosHeaders, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { API_PATHS } from '@/src/utils/api-paths';
 import { logger } from '@/src/utils/logger';
 import { ERROR_CODES, ERROR_MESSAGES } from './constants';
 import { isTokenExpiringSoon } from '@/src/utils/token';
+import type { User } from '@/src/features/auth/types';
+import axios from 'axios';
+import { useAuthStore } from '@/src/features/auth/store';
 
 // Token refresh lock mechanism
 let isRefreshing = false;
-let refreshQueue: Array<{
+let refreshQueue: {
   resolve: (value: unknown) => void;
   reject: (reason?: Error | unknown) => void;
-}> = [];
+}[] = [];
 
 // Auth state access functions - to be set by the auth store
 type AuthState = {
@@ -70,7 +73,7 @@ export class ApiClient extends BaseApiClient {
       async (config) => {
         // Skip auth for public endpoints that might exist on the backend (e.g., health checks, public data)
         // Auth-specific backend endpoints (login, register, refresh) are removed as Supabase handles these.
-        const publicBackendPaths = [
+        const publicBackendPaths: string[] = [
           // Add any known public backend paths here if necessary, for example:
           // '/v1/public/some-data',
           // API_PATHS.auth.validate, // If validate is a public check, otherwise remove
@@ -274,3 +277,26 @@ export class ApiClient extends BaseApiClient {
 // Singleton
 export const apiClient = ApiClient.getInstance();
 export const api = apiClient.getAxiosInstance();
+
+/**
+ * Calls the backend onboarding endpoint to upsert the user using the Supabase JWT.
+ * Returns the user profile from the backend.
+ */
+export async function onboardUser(username: string): Promise<User> {
+  const api = ApiClient.getInstance();
+  const response = await api.getAxiosInstance().post<User>(API_PATHS.users.onboard, { username });
+  return response.data;
+}
+
+export async function getCurrentUserProfile(): Promise<User> {
+  const api = ApiClient.getInstance();
+  const response = await api.getAxiosInstance().get<User>(API_PATHS.users.me);
+  return response.data;
+}
+
+export async function getSupabaseJWT(): Promise<string> {
+  // This assumes you are calling from a React context. If not, use useAuthStore.getState().token
+  const token = useAuthStore.getState().token;
+  if (!token) throw new Error('No Supabase JWT available');
+  return token;
+}

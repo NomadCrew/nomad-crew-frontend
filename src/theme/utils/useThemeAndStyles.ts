@@ -1,4 +1,4 @@
-import { useTheme } from '../ThemeProvider';
+import { useAppTheme } from '../ThemeProvider';
 import { StylesFunction, StylesObject } from './createStyles';
 import { useThemedStyles } from './useThemedStyles';
 
@@ -30,7 +30,7 @@ import { useThemedStyles } from './useThemedStyles';
 export function useThemeAndStyles<T extends StylesObject>(
   stylesFunc: StylesFunction<T>
 ) {
-  const themeContext = useTheme();
+  const themeContext = useAppTheme();
   const styles = useThemedStyles(stylesFunc);
   
   return {
