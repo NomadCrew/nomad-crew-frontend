@@ -8,7 +8,6 @@ import { Trip } from '@/src/features/trips/types';
 import { ChatList } from '../components/ChatList';
 import { ChatInput } from '../components/ChatInput';
 import { ChatAuthError } from '../components/ChatAuthError';
-import { WebSocketManager } from '@/src/features/websocket/WebSocketManager';
 import { Theme } from '@/src/theme/types';
 import { StatusBar } from 'expo-status-bar';
 import { StatusBarStyle } from 'expo-status-bar/build/StatusBar.types';
@@ -16,6 +15,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useThemedStyles } from '@/src/theme/utils';
 import { logger } from '@/src/utils/logger';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useChatMessages } from '@/src/features/trips/hooks/useChatMessages';
+import { usePresence } from '@/src/features/trips/hooks/usePresence';
+import { MaterialIcons } from '@expo/vector-icons';
 
 interface MobileChatScreenProps {
   tripId: string;
@@ -119,17 +121,6 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({
       return;
     }
     
-    // Check WebSocket connection
-    const wsManager = WebSocketManager.getInstance();
-    const isConnected = wsManager.isConnected();
-    logger.info('Mobile Chat Screen', `WebSocket connection status before sending: ${isConnected ? 'connected' : 'disconnected'}`);
-    
-    if (!isConnected) {
-      logger.warn('Mobile Chat Screen', 'WebSocket not connected, message may not be delivered');
-      // Don't attempt to reconnect here as it's managed at the trip level
-      // Just inform the user that the message might not be delivered
-    }
-    
     try {
       logger.info('Mobile Chat Screen', `Sending message in trip ${tripId}: "${content.substring(0, 20)}${content.length > 20 ? '...' : ''}"`);
       sendMessage({ tripId, content });
@@ -222,6 +213,25 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({
     );
   }
   
+  const { 
+    messages: chatMessages, 
+    isLoading: isLoadingChatMessages, 
+    error: messagesError, 
+    isConnected: isChatConnected,
+    sendMessage: chatSendMessage,
+    loadMoreMessages,
+    refreshMessages
+  } = useChatMessages({ tripId: tripId, autoConnect: true });
+
+  const { 
+    users: presenceUsers, 
+    isLoading: isLoadingPresence, 
+    error: presenceError, 
+    isConnected: isPresenceConnected
+  } = usePresence({ tripId: tripId, autoConnect: true });
+
+  const isRealtimeConnected = isChatConnected && isPresenceConnected;
+  
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
       <StatusBar style={styles.statusBarStyle} />
@@ -244,10 +254,15 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({
         <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">
           {tripName}
         </Text>
+        {isRealtimeConnected ? (
+          <MaterialIcons name="signal-cellular-alt" size={20} color={theme.colors.success.main} />
+        ) : (
+          <MaterialIcons name="signal-cellular-off" size={20} color={theme.colors.error.main} />
+        )}
       </View>
       
       <View style={styles.chatContainer}>
-        {isLoadingMessages && messages.length === 0 ? (
+        {isLoadingChatMessages && messages.length === 0 ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={theme?.colors?.content?.primary || '#1A1A1A'} />
             <Text style={styles.loadingText}>Loading messages...</Text>

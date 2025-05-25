@@ -7,7 +7,7 @@ This document provides an overview of the chat functionality implemented in the 
 The chat system allows users to communicate in real-time within trip contexts. It supports:
 
 - Multiple chat groups per trip
-- Real-time messaging via WebSockets
+- Real-time messaging via Supabase Realtime
 - Message typing indicators
 - Read receipts
 - File attachments
@@ -27,10 +27,11 @@ The chat functionality is built using the following components:
 
 - `useChatStore`: A Zustand store that manages chat state, including groups, messages, and typing status
 
-### WebSocket Communication
+### Real-time Communication
 
-- `ChatWebSocketManager`: A singleton class that manages WebSocket connections for chat functionality
-- Handles real-time events like new messages, typing indicators, and read receipts
+- Supabase Realtime: Handles real-time database subscriptions for chat functionality
+- Manages real-time events like new messages, typing indicators, and read receipts
+- Uses dedicated hooks: `useChatMessages`, `usePresence`, `useReactions`, `useReadReceipts`
 
 ### UI Components
 
@@ -85,16 +86,14 @@ Trip administrators can:
 
 ## Implementation Details
 
-### WebSocket Events
+### Real-time Events
 
-The chat system uses the following WebSocket events:
+The chat system uses Supabase Realtime for the following events:
 
-- `CHAT_MESSAGE_CREATED`: When a new message is created
-- `CHAT_MESSAGE_UPDATED`: When a message is updated (edited)
-- `CHAT_MESSAGE_DELETED`: When a message is deleted
-- `CHAT_TYPING_STARTED`: When a user starts typing
-- `CHAT_TYPING_STOPPED`: When a user stops typing
-- `CHAT_MESSAGE_READ`: When a user reads a message
+- Database changes on `chat_messages` table: When messages are created, updated, or deleted
+- Database changes on `chat_presence` table: When users join/leave or update typing status
+- Database changes on `chat_reactions` table: When reactions are added or removed
+- Database changes on `chat_read_receipts` table: When users read messages
 
 ### API Endpoints
 
@@ -103,7 +102,7 @@ The chat system uses the following API endpoints:
 - `/api/chat/groups`: For managing chat groups
 - `/api/chat/messages`: For managing chat messages
 - `/api/chat/members`: For managing group members
-- `/api/chat/ws`: For WebSocket connections
+- Supabase Realtime: For real-time database subscriptions
 
 ## Future Improvements
 

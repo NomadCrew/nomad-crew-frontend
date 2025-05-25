@@ -23,7 +23,7 @@ interface TodoState {
   // List operations with pagination
   fetchTodos: (tripId: string, offset: number, limit: number) => Promise<void>;
   
-  // WebSocket operations
+  // Event handling
   handleTodoEvent: (event: ServerEvent) => void;
 }
 

@@ -12,10 +12,15 @@ export const spaceScale = {
   xl: SPACE_UNIT * 8,       // 32px
   xxl: SPACE_UNIT * 12,     // 48px
   xxxl: SPACE_UNIT * 16,    // 64px
+  // Legacy aliases for backward compatibility
+  m: SPACE_UNIT * 4,        // 16px (alias for md)
 } as const;
 
 // Semantic spacing system
 export const createSemanticSpacing = () => ({
+  // Direct access to space scale for backward compatibility
+  ...spaceScale,
+
   // Layout spacing
   layout: {
     screen: {
@@ -30,6 +35,15 @@ export const createSemanticSpacing = () => ({
     },
     container: {
       padding: spaceScale.md,
+      gap: spaceScale.sm,
+    },
+    // Add the missing card layout properties
+    card: {
+      padding: {
+        horizontal: spaceScale.md,
+        vertical: spaceScale.sm,
+      },
+      margin: spaceScale.sm,
       gap: spaceScale.sm,
     },
   },

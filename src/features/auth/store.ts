@@ -464,18 +464,25 @@ export const useAuthStore = create<AuthState>((set, get) => {
           user = await getCurrentUserProfile();
           console.log('[AUTH] Got backend user profile after Google sign-in:', user);
         } catch (profileError: any) {
-          if (profileError?.response?.status === 404) {
-            console.warn('[AUTH] Backend user not found after Google sign-in, attempting onboarding...');
+          // Check for both 404 (user not found) and 401 (user not onboarded) errors
+          if (profileError?.response?.status === 404 || profileError?.response?.status === 401) {
+            console.warn('[AUTH] Backend user not found or not onboarded after Google sign-in, attempting onboarding...');
             try {
               const defaultUsername = session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'user';
+              console.log('[AUTH] Attempting to onboard user with username:', defaultUsername);
               user = await onboardUser(defaultUsername);
               needsUsername = !user.username;
-              console.log('[AUTH] User onboarded after 404:', user);
-            } catch (onboardError) {
+              console.log('[AUTH] User onboarded successfully:', user);
+            } catch (onboardError: any) {
               // Onboarding failed, force needsUsername
               needsUsername = true;
               user = null;
-              console.error('[AUTH] Onboarding failed after 404:', onboardError);
+              console.error('[AUTH] Onboarding failed:', onboardError);
+              console.error('[AUTH] Onboard error details:', {
+                status: onboardError?.response?.status,
+                data: onboardError?.response?.data,
+                message: onboardError?.message
+              });
             }
           } else {
             console.warn('[AUTH] Failed to fetch backend user profile after Google sign-in:', profileError);
@@ -534,17 +541,24 @@ export const useAuthStore = create<AuthState>((set, get) => {
           user = await getCurrentUserProfile();
           console.log('[AUTH] Got backend user profile after Apple sign-in:', user);
         } catch (profileError: any) {
-          if (profileError?.response?.status === 404) {
-            console.warn('[AUTH] Backend user not found after Apple sign-in, attempting onboarding...');
+          // Check for both 404 (user not found) and 401 (user not onboarded) errors
+          if (profileError?.response?.status === 404 || profileError?.response?.status === 401) {
+            console.warn('[AUTH] Backend user not found or not onboarded after Apple sign-in, attempting onboarding...');
             try {
               const defaultUsername = session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'user';
+              console.log('[AUTH] Attempting to onboard user with username:', defaultUsername);
               user = await onboardUser(defaultUsername);
               needsUsername = !user.username;
-              console.log('[AUTH] User onboarded after 404:', user);
-            } catch (onboardError) {
+              console.log('[AUTH] User onboarded successfully:', user);
+            } catch (onboardError: any) {
               needsUsername = true;
               user = null;
-              console.error('[AUTH] Onboarding failed after 404:', onboardError);
+              console.error('[AUTH] Onboarding failed:', onboardError);
+              console.error('[AUTH] Onboard error details:', {
+                status: onboardError?.response?.status,
+                data: onboardError?.response?.data,
+                message: onboardError?.message
+              });
             }
           } else {
             console.warn('[AUTH] Failed to fetch backend user profile after Apple sign-in:', profileError);

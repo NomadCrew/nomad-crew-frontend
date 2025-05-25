@@ -145,11 +145,13 @@ export interface Theme {
   components: ComponentStyles;
   breakpoints: typeof BREAKPOINTS;
   borderRadius: {
+    none: number;
     xs: number;
     sm: number;
     md: number;
     lg: number;
     xl: number;
+    full: number;
   };
   dark?: boolean;
 }
