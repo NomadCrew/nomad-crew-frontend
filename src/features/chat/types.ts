@@ -49,8 +49,8 @@ export interface ReadReceipt {
   timestamp: string;
 }
 
-// WebSocket Event Types
-export type ChatWebSocketEvent = 
+// Real-time Event Types (for reference - handled by Supabase Realtime)
+export type ChatRealtimeEvent = 
   | { type: 'chat_message_created'; data: ChatMessage }
   | { type: 'chat_message_updated'; data: ChatMessage }
   | { type: 'chat_message_deleted'; data: { id: string; trip_id: string } }
@@ -58,7 +58,7 @@ export type ChatWebSocketEvent =
   | { type: 'chat_read_receipt'; data: { user_id: string; trip_id: string; message_id: string; user_name: string; user_avatar?: string; timestamp: string } };
 
 // Client-side Types
-export type MessageStatus = 'sending' | 'sent' | 'error';
+export type MessageStatus = 'sending' | 'sent' | 'error' | 'pending' | 'failed';
 
 export interface ChatMessageWithStatus {
   message: ChatMessage;
@@ -108,7 +108,8 @@ export interface ChatState {
   disconnectFromChat: (tripId: string) => void;
   fetchMessages: (tripId: string, refresh?: boolean) => Promise<void>;
   fetchMoreMessages: (tripId: string) => Promise<void>;
-  sendMessage: (params: { tripId: string; content: string }) => Promise<void>;
+  sendMessage: (params: { tripId: string; content: string }) => Promise<ChatMessage | null>;
+  sendChatMessage: (tripId: string, content: string, optimisticId?: string) => Promise<ChatMessage | null>;
   markAsRead: (tripId: string, messageId: string) => Promise<void>;
   handleChatEvent: (event: ServerEvent) => void;
   setTypingStatus: (tripId: string, isTyping: boolean) => Promise<void>;

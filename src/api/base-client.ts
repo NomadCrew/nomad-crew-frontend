@@ -62,6 +62,19 @@ export class BaseApiClient {
           return Promise.reject(new Error(ERROR_MESSAGES.NETWORK_ERROR));
         }
 
+        // Create enhanced error that preserves original status and response
+        const createEnhancedError = (message: string, originalError: AxiosError) => {
+          const enhancedError = new Error(message) as Error & {
+            response?: AxiosError['response'];
+            status?: number;
+            originalError?: AxiosError;
+          };
+          enhancedError.response = originalError.response;
+          enhancedError.status = originalError.response?.status;
+          enhancedError.originalError = originalError;
+          return enhancedError;
+        };
+
         // Handle other status codes
         switch (error.response.status) {
           case 400:
@@ -70,17 +83,21 @@ export class BaseApiClient {
               (error.response.data as { message?: string; error?: string })?.message || 
               (error.response.data as { message?: string; error?: string })?.error || 
               'Bad request: The server could not process your request';
-            return Promise.reject(new Error(badRequestMessage));
+            return Promise.reject(createEnhancedError(badRequestMessage, error));
+          case 401:
+            const unauthorizedMessage = 
+              (error.response.data as { message?: string })?.message || 
+              'Unauthorized: Authentication required';
+            return Promise.reject(createEnhancedError(unauthorizedMessage, error));
           case 403:
-            return Promise.reject(new Error(ERROR_MESSAGES.FORBIDDEN));
+            return Promise.reject(createEnhancedError(ERROR_MESSAGES.FORBIDDEN, error));
           case 404:
-            return Promise.reject(new Error(ERROR_MESSAGES.NOT_FOUND));
+            return Promise.reject(createEnhancedError(ERROR_MESSAGES.NOT_FOUND, error));
           case 500:
-            return Promise.reject(new Error(ERROR_MESSAGES.SERVER_ERROR));
+            return Promise.reject(createEnhancedError(ERROR_MESSAGES.SERVER_ERROR, error));
           default:
-            return Promise.reject(
-              new Error((error.response.data as { message?: string })?.message || ERROR_MESSAGES.UNEXPECTED)
-            );
+            const defaultMessage = (error.response.data as { message?: string })?.message || ERROR_MESSAGES.UNEXPECTED;
+            return Promise.reject(createEnhancedError(defaultMessage, error));
         }
       }
     );

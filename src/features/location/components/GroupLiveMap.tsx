@@ -9,6 +9,7 @@ import { AlertCircle, Info } from 'lucide-react-native';
 import { LocationSharingToggle } from './LocationSharingToggle'; // Correct after move
 import { Surface } from 'react-native-paper';
 import { Theme } from '@/src/theme/types';
+import { logger } from '@/src/utils/logger';
 // import { LiveLocation, UserLocation } from '@/src/types/location'; // Removed, not used and path is old
 
 const DEFAULT_COORDINATES = {
@@ -22,9 +23,20 @@ interface GroupLiveMapProps {
   trip: Trip;
   onClose: () => void;
   isStandalone?: boolean;
+  supabaseLocations: {
+    locations: any[];
+    isLoading: boolean;
+    error: string | null;
+    connectionStatus: string;
+  };
 }
 
-export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isStandalone = false }) => {
+export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ 
+  trip, 
+  onClose, 
+  isStandalone = false,
+  supabaseLocations 
+}) => {
   const { theme } = useAppTheme();
   const mapRef = useRef<MapView>(null);
   const { user } = useAuthStore();
@@ -50,35 +62,16 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
   const [mapLoaded, setMapLoaded] = useState<boolean>(false);
   const [mapLoadAttempts, setMapLoadAttempts] = useState<number>(0);
 
-  const tripMemberLocations = memberLocations[trip.id] || {};
-  const memberLocationArray = Object.values(tripMemberLocations);
+  // Use Supabase Realtime location data
+  const memberLocationArray = supabaseLocations.locations;
 
   useEffect(() => {
+    logger.info('GroupLiveMap', `Using Supabase Realtime for location data for trip ${trip.id}`);
+    // Start location tracking for current user
     if (isLocationSharingEnabled) {
       startLocationTracking(trip.id);
     }
-
-    const fetchLocations = async () => {
-      try {
-        setIsLoading(true);
-        await getMemberLocations(trip.id);
-      } catch (error) {
-        setMapError('Unable to fetch member locations.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchLocations();
-
-    const intervalId = setInterval(() => {
-      if (isLocationSharingEnabled) {
-        getMemberLocations(trip.id).catch(() => {});
-      }
-    }, 30000);
-
-    return () => clearInterval(intervalId);
-  }, [trip.id, isLocationSharingEnabled, getMemberLocations, startLocationTracking]); // Added dependencies
+  }, [trip.id, isLocationSharingEnabled, startLocationTracking]);
 
   useEffect(() => {
     if (currentLocation && isLocationSharingEnabled) {
@@ -101,15 +94,16 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
       }));
       console.log('[MapDebug] Initial region set from trip destination:', JSON.stringify(trip.destination.coordinates));
     }
-  }, [trip.id, trip.destination.coordinates]); // Added dependencies
+  }, [trip.id, trip.destination.coordinates]);
 
   const fitToMarkers = () => {
     const markers: { latitude: number; longitude: number }[] = [];
 
     if (memberLocationArray.length > 0) {
-      markers.push(...memberLocationArray.map(m => ({
-        latitude: m.location.latitude,
-        longitude: m.location.longitude,
+      // Use Supabase location format
+      markers.push(...memberLocationArray.map((location: any) => ({
+        latitude: location.latitude,
+        longitude: location.longitude,
       })));
     }
 
@@ -143,7 +137,7 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
         fitToMarkers();
       });
     }
-  }, [mapLoaded, memberLocationArray, currentLocation, fitToMarkers]); // Added fitToMarkers to dependencies
+  }, [mapLoaded, memberLocationArray, currentLocation]);
 
   const handleMapReady = () => {
     console.log('[MapDebug] Map ready called, initial region:', JSON.stringify(region));
@@ -177,11 +171,11 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
     }
   };
 
-  const handleMapError = (error: any) => { // Added error param
+  const handleMapError = (error: any) => {
     console.error('[MapDebug] Map error occurred:', error?.nativeEvent?.error || error);
     setMapError('Error loading the map. Please ensure Google Maps services are available and configured.');
     setMapLoadAttempts(prev => prev + 1);
-    setIsLoading(false); // Ensure loading is stopped on error
+    setIsLoading(false);
   };
   
   const retryLoadMap = () => {
@@ -189,50 +183,62 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
     setMapError(null);
     setMapLoadAttempts(0);
     setMapLoaded(false);
-    setIsLoading(true); 
-    // Potentially re-trigger map setup if needed, e.g., by changing a key or re-fetching data
-    // For now, relying on MapView's own retry/reload or user interaction
+    setIsLoading(true);
   };
 
   const renderMap = () => (
     <MapView
-      key={`map-${trip.id}-${Platform.OS}-${mapLoadAttempts}`} // Add mapLoadAttempts to key to force re-render on retry
+      key={`map-${trip.id}-${Platform.OS}-${mapLoadAttempts}`}
       ref={mapRef}
       style={styles(theme).map}
       provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-      initialRegion={region} // Use state `region` which is updated
+      initialRegion={region}
       onMapReady={handleMapReady}
-      onError={handleMapError} // Added onError handler
-      loadingEnabled={isLoading} // Controlled by isLoading state
-      showsUserLocation={isLocationSharingEnabled} // Show blue dot for user
-      showsMyLocationButton // Default button to center on user
+      onError={handleMapError}
+      loadingEnabled={isLoading}
+      showsUserLocation={isLocationSharingEnabled}
+      showsMyLocationButton
       showsCompass
-      // showsScale // Can be too noisy
-      minZoomLevel={5} // Allow zooming out more
+      minZoomLevel={5}
       maxZoomLevel={20}
       scrollEnabled
       zoomEnabled
       rotateEnabled
-      // pitchEnabled // Can be disorienting for users
     >
 
-      {memberLocationArray.map((m) => m.userId !== user?.id && (
-        <Marker
-          key={m.userId}
-          coordinate={{ latitude: m.location.latitude, longitude: m.location.longitude }}
-          title={m.name || `Member ${m.userId.slice(0, 4)}`}
-          // pinColor={theme.colors.primary.main} // Example: Themed marker
-        />
-      ))}
-      {/* Current user marker is handled by showsUserLocation, no need for explicit marker if true */}
+      {memberLocationArray.map((location: any, index: number) => {
+        // Use Supabase location format
+        const userId = location.user_id;
+        const lat = location.latitude;
+        const lng = location.longitude;
+        const userName = location.user_name;
+        
+        // Don't show current user's marker (they see the blue dot)
+        if (userId === user?.id) return null;
+        
+        return (
+          <Marker
+            key={`${userId}-${index}`}
+            coordinate={{
+              latitude: lat,
+              longitude: lng,
+            }}
+            title={userName || 'Trip Member'}
+            description={`Last updated: ${new Date().toLocaleTimeString()}`}
+          />
+        );
+      })}
+
+      {/* Trip destination marker */}
       {trip.destination.coordinates?.lat && trip.destination.coordinates?.lng && (
         <Marker
           coordinate={{
             latitude: trip.destination.coordinates.lat,
             longitude: trip.destination.coordinates.lng,
           }}
-          title={trip.destination.address || 'Destination'}
-          pinColor={theme.colors.accent?.main || 'blue'} // Example: Different color for destination
+          title={trip.destination.name || trip.name}
+          description="Trip Destination"
+          pinColor="red"
         />
       )}
     </MapView>

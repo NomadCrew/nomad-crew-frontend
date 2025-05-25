@@ -14,6 +14,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Theme } from '@/src/theme/types';
 import { useLocalSearchParams, router } from 'expo-router';
 
+// Supabase Realtime imports
+import { useChatMessages } from '@/src/features/trips/hooks/useChatMessages';
+import { usePresence } from '@/src/features/trips/hooks/usePresence';
+import { useReactions } from '@/src/features/trips/hooks/useReactions';
+import { useReadReceipts } from '@/src/features/trips/hooks/useReadReceipts';
+
 interface ChatScreenProps {
   tripId: string;
   onBack?: () => void;
@@ -30,17 +36,28 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId, onBack }) => {
   // Auth store state
   const { token, isInitialized, user } = useAuthStore();
   
-  // Chat store state and actions
+  // Supabase Realtime hooks
+  const supabaseChatMessages = useChatMessages({ 
+    tripId, 
+    autoConnect: !!user && !authError 
+  });
+  const presence = usePresence({ 
+    tripId, 
+    autoConnect: !!user && !authError 
+  });
+  const reactions = useReactions({ 
+    tripId, 
+    autoConnect: !!user && !authError 
+  });
+  const readReceipts = useReadReceipts({ 
+    tripId, 
+    autoConnect: !!user && !authError 
+  });
+  
+  // Legacy chat store state and actions (for compatibility)
   const {
-    messagesByTripId,
-    isLoadingMessages,
-    hasMoreMessages,
-    typingUsers,
     fetchMessages,
-    fetchMoreMessages,
     connectToChat,
-    disconnectFromChat,
-    error
   } = useChatStore();
   
   // Trip store to get trip name
@@ -59,49 +76,44 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId, onBack }) => {
     }
   }, [isInitialized, token]);
   
-  // Connect to chat and fetch messages
+  // Initialize chat store for compatibility with existing components
   useEffect(() => {
     if (tripId && user && !authError) {
-      logger.info('Chat Screen', `Connecting to chat for trip ${tripId}`);
-      
-      // Connect to WebSocket for this trip
+      logger.info('Chat Screen', `Using Supabase Realtime for trip ${tripId}`);
+      // Initialize chat store for compatibility with existing components
       connectToChat(tripId);
-      
-      // Fetch messages for this trip
       fetchMessages(tripId);
-      
-      // Cleanup on unmount
-      return () => {
-        logger.info('Chat Screen', `Disconnecting from chat for trip ${tripId}`);
-        disconnectFromChat(tripId);
-      };
     }
-  }, [tripId, user, authError, connectToChat, fetchMessages, disconnectFromChat]);
+  }, [tripId, user, authError, connectToChat, fetchMessages]);
   
-  const messages = messagesByTripId[tripId] || [];
-  const hasMore = hasMoreMessages[tripId] || false;
+  // Use Supabase Realtime data
+  const messages = supabaseChatMessages.messages;
+  const isLoading = supabaseChatMessages.isLoading;
+  const hasMore = supabaseChatMessages.hasMore;
+  const currentError = supabaseChatMessages.error;
+  const currentTypingUsers = presence.typingUsers;
   
   const handleRefresh = async () => {
     logger.info('Chat Screen', `Manually refreshing messages for trip ${tripId}`);
     setIsRefreshing(true);
-    await fetchMessages(tripId, true);
+    await supabaseChatMessages.refetch();
     setIsRefreshing(false);
     logger.info('Chat Screen', `Completed manual refresh for trip ${tripId}`);
   };
   
   const handleLoadMore = () => {
     logger.info('Chat Screen', `Loading more messages for trip ${tripId}`);
-    fetchMoreMessages(tripId);
+    supabaseChatMessages.loadMore();
   };
   
   // Handle retry after auth error
-  const handleAuthRetry = async () => {
+    const handleAuthRetry = async () => {
     logger.info('Chat Screen', 'Attempting to refresh authentication session');
     try {
       await useAuthStore.getState().refreshSession();
       setAuthError(false);
       logger.info('Chat Screen', 'Authentication refreshed successfully, fetching messages');
-      fetchMessages(tripId);
+      supabaseChatMessages.refetch();
     } catch (error) {
       logger.error('Chat Screen', 'Failed to refresh authentication:', error);
     }
@@ -112,6 +124,46 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId, onBack }) => {
     flex: 1,
     backgroundColor: theme?.colors?.background?.default || '#FFFFFF',
   };
+  
+  // Handle connection errors from Supabase Realtime hooks
+  if (supabaseChatMessages.error || presence.error || reactions.error || readReceipts.error) {
+    const errorMessage = supabaseChatMessages.error || presence.error || reactions.error || readReceipts.error;
+    return (
+      <View style={containerStyle}>
+        <StatusBar style={theme.dark ? 'light' : 'dark'} />
+        <View style={{ paddingTop: insets.top }} />
+        <View style={styles(theme).header}>
+          {onBack && (
+            <TouchableOpacity 
+              style={styles(theme).backButton} 
+              onPress={onBack}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              activeOpacity={0.7}
+            >
+              <Ionicons 
+                name="chevron-back" 
+                size={24} 
+                color={theme?.colors?.content?.primary || '#1A1A1A'} 
+              />
+            </TouchableOpacity>
+          )}
+          <Text style={styles(theme).headerTitle} numberOfLines={1} ellipsizeMode="tail">
+            {tripName}
+          </Text>
+        </View>
+        <View style={styles(theme).loadingContainer}>
+          <Text style={styles(theme).errorText}>Connection Error</Text>
+          <Text style={styles(theme).loadingText}>{errorMessage}</Text>
+          <TouchableOpacity 
+            style={styles(theme).retryButton} 
+            onPress={() => supabaseChatMessages.refetch()}
+          >
+            <Text style={styles(theme).retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
   
   // If there's an auth error, show the error component
   if (authError) {
@@ -126,7 +178,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId, onBack }) => {
   }
   
   // Show loading state
-  if (isLoadingMessages && messages.length === 0) {
+  if (isLoading && messages.length === 0) {
     return (
       <View style={containerStyle}>
         <StatusBar style={theme.dark ? 'light' : 'dark'} />
@@ -159,7 +211,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId, onBack }) => {
   }
   
   // Show error state
-  if (error && messages.length === 0) {
+  if (currentError && messages.length === 0) {
     return (
       <View style={containerStyle}>
         <StatusBar style={theme.dark ? 'light' : 'dark'} />
@@ -184,7 +236,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId, onBack }) => {
           </Text>
         </View>
         <View style={styles(theme).errorContainer}>
-          <Text style={styles(theme).errorText}>{error}</Text>
+          <Text style={styles(theme).errorText}>{currentError}</Text>
           <TouchableOpacity 
             style={styles(theme).retryButton}
             onPress={handleRefresh}
@@ -196,7 +248,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId, onBack }) => {
     );
   }
   
-  logger.debug('Chat Screen', `Rendering chat UI with ${messages.length} messages`);
+  logger.debug('Chat Screen', `Rendering chat UI with ${messages.length} messages using Supabase Realtime`);
   return (
     <View style={containerStyle}>
       <StatusBar style={theme?.dark ? 'light' : 'dark'} />
@@ -231,12 +283,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId, onBack }) => {
         <View style={styles(theme).chatArea}>
           <ChatList
             messages={messages}
-            isLoading={isLoadingMessages}
+            isLoading={isLoading}
             hasMore={hasMore}
             onLoadMore={handleLoadMore}
             onRefresh={handleRefresh}
             isRefreshing={isRefreshing}
-            typingUsers={typingUsers[tripId] || []}
+            typingUsers={currentTypingUsers}
             tripId={tripId}
           />
           <ChatInput tripId={tripId} />
@@ -292,6 +344,11 @@ const styles = (theme: Theme) => StyleSheet.create({
     borderRadius: 5,
   },
   retryText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  retryButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#FFFFFF',

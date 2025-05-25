@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, ScrollView, useWindowDimensions, SafeAreaView, StyleSheet, ViewStyle } from 'react-native';
+import { View, ScrollView, useWindowDimensions, SafeAreaView, StyleSheet, ViewStyle, Text } from 'react-native';
+import { Button } from 'react-native-paper';
 import { router } from 'expo-router';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { BentoGrid } from '@/components/ui/BentoGrid';
@@ -8,7 +9,6 @@ import { BentoCarousel } from '@/components/ui/BentoCarousel';
 import { Trip } from '@/src/features/trips/types';
 import { AddTodoModal } from '@/src/features/todos/components/AddTodoModal';
 import { InviteModal } from '@/src/features/trips/components/InviteModal';
-import { WebSocketManager } from '@/src/features/websocket/WebSocketManager';
 import { useTripStore } from '@/src/features/trips/store';
 import { useTodoStore } from '@/src/features/todos/store';
 import { useLocationStore } from '@/src/features/location/store/useLocationStore';
@@ -18,10 +18,15 @@ import { StatusBar } from 'expo-status-bar';
 import { useChatStore } from '@/src/features/chat/store';
 import { TripStats } from '@/src/features/trips/components/TripStats';
 import { useThemedStyles } from '@/src/theme/utils';
-import { BaseEventSchema, ServerEvent, isChatEvent, isServerEvent, isTodoEvent, isTripEvent, isWeatherEvent, isMemberEvent, isMemberInviteEvent } from '@/src/types/events';
-import { ZodNotificationSchema, Notification, isTripInvitationNotification } from '@/src/features/notifications/types/notification';
-import { useNotificationStore } from '@/src/features/notifications/store/useNotificationStore';
 import { logger } from '@/src/utils/logger';
+
+// Supabase Realtime imports
+import { useChatMessages } from '@/src/features/trips/hooks/useChatMessages';
+import { useLocations } from '@/src/features/trips/hooks/useLocations';
+import { usePresence } from '@/src/features/trips/hooks/usePresence';
+import { useReactions } from '@/src/features/trips/hooks/useReactions';
+import { useReadReceipts } from '@/src/features/trips/hooks/useReadReceipts';
+// Removed SupabaseRealtimeErrorScreen import - no longer needed
 
 interface TripDetailScreenProps {
   trip: Trip;
@@ -35,6 +40,47 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const { isLocationSharingEnabled, startLocationTracking, stopLocationTracking } = useLocationStore();
   const { connectToChat, fetchMessages } = useChatStore();
+
+  // Directly use Supabase Realtime hooks
+  const { 
+    messages, 
+    isLoading: isLoadingMessages, 
+    error: messagesError, 
+    sendMessage, 
+    isConnected: isChatConnected 
+  } = useChatMessages({ tripId });
+
+  const { 
+    locations, 
+    isLoading: isLoadingLocations, 
+    error: locationsError, 
+    shareLocation, 
+    isConnected: isLocationConnected 
+  } = useLocations({ tripId });
+
+  const { 
+    users, 
+    isLoading: isLoadingPresence, 
+    error: presenceError, 
+    updatePresence, 
+    isConnected: isPresenceConnected 
+  } = usePresence({ tripId });
+
+  const { 
+    reactions, 
+    isLoading: isLoadingReactions, 
+    error: reactionsError, 
+    addReaction, 
+    isConnected: isReactionsConnected 
+  } = useReactions({ tripId });
+
+  const { 
+    readReceipts, 
+    isLoading: isLoadingReadReceipts, 
+    error: readReceiptsError, 
+    updateLastRead, 
+    isConnected: isReadReceiptsConnected 
+  } = useReadReceipts({ tripId });
 
   const styles = useThemedStyles((theme) => {
     const backgroundDefault = theme?.colors?.background?.default || '#FFFFFF';
@@ -121,79 +167,50 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
     ];
   }, [carouselItems, trip, tripId, CARD_WIDTH, TALL_CARD_HEIGHT, setShowInviteModal]);
 
+  // Initialize chat store for compatibility with existing components
   useEffect(() => {
-    logger.info('Trip Detail Screen', `Setting up WebSocket connection for trip ${tripId}`);
-    const manager = WebSocketManager.getInstance();
-    
-    const isConnectedBefore = manager.isConnected();
-    logger.info('Trip Detail Screen', `WebSocket connection status before connect: ${isConnectedBefore ? 'connected' : 'disconnected'}`);
-    
-    manager.connect(tripId, {
-      onMessage: (rawEvent: unknown) => {
-        const serverEventParseResult = BaseEventSchema.safeParse(rawEvent);
-        if (serverEventParseResult.success) {
-          const eventData = serverEventParseResult.data;
-          if (isServerEvent(eventData)) {
-            logger.debug('WS', 'TripDetailScreen: Confirmed ServerEvent', eventData);
-
-            useTripStore.getState().handleTripEvent(eventData);
-
-            if (isChatEvent(eventData)) {
-              useChatStore.getState().handleChatEvent(eventData);
-            }
-          } else {
-            logger.warn('WS', 'TripDetailScreen: Parsed as ServerEvent by Zod, but failed isServerEvent guard:', eventData);
-            const notificationParseResult = ZodNotificationSchema.safeParse(rawEvent);
-            if (notificationParseResult.success) {
-                const notification = notificationParseResult.data;
-                logger.debug('WS', 'TripDetailScreen: Fallback - Received Notification after ServerEvent parse mismatch', notification);
-                useNotificationStore.getState().handleIncomingNotification(notification);
-            } else {
-                logger.error('WS', 'TripDetailScreen: Unknown event structure after failing ServerEvent specific guard:', rawEvent);
-            }
-          }
-          return;
-        }
-
-        const notificationParseResult = ZodNotificationSchema.safeParse(rawEvent);
-        if (notificationParseResult.success) {
-          const notification = notificationParseResult.data;
-          logger.debug('WS', 'TripDetailScreen: Received Notification', notification);
-          useNotificationStore.getState().handleIncomingNotification(notification);
-          return;
-        }
-        
-        logger.error('WS', 'TripDetailScreen: Received completely unknown event from WebSocket', rawEvent);
-      }
-    }).then(() => {
-      const isConnectedAfter = manager.isConnected();
-      logger.info('UI', `WebSocket connection status after connect: ${isConnectedAfter ? 'connected' : 'disconnected'}`);
-    }).catch(error => {
-      logger.error('UI', `Failed to connect to WebSocket for trip ${tripId}:`, error);
-    });
-    
-    connectToChat(tripId);
-    fetchMessages(tripId);
-    
-    if (isLocationSharingEnabled) {
-      startLocationTracking(tripId);
+    if (isChatConnected) {
+      logger.info('Trip Detail Screen', `Using Supabase Realtime for trip ${tripId}`);
+      // Initialize chat store for compatibility with existing components
+      connectToChat(tripId);
+      fetchMessages(tripId);
     }
+  }, [tripId, isChatConnected, connectToChat, fetchMessages]);
 
-    return () => {
-      logger.info('Trip Detail Screen', `Cleaning up WebSocket connection for trip ${tripId}`);
-      manager.disconnect();
-    };
-  }, [tripId, connectToChat, fetchMessages, isLocationSharingEnabled, startLocationTracking]);
-
+  // Location tracking (independent of realtime system)
   useEffect(() => {
     if (isLocationSharingEnabled) {
-      logger.info('TripDetailScreen', `Starting location tracking for trip ${tripId} (state change)`);
+      logger.info('TripDetailScreen', `Starting location tracking for trip ${tripId}`);
       startLocationTracking(tripId);
     } else {
-      logger.info('TripDetailScreen', `Stopping location tracking for trip ${tripId} (state change)`);
+      logger.info('TripDetailScreen', `Stopping location tracking for trip ${tripId}`);
       stopLocationTracking();
     }
   }, [isLocationSharingEnabled, tripId, startLocationTracking, stopLocationTracking]);
+
+  // Handle individual hook errors
+  const hasErrors = messagesError || locationsError || presenceError || reactionsError || readReceiptsError;
+  if (hasErrors) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>
+          Connection Error
+        </Text>
+        <Text style={{ textAlign: 'center', marginBottom: 20 }}>
+          Unable to connect to real-time features. Please check your connection and try again.
+        </Text>
+        <Button 
+          mode="contained" 
+          onPress={() => {
+            // Trigger reconnection by navigating away and back
+            // or implement retry logic in hooks
+          }}
+        >
+          Retry
+        </Button>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>

@@ -1,8 +1,10 @@
 import React from 'react';
 import { Text, TextProps } from 'react-native';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
-import { createStyles, useThemedStyles } from '@/src/theme/utils';
+import { useThemedStyles } from '@/src/theme/utils';
 import { logger } from '@/src/utils/logger';
+import type { Typography } from '@/src/theme/foundations/typography';
+import type { SemanticColors } from '@/src/theme/foundations/colors';
 
 // Helper type to create dot notation paths for nested objects
 type DotNotation<T, D extends number = 2, P extends string = ''> =
