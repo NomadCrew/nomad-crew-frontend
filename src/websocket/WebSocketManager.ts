@@ -1,13 +1,12 @@
-import { WebSocketConnection } from './WebSocketConnection';
+import { WebSocketConnection } from '../features/websocket/WebSocketConnection';
 import { WebSocketStatus, ServerEvent, BaseEventSchema, isLocationEvent, isChatEvent } from '../types/events';
-import { useAuthStore } from '../store/useAuthStore';
+import { useAuthStore } from '../features/auth/store';
 import { API_CONFIG } from '../api/env';
 import { jwtDecode } from 'jwt-decode';
 import { logger } from '../utils/logger';
-import { useLocationStore } from '../store/useLocationStore';
-import { useNotificationStore } from '../store/useNotificationStore';
-import { ZodNotificationSchema, Notification } from '../types/notification';
-import { useTripStore } from '../store/useTripStore';
+import { useLocationStore } from '../features/location/store/useLocationStore';
+import { useNotificationStore } from '../features/notifications/store/useNotificationStore';
+import { ZodNotificationSchema, Notification } from '../features/notifications/types/notification';
 import { ZodError } from 'zod';
 
 interface ConnectionCallbacks {
@@ -127,7 +126,7 @@ export class WebSocketManager {
           if (error.message === 'Authentication failed') {
             useAuthStore.getState().refreshSession()
               .then(() => this.reconnect(tripId, callbacks))
-              .catch((err) => logger.error('WS', 'Token refresh failed:', err));
+              .catch((err: Error) => logger.error('WS', 'Token refresh failed:', err));
           }
         },
         onStatus: callbacks?.onStatus,
@@ -191,7 +190,7 @@ export class WebSocketManager {
 
   private handleChatEvent(event: ServerEvent): void {
     // Forward the chat event to the chat store
-    const { useChatStore } = require('../store/useChatStore');
+    const { useChatStore } = require('../features/chat/store');
     
     // Add detailed logging of the raw event
     logger.debug('WS', 'Received chat event type:', event.type);

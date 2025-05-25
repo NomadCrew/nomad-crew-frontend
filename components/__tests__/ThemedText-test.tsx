@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '../../__tests__/test-utils';
-import { ThemedText } from '../ThemedText';
+import { ThemedText } from '@/src/components/ThemedText';
 
 describe('ThemedText', () => {
   it('renders correctly', () => {
