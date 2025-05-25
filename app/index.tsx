@@ -30,7 +30,7 @@ export default function Index() {
   // If onboarding is initialized and user is not first time, redirect to tabs
   if (isInitialized && !isFirstTime) {
     console.log('[Index] Redirecting to (tabs) because isFirstTime is false');
-    return <Redirect href="/(tabs)" />;
+    return <Redirect href="/(tabs)/trips" />;
   }
 
   // This should never be reached, but just in case

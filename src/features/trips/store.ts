@@ -109,15 +109,19 @@ export const useTripStore = create<TripState>((set, get) => ({
 
   fetchTrips: async () => {
     set({ loading: true, error: null });
+    logger.info('TRIP', 'fetchTrips started.');
     try {
       const response = await api.get<Trip[]>(API_PATHS.trips.list);
+      logger.info('TRIP', 'Raw API response:', response.data);
       const trips = response.data.map(normalizeTrip);
+      logger.info('TRIP', 'Normalized trips:', trips);
       set({ 
         trips: trips || [] as Trip[],
         loading: false,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to fetch trips';
+      logger.error('TRIP', 'fetchTrips error:', message, error);
       set({ error: message, loading: false });
       throw error;
     }
@@ -248,32 +252,29 @@ export const useTripStore = create<TripState>((set, get) => ({
   },
   
   checkPendingInvitations: async () => {
-    set({ loading: true, error: null });
+    logger.info('TRIP', 'Checking for pending invitations...');
     try {
       const keys = await AsyncStorage.getAllKeys();
       const invitationKeys = keys.filter(key => key.startsWith('pendingInvitation_'));
       if (invitationKeys.length > 0) {
-        logger.info('Found pending invitations:', invitationKeys);
+        logger.info('TRIP', `Found ${invitationKeys.length} pending invitation(s).`);
         for (const key of invitationKeys) {
           const token = await AsyncStorage.getItem(key);
           if (token) {
             try {
-              logger.info('Attempting to accept pending invitation:', token);
-              await get().acceptInvitation(token); 
+              logger.info('TRIP', `Attempting to accept pending invitation with token: ${token}`);
+              await get().acceptInvitation(token);
+              logger.info('TRIP', `Successfully accepted invitation with token: ${token}`);
             } catch (error) {
-              logger.warn('Failed to automatically accept pending invitation:', { token, error });
-              // Keep token if it failed for reasons other than invalid/expired
+              logger.error('TRIP', `Failed to automatically accept pending invitation: ${token}`, error);
             }
           }
         }
       } else {
-        logger.info('No pending invitations found.');
+        logger.info('TRIP', 'No pending invitations found.');
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Error checking pending invitations';
-      logger.error('TRIP', message);
-      set({ error: message, loading: false });
-      throw error;
+      logger.error('TRIP', 'Error checking pending invitations:', error);
     }
   },
 

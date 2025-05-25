@@ -2,6 +2,30 @@
 
 ## ✅ Recent Changes / Decisions (as of Current Date)
 
+- **"Screen Doesn't Exist" Issue After Restart Resolved:**
+    - Fixed an issue where restarting the app would lead to a "This screen doesn't exist" error.
+    - The problem was caused by an incorrect redirect path in `app/index.tsx`. It was redirecting to the `(tabs)` layout group generally, instead of a specific default screen within that group (e.g., `(tabs)/trips`).
+    - Corrected the redirect in `app/index.tsx` to point to `/(tabs)/trips` (or the appropriate default tab screen).
+    - This ensures that after the initial app setup and when not a first-time launch, the app correctly navigates to a valid, existing screen.
+
+- **Username Onboarding Infinite Redirect Issue Resolved:**
+    - Fixed the infinite redirect loop and username screen skipping issues related to username setup after social login/registration.
+    - The core change was made in `src/features/auth/store.ts`:
+        - During session initialization (`initialize`), login (`handleGoogleSignInSuccess`, `handleAppleSignInSuccess`), and registration, if `needsUsername` is determined to be `true` (because the backend user profile is missing or has no username), the `user` object in the store is *no longer set to null*.
+        - Instead, the `user` object is populated with the authenticated user's information from the Supabase session, ensuring that `status` remains `'authenticated'` and is accompanied by user data.
+        - The `needsUsername` flag is now the sole, reliable indicator for requiring username setup.
+    - This ensures `OnboardingGate.tsx` can consistently act as the single source of truth for gating access to the username screen.
+    - `AuthGuard.tsx` now correctly interprets the auth state, as `user` is not prematurely nulled, allowing its logic (which defers to `OnboardingGate` when `needsUsername` is true) to function as intended.
+    - This prevents conflicts between `AuthGuard` and `OnboardingGate` that previously led to redirect loops or incorrect navigation.
+
+- **Onboarding/Username Bug Identified:**
+    - On fresh install and new user sign-in (including Google), the app does not present the username onboarding screen, even when the backend user has no username set.
+    - Debug logs confirm: after Google sign-in, the backend returns a user profile with a username field (e.g., "hrkadushmann"), but this is auto-generated from the email prefix, not user-chosen.
+    - The frontend logic only checks for the presence of a non-empty username to skip the username onboarding step, so users never get a chance to set a custom username if one is auto-generated.
+    - This results in users being routed directly to the home screen after login, with no opportunity to set or change their username.
+    - The bug is confirmed by both the logs and the absence of a username on the profile page after onboarding.
+    - The backend `/v1/users/me` endpoint is working as expected and returns the current user profile.
+
 - **Startup Crash & Navigation Flow Fixed:**
     - Resolved app startup crash previously caused by a combination of font loading errors and navigation conflicts between `OnboardingGate` and `AuthGuard`.
     - Corrected font loading paths in `app/AppInitializer.tsx` for Manrope fonts and temporarily commented out Inter fonts (due to missing static files) to allow bundling.
@@ -142,32 +166,37 @@
     - Implemented a comprehensive `logout` method including push token deregistration (frontend part) and SecureStore cleanup.
     - Added `supabase.auth.onAuthStateChange` listener to keep store and SecureStore synced with Supabase events (`SIGNED_IN`, `SIGNED_OUT`, `TOKEN_REFRESHED`, `USER_UPDATED`).
 
-## �� Next Steps
+## 🧠 Next Steps
 
-1.  **Address Inter Fonts:**
-    *   Decide on the strategy for Inter fonts (use variable fonts `Inter-VariableFont_opsz,wght.ttf` or add static `.otf`/`.ttf` files to `assets/fonts/Inter/static/`).
-    *   Implement the chosen strategy in `app/AppInitializer.tsx`.
-2.  **Thorough Testing & Validation (Authentication & Onboarding):**
-    *   Test all authentication flows: email/password (login, register), Google Sign-In, Apple Sign-In.
-    *   Verify token persistence in SecureStore and correct behavior across app restarts.
-    *   Test `onAuthStateChange` listener scenarios.
-    *   Confirm 401 interceptor correctly refreshes token and retries requests.
-    *   Test logout thoroughly: SecureStore cleared, push token deregistered (verify backend), state reset.
-    *   Test error handling for all auth operations.
-    *   Test the complete onboarding flow now that navigation is unblocked. Ensure `isFirstTime` flag in `OnboardingProvider` is correctly set/reset.
-3.  **Investigate API Calls for Unauthenticated Users:**
-    *   Review API calls like `fetchUnreadCount` that might be triggered for unauthenticated users (e.g., on the login screen or during initial app load before full auth state is settled).
-    *   Ensure these calls are either deferred until authentication or handled gracefully if made by unauthenticated users.
-4.  **Implement Central Data Normalization for Trips:**
-    *   Create `src/features/trips/adapters/normalizeTrip.ts` with a normalization function for trip data.
-    *   Refactor trip store/service to use this adapter for all trip data entering the app state/UI.
-5.  **Backend: Push Token Deregistration Endpoint:**
-    *   (Backend Task) Implement the backend endpoint (e.g., `/users/push-token/deregister`) that the `logout` function in `useAuthStore` calls.
-6.  **Review `registerAuthHandlers` (Final Check):**
-    *   After full testing, give a final confirmation that the `registerAuthHandlers` integration and functionality are as expected.
-7.  **Documentation Finalization:** Update internal developer documentation based on recent changes and learnings.
-8.  **Resolve Persistent Linter Errors (if any):**
-    *   Address any remaining linter errors.
+1. **Coordinate with Backend:**
+    - Confirm with the backend team if the username should ever be auto-generated, or if the field should be left empty until the user sets it.
+    - If auto-generation is required, agree on a pattern (e.g., email prefix) so the frontend can detect and prompt for a custom username.
+2. **Thorough Testing & Validation (Authentication & Onboarding):**
+    - Test all authentication flows: email/password (login, register), Google Sign-In, Apple Sign-In.
+    - Verify token persistence in SecureStore and correct behavior across app restarts.
+    - Test `onAuthStateChange` listener scenarios.
+    - Confirm 401 interceptor correctly refreshes token and retries requests.
+    - Test logout thoroughly: SecureStore cleared, push token deregistered (verify backend), state reset.
+    - Test error handling for all auth operations.
+    - Test the complete onboarding flow now that navigation is unblocked. Ensure `isFirstTime` flag in `OnboardingProvider` is correctly set/reset.
+    - Specifically test the resolved username onboarding flow:
+        - New user registration (email/social) leading to username screen.
+        - Session restore for user who hasn't set username, leading to username screen.
+        - User attempts to navigate away from username screen before completion.
+    - Test the resolved "Screen Doesn't Exist" issue by restarting the app under various conditions (e.g., after login, after completing onboarding).
+3. **Investigate API Calls for Unauthenticated Users:**
+    - Review API calls like `fetchUnreadCount` that might be triggered for unauthenticated users (e.g., on the login screen or during initial app load before full auth state is settled).
+    - Ensure these calls are either deferred until authentication or handled gracefully if made by unauthenticated users.
+4. **Implement Central Data Normalization for Trips:**
+    - Create `src/features/trips/adapters/normalizeTrip.ts` with a normalization function for trip data.
+    - Refactor trip store/service to use this adapter for all trip data entering the app state/UI.
+5. **Backend: Push Token Deregistration Endpoint:**
+    - (Backend Task) Implement the backend endpoint (e.g., `/users/push-token/deregister`) that the `logout` function in `useAuthStore` calls.
+6. **Review `registerAuthHandlers` (Final Check):**
+    - After full testing, give a final confirmation that the `registerAuthHandlers` integration and functionality are as expected.
+7. **Documentation Finalization:** Update internal developer documentation based on recent changes and learnings.
+8. **Resolve Persistent Linter Errors (if any):**
+    - Address any remaining linter errors.
 
 ## ❗ Active Decisions / Context
 - The combined use of `app/index.tsx` for initial onboarding/app redirection, `OnboardingGate` (using `useSegments`) for protecting non-onboarding/non-auth routes during first-time use, and `AuthGuard` for general route protection and auth redirects is the current established pattern.

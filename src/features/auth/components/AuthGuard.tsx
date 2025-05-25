@@ -14,7 +14,7 @@ interface AuthGuardProps {
  * Also handles token refreshing when necessary.
  */
 export const AuthGuard = ({ children }: AuthGuardProps) => {
-  const { user, isInitialized, token, refreshToken, refreshSession, status } = useAuthStore();
+  const { user, isInitialized, token, refreshToken, refreshSession, status, needsUsername } = useAuthStore();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const router = useRouter();
   const segments = useSegments();
@@ -37,8 +37,20 @@ export const AuthGuard = ({ children }: AuthGuardProps) => {
         // If we have a user and token, but we're in auth group or onboarding group (and onboarding is complete),
         // redirect to main app. If onboarding is not complete, user should stay in onboarding.
         // This part might need refinement based on how onboarding completion is tracked and when to exit onboarding.
-        if (user && token && (isAuthGroup || isOnboardingGroup)) { // Simplified for now
-          logger.debug('AUTH-GUARD', 'User is authenticated but on auth/onboarding route, redirecting to app');
+        const isOnUsernameScreen = segments[0] === '(onboarding)' && segments[1] === 'username';
+        if (user && token && (isAuthGroup || isOnboardingGroup)) {
+          if (needsUsername && isOnUsernameScreen) {
+            // User needs username and is on the username screen: do not redirect
+            logger.debug('AUTH-GUARD', 'User needs username and is on username screen, not redirecting');
+            return;
+          }
+          if (needsUsername && !isOnUsernameScreen) {
+            // User needs username but is not on username screen: let OnboardingGate handle redirect
+            logger.debug('AUTH-GUARD', 'User needs username, letting OnboardingGate handle redirect');
+            return;
+          }
+          // Only redirect to main app if needsUsername is false
+          logger.debug('AUTH-GUARD', 'User is authenticated and does not need username, redirecting to app');
           router.replace('/(tabs)/trips');
           return;
         }

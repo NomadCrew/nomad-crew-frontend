@@ -6,6 +6,8 @@ import { logger } from '@/src/utils/logger';
 import { ERROR_CODES, ERROR_MESSAGES } from './constants';
 import { isTokenExpiringSoon } from '@/src/utils/token';
 import type { User } from '@/src/features/auth/types';
+import axios from 'axios';
+import { useAuthStore } from '@/src/features/auth/store';
 
 // Token refresh lock mechanism
 let isRefreshing = false;
@@ -284,4 +286,17 @@ export async function onboardUser(username: string): Promise<User> {
   const api = ApiClient.getInstance();
   const response = await api.getAxiosInstance().post<User>(API_PATHS.users.onboard, { username });
   return response.data;
+}
+
+export async function getCurrentUserProfile(): Promise<User> {
+  const api = ApiClient.getInstance();
+  const response = await api.getAxiosInstance().get<User>(API_PATHS.users.me);
+  return response.data;
+}
+
+export async function getSupabaseJWT(): Promise<string> {
+  // This assumes you are calling from a React context. If not, use useAuthStore.getState().token
+  const token = useAuthStore.getState().token;
+  if (!token) throw new Error('No Supabase JWT available');
+  return token;
 }

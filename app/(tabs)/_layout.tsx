@@ -5,10 +5,11 @@ import { Home, MapPin, Bell, User } from 'lucide-react-native';
 import { AuthGuard } from '@/src/features/auth/components/AuthGuard';
 import { OnboardingGate } from '@/src/components/common/OnboardingGate';
 
-console.log('[TabsLayout] Rendering');
+console.log('[TabsLayout] File loaded, starting TabsLayout component render');
 
 export default function TabsLayout() {
   const { theme } = useAppTheme();
+  console.log('[TabsLayout] Inside TabsLayout function - rendering');
 
   return (
     <AuthGuard>
