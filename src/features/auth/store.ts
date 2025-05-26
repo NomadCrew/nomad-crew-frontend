@@ -466,24 +466,11 @@ export const useAuthStore = create<AuthState>((set, get) => {
         } catch (profileError: any) {
           // Check for both 404 (user not found) and 401 (user not onboarded) errors
           if (profileError?.response?.status === 404 || profileError?.response?.status === 401) {
-            console.warn('[AUTH] Backend user not found or not onboarded after Google sign-in, attempting onboarding...');
-            try {
-              const defaultUsername = session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'user';
-              console.log('[AUTH] Attempting to onboard user with username:', defaultUsername);
-              user = await onboardUser(defaultUsername);
-              needsUsername = !user.username;
-              console.log('[AUTH] User onboarded successfully:', user);
-            } catch (onboardError: any) {
-              // Onboarding failed, force needsUsername
-              needsUsername = true;
-              user = null;
-              console.error('[AUTH] Onboarding failed:', onboardError);
-              console.error('[AUTH] Onboard error details:', {
-                status: onboardError?.response?.status,
-                data: onboardError?.response?.data,
-                message: onboardError?.message
-              });
-            }
+            console.warn('[AUTH] Backend user not found or not onboarded after Google sign-in, user needs to select username');
+            // For new users, always show username selection screen
+            // Don't auto-onboard - let user choose their username
+            needsUsername = true;
+            user = null;
           } else {
             console.warn('[AUTH] Failed to fetch backend user profile after Google sign-in:', profileError);
             // If it's a different error, still allow user to recover via username screen
@@ -543,23 +530,11 @@ export const useAuthStore = create<AuthState>((set, get) => {
         } catch (profileError: any) {
           // Check for both 404 (user not found) and 401 (user not onboarded) errors
           if (profileError?.response?.status === 404 || profileError?.response?.status === 401) {
-            console.warn('[AUTH] Backend user not found or not onboarded after Apple sign-in, attempting onboarding...');
-            try {
-              const defaultUsername = session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'user';
-              console.log('[AUTH] Attempting to onboard user with username:', defaultUsername);
-              user = await onboardUser(defaultUsername);
-              needsUsername = !user.username;
-              console.log('[AUTH] User onboarded successfully:', user);
-            } catch (onboardError: any) {
-              needsUsername = true;
-              user = null;
-              console.error('[AUTH] Onboarding failed:', onboardError);
-              console.error('[AUTH] Onboard error details:', {
-                status: onboardError?.response?.status,
-                data: onboardError?.response?.data,
-                message: onboardError?.message
-              });
-            }
+            console.warn('[AUTH] Backend user not found or not onboarded after Apple sign-in, user needs to select username');
+            // For new users, always show username selection screen
+            // Don't auto-onboard - let user choose their username
+            needsUsername = true;
+            user = null;
           } else {
             console.warn('[AUTH] Failed to fetch backend user profile after Apple sign-in:', profileError);
             needsUsername = true;

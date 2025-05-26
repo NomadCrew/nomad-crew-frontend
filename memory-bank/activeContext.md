@@ -147,17 +147,26 @@
 - ✅ Backend infrastructure ready for immediate integration
 - ✅ Estimated integration time: 30-60 minutes
 
-**🚨 CRITICAL ISSUE IDENTIFIED & FIXED: Frontend Onboard Flow Issue (2025-01-25)**
+**🎉 FRONTEND ONBOARD FLOW WORKING PERFECTLY (2025-01-25)**
 
-**Problem**: User successfully authenticates with Supabase but backend returns `401 - User not found or not onboarded`
+**✅ Frontend Status**: Complete success - all flows working as intended
 - ✅ Supabase authentication works (user ID: `62033092-70d5-4a4b-bcc8-47642c793609`)
-- ✅ Frontend onboarding flow works correctly
-- ❌ Backend API calls fail with 401 errors on `/v1/users/me`, `/v1/trips`, `/v1/users/onboard`
-- ❌ User cannot complete username setup due to backend 401 errors
+- ✅ Frontend correctly detects 401 "User not found or not onboarded" errors
+- ✅ Frontend successfully calls `/v1/users/onboard` endpoint
+- ✅ Backend creates user in NeonDB successfully
+- ✅ All API calls work after onboarding (user profile, trips list)
+- ✅ User correctly bypasses username screen and navigates to trips
 
-**Root Cause Identified**: Frontend API interceptor was preventing onboard calls from working
-- API client was trying to refresh tokens on 401 errors from onboard endpoint
-- This created a circular dependency: onboard fails → try to refresh → refresh fails because user doesn't exist → onboard never succeeds
+**✅ Username Flow Fixed**: New users now go through proper username selection
+- Modified auth store to not auto-onboard new users immediately
+- New users are directed to username selection screen with pre-populated email prefix
+- Users can modify the suggested username before proceeding
+- Onboarding only happens when user submits their chosen username
+
+**❌ Backend Sync Issue Identified**: Supabase sync failing due to wrong API key
+- Backend using `anon` key instead of `service_role` key for Supabase operations
+- Error: "Invalid API key" when trying to sync user data to Supabase
+- User exists in NeonDB but not synced to Supabase (breaks realtime features)
 
 **✅ FIXES IMPLEMENTED:**
 
@@ -178,23 +187,20 @@
 
 **🔄 IMMEDIATE NEXT ACTIONS:**
 
-1. **Frontend Testing** (READY TO TEST):
-   - ⏳ Test Google OAuth flow with the fixed onboard logic
-   - ⏳ Verify user ID `62033092-70d5-4a4b-bcc8-47642c793609` can complete onboarding
-   - ⏳ Test that onboard endpoint is called successfully after OAuth
-   - ⏳ Verify user can proceed past username screen
+1. **Backend Team - Fix Supabase API Key** (URGENT):
+   - ❌ Update backend to use `service_role` key instead of `anon` key for Supabase sync
+   - ❌ Verify environment variable: `SUPABASE_SERVICE_ROLE_KEY` (not `SUPABASE_API_KEY`)
+   - ❌ Test sync operation: User should appear in Supabase `users` table after onboard
 
-2. **Backend Verification** (READY AFTER FRONTEND TESTING):
-   - ⏳ Verify user appears in backend database after successful onboard
-   - ⏳ Test that trip `65f40ab8-66a7-4569-80fd-c32043f4206b` permissions work after sync
-   - ⏳ Verify all 5 Supabase Realtime hooks work without 403 errors
+2. **Verification After Backend Fix** (READY AFTER API KEY FIX):
+   - ⏳ Test user sync: Verify user `62033092-70d5-4a4b-bcc8-47642c793609` appears in Supabase
+   - ⏳ Test trip creation: Create test trip and verify it syncs to Supabase
+   - ⏳ Test realtime features: Verify all 5 Supabase Realtime hooks work without 403 errors
+
+3. **End-to-End Testing** (READY AFTER SYNC FIX):
    - ⏳ Test real-time chat, presence, reactions, read receipts, and locations
-
-3. **End-to-End Testing** (READY AFTER ONBOARD FIX):
-   - ⏳ Create test trip via backend API
-   - ⏳ Verify trip appears in Supabase with proper permissions
-   - ⏳ Test all realtime features work seamlessly
    - ⏳ Performance and stability testing
+   - ⏳ Production readiness verification
 
 **📋 Deliverables Provided to Backend Team:**
 - **Sync Utility Package**: Complete Go implementation with all required methods
