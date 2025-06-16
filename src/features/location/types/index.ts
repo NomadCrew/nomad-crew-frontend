@@ -14,7 +14,7 @@ export interface MemberLocation {
 export interface LocationState {
   // Settings
   isLocationSharingEnabled: boolean;
-  setLocationSharingEnabled: (enabled: boolean) => Promise<void>;
+  setLocationSharingEnabled: (enabled: boolean, tripId?: string) => Promise<void>;
   
   // Current user's location
   currentLocation: Location.LocationObject | null;
@@ -26,6 +26,7 @@ export interface LocationState {
   
   // Location tracking subscription
   locationSubscription: Location.LocationSubscription | null;
+  currentTripId: string | null;
   
   // Actions
   startLocationTracking: (tripId: string) => Promise<void>;

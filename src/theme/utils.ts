@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import { useAppTheme } from './ThemeProvider';
 import { logger } from '../utils/logger';
-import type { Theme } from './types';
+import type { Theme, TripStatus, MemberRole, PresenceStatus } from './types';
 
 /**
  * Safe theme property access with fallbacks
@@ -71,6 +71,94 @@ export const safeThemeAccess = {
 };
 
 /**
+ * NEW: Semantic color utilities for enhanced theme tokens
+ */
+export const createSemanticColorHelpers = (theme: Theme) => ({
+  /**
+   * Get trip status colors
+   */
+  getTripStatusColors: (status: TripStatus) => {
+    const statusColors = theme.colors.tripStatus?.[status];
+    if (!statusColors) {
+      console.warn(`[Theme] Missing trip status colors for: ${status}`);
+      return {
+        background: safeThemeAccess.colors.get(theme, 'surface.main', '#FFFFFF'),
+        content: safeThemeAccess.colors.get(theme, 'content.primary', '#000000'),
+        border: safeThemeAccess.colors.get(theme, 'border.default', '#E5E7EB'),
+        icon: safeThemeAccess.colors.get(theme, 'content.secondary', '#6B7280'),
+      };
+    }
+    return statusColors;
+  },
+
+  /**
+   * Get member role colors
+   */
+  getMemberRoleColors: (role: MemberRole) => {
+    const roleColors = theme.colors.memberRoles?.[role];
+    if (!roleColors) {
+      console.warn(`[Theme] Missing member role colors for: ${role}`);
+      return {
+        background: safeThemeAccess.colors.get(theme, 'surface.main', '#FFFFFF'),
+        content: safeThemeAccess.colors.get(theme, 'content.primary', '#000000'),
+        border: safeThemeAccess.colors.get(theme, 'border.default', '#E5E7EB'),
+        icon: safeThemeAccess.colors.get(theme, 'content.secondary', '#6B7280'),
+        badge: safeThemeAccess.colors.get(theme, 'primary.main', '#F46315'),
+      };
+    }
+    return roleColors;
+  },
+
+  /**
+   * Get presence indicator colors
+   */
+  getPresenceColors: (status: PresenceStatus) => {
+    const presenceColors = theme.colors.presence?.[status];
+    if (!presenceColors) {
+      console.warn(`[Theme] Missing presence colors for: ${status}`);
+      return {
+        indicator: safeThemeAccess.colors.get(theme, 'content.tertiary', '#9CA3AF'),
+        background: safeThemeAccess.colors.get(theme, 'surface.main', '#FFFFFF'),
+        content: safeThemeAccess.colors.get(theme, 'content.primary', '#000000'),
+        glow: 'transparent',
+        ...(status === 'typing' && { animation: safeThemeAccess.colors.get(theme, 'primary.main', '#F46315') }),
+      };
+    }
+    return presenceColors;
+  },
+
+  /**
+   * Get role badge style properties
+   */
+  getRoleBadgeStyle: (role: MemberRole) => {
+    const roleColors = theme.colors.memberRoles?.[role];
+    return {
+      backgroundColor: roleColors?.badge || safeThemeAccess.colors.get(theme, 'primary.main', '#F46315'),
+      color: '#FFFFFF',
+      borderColor: roleColors?.border || safeThemeAccess.colors.get(theme, 'border.default', '#E5E7EB'),
+    };
+  },
+
+  /**
+   * Get presence indicator style with glow effect
+   */
+  getPresenceIndicatorStyle: (status: PresenceStatus, size: number = 8) => {
+    const presenceColors = theme.colors.presence?.[status];
+    return {
+      width: size,
+      height: size,
+      borderRadius: size / 2,
+      backgroundColor: presenceColors?.indicator || safeThemeAccess.colors.get(theme, 'content.tertiary', '#9CA3AF'),
+      shadowColor: presenceColors?.glow || 'transparent',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.8,
+      shadowRadius: size / 2,
+      elevation: 2,
+    };
+  },
+});
+
+/**
  * Enhanced useThemedStyles hook with better error handling
  */
 export function useThemedStyles<T extends Record<string, any>>(
@@ -130,6 +218,9 @@ export const createThemeHelpers = (theme: Theme) => ({
     lg: safeThemeAccess.borderRadius.get(theme, 'lg', 12),
     xl: safeThemeAccess.borderRadius.get(theme, 'xl', 16),
   },
+
+  // NEW: Semantic color helpers
+  semantic: createSemanticColorHelpers(theme),
 });
 
 /**
@@ -138,6 +229,14 @@ export const createThemeHelpers = (theme: Theme) => ({
 export function useThemeHelpers() {
   const { theme } = useAppTheme();
   return useMemo(() => createThemeHelpers(theme), [theme]);
+}
+
+/**
+ * NEW: Hook specifically for semantic colors
+ */
+export function useSemanticColors() {
+  const { theme } = useAppTheme();
+  return useMemo(() => createSemanticColorHelpers(theme), [theme]);
 }
 
 /**

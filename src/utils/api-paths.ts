@@ -38,9 +38,10 @@ export const API_PATHS = {
   },
   // Add location endpoints
   location: {
-    update: createApiPath('location/update'),
+    update: (tripId: string) => createApiPath(`trips/${tripId}/locations`),
     byTrip: (tripId: string) => createApiPath(`trips/${tripId}/locations`),
     preferences: createApiPath('location/preferences'),
+    members: (tripId: string) => createApiPath(`trips/${tripId}/locations/members`),
   },
   // Add chat endpoints
   CHAT: {
