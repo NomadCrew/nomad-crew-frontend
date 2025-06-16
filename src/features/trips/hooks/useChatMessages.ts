@@ -73,15 +73,25 @@ export function useChatMessages({
 
       const { messages: newMessages, pagination } = response.data;
       
+      // Defensive check: Ensure pagination exists and has expected structure
+      const safePagination = pagination || { has_more: false, next_cursor: undefined };
+      
       if (refresh || offset === 0) {
-        setMessages(newMessages);
+        setMessages(newMessages || []);
       } else {
-        setMessages(prev => [...prev, ...newMessages]);
+        setMessages(prev => [...prev, ...(newMessages || [])]);
       }
 
-      setHasMore(pagination.has_more);
-      setNextCursor(pagination.next_cursor);
+      setHasMore(safePagination.has_more || false);
+      setNextCursor(safePagination.next_cursor);
       setError(null);
+      
+      // Log for debugging backend response structure
+      logger.debug('useChatMessages', 'Response structure:', {
+        messagesCount: (newMessages || []).length,
+        hasPagination: !!pagination,
+        paginationStructure: pagination
+      });
     } catch (err) {
       if (!isMountedRef.current) return;
       

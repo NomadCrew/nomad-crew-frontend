@@ -135,6 +135,7 @@ export function useLocations({ tripId, autoConnect = true }: UseLocationsParams)
       switch (eventType) {
         case 'INSERT':
           if (newRecord && newRecord.trip_id === tripId) {
+            logger.debug('useLocations', 'Adding new location for trip:', tripId, newRecord);
             // Check if location already exists to avoid duplicates
             const exists = currentLocations.some(loc => loc.id === newRecord.id);
             if (!exists) {
@@ -145,6 +146,7 @@ export function useLocations({ tripId, autoConnect = true }: UseLocationsParams)
 
         case 'UPDATE':
           if (newRecord && newRecord.trip_id === tripId) {
+            logger.debug('useLocations', 'Updating location for trip:', tripId, newRecord);
             return currentLocations.map(loc =>
               loc.id === newRecord.id ? newRecord : loc
             );
@@ -153,6 +155,7 @@ export function useLocations({ tripId, autoConnect = true }: UseLocationsParams)
 
         case 'DELETE':
           if (oldRecord) {
+            logger.debug('useLocations', 'Deleting location for trip:', tripId, oldRecord);
             return currentLocations.filter(loc => loc.id !== oldRecord.id);
           }
           return currentLocations;

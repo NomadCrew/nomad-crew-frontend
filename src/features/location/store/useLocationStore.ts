@@ -9,7 +9,7 @@ import { MemberLocation, LocationState } from '../types';
 import { useTripStore } from '@/src/features/trips/store';
 
 // Mock data for testing while backend endpoints are being implemented
-const MOCK_MODE = true; // Set to false when backend is ready
+const MOCK_MODE = false; // Set to false when backend is ready
 
 // Generate mock member locations around a given center point
 const generateMockMemberLocations = (
@@ -46,10 +46,11 @@ export const useLocationStore = create<LocationState>((set, get) => ({
   // Trip member locations
   memberLocations: {},
   
-  // Location tracking subscription
+  // Location tracking subscription and current trip
   locationSubscription: null as Location.LocationSubscription | null,
+  currentTripId: null as string | null,
   
-  setLocationSharingEnabled: async (enabled: boolean) => {
+  setLocationSharingEnabled: async (enabled: boolean, tripId?: string) => {
     try {
       logger.debug('Setting location sharing enabled:', enabled);
       await AsyncStorage.setItem('locationSharingEnabled', JSON.stringify(enabled));
@@ -57,9 +58,12 @@ export const useLocationStore = create<LocationState>((set, get) => ({
       
       // If enabling, start tracking if not already tracking
       if (enabled && !get().isTrackingLocation) {
-        // Get the active trip ID from the trip store if available
-        const tripStore = useTripStore.getState();
-        const activeTripId = tripStore.selectedTrip?.id;
+        // Use provided tripId or get the active trip ID from the trip store if available
+        let activeTripId = tripId;
+        if (!activeTripId) {
+          const tripStore = useTripStore.getState();
+          activeTripId = tripStore.selectedTrip?.id;
+        }
         
         if (activeTripId) {
           get().startLocationTracking(activeTripId);
@@ -89,6 +93,9 @@ export const useLocationStore = create<LocationState>((set, get) => ({
     
     try {
       logger.debug('Starting location tracking for trip:', tripId);
+      
+      // Store the current trip ID
+      set({ currentTripId: tripId });
       
       // Request permissions if not already granted
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -147,14 +154,22 @@ export const useLocationStore = create<LocationState>((set, get) => ({
     
     set({ 
       isTrackingLocation: false,
-      locationSubscription: null
+      locationSubscription: null,
+      currentTripId: null
     });
   },
   
   updateLocation: async (location: Location.LocationObject) => {
     const { user } = useAuthStore.getState();
+    const { currentTripId } = get();
+    
     if (!user) {
       logger.debug('No user found, not updating location');
+      return;
+    }
+    
+    if (!currentTripId) {
+      logger.debug('No current trip ID found, not updating location');
       return;
     }
     
@@ -172,12 +187,14 @@ export const useLocationStore = create<LocationState>((set, get) => ({
           return;
         }
         
-        await api.post(API_PATHS.location.update, {
+        await api.post(API_PATHS.location.update(currentTripId), {
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
           accuracy: location.coords.accuracy,
           timestamp: location.timestamp
         });
+        
+        logger.debug('Location update sent successfully for trip:', currentTripId);
       }
     } catch (error) {
       // Log the error but don't set an error state to avoid disrupting the UI
