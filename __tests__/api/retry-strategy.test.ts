@@ -1,5 +1,5 @@
 // Import setup FIRST to ensure all mocks are in place
-import './setup';
+import './test-setup';
 
 import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
@@ -134,9 +134,11 @@ describe('Retry Strategy', () => {
       });
 
       // Mock refresh that doesn't return a token
+      // getToken is called twice in request interceptor: once in while loop check, once for token variable
       mockAuthState.refreshSession.mockResolvedValueOnce(undefined);
       mockAuthState.getToken
-        .mockReturnValueOnce('old-token')
+        .mockReturnValueOnce('old-token') // while loop check in request interceptor
+        .mockReturnValueOnce('old-token') // token variable assignment in request interceptor
         .mockReturnValue(null); // No new token after refresh
 
       const api = apiClient.getAxiosInstance();
@@ -532,6 +534,9 @@ describe('Retry Strategy', () => {
 
   describe('concurrent retry handling', () => {
     it('should queue concurrent requests during token refresh', async () => {
+      // Use real timers for this test since we need setTimeout to work
+      jest.useRealTimers();
+
       // Multiple requests hit 401 simultaneously
       mockAxios
         .onGet('/api/trips')
@@ -566,14 +571,19 @@ describe('Retry Strategy', () => {
         .onGet('/api/notifications')
         .reply(200, { notifications: [] });
 
-      // Mock refresh with delay
+      // Mock refresh with small delay
       mockAuthState.refreshSession.mockImplementation(() =>
-        new Promise((resolve) => setTimeout(resolve, 100))
+        new Promise((resolve) => setTimeout(resolve, 10))
       );
+      // getToken is called twice per request in the request interceptor (while loop + token variable)
+      // For 3 concurrent requests, we need 6 'old-token' returns, then 'new-token' for post-refresh
       mockAuthState.getToken
-        .mockReturnValueOnce('old-token')
-        .mockReturnValueOnce('old-token')
-        .mockReturnValueOnce('old-token')
+        .mockReturnValueOnce('old-token') // request 1: while loop
+        .mockReturnValueOnce('old-token') // request 1: token var
+        .mockReturnValueOnce('old-token') // request 2: while loop
+        .mockReturnValueOnce('old-token') // request 2: token var
+        .mockReturnValueOnce('old-token') // request 3: while loop
+        .mockReturnValueOnce('old-token') // request 3: token var
         .mockReturnValue('new-token');
 
       const api = apiClient.getAxiosInstance();
@@ -592,9 +602,12 @@ describe('Retry Strategy', () => {
 
       // Should only refresh once
       expect(mockAuthState.refreshSession).toHaveBeenCalledTimes(1);
-    });
+    }, 10000); // Increase timeout for this test
 
     it('should handle mixed success and failure during concurrent retries', async () => {
+      // Use real timers for this test
+      jest.useRealTimers();
+
       mockAxios
         .onGet('/api/trips')
         .replyOnce(401, {
@@ -622,9 +635,13 @@ describe('Retry Strategy', () => {
         });
 
       mockAuthState.refreshSession.mockResolvedValue(undefined);
+      // getToken is called twice per request in the request interceptor
+      // For 2 concurrent requests, we need 4 'old-token' returns
       mockAuthState.getToken
-        .mockReturnValueOnce('old-token')
-        .mockReturnValueOnce('old-token')
+        .mockReturnValueOnce('old-token') // request 1: while loop
+        .mockReturnValueOnce('old-token') // request 1: token var
+        .mockReturnValueOnce('old-token') // request 2: while loop
+        .mockReturnValueOnce('old-token') // request 2: token var
         .mockReturnValue('new-token');
 
       const api = apiClient.getAxiosInstance();
@@ -637,6 +654,6 @@ describe('Retry Strategy', () => {
       expect(results[0].status).toBe('fulfilled');
       expect(results[1].status).toBe('rejected');
       expect(mockAuthState.refreshSession).toHaveBeenCalledTimes(1);
-    });
+    }, 10000); // Increase timeout for this test
   });
 });
