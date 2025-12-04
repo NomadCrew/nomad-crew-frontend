@@ -1,7 +1,6 @@
 // Import setup FIRST to ensure all mocks are in place
 import './test-setup';
 
-import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
 import { ApiClient, registerAuthHandlers } from '@/src/api/api-client';
 import { ERROR_CODES, ERROR_MESSAGES } from '@/src/api/constants';
@@ -177,7 +176,7 @@ describe('Retry Strategy', () => {
       // This test demonstrates expected behavior for a retry mechanism
       try {
         await api.get('/api/trips');
-        fail('Should have thrown 429 error');
+        throw new Error('Should have thrown 429 error');
       } catch (error: any) {
         expect(error.response?.status).toBe(429);
         expect(error.response?.headers['retry-after']).toBe('5');
@@ -215,7 +214,7 @@ describe('Retry Strategy', () => {
       // First attempt
       try {
         await api.get('/api/trips');
-        fail('Should have thrown 429 error');
+        throw new Error('Should have thrown 429 error');
       } catch (error: any) {
         expect(error.response?.headers['retry-after']).toBe('30');
       }
@@ -232,7 +231,7 @@ describe('Retry Strategy', () => {
 
       try {
         await api.get('/api/trips');
-        fail('Should have thrown error');
+        throw new Error('Should have thrown error');
       } catch (error: any) {
         expect(error.response?.status).toBe(429);
         // Should handle gracefully even without Retry-After header
@@ -265,7 +264,7 @@ describe('Retry Strategy', () => {
 
       try {
         await api.get('/api/trips');
-        fail('Should have thrown error');
+        throw new Error('Should have thrown error');
       } catch (error: any) {
         expect(error.response?.status).toBe(500);
       }

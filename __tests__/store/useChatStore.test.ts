@@ -10,6 +10,9 @@ import { ChatMessage, ChatMessageWithStatus, ReadReceipt } from '@/src/types/cha
 import { WebSocketManager } from '@/src/websocket/WebSocketManager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { api } from '@/src/api/api-client';
+import { chatService } from '@/src/services/chatService';
+
 // Mock dependencies
 jest.mock('@/src/api/api-client', () => ({
   api: {
@@ -55,9 +58,6 @@ jest.mock('uuid', () => {
     v4: jest.fn(() => `mock-uuid-${++counter}-${Date.now()}`),
   };
 }, { virtual: true });
-
-import { api } from '@/src/api/api-client';
-import { chatService } from '@/src/services/chatService';
 
 describe('useChatStore', () => {
   const mockUser = createMockUser({ id: 'user-123', username: 'testuser' });

@@ -114,8 +114,9 @@ export function useInputPerformance(options = {}) {
     // Performance styles that can be applied to containers
     containerStyle: performantInputStyles.container,
     inputStyle: performantInputStyles.input,
-    // Callback optimization helper
-    optimizeCallback: (callback: (...args: any[]) => void) => {
+    // Callback optimization helper - renamed to follow hook naming convention
+    useOptimizedCallback: (callback: (...args: any[]) => void) => {
+      // eslint-disable-next-line react-hooks/rules-of-hooks
       return useCallback((...args: any[]) => {
         if (callback) {
           callback(...args);

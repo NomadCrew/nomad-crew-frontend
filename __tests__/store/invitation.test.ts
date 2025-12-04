@@ -5,6 +5,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { resetAllStores, setupAuthenticatedUser } from '../helpers';
 import { createMockUser, createMockTrip, createMockInvitation } from '../factories';
 
+import { api, apiClient } from '@/src/api/api-client';
+
 // Mock Supabase
 jest.mock('@/src/auth/supabaseClient', () => ({
   supabase: {
@@ -58,8 +60,6 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   setItem: jest.fn(),
   removeItem: jest.fn(),
 }));
-
-import { api, apiClient } from '@/src/api/api-client';
 
 describe('Trip Invitations', () => {
   const mockUser = createMockUser();

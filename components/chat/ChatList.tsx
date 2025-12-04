@@ -253,7 +253,7 @@ export const ChatList: React.FC<ChatListProps> = ({
   }, [isLoading, styles]);
 
   // Handle when a message becomes visible
-  const handleViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: Array<any> }) => {
+  const handleViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: any[] }) => {
     if (viewableItems.length > 0 && user?.id) {
       // Get the last visible message
       const lastVisibleItem = viewableItems[viewableItems.length - 1];

@@ -66,7 +66,7 @@ export type TabParamList = {
  */
 declare global {
   namespace ReactNavigation {
-    interface RootParamList extends RootStackParamList {}
+    type RootParamList = RootStackParamList
   }
 }
 

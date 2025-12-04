@@ -9,6 +9,8 @@ import { createMockUser } from '../factories';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { api } from '@/src/api/api-client';
+
 // Mock dependencies
 jest.mock('@/src/api/api-client', () => ({
   api: {
@@ -42,8 +44,6 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   removeItem: jest.fn(() => Promise.resolve()),
   multiRemove: jest.fn(() => Promise.resolve()),
 }));
-
-import { api } from '@/src/api/api-client';
 
 describe('useLocationStore', () => {
   const mockUser = createMockUser({ id: 'user-123' });

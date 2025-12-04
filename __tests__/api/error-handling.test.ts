@@ -1,7 +1,6 @@
 // Import setup FIRST to ensure all mocks are in place
 import './test-setup';
 
-import axios, { AxiosError, AxiosHeaders } from 'axios';
 import MockAdapter from 'axios-mock-adapter';
 import { ApiClient, registerAuthHandlers } from '@/src/api/api-client';
 import { ERROR_CODES, ERROR_MESSAGES } from '@/src/api/constants';
@@ -196,7 +195,7 @@ describe('API Error Handling', () => {
           email: 'invalid-email',
           startDate: '2020-01-01',
         });
-        fail('Should have thrown error');
+        throw new Error('Should have thrown error');
       } catch (error: any) {
         expect(error.message).toContain('Invalid data');
         // Note: In real implementation, you'd parse error.response.data to extract fields
@@ -230,7 +229,7 @@ describe('API Error Handling', () => {
 
       try {
         await api.get('/api/trips/123');
-        fail('Should have thrown error');
+        throw new Error('Should have thrown error');
       } catch (error: any) {
         expect(error.message).toContain('permission');
       }
@@ -267,7 +266,7 @@ describe('API Error Handling', () => {
 
       try {
         await api.get('/api/trips/nonexistent');
-        fail('Should have thrown error');
+        throw new Error('Should have thrown error');
       } catch (error: any) {
         expect(error.message).toContain('not found');
       }
@@ -304,7 +303,7 @@ describe('API Error Handling', () => {
 
       try {
         await api.post('/api/trips/123/members', { userId: 'user-456' });
-        fail('Should have thrown error');
+        throw new Error('Should have thrown error');
       } catch (error: any) {
         expect(error.message).toContain('already');
       }
@@ -351,7 +350,7 @@ describe('API Error Handling', () => {
 
       try {
         await api.get('/api/trips');
-        fail('Should have thrown error');
+        throw new Error('Should have thrown error');
       } catch (error: any) {
         // In Axios, response headers are available on error.response.headers
         expect(error.response?.headers['retry-after']).toBe('60');
@@ -385,7 +384,7 @@ describe('API Error Handling', () => {
 
       try {
         await api.post('/api/messages', { text: 'Hello' });
-        fail('Should have thrown error');
+        throw new Error('Should have thrown error');
       } catch (error: any) {
         expect(error.response?.headers['x-ratelimit-limit']).toBe('100');
         expect(error.response?.headers['x-ratelimit-remaining']).toBe('0');
@@ -420,7 +419,7 @@ describe('API Error Handling', () => {
 
       try {
         await api.get('/api/trips');
-        fail('Should have thrown error');
+        throw new Error('Should have thrown error');
       } catch (error: any) {
         expect(error.message).toContain('internal server error');
       }
@@ -438,7 +437,7 @@ describe('API Error Handling', () => {
 
       try {
         await api.get('/api/trips');
-        fail('Should have thrown error');
+        throw new Error('Should have thrown error');
       } catch (error: any) {
         // The error message comes from the response data, not the constant
         expect(error.message).toContain('Service temporarily unavailable');
@@ -488,7 +487,7 @@ describe('API Error Handling', () => {
 
       try {
         await api.get('/api/trips');
-        fail('Should have thrown error');
+        throw new Error('Should have thrown error');
       } catch (error: any) {
         // Network errors show a user-friendly message about connection issues
         expect(error.message).toContain('No response from server');
@@ -523,7 +522,7 @@ describe('API Error Handling', () => {
 
       try {
         await api.post('/api/trips', {});
-        fail('Should have thrown error');
+        throw new Error('Should have thrown error');
       } catch (error: any) {
         expect(error.response?.data).toEqual(standardError);
         expect(error.response?.data?.type).toBe('VALIDATION_ERROR');
@@ -546,7 +545,7 @@ describe('API Error Handling', () => {
 
       try {
         await api.get('/api/trips');
-        fail('Should have thrown error');
+        throw new Error('Should have thrown error');
       } catch (error: any) {
         expect(error.response?.data).toEqual(minimalError);
         expect(error.response?.data?.details).toBeUndefined();
