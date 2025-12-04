@@ -2,6 +2,7 @@ import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
 import { API_CONFIG } from './env';
 import { ERROR_MESSAGES } from './constants';
 import { logger } from '@/src/utils/logger';
+import { ApiError } from './errors';
 
 export class BaseApiClient {
   protected api: AxiosInstance;
@@ -57,6 +58,11 @@ export class BaseApiClient {
         return response;
       },
       (error: AxiosError) => {
+        // If it's not an AxiosError (e.g., thrown from request interceptor), pass it through unchanged
+        if (!error.isAxiosError) {
+          return Promise.reject(error);
+        }
+
         logger.error('API', 'Request failed:', {
           message: error.message,
           code: error.code,
@@ -75,29 +81,38 @@ export class BaseApiClient {
           cause: error.cause
         });
 
-        // Handle network errors
+        // Handle network errors - no response received
         if (!error.response) {
-          return Promise.reject(new Error(ERROR_MESSAGES.NETWORK_ERROR));
+          const apiError = new ApiError(ERROR_MESSAGES.NETWORK_ERROR, undefined, 'NETWORK_ERROR');
+          return Promise.reject(apiError);
         }
 
-        // Handle other status codes
+        // For 401 errors, pass through the original AxiosError so api-client can handle token refresh
+        // The api-client interceptor needs access to error.response to check the error code
+        if (error.response.status === 401) {
+          return Promise.reject(error);
+        }
+
+        // Handle other status codes - convert to ApiError while preserving response
+        const responseData = error.response.data as { message?: string; error?: string; code?: string };
+
         switch (error.response.status) {
           case 400:
             // Extract error message from response if available
-            const badRequestMessage = 
-              (error.response.data as { message?: string; error?: string })?.message || 
-              (error.response.data as { message?: string; error?: string })?.error || 
+            const badRequestMessage =
+              responseData?.message ||
+              responseData?.error ||
               'Bad request: The server could not process your request';
-            return Promise.reject(new Error(badRequestMessage));
+            return Promise.reject(ApiError.fromAxiosError(error, badRequestMessage));
           case 403:
-            return Promise.reject(new Error(ERROR_MESSAGES.FORBIDDEN));
+            return Promise.reject(ApiError.fromAxiosError(error, ERROR_MESSAGES.FORBIDDEN));
           case 404:
-            return Promise.reject(new Error(ERROR_MESSAGES.NOT_FOUND));
+            return Promise.reject(ApiError.fromAxiosError(error, ERROR_MESSAGES.NOT_FOUND));
           case 500:
-            return Promise.reject(new Error(ERROR_MESSAGES.SERVER_ERROR));
+            return Promise.reject(ApiError.fromAxiosError(error, ERROR_MESSAGES.SERVER_ERROR));
           default:
             return Promise.reject(
-              new Error((error.response.data as { message?: string })?.message || ERROR_MESSAGES.UNEXPECTED)
+              ApiError.fromAxiosError(error, responseData?.message || ERROR_MESSAGES.UNEXPECTED)
             );
         }
       }

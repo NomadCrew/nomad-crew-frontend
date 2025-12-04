@@ -1,5 +1,5 @@
 // Import setup FIRST to ensure all mocks are in place
-import './setup';
+import './test-setup';
 
 import axios, { AxiosError, AxiosHeaders } from 'axios';
 import MockAdapter from 'axios-mock-adapter';
@@ -440,7 +440,8 @@ describe('API Error Handling', () => {
         await api.get('/api/trips');
         fail('Should have thrown error');
       } catch (error: any) {
-        expect(error.message).toContain('unexpected');
+        // The error message comes from the response data, not the constant
+        expect(error.message).toContain('Service temporarily unavailable');
       }
     });
 
@@ -489,7 +490,8 @@ describe('API Error Handling', () => {
         await api.get('/api/trips');
         fail('Should have thrown error');
       } catch (error: any) {
-        expect(error.message).toContain('network');
+        // Network errors show a user-friendly message about connection issues
+        expect(error.message).toContain('No response from server');
       }
     });
 
