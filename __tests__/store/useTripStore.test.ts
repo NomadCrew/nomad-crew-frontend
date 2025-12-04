@@ -3,6 +3,14 @@
  */
 
 // Set env variables before any imports
+import { act } from '@testing-library/react-native';
+import { useTripStore } from '@/src/store/useTripStore';
+import { useAuthStore } from '@/src/store/useAuthStore';
+import { createMockUser } from '@/__tests__/factories/user.factory';
+import { createMockTrip, createMockMember } from '@/__tests__/factories/trip.factory';
+import { resetAllStores, setupAuthenticatedUser } from '@/__tests__/helpers/store-helpers';
+import { api } from '@/src/api/api-client';
+
 process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
 process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
 
@@ -70,14 +78,6 @@ jest.mock('@/src/utils/logger', () => ({
     warn: jest.fn(),
   },
 }));
-
-import { act } from '@testing-library/react-native';
-import { useTripStore } from '@/src/store/useTripStore';
-import { useAuthStore } from '@/src/store/useAuthStore';
-import { createMockUser } from '@/__tests__/factories/user.factory';
-import { createMockTrip, createMockMember } from '@/__tests__/factories/trip.factory';
-import { resetAllStores, setupAuthenticatedUser } from '@/__tests__/helpers/store-helpers';
-import { api } from '@/src/api/api-client';
 
 const mockUser = createMockUser();
 const mockTrip = createMockTrip({

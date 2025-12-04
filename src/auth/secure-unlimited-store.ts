@@ -19,6 +19,7 @@ class SecureUnlimitedStore {
   }
 
   private async storeEncryptedData(encryptedData: string, identifier: string): Promise<void> {
+    // eslint-disable-next-line import/namespace
     const filePath = `${FileSystem.documentDirectory}secure_${identifier}.enc`;
     await FileSystem.writeAsStringAsync(filePath, encryptedData);
   }
@@ -30,6 +31,7 @@ class SecureUnlimitedStore {
   }
 
   private async getEncryptedData(identifier: string): Promise<string | null> {
+    // eslint-disable-next-line import/namespace
     const filePath = `${FileSystem.documentDirectory}secure_${identifier}.enc`;
     try {
       const fileInfo = await FileSystem.getInfoAsync(filePath);
@@ -73,6 +75,7 @@ class SecureUnlimitedStore {
   public async removeItem(key: string): Promise<void> {
     try {
       await SecureStore.deleteItemAsync(`encryption_key_${key}`);
+      // eslint-disable-next-line import/namespace
       const filePath = `${FileSystem.documentDirectory}secure_${key}.enc`;
       const fileInfo = await FileSystem.getInfoAsync(filePath);
       if (fileInfo.exists) {

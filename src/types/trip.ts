@@ -87,8 +87,8 @@ export interface UpdateTripStatusResponse {
 }
 
 // Response types for REST API
-export interface CreateTripResponse extends Trip {}
-export interface UpdateTripResponse extends Trip {}
+export type CreateTripResponse = Trip
+export type UpdateTripResponse = Trip
 export interface DeleteTripResponse {
   id: string;
   success: boolean;

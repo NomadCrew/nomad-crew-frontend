@@ -2,13 +2,14 @@ import React from 'react';
 import { render as rtlRender } from '@testing-library/react-native';
 import { ThemeProvider } from '../src/theme/ThemeProvider';
 import { PaperProvider } from 'react-native-paper';
-import { createTheme } from '../src/theme/create-theme';
-import { extendTheme } from './mocks/theme-compatibility';
 
 // Mock ThemeProvider to avoid loading delay
 jest.mock('../src/theme/ThemeProvider', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const React = require('react');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { createTheme } = require('../src/theme/create-theme');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { extendTheme } = require('./mocks/theme-compatibility');
   const baseTheme = createTheme({ isDark: false });
   const theme = extendTheme(baseTheme);
