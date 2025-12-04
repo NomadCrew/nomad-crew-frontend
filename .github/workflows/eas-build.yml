@@ -1,0 +1,71 @@
+# EAS Build Automation workflow for NomadCrew Frontend
+# Triggers preview builds on push to main, production builds on manual trigger
+#
+# Required Secrets:
+#   - EXPO_TOKEN: Expo access token for authentication
+#     Generate at: https://expo.dev/accounts/[account]/settings/access-tokens
+#
+# EAS Project ID: 50d59d51-34e0-49ab-a7ee-6989ed09f8ef
+
+name: EAS Build
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "Build profile (preview or production)"
+        required: true
+        default: "preview"
+        type: choice
+        options:
+          - preview
+          - production
+      platform:
+        description: "Platform to build"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - ios
+          - android
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: EAS Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Setup Expo CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        # Using --legacy-peer-deps due to peer dependency conflicts
+        run: npm ci --legacy-peer-deps
+
+      # Preview build on push to main
+      - name: Build preview (on push)
+        if: github.event_name == 'push'
+        run: eas build --profile preview --platform all --non-interactive
+
+      # Manual trigger builds
+      - name: Build (manual trigger)
+        if: github.event_name == 'workflow_dispatch'
+        run: eas build --profile ${{ github.event.inputs.profile }} --platform ${{ github.event.inputs.platform }} --non-interactive

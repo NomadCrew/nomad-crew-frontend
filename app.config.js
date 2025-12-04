@@ -1,4 +1,4 @@
-const SUPABASE_URL = 'https://efmqiltdajvqenndmylz.supabase.co';
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://eihszqnmmgbrcxtymskn.supabase.co';
 
 const getEnvironment = () => {
   switch (process.env.APP_VARIANT) {
@@ -92,7 +92,7 @@ export default {
             },
             {
               scheme: 'https',
-              host: 'efmqiltdajyqenndmykz.supabase.co',
+              host: 'eihszqnmmgbrcxtymskn.supabase.co',
               pathPrefix: '/auth/v1/callback'
             },
             {
@@ -134,8 +134,9 @@ export default {
     },
     plugins: [
       'expo-router',
+      'expo-web-browser',
       ['expo-location', {
-        locationAlwaysAndWhenInUsePermission: 'Allow $(PRODUCT_NAME) to use your location.'
+        locationAlwaysAndWhenInUsePermission: 'Allow $(PRODUCT_NAME) to access your location to find nearby crews, share your location with trip members, and display your position on the map.'
       }],
       'expo-secure-store', 
       [
