@@ -1,0 +1,18 @@
+diff --git a/src/types/auth.ts b/src/types/auth.ts
+index 37323c8..2172c1c 100644
+--- a/src/types/auth.ts
++++ b/src/types/auth.ts
+@@ -23,7 +23,12 @@ export interface User {
+     password: string;
+   }
+   
+-  export type AuthStatus = 'unauthenticated' | 'authenticated' | 'verifying';
++  // Three-state authentication pattern (recommended by Obytes Starter & community best practices)
++// - 'idle': Initial state - we don't know yet if user is authenticated (checking storage)
++// - 'authenticated': User has valid token
++// - 'unauthenticated': User has no token or token is invalid
++// - 'verifying': User is in email verification flow
++export type AuthStatus = 'idle' | 'unauthenticated' | 'authenticated' | 'verifying';
+   
+   export interface Session {
+     access_token: string;

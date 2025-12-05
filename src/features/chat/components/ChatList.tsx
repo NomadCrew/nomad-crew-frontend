@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useCallback, useMemo } from 'react';
-import { View, FlatList, StyleSheet, ActivityIndicator, Text } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Text } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { ChatMessage } from './ChatMessage';
 import { ChatMessageWithStatus } from '../types';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
@@ -27,18 +28,21 @@ export const ChatList: React.FC<ChatListProps> = ({
   onRefresh,
   isRefreshing = false,
   typingUsers = [],
-  tripId
+  tripId,
 }) => {
   logger.debug('UI', `Rendering ChatList with ${messages.length} messages`);
-  
+
   const { theme } = useAppTheme();
   const { user } = useAuth();
-  const flatListRef = useRef<FlatList>(null);
+  const flashListRef = useRef<FlashList<ChatMessageWithStatus>>(null);
   const { markAsRead, getLastReadMessageId } = useChatStore();
-  
+
   // Get the last read message ID for this trip
-  const lastReadMessageId = useMemo(() => getLastReadMessageId(tripId), [getLastReadMessageId, tripId]);
-  
+  const lastReadMessageId = useMemo(
+    () => getLastReadMessageId(tripId),
+    [getLastReadMessageId, tripId]
+  );
+
   // Sort messages by creation time (oldest first)
   const sortedMessages = useMemo(() => {
     return [...messages].sort((a, b) => {
@@ -47,58 +51,58 @@ export const ChatList: React.FC<ChatListProps> = ({
       return dateA.getTime() - dateB.getTime();
     });
   }, [messages]);
-  
+
   // Filter out typing indicators older than 5 seconds and from the current user
   const activeTypingUsers = useMemo(() => {
     const now = Date.now();
     return typingUsers.filter(
-      typingUser => now - typingUser.timestamp < 5000 && typingUser.userId !== user?.id
+      (typingUser) => now - typingUser.timestamp < 5000 && typingUser.userId !== user?.id
     );
   }, [typingUsers, user?.id]);
-  
+
   // Log when the component mounts and when messages change
   useEffect(() => {
     logger.debug('UI', 'ChatList component mounted');
-    
+
     return () => {
       logger.debug('UI', 'ChatList component unmounted');
     };
   }, []);
-  
+
   // Log when messages change
   useEffect(() => {
     if (messages.length > 0) {
       logger.debug('UI', `Messages updated, now displaying ${messages.length} messages`);
     }
   }, [messages.length]);
-  
+
   // Scroll to bottom when new messages arrive or component mounts
   useEffect(() => {
-    if (sortedMessages.length > 0 && flatListRef.current) {
+    if (sortedMessages.length > 0 && flashListRef.current) {
       setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: false });
+        flashListRef.current?.scrollToEnd({ animated: false });
       }, 100);
     }
   }, [sortedMessages.length]);
-  
+
   // Scroll to bottom when the component mounts
   useEffect(() => {
-    if (sortedMessages.length > 0 && flatListRef.current) {
+    if (sortedMessages.length > 0 && flashListRef.current) {
       setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: false });
+        flashListRef.current?.scrollToEnd({ animated: false });
       }, 300);
     }
   }, [sortedMessages.length]);
-  
+
   // Mark the latest message as read when messages change
   useEffect(() => {
     if (sortedMessages.length > 0 && user?.id) {
       // Get the latest message
       const latestMessage = sortedMessages[sortedMessages.length - 1];
-      
+
       // Check if the latest message is not from the current user and is newer than the last read message
       if (
-        latestMessage.message.sender?.id !== user.id && 
+        latestMessage.message.sender?.id !== user.id &&
         latestMessage.message.id !== lastReadMessageId
       ) {
         logger.debug('UI', `Marking message ${latestMessage.message.id} as read`);
@@ -106,7 +110,7 @@ export const ChatList: React.FC<ChatListProps> = ({
       }
     }
   }, [sortedMessages, user?.id, tripId, markAsRead, lastReadMessageId]);
-  
+
   const styles = useThemedStyles((theme) => {
     return StyleSheet.create({
       container: {
@@ -171,33 +175,31 @@ export const ChatList: React.FC<ChatListProps> = ({
         fontSize: 12,
         color: theme.colors.content.tertiary,
         fontWeight: '500',
-      }
+      },
     });
   });
 
-  const renderItem = useCallback(({ item, index }: { item: ChatMessageWithStatus; index: number }) => {
-    // Validate message data
-    if (!item.message || !item.message.sender) {
-      logger.warn('UI', 'Invalid message data');
-      return null;
-    }
-    
-    // Determine if we should show the avatar
-    // Show avatar if it's the last message or if the sender is different from the next message
-    const showAvatar = index === 0 || 
-      sortedMessages[index - 1].message.sender.id !== item.message.sender.id;
-    
-    return (
-      <ChatMessage 
-        messageWithStatus={item} 
-        showAvatar={showAvatar} 
-      />
-    );
-  }, [sortedMessages]);
+  const renderItem = useCallback(
+    ({ item, index }: { item: ChatMessageWithStatus; index: number }) => {
+      // Validate message data
+      if (!item.message || !item.message.sender) {
+        logger.warn('UI', 'Invalid message data');
+        return null;
+      }
+
+      // Determine if we should show the avatar
+      // Show avatar if it's the last message or if the sender is different from the next message
+      const showAvatar =
+        index === 0 || sortedMessages[index - 1].message.sender.id !== item.message.sender.id;
+
+      return <ChatMessage messageWithStatus={item} showAvatar={showAvatar} />;
+    },
+    [sortedMessages]
+  );
 
   const renderFooter = useCallback(() => {
     if (!isLoading) return null;
-    
+
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="small" color={theme.colors.primary.main} />
@@ -209,7 +211,7 @@ export const ChatList: React.FC<ChatListProps> = ({
     if (activeTypingUsers.length === 0) {
       return null;
     }
-    
+
     let typingText = '';
     if (activeTypingUsers.length === 1) {
       typingText = `${activeTypingUsers[0].name} is typing...`;
@@ -218,7 +220,7 @@ export const ChatList: React.FC<ChatListProps> = ({
     } else {
       typingText = 'Several people are typing...';
     }
-    
+
     return (
       <View style={styles.typingContainer}>
         <Text style={styles.typingText}>{typingText}</Text>
@@ -243,7 +245,7 @@ export const ChatList: React.FC<ChatListProps> = ({
   // Render empty state if no messages
   const renderEmptyComponent = useCallback(() => {
     if (isLoading) return null;
-    
+
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyText}>No messages yet</Text>
@@ -254,8 +256,8 @@ export const ChatList: React.FC<ChatListProps> = ({
 
   return (
     <View style={styles.container}>
-      <FlatList
-        ref={flatListRef}
+      <FlashList
+        ref={flashListRef}
         data={sortedMessages}
         renderItem={renderItem}
         keyExtractor={(item) => item.message.id}
@@ -266,12 +268,9 @@ export const ChatList: React.FC<ChatListProps> = ({
         onEndReachedThreshold={0.5}
         onRefresh={handleRefresh}
         refreshing={isRefreshing}
+        estimatedItemSize={80}
         // Performance optimization: Only render items visible on screen
-        windowSize={10}
-        initialNumToRender={10}
-        maxToRenderPerBatch={10}
-        // Remove if not using custom date separators
-        // ItemSeparatorComponent={({ leadingItem }) => <DateSeparator leadingItem={leadingItem} />} 
+        drawDistance={400}
       />
       {renderTypingIndicator()}
     </View>
@@ -282,4 +281,4 @@ export const ChatList: React.FC<ChatListProps> = ({
 // If date separators are needed, a better approach would be to:
 // 1. Process the message data before rendering to insert date separator items in the array
 // 2. Use a renderItem function that can handle both message and separator types
-// 3. This avoids the complexity of the FlatList ItemSeparatorComponent which is limited in this case 
+// 3. This avoids the complexity of the FlatList ItemSeparatorComponent which is limited in this case

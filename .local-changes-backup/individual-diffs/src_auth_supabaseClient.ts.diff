@@ -1,0 +1,19 @@
+diff --git a/src/auth/supabaseClient.ts b/src/auth/supabaseClient.ts
+index 9c3e18a..f1b2de8 100644
+--- a/src/auth/supabaseClient.ts
++++ b/src/auth/supabaseClient.ts
+@@ -10,11 +10,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
+ 
+ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+   auth: {
++    storage: AsyncStorage,
+     autoRefreshToken: true,
+     persistSession: true,
+-    detectSessionInUrl: false,
+-    storage: AsyncStorage
+-  },
++    detectSessionInUrl: false
++  }
+ });
+ 
+ export default supabase;
