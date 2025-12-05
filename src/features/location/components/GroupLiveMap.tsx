@@ -1,5 +1,13 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, InteractionManager, Platform, Pressable, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  InteractionManager,
+  Platform,
+  Pressable,
+  ActivityIndicator,
+} from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { useLocationStore } from '../store/useLocationStore'; // Updated
@@ -24,7 +32,11 @@ interface GroupLiveMapProps {
   isStandalone?: boolean;
 }
 
-export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isStandalone = false }) => {
+export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
+  trip,
+  onClose,
+  isStandalone = false,
+}) => {
   const { theme } = useAppTheme();
   const mapRef = useRef<MapView>(null);
   const { user } = useAuthStore();
@@ -35,7 +47,7 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
     startLocationTracking,
     stopLocationTracking,
     getMemberLocations,
-    locationError
+    locationError,
   } = useLocationStore();
 
   const [region, setRegion] = useState<Region>({
@@ -69,15 +81,10 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
       }
     };
 
+    // Initial fetch only - WebSocket handles real-time updates
     fetchLocations();
 
-    const intervalId = setInterval(() => {
-      if (isLocationSharingEnabled) {
-        getMemberLocations(trip.id).catch(() => {});
-      }
-    }, 30000);
-
-    return () => clearInterval(intervalId);
+    // Cleanup: No polling interval to clear, WebSocket handles updates
   }, [trip.id, isLocationSharingEnabled, getMemberLocations, startLocationTracking]); // Added dependencies
 
   useEffect(() => {
@@ -93,13 +100,19 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
 
   // Ensure we have valid coordinates initially
   useEffect(() => {
-    if (trip.destination.coordinates?.lat !== undefined && trip.destination.coordinates?.lng !== undefined) {
-      setRegion(prevRegion => ({
+    if (
+      trip.destination.coordinates?.lat !== undefined &&
+      trip.destination.coordinates?.lng !== undefined
+    ) {
+      setRegion((prevRegion) => ({
         ...prevRegion, // Keep delta values if already set
         latitude: trip.destination.coordinates.lat,
         longitude: trip.destination.coordinates.lng,
       }));
-      console.log('[MapDebug] Initial region set from trip destination:', JSON.stringify(trip.destination.coordinates));
+      console.log(
+        '[MapDebug] Initial region set from trip destination:',
+        JSON.stringify(trip.destination.coordinates)
+      );
     }
   }, [trip.id, trip.destination.coordinates]); // Added dependencies
 
@@ -107,10 +120,12 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
     const markers: { latitude: number; longitude: number }[] = [];
 
     if (memberLocationArray.length > 0) {
-      markers.push(...memberLocationArray.map(m => ({
-        latitude: m.location.latitude,
-        longitude: m.location.longitude,
-      })));
+      markers.push(
+        ...memberLocationArray.map((m) => ({
+          latitude: m.location.latitude,
+          longitude: m.location.longitude,
+        }))
+      );
     }
 
     if (currentLocation && isLocationSharingEnabled) {
@@ -120,7 +135,10 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
       });
     }
 
-    if (trip.destination.coordinates?.lat !== undefined && trip.destination.coordinates?.lng !== undefined) {
+    if (
+      trip.destination.coordinates?.lat !== undefined &&
+      trip.destination.coordinates?.lng !== undefined
+    ) {
       const coordinates = trip.destination.coordinates;
       markers.push({
         latitude: coordinates.lat,
@@ -135,7 +153,7 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
       });
     }
   };
-  
+
   // Fit to markers when map is loaded and member locations are available
   useEffect(() => {
     if (mapLoaded && (memberLocationArray.length > 0 || currentLocation)) {
@@ -149,47 +167,60 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
     console.log('[MapDebug] Map ready called, initial region:', JSON.stringify(region));
     setMapLoaded(true);
     setIsLoading(false);
-  
+
     // Animate to initial region based on trip destination after interactions
-    if (mapRef.current && trip.destination?.coordinates?.lat && trip.destination?.coordinates?.lng) {
+    if (
+      mapRef.current &&
+      trip.destination?.coordinates?.lat &&
+      trip.destination?.coordinates?.lng
+    ) {
       InteractionManager.runAfterInteractions(() => {
         console.log('[MapDebug] Animating to initial trip destination region');
-        mapRef.current?.animateToRegion({
-          latitude: trip.destination.coordinates.lat,
-          longitude: trip.destination.coordinates.lng,
-          latitudeDelta: region.latitudeDelta, // Keep existing delta
-          longitudeDelta: region.longitudeDelta, // Keep existing delta
-        }, 1000);
+        mapRef.current?.animateToRegion(
+          {
+            latitude: trip.destination.coordinates.lat,
+            longitude: trip.destination.coordinates.lng,
+            latitudeDelta: region.latitudeDelta, // Keep existing delta
+            longitudeDelta: region.longitudeDelta, // Keep existing delta
+          },
+          1000
+        );
         // Then fit to markers if needed
-        fitToMarkers(); 
+        fitToMarkers();
       });
     } else if (currentLocation && isLocationSharingEnabled) {
-        InteractionManager.runAfterInteractions(() => {
-            console.log('[MapDebug] Animating to current user location');
-            mapRef.current?.animateToRegion({
-                latitude: currentLocation.coords.latitude,
-                longitude: currentLocation.coords.longitude,
-                latitudeDelta: region.latitudeDelta,
-                longitudeDelta: region.longitudeDelta,
-            }, 1000);
-            fitToMarkers();
-        });
+      InteractionManager.runAfterInteractions(() => {
+        console.log('[MapDebug] Animating to current user location');
+        mapRef.current?.animateToRegion(
+          {
+            latitude: currentLocation.coords.latitude,
+            longitude: currentLocation.coords.longitude,
+            latitudeDelta: region.latitudeDelta,
+            longitudeDelta: region.longitudeDelta,
+          },
+          1000
+        );
+        fitToMarkers();
+      });
     }
   };
 
-  const handleMapError = (error: any) => { // Added error param
+  const handleMapError = (error: any) => {
+    // Added error param
     console.error('[MapDebug] Map error occurred:', error?.nativeEvent?.error || error);
-    setMapError('Error loading the map. Please ensure Google Maps services are available and configured.');
-    setMapLoadAttempts(prev => prev + 1);
+    setMapError(
+      'Error loading the map. Please ensure Google Maps services are available and configured.'
+    );
+    setMapLoadAttempts((prev) => prev + 1);
     setIsLoading(false); // Ensure loading is stopped on error
   };
-  
+
   const retryLoadMap = () => {
     console.log('[MapDebug] Retrying map load.');
     setMapError(null);
     setMapLoadAttempts(0);
     setMapLoaded(false);
-    setIsLoading(true); 
+    setIsLoading(true);
     // Potentially re-trigger map setup if needed, e.g., by changing a key or re-fetching data
     // For now, relying on MapView's own retry/reload or user interaction
   };
@@ -215,15 +246,17 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
       rotateEnabled
       // pitchEnabled // Can be disorienting for users
     >
-
-      {memberLocationArray.map((m) => m.userId !== user?.id && (
-        <Marker
-          key={m.userId}
-          coordinate={{ latitude: m.location.latitude, longitude: m.location.longitude }}
-          title={m.name || `Member ${m.userId.slice(0, 4)}`}
-          // pinColor={theme.colors.primary.main} // Example: Themed marker
-        />
-      ))}
+      {memberLocationArray.map(
+        (m) =>
+          m.userId !== user?.id && (
+            <Marker
+              key={m.userId}
+              coordinate={{ latitude: m.location.latitude, longitude: m.location.longitude }}
+              title={m.name || `Member ${m.userId.slice(0, 4)}`}
+              // pinColor={theme.colors.primary.main} // Example: Themed marker
+            />
+          )
+      )}
       {/* Current user marker is handled by showsUserLocation, no need for explicit marker if true */}
       {trip.destination.coordinates?.lat && trip.destination.coordinates?.lng && (
         <Marker
@@ -267,7 +300,7 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
 
       <View style={styles(theme).mapContainer}>
         {isLoading && !mapLoaded && (
-           <View style={styles(theme).activityIndicatorContainer}>
+          <View style={styles(theme).activityIndicatorContainer}>
             <ActivityIndicator size="large" color={theme.colors.primary?.main || '#FF8F5E'} />
             <Text style={styles(theme).loadingText}>Loading Map...</Text>
           </View>
@@ -277,120 +310,123 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({ trip, onClose, isSta
             <AlertCircle size={24} color={theme.colors.status.error.content} />
             <Text style={styles(theme).mapErrorText}>{mapError}</Text>
             {mapLoadAttempts < 3 && Platform.OS === 'android' && (
-                 <Pressable style={styles(theme).retryButton} onPress={retryLoadMap}>
-                    <Text style={styles(theme).retryButtonText}>Retry</Text>
-                 </Pressable>
+              <Pressable style={styles(theme).retryButton} onPress={retryLoadMap}>
+                <Text style={styles(theme).retryButtonText}>Retry</Text>
+              </Pressable>
             )}
-             <Text style={styles(theme).mapErrorDetailText}>Ensure Google Play Services are up to date if on Android.</Text>
+            <Text style={styles(theme).mapErrorDetailText}>
+              Ensure Google Play Services are up to date if on Android.
+            </Text>
           </View>
         )}
-        <View style={{flex: 1, display: isLoading || mapError ? 'none' : 'flex'}}>
-         {renderMap()} 
+        <View style={{ flex: 1, display: isLoading || mapError ? 'none' : 'flex' }}>
+          {renderMap()}
         </View>
       </View>
     </View>
   );
 };
 
-const styles = (theme: Theme) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background.default,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: theme.spacing.inset.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border.default,
-    backgroundColor: theme.colors.surface.default, 
-  },
-  title: {
-    fontSize: theme.typography.size.lg,
-    fontWeight: 'bold',
-    color: theme.colors.content.primary,
-  },
-  closeButtonText: {
-    fontSize: theme.typography.size.md,
-    color: theme.colors.primary.main,
-    fontWeight: '500',
-  },
-  warningContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: theme.spacing.inset.sm,
-    backgroundColor: theme.colors.status.warning?.background || '#FFFBEB',
-    margin: theme.spacing.inset.sm,
-    borderRadius: theme.borderRadius.sm,
-  },
-  warningText: {
-    marginLeft: theme.spacing.inset.xs,
-    fontSize: theme.typography.size.sm,
-    color: theme.colors.status.warning?.content || '#F59E0B',
-  },
-  errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: theme.spacing.inset.sm,
-    backgroundColor: theme.colors.status.error.background,
-    margin: theme.spacing.inset.sm,
-    borderRadius: theme.borderRadius.sm,
-  },
-  errorText: {
-    marginLeft: theme.spacing.inset.xs,
-    fontSize: theme.typography.size.sm,
-    color: theme.colors.status.error.content,
-  },
-  mapContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.colors.surface.variant, // Placeholder background for map area
-  },
-  map: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  activityIndicatorContainer: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.8)', // Semi-transparent overlay
-  },
-  loadingText: {
-    marginTop: theme.spacing.inset.xs,
-    fontSize: theme.typography.size.sm,
-    color: theme.colors.content.secondary,
-  },
-  errorOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.colors.surface.default,
-    padding: theme.spacing.inset.md,
-  },
-  mapErrorText: {
-    fontSize: theme.typography.size.md,
-    color: theme.colors.status.error.content,
-    textAlign: 'center',
-    marginBottom: theme.spacing.inset.sm,
-  },
-   mapErrorDetailText: {
-    fontSize: theme.typography.size.sm,
-    color: theme.colors.content.secondary,
-    textAlign: 'center',
-    marginTop: theme.spacing.inset.xs,
-  },
-  retryButton: {
-    backgroundColor: theme.colors.primary.main,
-    paddingVertical: theme.spacing.inset.xs,
-    paddingHorizontal: theme.spacing.inset.md,
-    borderRadius: theme.borderRadius.md,
-    marginTop: theme.spacing.inset.sm,
-  },
-  retryButtonText: {
-    color: theme.colors.primary.content,
-    fontWeight: 'bold',
-    fontSize: theme.typography.size.sm,
-  },
-}); 
+const styles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background.default,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: theme.spacing.inset.md,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border.default,
+      backgroundColor: theme.colors.surface.default,
+    },
+    title: {
+      fontSize: theme.typography.size.lg,
+      fontWeight: 'bold',
+      color: theme.colors.content.primary,
+    },
+    closeButtonText: {
+      fontSize: theme.typography.size.md,
+      color: theme.colors.primary.main,
+      fontWeight: '500',
+    },
+    warningContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: theme.spacing.inset.sm,
+      backgroundColor: theme.colors.status.warning?.background || '#FFFBEB',
+      margin: theme.spacing.inset.sm,
+      borderRadius: theme.borderRadius.sm,
+    },
+    warningText: {
+      marginLeft: theme.spacing.inset.xs,
+      fontSize: theme.typography.size.sm,
+      color: theme.colors.status.warning?.content || '#F59E0B',
+    },
+    errorContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: theme.spacing.inset.sm,
+      backgroundColor: theme.colors.status.error.background,
+      margin: theme.spacing.inset.sm,
+      borderRadius: theme.borderRadius.sm,
+    },
+    errorText: {
+      marginLeft: theme.spacing.inset.xs,
+      fontSize: theme.typography.size.sm,
+      color: theme.colors.status.error.content,
+    },
+    mapContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: theme.colors.surface.variant, // Placeholder background for map area
+    },
+    map: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    activityIndicatorContainer: {
+      ...StyleSheet.absoluteFillObject,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(255, 255, 255, 0.8)', // Semi-transparent overlay
+    },
+    loadingText: {
+      marginTop: theme.spacing.inset.xs,
+      fontSize: theme.typography.size.sm,
+      color: theme.colors.content.secondary,
+    },
+    errorOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: theme.colors.surface.default,
+      padding: theme.spacing.inset.md,
+    },
+    mapErrorText: {
+      fontSize: theme.typography.size.md,
+      color: theme.colors.status.error.content,
+      textAlign: 'center',
+      marginBottom: theme.spacing.inset.sm,
+    },
+    mapErrorDetailText: {
+      fontSize: theme.typography.size.sm,
+      color: theme.colors.content.secondary,
+      textAlign: 'center',
+      marginTop: theme.spacing.inset.xs,
+    },
+    retryButton: {
+      backgroundColor: theme.colors.primary.main,
+      paddingVertical: theme.spacing.inset.xs,
+      paddingHorizontal: theme.spacing.inset.md,
+      borderRadius: theme.borderRadius.md,
+      marginTop: theme.spacing.inset.sm,
+    },
+    retryButtonText: {
+      color: theme.colors.primary.content,
+      fontWeight: 'bold',
+      fontSize: theme.typography.size.sm,
+    },
+  });
