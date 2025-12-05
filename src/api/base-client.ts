@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
 import axiosRetry from 'axios-retry';
 import { API_CONFIG } from './env';
-import { ERROR_MESSAGES } from './constants';
+import { ERROR_MESSAGES, ERROR_CODES, ApiError } from './constants';
 import { logger } from '@/src/utils/logger';
 
 export class BaseApiClient {
@@ -86,32 +86,58 @@ export class BaseApiClient {
           cause: error.cause,
         });
 
-        // Handle network errors
+        // Handle network errors (no response from server)
         if (!error.response) {
-          return Promise.reject(new Error(ERROR_MESSAGES.NETWORK_ERROR));
+          const networkError = new ApiError(
+            0,
+            ERROR_CODES.NETWORK_ERROR,
+            ERROR_MESSAGES.NETWORK_ERROR
+          );
+          return Promise.reject(networkError);
         }
 
-        // Handle other status codes
-        switch (error.response.status) {
+        const status = error.response.status;
+        const responseData = error.response.data;
+
+        // Handle other status codes - transform to ApiError
+        switch (status) {
           case 400:
             // Extract error message from response if available
             const badRequestMessage =
-              (error.response.data as { message?: string; error?: string })?.message ||
-              (error.response.data as { message?: string; error?: string })?.error ||
+              (responseData as { message?: string; error?: string })?.message ||
+              (responseData as { message?: string; error?: string })?.error ||
               'Bad request: The server could not process your request';
-            return Promise.reject(new Error(badRequestMessage));
-          case 403:
-            return Promise.reject(new Error(ERROR_MESSAGES.FORBIDDEN));
-          case 404:
-            return Promise.reject(new Error(ERROR_MESSAGES.NOT_FOUND));
-          case 500:
-            return Promise.reject(new Error(ERROR_MESSAGES.SERVER_ERROR));
-          default:
+            const badRequestCode = (responseData as { code?: string })?.code || 'BAD_REQUEST';
             return Promise.reject(
-              new Error(
-                (error.response.data as { message?: string })?.message || ERROR_MESSAGES.UNEXPECTED
-              )
+              new ApiError(status, badRequestCode, badRequestMessage, responseData)
             );
+
+          case 403:
+            return Promise.reject(
+              new ApiError(status, 'FORBIDDEN', ERROR_MESSAGES.FORBIDDEN, responseData)
+            );
+
+          case 404:
+            return Promise.reject(
+              new ApiError(status, 'NOT_FOUND', ERROR_MESSAGES.NOT_FOUND, responseData)
+            );
+
+          case 429:
+            return Promise.reject(
+              new ApiError(status, 'RATE_LIMITED', ERROR_MESSAGES.RATE_LIMITED, responseData)
+            );
+
+          case 500:
+            return Promise.reject(
+              new ApiError(status, 'SERVER_ERROR', ERROR_MESSAGES.SERVER_ERROR, responseData)
+            );
+
+          default:
+            // For any other status, try to use response data or fallback
+            const message =
+              (responseData as { message?: string })?.message || ERROR_MESSAGES.UNEXPECTED;
+            const code = (responseData as { code?: string })?.code || 'UNKNOWN_ERROR';
+            return Promise.reject(new ApiError(status, code, message, responseData));
         }
       }
     );
