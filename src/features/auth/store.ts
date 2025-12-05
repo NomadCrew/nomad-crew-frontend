@@ -84,6 +84,15 @@ export const useAuthStore = create<AuthState>((set, get) => {
             expiresAt: session.expires_at,
           });
           await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, session.access_token);
+          
+          // Mark first-time as done since user has authenticated
+          try {
+            await AsyncStorage.setItem('@app_first_time_done', 'true');
+            logger.debug('AUTH', 'First time flag set during session restore');
+          } catch (e) {
+            logger.warn('AUTH', 'Failed to set first time flag during session restore:', e);
+          }
+          
           set({ 
             user: {
               id: session.user.id,
@@ -136,15 +145,15 @@ export const useAuthStore = create<AuthState>((set, get) => {
               set({ needsUsername: false });
             }
           } catch (err: any) {
-            if (err?.response?.status === 404) {
+            // Handle 404 (user not found) and 401 with user_not_onboarded
+            if (err?.response?.status === 404 || 
+                (err?.response?.status === 401 && err?.response?.data?.details === 'user_not_onboarded')) {
               set({ needsUsername: true }); // Only set needsUsername, keep user object
-              console.warn('[AUTH] Session restored but backend user not found. needsUsername=true');
+              console.warn('[AUTH] Session restored but backend user not found or not onboarded. needsUsername=true');
             } else {
               // Handle other errors as needed
               console.error('[AUTH] Error validating backend user profile on session restore:', err);
-              // Potentially set needsUsername to true here as well, as we don't know the state
-              // Or, keep it as is and rely on a loading/error state elsewhere.
-              // For now, let's assume if we can't fetch the profile, we might need username.
+              // For other auth errors, also set needsUsername to allow recovery
               set({ needsUsername: true });
             }
           }
@@ -325,6 +334,15 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
         if (data.session) { // If session is returned, user is likely auto-confirmed or email verification is off
           await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, data.session.access_token); // Store token
+          
+          // Mark first-time as done since user has successfully registered
+          try {
+            await AsyncStorage.setItem('@app_first_time_done', 'true');
+            logger.debug('AUTH', 'First time flag set during registration');
+          } catch (e) {
+            logger.warn('AUTH', 'Failed to set first time flag during registration:', e);
+          }
+          
           let user: User = {
             id: data.session.user.id,
             email: data.session.user.email ?? '',
@@ -421,6 +439,14 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
         await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, data.session.access_token); // Store token
 
+        // Mark first-time as done since user has successfully logged in
+        try {
+          await AsyncStorage.setItem('@app_first_time_done', 'true');
+          logger.debug('AUTH', 'First time flag set during login');
+        } catch (e) {
+          logger.warn('AUTH', 'Failed to set first time flag during login:', e);
+        }
+
         let user: User;
         try {
           user = await getCurrentUserProfile();
@@ -458,25 +484,27 @@ export const useAuthStore = create<AuthState>((set, get) => {
         set({ loading: true, error: null, status: 'verifying' });
         console.log('Supabase Google sign-in session:', session);
         await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, session.access_token);
+        
+        // Mark first-time as done since user has successfully authenticated
+        try {
+          await AsyncStorage.setItem('@app_first_time_done', 'true');
+          logger.debug('AUTH', 'First time flag set during Google sign-in');
+        } catch (e) {
+          logger.warn('AUTH', 'Failed to set first time flag during Google sign-in:', e);
+        }
         let user: User | null = null;
         let needsUsername = false;
         try {
           user = await getCurrentUserProfile();
           console.log('[AUTH] Got backend user profile after Google sign-in:', user);
         } catch (profileError: any) {
-          if (profileError?.response?.status === 404) {
-            console.warn('[AUTH] Backend user not found after Google sign-in, attempting onboarding...');
-            try {
-              const defaultUsername = session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'user';
-              user = await onboardUser(defaultUsername);
-              needsUsername = !user.username;
-              console.log('[AUTH] User onboarded after 404:', user);
-            } catch (onboardError) {
-              // Onboarding failed, force needsUsername
-              needsUsername = true;
-              user = null;
-              console.error('[AUTH] Onboarding failed after 404:', onboardError);
-            }
+          // Check for both 404 (user not found) and 401 (user not onboarded) errors
+          if (profileError?.response?.status === 404 || profileError?.response?.status === 401) {
+            console.warn('[AUTH] Backend user not found or not onboarded after Google sign-in, user needs to select username');
+            // For new users, always show username selection screen
+            // Don't auto-onboard - let user choose their username
+            needsUsername = true;
+            user = null;
           } else {
             console.warn('[AUTH] Failed to fetch backend user profile after Google sign-in:', profileError);
             // If it's a different error, still allow user to recover via username screen
@@ -528,24 +556,28 @@ export const useAuthStore = create<AuthState>((set, get) => {
       try {
         set({ loading: true, error: null, status: 'verifying' });
         logger.debug('AUTH', 'Handling Apple Sign-In Success in store', { userId: session.user.id });
+        
+        // Mark first-time as done since user has successfully authenticated
+        try {
+          await AsyncStorage.setItem('@app_first_time_done', 'true');
+          logger.debug('AUTH', 'First time flag set during Apple sign-in');
+        } catch (e) {
+          logger.warn('AUTH', 'Failed to set first time flag during Apple sign-in:', e);
+        }
+        
         let user: User | null = null;
         let needsUsername = false;
         try {
           user = await getCurrentUserProfile();
           console.log('[AUTH] Got backend user profile after Apple sign-in:', user);
         } catch (profileError: any) {
-          if (profileError?.response?.status === 404) {
-            console.warn('[AUTH] Backend user not found after Apple sign-in, attempting onboarding...');
-            try {
-              const defaultUsername = session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'user';
-              user = await onboardUser(defaultUsername);
-              needsUsername = !user.username;
-              console.log('[AUTH] User onboarded after 404:', user);
-            } catch (onboardError) {
-              needsUsername = true;
-              user = null;
-              console.error('[AUTH] Onboarding failed after 404:', onboardError);
-            }
+          // Check for both 404 (user not found) and 401 (user not onboarded) errors
+          if (profileError?.response?.status === 404 || profileError?.response?.status === 401) {
+            console.warn('[AUTH] Backend user not found or not onboarded after Apple sign-in, user needs to select username');
+            // For new users, always show username selection screen
+            // Don't auto-onboard - let user choose their username
+            needsUsername = true;
+            user = null;
           } else {
             console.warn('[AUTH] Failed to fetch backend user profile after Apple sign-in:', profileError);
             needsUsername = true;
@@ -682,6 +714,15 @@ export const useAuthStore = create<AuthState>((set, get) => {
     if (event === 'SIGNED_IN') {
       if (session) {
         await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, session.access_token);
+        
+        // Mark first-time as done since user has successfully signed in
+        try {
+          await AsyncStorage.setItem('@app_first_time_done', 'true');
+          logger.debug('AUTH', 'First time flag set during SIGNED_IN event');
+        } catch (e) {
+          logger.warn('AUTH', 'Failed to set first time flag during SIGNED_IN event:', e);
+        }
+        
         set({
           user: {
             id: session.user.id,

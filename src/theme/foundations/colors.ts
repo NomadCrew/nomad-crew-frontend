@@ -72,6 +72,45 @@ export const colorTokens = {
       800: '#92400E',
       900: '#78350F',
     },
+    // NEW: Purple color scale for role differentiation
+    purple: {
+      50: '#FAF5FF',
+      100: '#F3E8FF',
+      200: '#E9D5FF',
+      300: '#D8B4FE',
+      400: '#C084FC',
+      500: '#A855F7',
+      600: '#9333EA',
+      700: '#7C3AED',
+      800: '#6B21A8',
+      900: '#581C87',
+    },
+    // NEW: Indigo for secondary roles
+    indigo: {
+      50: '#EEF2FF',
+      100: '#E0E7FF',
+      200: '#C7D2FE',
+      300: '#A5B4FC',
+      400: '#818CF8',
+      500: '#6366F1',
+      600: '#4F46E5',
+      700: '#4338CA',
+      800: '#3730A3',
+      900: '#312E81',
+    },
+    // NEW: Teal for utility colors
+    teal: {
+      50: '#F0FDFA',
+      100: '#CCFBF1',
+      200: '#99F6E4',
+      300: '#5EEAD4',
+      400: '#2DD4BF',
+      500: '#14B8A6',
+      600: '#0D9488',
+      700: '#0F766E',
+      800: '#115E59',
+      900: '#134E4A',
+    },
     pastel: {
       blue: '#E6F2FF',
       green: '#E6F7F2',
@@ -90,6 +129,13 @@ export const colorTokens = {
       darkPeach: '#B06048',
       darkCoral: '#8A4A3F',
       lightPeach: '#FFE8DC',
+      // NEW: Additional pastel variants
+      purple: '#F3E8FF',
+      purpleDark: '#E9D5FF',
+      indigo: '#E0E7FF',
+      indigoDark: '#C7D2FE',
+      teal: '#F0FDFA',
+      tealDark: '#CCFBF1',
     },
   } as const;
   
@@ -98,6 +144,8 @@ export const colorTokens = {
     // Interactive colors
     primary: {
       main: isDark ? colorTokens.orange[400] : colorTokens.orange[700],
+      container: isDark ? colorTokens.orange[800] : '#FFF7ED',
+      containerSoft: isDark ? colorTokens.orange[900] : '#FFF7ED',
       surface: isDark ? colorTokens.orange[900] : colorTokens.orange[50],
       border: isDark ? colorTokens.orange[700] : colorTokens.orange[300],
       hover: isDark ? colorTokens.orange[300] : colorTokens.orange[800],
@@ -120,9 +168,120 @@ export const colorTokens = {
   
     // Surface colors
     surface: {
+      main: isDark ? colorTokens.gray[800] : '#FFFFFF',
       default: isDark ? colorTokens.gray[900] : colorTokens.pastel.peachLight,
       variant: isDark ? colorTokens.gray[800] : colorTokens.pastel.darkPeach,
+      containerHighest: isDark ? colorTokens.gray[700] : '#F9FAFB',
+      disabled: isDark ? colorTokens.gray[700] : '#F3F4F6',
     },
+
+    // NEW: Trip Status Colors
+    tripStatus: {
+      draft: {
+        background: isDark ? colorTokens.gray[800] : colorTokens.gray[100],
+        content: isDark ? colorTokens.gray[300] : colorTokens.gray[700],
+        border: isDark ? colorTokens.gray[700] : colorTokens.gray[300],
+        icon: isDark ? colorTokens.gray[400] : colorTokens.gray[600],
+      },
+      planning: {
+        background: isDark ? colorTokens.orange[900] : colorTokens.orange[50],
+        content: isDark ? colorTokens.orange[300] : colorTokens.orange[800],
+        border: isDark ? colorTokens.orange[700] : colorTokens.orange[300],
+        icon: isDark ? colorTokens.orange[400] : colorTokens.orange[600],
+      },
+      active: {
+        background: isDark ? colorTokens.blue[900] : colorTokens.blue[50],
+        content: isDark ? colorTokens.blue[300] : colorTokens.blue[800],
+        border: isDark ? colorTokens.blue[700] : colorTokens.blue[300],
+        icon: isDark ? colorTokens.blue[400] : colorTokens.blue[600],
+      },
+      completed: {
+        background: isDark ? colorTokens.green[900] : colorTokens.green[50],
+        content: isDark ? colorTokens.green[300] : colorTokens.green[800],
+        border: isDark ? colorTokens.green[700] : colorTokens.green[300],
+        icon: isDark ? colorTokens.green[400] : colorTokens.green[600],
+      },
+      cancelled: {
+        background: isDark ? colorTokens.red[900] : colorTokens.red[50],
+        content: isDark ? colorTokens.red[300] : colorTokens.red[800],
+        border: isDark ? colorTokens.red[700] : colorTokens.red[300],
+        icon: isDark ? colorTokens.red[400] : colorTokens.red[600],
+      },
+    },
+
+    // NEW: Member Role Colors
+    memberRoles: {
+      owner: {
+        background: isDark ? colorTokens.purple[900] : colorTokens.purple[50],
+        content: isDark ? colorTokens.purple[200] : colorTokens.purple[800],
+        border: isDark ? colorTokens.purple[700] : colorTokens.purple[300],
+        icon: isDark ? colorTokens.purple[400] : colorTokens.purple[600],
+        badge: isDark ? colorTokens.purple[700] : colorTokens.purple[600],
+      },
+      admin: {
+        background: isDark ? colorTokens.indigo[900] : colorTokens.indigo[50],
+        content: isDark ? colorTokens.indigo[200] : colorTokens.indigo[800],
+        border: isDark ? colorTokens.indigo[700] : colorTokens.indigo[300],
+        icon: isDark ? colorTokens.indigo[400] : colorTokens.indigo[600],
+        badge: isDark ? colorTokens.indigo[700] : colorTokens.indigo[600],
+      },
+      moderator: {
+        background: isDark ? colorTokens.teal[900] : colorTokens.teal[50],
+        content: isDark ? colorTokens.teal[200] : colorTokens.teal[800],
+        border: isDark ? colorTokens.teal[700] : colorTokens.teal[300],
+        icon: isDark ? colorTokens.teal[400] : colorTokens.teal[600],
+        badge: isDark ? colorTokens.teal[700] : colorTokens.teal[600],
+      },
+      member: {
+        background: isDark ? colorTokens.blue[900] : colorTokens.blue[50],
+        content: isDark ? colorTokens.blue[200] : colorTokens.blue[800],
+        border: isDark ? colorTokens.blue[700] : colorTokens.blue[300],
+        icon: isDark ? colorTokens.blue[400] : colorTokens.blue[600],
+        badge: isDark ? colorTokens.blue[700] : colorTokens.blue[600],
+      },
+      viewer: {
+        background: isDark ? colorTokens.gray[800] : colorTokens.gray[100],
+        content: isDark ? colorTokens.gray[300] : colorTokens.gray[700],
+        border: isDark ? colorTokens.gray[700] : colorTokens.gray[300],
+        icon: isDark ? colorTokens.gray[400] : colorTokens.gray[600],
+        badge: isDark ? colorTokens.gray[600] : colorTokens.gray[500],
+      },
+    },
+
+    // NEW: Presence Indicators
+    presence: {
+      online: {
+        indicator: isDark ? colorTokens.green[400] : colorTokens.green[500],
+        background: isDark ? colorTokens.green[900] : colorTokens.green[50],
+        content: isDark ? colorTokens.green[200] : colorTokens.green[800],
+        glow: isDark ? `${colorTokens.green[400]}40` : `${colorTokens.green[500]}20`,
+      },
+      away: {
+        indicator: isDark ? colorTokens.yellow[400] : colorTokens.yellow[500],
+        background: isDark ? colorTokens.yellow[900] : colorTokens.yellow[50],
+        content: isDark ? colorTokens.yellow[200] : colorTokens.yellow[800],
+        glow: isDark ? `${colorTokens.yellow[400]}40` : `${colorTokens.yellow[500]}20`,
+      },
+      busy: {
+        indicator: isDark ? colorTokens.red[400] : colorTokens.red[500],
+        background: isDark ? colorTokens.red[900] : colorTokens.red[50],
+        content: isDark ? colorTokens.red[200] : colorTokens.red[800],
+        glow: isDark ? `${colorTokens.red[400]}40` : `${colorTokens.red[500]}20`,
+      },
+      offline: {
+        indicator: isDark ? colorTokens.gray[600] : colorTokens.gray[400],
+        background: isDark ? colorTokens.gray[800] : colorTokens.gray[100],
+        content: isDark ? colorTokens.gray[400] : colorTokens.gray[600],
+        glow: isDark ? `${colorTokens.gray[600]}20` : `${colorTokens.gray[400]}10`,
+      },
+      typing: {
+        indicator: isDark ? colorTokens.blue[400] : colorTokens.blue[500],
+        background: isDark ? colorTokens.blue[900] : colorTokens.blue[50],
+        content: isDark ? colorTokens.blue[200] : colorTokens.blue[800],
+        animation: isDark ? colorTokens.blue[400] : colorTokens.blue[500],
+      },
+    },
+
     status: {
       error: {
         surface: isDark ? colorTokens.red[900] : colorTokens.red[50],
@@ -217,7 +376,43 @@ export const colorTokens = {
         icon: isDark ? colorTokens.blue[400] : colorTokens.blue[600],
         text: isDark ? colorTokens.gray[300] : colorTokens.gray[600],
       }
-    }
+    },
+    // Outline colors
+    outline: {
+      default: isDark ? colorTokens.gray[600] : '#E5E7EB',
+      strong: isDark ? colorTokens.gray[500] : colorTokens.gray[400],
+    },
+    // Feedback colors
+    feedback: {
+      error: {
+        main: isDark ? colorTokens.red[400] : '#EF4444',
+        surface: isDark ? colorTokens.red[900] : colorTokens.red[50],
+        content: isDark ? colorTokens.red[300] : colorTokens.red[800],
+        background: isDark ? colorTokens.red[800] : colorTokens.red[100],
+        border: isDark ? colorTokens.red[700] : colorTokens.red[300],
+      },
+      success: {
+        main: isDark ? colorTokens.green[400] : colorTokens.green[500],
+        surface: isDark ? colorTokens.green[800] : colorTokens.green[50],
+        content: isDark ? colorTokens.green[200] : colorTokens.green[800],
+        background: isDark ? colorTokens.green[700] : colorTokens.green[100],
+        border: isDark ? colorTokens.green[800] : colorTokens.green[300],
+      },
+      warning: {
+        main: isDark ? colorTokens.yellow[400] : colorTokens.yellow[500],
+        surface: isDark ? colorTokens.yellow[900] : colorTokens.yellow[50],
+        content: isDark ? colorTokens.yellow[300] : colorTokens.yellow[800],
+        background: isDark ? colorTokens.yellow[800] : colorTokens.yellow[100],
+        border: isDark ? colorTokens.yellow[700] : colorTokens.yellow[300],
+      },
+      info: {
+        main: isDark ? colorTokens.blue[400] : colorTokens.blue[500],
+        surface: isDark ? colorTokens.blue[900] : colorTokens.blue[50],
+        content: isDark ? colorTokens.blue[300] : colorTokens.blue[800],
+        background: isDark ? colorTokens.blue[800] : colorTokens.blue[100],
+        border: isDark ? colorTokens.blue[700] : colorTokens.blue[300],
+      },
+    },
   });
   
   // Add color value type

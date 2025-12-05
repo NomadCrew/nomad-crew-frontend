@@ -3,6 +3,7 @@ import { SemanticColors } from './foundations/colors';
 import { SemanticSpacing } from './foundations/spacing';
 import { Typography } from './foundations/typography';
 import { SemanticElevation } from './foundations/elevation';
+import { animationTokens } from './foundations/animations';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -84,7 +85,151 @@ export interface StatusColors {
   };
 }
 
-// Extended colors to include disabled state
+// NEW: Trip Status interface
+export interface TripStatusColors {
+  draft: {
+    background: string;
+    content: string;
+    border: string;
+    icon: string;
+  };
+  planning: {
+    background: string;
+    content: string;
+    border: string;
+    icon: string;
+  };
+  active: {
+    background: string;
+    content: string;
+    border: string;
+    icon: string;
+  };
+  completed: {
+    background: string;
+    content: string;
+    border: string;
+    icon: string;
+  };
+  cancelled: {
+    background: string;
+    content: string;
+    border: string;
+    icon: string;
+  };
+}
+
+// NEW: Member Role interface
+export interface MemberRoleColors {
+  owner: {
+    background: string;
+    content: string;
+    border: string;
+    icon: string;
+    badge: string;
+  };
+  admin: {
+    background: string;
+    content: string;
+    border: string;
+    icon: string;
+    badge: string;
+  };
+  moderator: {
+    background: string;
+    content: string;
+    border: string;
+    icon: string;
+    badge: string;
+  };
+  member: {
+    background: string;
+    content: string;
+    border: string;
+    icon: string;
+    badge: string;
+  };
+  viewer: {
+    background: string;
+    content: string;
+    border: string;
+    icon: string;
+    badge: string;
+  };
+}
+
+// NEW: Presence interface
+export interface PresenceColors {
+  online: {
+    indicator: string;
+    background: string;
+    content: string;
+    glow: string;
+  };
+  away: {
+    indicator: string;
+    background: string;
+    content: string;
+    glow: string;
+  };
+  busy: {
+    indicator: string;
+    background: string;
+    content: string;
+    glow: string;
+  };
+  offline: {
+    indicator: string;
+    background: string;
+    content: string;
+    glow: string;
+  };
+  typing: {
+    indicator: string;
+    background: string;
+    content: string;
+    animation: string;
+  };
+}
+
+// NEW: Animation types
+export type AnimationTokens = typeof animationTokens;
+export type AnimationDuration = keyof typeof animationTokens.durations;
+export type AnimationEasing = keyof typeof animationTokens.easings;
+export type AnimationScale = keyof typeof animationTokens.scales;
+export type AnimationTransform = keyof typeof animationTokens.transforms;
+export type AnimationOpacity = keyof typeof animationTokens.opacities;
+export type SpringConfig = keyof typeof animationTokens.springs;
+export type MicroInteraction = keyof typeof animationTokens.micro;
+export type PresenceAnimation = keyof typeof animationTokens.presence;
+export type LoadingAnimation = keyof typeof animationTokens.loading;
+export type PageTransition = keyof typeof animationTokens.transitions;
+
+// Animation configuration interfaces
+export interface AnimationConfig {
+  duration?: number;
+  easing?: string;
+  useNativeDriver?: boolean;
+  delay?: number;
+}
+
+export interface SpringAnimationConfig {
+  damping?: number;
+  stiffness?: number;
+  mass?: number;
+  useNativeDriver?: boolean;
+  delay?: number;
+}
+
+export interface TimingAnimationConfig extends AnimationConfig {
+  toValue: number;
+}
+
+export interface SpringAnimationProperties extends SpringAnimationConfig {
+  toValue: number;
+}
+
+// Extended colors to include disabled state and new semantic colors
 export interface ExtendedColors {
   disabled?: {
     background: string;
@@ -112,6 +257,10 @@ export interface ExtendedColors {
     surface: string;
     main: string;
   };
+  // NEW: Adding new semantic color categories
+  tripStatus?: TripStatusColors;
+  memberRoles?: MemberRoleColors;
+  presence?: PresenceColors;
 }
 
 // Font size interface for typography
@@ -145,15 +294,24 @@ export interface Theme {
   components: ComponentStyles;
   breakpoints: typeof BREAKPOINTS;
   borderRadius: {
+    none: number;
     xs: number;
     sm: number;
     md: number;
     lg: number;
     xl: number;
+    full: number;
   };
+  // NEW: Animation tokens
+  animations: AnimationTokens;
   dark?: boolean;
 }
 
 // Helper types
 export type ThemeNestedValue<T> = T | Record<string, T>;
 export type ThemeColorValue = ColorValue | keyof SemanticColors;
+
+// NEW: Helper types for the new semantic colors
+export type TripStatus = keyof TripStatusColors;
+export type MemberRole = keyof MemberRoleColors;
+export type PresenceStatus = keyof PresenceColors;

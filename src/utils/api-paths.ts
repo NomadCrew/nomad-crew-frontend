@@ -27,8 +27,8 @@ export const API_PATHS = {
     invite: (tripId: string) => createApiPath(`trips/${tripId}/invitations`),
     invitations: (tripId: string) => createApiPath(`trips/${tripId}/invitations`),
     acceptInvitation: createApiPath('trips/invitations/accept'),
-    messages: (tripId: string) => createApiPath(`trips/${tripId}/messages`),
-    messagesRead: (tripId: string) => createApiPath(`trips/${tripId}/messages/read`),
+    messages: (tripId: string) => createApiPath(`trips/${tripId}/chat/messages`),
+    messagesRead: (tripId: string) => createApiPath(`trips/${tripId}/chat/messages/read`),
   },
   todos: {
     create: (tripId: string) => createApiPath(`trips/${tripId}/todos`),
@@ -38,12 +38,13 @@ export const API_PATHS = {
   },
   // Add location endpoints
   location: {
-    update: createApiPath('location/update'),
+    update: (tripId: string) => createApiPath(`trips/${tripId}/locations`),
     byTrip: (tripId: string) => createApiPath(`trips/${tripId}/locations`),
     preferences: createApiPath('location/preferences'),
+    members: (tripId: string) => createApiPath(`trips/${tripId}/locations/members`),
   },
   // Add chat endpoints
   CHAT: {
-    UPDATE_LAST_READ: (tripId: string) => createApiPath(`trips/${tripId}/messages/read`),
+    UPDATE_LAST_READ: (tripId: string) => createApiPath(`trips/${tripId}/chat/messages/read`),
   }
 } as const;

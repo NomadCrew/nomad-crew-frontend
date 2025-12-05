@@ -20,7 +20,7 @@ export default function Index() {
       </View>
     );
   }
-  
+
   // If onboarding is initialized and user is first time, redirect to onboarding flow
   if (isInitialized && isFirstTime) {
     console.log('[Index] Redirecting to (onboarding)/welcome because isFirstTime is true');

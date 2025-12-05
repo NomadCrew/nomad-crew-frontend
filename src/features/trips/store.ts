@@ -39,7 +39,7 @@ interface TripState {
   removeMember: (tripId: string, userId: string) => Promise<void>;
   // Status operations
   updateTripStatus: (id: string, status: TripStatus) => Promise<void>;
-  // WebSocket operations
+  // Event handling
   handleTripEvent: (event: ServerEvent) => void;
   acceptInvitation: (token: string) => Promise<void>;
   checkPendingInvitations: () => Promise<void>;
@@ -113,10 +113,11 @@ export const useTripStore = create<TripState>((set, get) => ({
     try {
       const response = await api.get<Trip[]>(API_PATHS.trips.list);
       logger.info('TRIP', 'Raw API response:', response.data);
-      const trips = response.data.map(normalizeTrip);
+      // Ensure response.data is an array before mapping
+      const trips = Array.isArray(response.data) ? response.data.map(normalizeTrip) : [];
       logger.info('TRIP', 'Normalized trips:', trips);
       set({ 
-        trips: trips || [] as Trip[],
+        trips: trips, // No need for `|| []` here anymore as `trips` will be an array.
         loading: false,
       });
     } catch (error) {
@@ -173,7 +174,7 @@ export const useTripStore = create<TripState>((set, get) => ({
     try {
       await api.post(API_PATHS.trips.invite(tripId), { email, role });
       // Optionally, refetch trip data or update locally if the API returns the updated trip
-      // For now, we assume a WebSocket event will update the trip details with new invitation
+      // For now, we assume a real-time event will update the trip details with new invitation
       set({ loading: false });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to invite member';
