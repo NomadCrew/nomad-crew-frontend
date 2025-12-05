@@ -4,6 +4,19 @@ import { API_CONFIG } from './env';
 import { ERROR_MESSAGES, ERROR_CODES, ApiError } from './constants';
 import { logger } from '@/src/utils/logger';
 
+/**
+ * Base API client with retry logic, interceptors, and error handling.
+ *
+ * Supports request cancellation via AbortController:
+ * @example
+ * ```typescript
+ * const controller = new AbortController();
+ * api.get('/endpoint', { signal: controller.signal });
+ * // Later: controller.abort();
+ * ```
+ *
+ * For React components, use the `useCancellableRequest` hook for automatic cleanup.
+ */
 export class BaseApiClient {
   protected api: AxiosInstance;
 
