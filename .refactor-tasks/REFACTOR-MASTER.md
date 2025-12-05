@@ -15,7 +15,7 @@
 | 2. Core Infrastructure  | IN PROGRESS | 2/5      | -                         |
 | 3. Developer Experience | IN PROGRESS | 4/5      | -                         |
 | 4. Performance          | COMPLETE    | 5/5      | ✅                        |
-| 5. Data Layer           | IN PROGRESS | 2/6      | -                         |
+| 5. Data Layer           | IN PROGRESS | 4/6      | -                         |
 | 6. Testing              | PENDING     | 0/4      | -                         |
 
 ---
@@ -300,7 +300,7 @@
 ### Task 4.3: Add Zustand Middleware (persist, immer, devtools)
 
 - **ID:** PERF-003
-- **Status:** PENDING
+- **Status:** ✅ COMPLETED (devtools only)
 - **Priority:** P2 - MEDIUM
 - **Estimated:** 6 hours
 - **Files:**
@@ -401,7 +401,7 @@
 ### Task 5.4: Migrate Todo Feature to TanStack Query
 
 - **ID:** DATA-004
-- **Status:** PENDING
+- **Status:** ✅ COMPLETED
 - **Priority:** P2 - MEDIUM
 - **Estimated:** 4 hours
 - **Files:**
@@ -436,7 +436,7 @@
 ### Task 5.6: Create Error Boundaries for Data
 
 - **ID:** DATA-006
-- **Status:** PENDING
+- **Status:** ✅ COMPLETED
 - **Priority:** P2 - MEDIUM
 - **Estimated:** 2 hours
 - **Files:**
@@ -538,6 +538,9 @@
 | DATA-002  | Create Trip Service Layer          | 2025-12-05 | a387397 |
 | PERF-004  | Throttle Location Updates          | 2025-12-05 | cda65a1 |
 | PERF-005  | Remove Polling from GroupLiveMap   | 2025-12-05 | aad3a16 |
+| DATA-004  | Migrate Todo to TanStack Query     | 2025-12-05 | 99f8e34 |
+| DATA-006  | Create Error Boundaries            | 2025-12-05 | 482055a |
+| PERF-003  | Add Zustand Devtools Middleware    | 2025-12-05 | 36ff12b |
 
 ---
 
