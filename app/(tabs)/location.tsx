@@ -4,6 +4,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedView } from '@/src/components/ThemedView';
 import { ThemedText } from '@/src/components/ThemedText';
 
+// BareMap debug component renders a plain MapView for quick validation
+// Only imported in development to avoid bundling overhead in production
+let BareMap: React.ComponentType | null = null;
+if (__DEV__) {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  BareMap = require('../debug/BareMap').default;
+}
+
 export default function LocationScreen() {
   const insets = useSafeAreaInsets();
   
@@ -13,11 +21,15 @@ export default function LocationScreen() {
         <ThemedText variant="display.medium">Location</ThemedText>
       </ThemedView>
       
-      <ThemedView style={styles.content}>
-        <ThemedText variant="body.large">
-          Location sharing feature
-        </ThemedText>
-      </ThemedView>
+      {__DEV__ && BareMap ? (
+        <BareMap />
+      ) : (
+        <ThemedView style={styles.content}>
+          <ThemedText variant="body.large">
+            Location sharing feature
+          </ThemedText>
+        </ThemedView>
+      )}
     </ThemedView>
   );
 }

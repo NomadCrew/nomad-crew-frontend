@@ -6,6 +6,7 @@ import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { Theme } from '@/src/theme/types';
 import { Portal, IconButton } from 'react-native-paper';
 import { BlurView } from 'expo-blur';
+import { useLocations } from '@/src/features/trips/hooks/useLocations';
 
 interface GroupLiveMapModalProps {
   visible: boolean;
@@ -19,6 +20,9 @@ export const GroupLiveMapModal: React.FC<GroupLiveMapModalProps> = ({
   trip,
 }) => {
   const { theme } = useAppTheme();
+  
+  // Get location data using the same hook as LocationScreen
+  const locations = useLocations({ tripId: trip.id, autoConnect: true });
 
   return (
     <Modal
@@ -29,7 +33,11 @@ export const GroupLiveMapModal: React.FC<GroupLiveMapModalProps> = ({
       statusBarTranslucent
     >
       <View style={styles(theme).container}>
-        <GroupLiveMap trip={trip} onClose={onClose} />
+        <GroupLiveMap 
+          trip={trip} 
+          onClose={onClose} 
+          supabaseLocations={locations}
+        />
       </View>
     </Modal>
   );
@@ -38,6 +46,6 @@ export const GroupLiveMapModal: React.FC<GroupLiveMapModalProps> = ({
 const styles = (theme: Theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.background.default,
   },
 }); 

@@ -7,7 +7,6 @@ import { ERROR_CODES, ERROR_MESSAGES } from './constants';
 import { isTokenExpiringSoon } from '@/src/utils/token';
 import type { User } from '@/src/features/auth/types';
 import axios from 'axios';
-import { useAuthStore } from '@/src/features/auth/store';
 
 // Token refresh lock mechanism
 let isRefreshing = false;
@@ -170,6 +169,12 @@ export class ApiClient extends BaseApiClient {
   
         // Check if the error is a 401 Unauthorized and we haven't tried to refresh yet
         if (error.response.status === 401 && !originalRequest._retry) {
+          // Don't try to refresh tokens for onboard endpoint - 401 is expected for new users
+          if (originalRequest.url?.includes('/users/onboard')) {
+            logger.debug('API Client', '401 on onboard endpoint is expected for new users, not refreshing token');
+            return Promise.reject(error);
+          }
+          
           // Check if it's a token expiration error
           const errorData = error.response.data as any;
           const isTokenExpired = 
@@ -295,8 +300,8 @@ export async function getCurrentUserProfile(): Promise<User> {
 }
 
 export async function getSupabaseJWT(): Promise<string> {
-  // This assumes you are calling from a React context. If not, use useAuthStore.getState().token
-  const token = useAuthStore.getState().token;
+  // Use the registered auth handlers instead of direct store access
+  const token = authState.getToken();
   if (!token) throw new Error('No Supabase JWT available');
   return token;
 }

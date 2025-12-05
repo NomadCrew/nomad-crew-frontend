@@ -172,7 +172,7 @@ export const useNotificationStore = create<NotificationState>()(
       handleIncomingNotification: (notification: Notification) => {
         // Ensure the notification object is valid (basic check)
         if (!notification || !notification.id || !notification.type) {
-          logger.warn('Received invalid notification object via WebSocket', notification);
+          logger.warn('Received invalid notification object', notification);
           return;
         }
 
@@ -191,9 +191,9 @@ export const useNotificationStore = create<NotificationState>()(
 
         // Handle all other notification types
         set(state => {
-          // Prevent duplicates if the same notification arrives multiple times via WS
+          // Prevent duplicates if the same notification arrives multiple times
           if (state.notifications.some(n => n.id === notification.id)) {
-            logger.debug('Duplicate notification received via WS, ignoring:', notification.id);
+            logger.debug('Duplicate notification received, ignoring:', notification.id);
             return state; // Return current state without modification
           }
 
@@ -231,7 +231,7 @@ export const useNotificationStore = create<NotificationState>()(
           await api.post(`/v1/invitations/${inviteId}/accept`);
 
           // Success! We rely on the backend to potentially send a follow-up
-          // WebSocket message (e.g., MEMBER_ADDED or TRIP_UPDATE) to reflect the change.
+          // real-time message (e.g., MEMBER_ADDED or TRIP_UPDATE) to reflect the change.
           // Alternatively, we could optimistically remove/update the notification here.
           // For now, just log success and potentially mark as read locally if desired.
           logger.info(`Accepted trip invitation: ${inviteId}`);
@@ -355,7 +355,7 @@ export const selectLatestChatMessageToast = (state: NotificationState) => state.
 
 /**
  * Helper function to handle incoming server events that might contain notifications.
- * This can be called from a WebSocket manager or similar event source.
+ * This can be called from a real-time event manager or similar event source.
  */
 export const handleIncomingServerEventForNotifications = (event: ServerEvent) => {
   if (event.type === 'NOTIFICATION' && event.payload) {

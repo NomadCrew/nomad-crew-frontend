@@ -2,7 +2,259 @@ import { useCallback, useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import { useAppTheme } from './ThemeProvider';
 import { logger } from '../utils/logger';
-import { Theme } from './types';
+import type { Theme, TripStatus, MemberRole, PresenceStatus } from './types';
+
+/**
+ * Safe theme property access with fallbacks
+ */
+export const safeThemeAccess = {
+  spacing: {
+    get: (theme: Theme, path: string, fallback: number = 16): number => {
+      try {
+        const keys = path.split('.');
+        let value: any = theme.spacing;
+        
+        for (const key of keys) {
+          if (value && typeof value === 'object' && key in value) {
+            value = value[key];
+          } else {
+            console.warn(`[Theme] Missing spacing property: theme.spacing.${path}, using fallback: ${fallback}`);
+            return fallback;
+          }
+        }
+        
+        return typeof value === 'number' ? value : fallback;
+      } catch (error) {
+        console.warn(`[Theme] Error accessing spacing property: theme.spacing.${path}`, error);
+        return fallback;
+      }
+    },
+  },
+  
+  colors: {
+    get: (theme: Theme, path: string, fallback: string = '#000000'): string => {
+      try {
+        const keys = path.split('.');
+        let value: any = theme.colors;
+        
+        for (const key of keys) {
+          if (value && typeof value === 'object' && key in value) {
+            value = value[key];
+          } else {
+            console.warn(`[Theme] Missing color property: theme.colors.${path}, using fallback: ${fallback}`);
+            return fallback;
+          }
+        }
+        
+        return typeof value === 'string' ? value : fallback;
+      } catch (error) {
+        console.warn(`[Theme] Error accessing color property: theme.colors.${path}`, error);
+        return fallback;
+      }
+    },
+  },
+  
+  borderRadius: {
+    get: (theme: Theme, size: string, fallback: number = 8): number => {
+      try {
+        if (theme.borderRadius && size in theme.borderRadius) {
+          return theme.borderRadius[size as keyof typeof theme.borderRadius];
+        }
+        console.warn(`[Theme] Missing borderRadius property: theme.borderRadius.${size}, using fallback: ${fallback}`);
+        return fallback;
+      } catch (error) {
+        console.warn(`[Theme] Error accessing borderRadius property: theme.borderRadius.${size}`, error);
+        return fallback;
+      }
+    },
+  },
+};
+
+/**
+ * NEW: Semantic color utilities for enhanced theme tokens
+ */
+export const createSemanticColorHelpers = (theme: Theme) => ({
+  /**
+   * Get trip status colors
+   */
+  getTripStatusColors: (status: TripStatus) => {
+    const statusColors = theme.colors.tripStatus?.[status];
+    if (!statusColors) {
+      console.warn(`[Theme] Missing trip status colors for: ${status}`);
+      return {
+        background: safeThemeAccess.colors.get(theme, 'surface.main', '#FFFFFF'),
+        content: safeThemeAccess.colors.get(theme, 'content.primary', '#000000'),
+        border: safeThemeAccess.colors.get(theme, 'border.default', '#E5E7EB'),
+        icon: safeThemeAccess.colors.get(theme, 'content.secondary', '#6B7280'),
+      };
+    }
+    return statusColors;
+  },
+
+  /**
+   * Get member role colors
+   */
+  getMemberRoleColors: (role: MemberRole) => {
+    const roleColors = theme.colors.memberRoles?.[role];
+    if (!roleColors) {
+      console.warn(`[Theme] Missing member role colors for: ${role}`);
+      return {
+        background: safeThemeAccess.colors.get(theme, 'surface.main', '#FFFFFF'),
+        content: safeThemeAccess.colors.get(theme, 'content.primary', '#000000'),
+        border: safeThemeAccess.colors.get(theme, 'border.default', '#E5E7EB'),
+        icon: safeThemeAccess.colors.get(theme, 'content.secondary', '#6B7280'),
+        badge: safeThemeAccess.colors.get(theme, 'primary.main', '#F46315'),
+      };
+    }
+    return roleColors;
+  },
+
+  /**
+   * Get presence indicator colors
+   */
+  getPresenceColors: (status: PresenceStatus) => {
+    const presenceColors = theme.colors.presence?.[status];
+    if (!presenceColors) {
+      console.warn(`[Theme] Missing presence colors for: ${status}`);
+      return {
+        indicator: safeThemeAccess.colors.get(theme, 'content.tertiary', '#9CA3AF'),
+        background: safeThemeAccess.colors.get(theme, 'surface.main', '#FFFFFF'),
+        content: safeThemeAccess.colors.get(theme, 'content.primary', '#000000'),
+        glow: 'transparent',
+        ...(status === 'typing' && { animation: safeThemeAccess.colors.get(theme, 'primary.main', '#F46315') }),
+      };
+    }
+    return presenceColors;
+  },
+
+  /**
+   * Get role badge style properties
+   */
+  getRoleBadgeStyle: (role: MemberRole) => {
+    const roleColors = theme.colors.memberRoles?.[role];
+    return {
+      backgroundColor: roleColors?.badge || safeThemeAccess.colors.get(theme, 'primary.main', '#F46315'),
+      color: '#FFFFFF',
+      borderColor: roleColors?.border || safeThemeAccess.colors.get(theme, 'border.default', '#E5E7EB'),
+    };
+  },
+
+  /**
+   * Get presence indicator style with glow effect
+   */
+  getPresenceIndicatorStyle: (status: PresenceStatus, size: number = 8) => {
+    const presenceColors = theme.colors.presence?.[status];
+    return {
+      width: size,
+      height: size,
+      borderRadius: size / 2,
+      backgroundColor: presenceColors?.indicator || safeThemeAccess.colors.get(theme, 'content.tertiary', '#9CA3AF'),
+      shadowColor: presenceColors?.glow || 'transparent',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.8,
+      shadowRadius: size / 2,
+      elevation: 2,
+    };
+  },
+});
+
+/**
+ * Enhanced useThemedStyles hook with better error handling
+ */
+export function useThemedStyles<T extends Record<string, any>>(
+  createStyles: (theme: Theme, safeAccess: typeof safeThemeAccess) => T
+): T {
+  const { theme } = useAppTheme();
+  
+  return useMemo(() => {
+    try {
+      return createStyles(theme, safeThemeAccess);
+    } catch (error) {
+      console.error('[Theme] Error creating styles:', error);
+      // Return empty styles object as fallback
+      return {} as T;
+    }
+  }, [theme, createStyles]);
+}
+
+/**
+ * Quick access helpers for common theme properties
+ */
+export const createThemeHelpers = (theme: Theme) => ({
+  // Spacing helpers
+  spacing: {
+    xs: safeThemeAccess.spacing.get(theme, 'xs', 4),
+    sm: safeThemeAccess.spacing.get(theme, 'sm', 8),
+    md: safeThemeAccess.spacing.get(theme, 'md', 16),
+    lg: safeThemeAccess.spacing.get(theme, 'lg', 24),
+    xl: safeThemeAccess.spacing.get(theme, 'xl', 32),
+    
+    // Layout helpers
+    screenPadding: safeThemeAccess.spacing.get(theme, 'layout.screen.padding', 16),
+    sectionGap: safeThemeAccess.spacing.get(theme, 'layout.section.gap', 16),
+    cardPaddingH: safeThemeAccess.spacing.get(theme, 'layout.card.padding.horizontal', 16),
+    cardPaddingV: safeThemeAccess.spacing.get(theme, 'layout.card.padding.vertical', 8),
+    
+    // Component helpers
+    buttonPaddingH: safeThemeAccess.spacing.get(theme, 'components.button.paddingHorizontal', 16),
+    buttonPaddingV: safeThemeAccess.spacing.get(theme, 'components.button.paddingVertical', 8),
+  },
+  
+  // Color helpers
+  colors: {
+    primary: safeThemeAccess.colors.get(theme, 'primary.main', '#F46315'),
+    primaryContainer: safeThemeAccess.colors.get(theme, 'primary.container', '#FFF7ED'),
+    surface: safeThemeAccess.colors.get(theme, 'surface.main', '#FFFFFF'),
+    surfaceVariant: safeThemeAccess.colors.get(theme, 'surface.variant', '#F5F5F5'),
+    contentPrimary: safeThemeAccess.colors.get(theme, 'content.primary', '#1A1A1A'),
+    contentSecondary: safeThemeAccess.colors.get(theme, 'content.secondary', '#6B7280'),
+    border: safeThemeAccess.colors.get(theme, 'border.default', '#E5E7EB'),
+  },
+  
+  // BorderRadius helpers
+  borderRadius: {
+    sm: safeThemeAccess.borderRadius.get(theme, 'sm', 4),
+    md: safeThemeAccess.borderRadius.get(theme, 'md', 8),
+    lg: safeThemeAccess.borderRadius.get(theme, 'lg', 12),
+    xl: safeThemeAccess.borderRadius.get(theme, 'xl', 16),
+  },
+
+  // NEW: Semantic color helpers
+  semantic: createSemanticColorHelpers(theme),
+});
+
+/**
+ * Hook to get theme helpers
+ */
+export function useThemeHelpers() {
+  const { theme } = useAppTheme();
+  return useMemo(() => createThemeHelpers(theme), [theme]);
+}
+
+/**
+ * NEW: Hook specifically for semantic colors
+ */
+export function useSemanticColors() {
+  const { theme } = useAppTheme();
+  return useMemo(() => createSemanticColorHelpers(theme), [theme]);
+}
+
+/**
+ * Legacy compatibility function - creates styles with theme parameter
+ * @deprecated Use useThemedStyles instead
+ */
+export function createStyles<T extends Record<string, any>>(
+  styleCreator: (theme: Theme) => T
+) {
+  return (theme: Theme): T => {
+    try {
+      return styleCreator(theme);
+    } catch (error) {
+      console.error('[Theme] Error in createStyles:', error);
+      return {} as T;
+    }
+  };
+}
 
 /**
  * Creates a styles object using the theme
@@ -10,19 +262,6 @@ import { Theme } from './types';
  * 
  * @param createStyles A function that takes the theme and returns a styles object
  * @returns A styles object
- */
-export function createStyles<T extends StyleSheet.NamedStyles<T> | StyleSheet.NamedStyles<any>>(
-  createStyles: (theme: Theme) => T
-) {
-  return createStyles;
-}
-
-/**
- * A hook that returns the theme and styles created with the theme
- * This is a type-safe way to use theme values in styles
- * 
- * @param createStyles A function that takes the theme and returns a styles object
- * @returns An object with the theme and styles
  */
 export function useThemeAndStyles<T extends StyleSheet.NamedStyles<T> | StyleSheet.NamedStyles<any>>(
   createStyles: (theme: Theme) => T
@@ -34,52 +273,6 @@ export function useThemeAndStyles<T extends StyleSheet.NamedStyles<T> | StyleShe
   }, [theme, createStyles]);
   
   return { theme, styles };
-}
-
-/**
- * A hook that returns styles created with the theme
- * This is a type-safe way to use theme values in styles with safe access
- * 
- * @param stylesFn A function that takes the theme and returns a styles object
- * @returns A styles object with safe access to theme properties
- */
-export function useThemedStyles<T extends Record<string, any>>(
-  stylesFn: (theme: Theme) => T
-): T {
-  const { theme } = useAppTheme();
-  
-  // Create a safe version of the theme that handles undefined properties
-  const safeTheme = useMemo(() => {
-    if (!theme) return {} as Theme;
-    
-    // Create a proxy to handle undefined properties safely
-    return new Proxy(theme, {
-      get: (target, prop) => {
-        const value = target[prop as keyof Theme];
-        if (typeof value === 'object' && value !== null) {
-          return new Proxy(value, {
-            get: (obj, key) => {
-              return obj[key as keyof typeof obj] !== undefined ? obj[key as keyof typeof obj] : null;
-            }
-          });
-        }
-        return value;
-      }
-    }) as Theme;
-  }, [theme]);
-  
-  // Memoize the styles to prevent unnecessary recalculations
-  const styles = useMemo(() => {
-    try {
-      return stylesFn(safeTheme);
-    } catch (error) {
-      logger.warn('UI', 'Error creating styles:', error);
-      // Return an empty object if there's an error
-      return {} as T;
-    }
-  }, [safeTheme, stylesFn]);
-  
-  return styles;
 }
 
 /**

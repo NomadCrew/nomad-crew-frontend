@@ -10,7 +10,6 @@ export type LogModule =
   | 'INVITATION' 
   | 'NOTIFICATION' 
   | 'ChatStore' 
-  | 'WS' 
   | 'location'
   | 'todo'
   | 'chat'
@@ -49,7 +48,20 @@ export type LogModule =
   | 'Chat Screen' 
   | 'Mobile Chat Screen' 
   | 'API Client' 
-  | 'AUTH API';
+  | 'AUTH API'
+  | 'useChatMessages'
+  | 'useLocations'
+  | 'usePresence'
+  | 'useReactions'
+  | 'useReadReceipts'
+
+  | 'APP'
+  | 'INVITE'
+  | 'ONBOARDING'
+  | 'TripDetailScreen'
+  | 'ChatScreen'
+  | 'LocationScreen'
+  | 'GroupLiveMap';
 
 export const logger = {
   debug: (module: LogModule, ...args: unknown[]) => {

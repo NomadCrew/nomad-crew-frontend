@@ -55,9 +55,9 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
   // Handle pagination
   const handleLoadMore = React.useCallback(() => {
     if (!loading && hasMore) {
-      fetchTodos(tripId, todos.length, 20);
+      fetchTodos(tripId, (todos || []).length, 20);
     }
-  }, [loading, hasMore, todos.length, tripId, fetchTodos]);
+  }, [loading, hasMore, (todos || []).length, tripId, fetchTodos]);
 
   const handleRetry = React.useCallback(() => {
     fetchTodos(tripId, 0, 20);
@@ -90,7 +90,7 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
     />
   ), [loading, updateTodo, deleteTodo]);
 
-  if (loading && todos.length === 0) {
+  if (loading && (todos || []).length === 0) {
     return (
       <Surface style={styles(theme).centerContainer} pointerEvents="box-none">
         <ActivityIndicator size="large" color={theme.colors.primary.main} />
@@ -109,7 +109,7 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
     );
   }
 
-  if (todos.length === 0) {
+  if ((todos || []).length === 0) {
     return (
       <View style={styles(theme).container}>
         <Surface style={styles(theme).centerContainer} pointerEvents="box-none">

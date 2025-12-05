@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 // --- Base Components ---
 
-// Using zod for runtime validation of incoming WS data
+// Using zod for runtime validation of incoming notification data
 const NotificationIdSchema = z.string().uuid(); // Assuming backend uses UUIDs
 const IsoTimestampSchema = z.string().datetime({ offset: true }); // Expect ISO 8601 format
 
@@ -55,7 +55,7 @@ const NotificationTypeEnum = z.enum([
   'UNKNOWN' // Added for fallback case
 ]);
 
-// --- Zod Schema for Discriminated Union (for WebSocket Validation) ---
+// --- Zod Schema for Discriminated Union (for Notification Validation) ---
 // Define individual schemas for each notification type extending the base
 
 export const ZodNotificationSchema = z.discriminatedUnion('type', [
@@ -100,7 +100,7 @@ export type GenericNotification = Extract<Notification, { type: 'UNKNOWN' }>; //
 export const isTripInvitationNotification = (
   notification: Notification
 ): notification is TripInvitationNotification => {
-  // Zod schema validation is preferred at the entry point (WebSocketManager)
+  // Zod schema validation is preferred at the entry point
   // but simple type guards can still be useful internally.
   return notification.type === 'TRIP_INVITATION';
 };
@@ -138,3 +138,12 @@ export interface MarkNotificationsReadPayload {
 // Remove the old NotificationType enum, NotificationStatus enum, 
 // old individual interfaces, old union type, old type guards, 
 // and the TripInviteEventSchema/guard as they are now superseded by ZodNotificationSchema. 
+
+export const NotificationDataSchema = z.object({
+  // ... existing fields ...
+});
+
+// Example usage if needed for reference (though Supabase will handle events differently)
+// export const ParsedNotificationEventSchema = BaseEventSchema.extend({
+// ... existing code ...
+// }); 
