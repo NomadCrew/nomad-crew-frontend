@@ -291,7 +291,7 @@ export const useLocationStore = create<LocationState>()(
 );
 
 // Call init function to load initial state from AsyncStorage
-useLocationStore.getState().init();
+useLocationStore.getState().init?.();
 
 // ====================
 // SELECTORS

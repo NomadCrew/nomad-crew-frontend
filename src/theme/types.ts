@@ -9,7 +9,7 @@ export type ThemeMode = 'light' | 'dark' | 'system';
 // Define breakpoints
 export const BREAKPOINTS = {
   mobile: 320,
-  tablet: 720, 
+  tablet: 720,
   desktop: 1024,
 } as const;
 
@@ -123,10 +123,8 @@ export interface FontSizes {
   xl: number;
 }
 
-// Extended Typography interface
-export interface ExtendedTypography extends Typography {
-  size?: FontSizes;
-}
+// Extended Typography interface - Typography already includes size and fontSizes
+export type ExtendedTypography = Typography;
 
 export interface ThemeColors {
   // ... other color definitions
@@ -150,6 +148,13 @@ export interface Theme {
     md: number;
     lg: number;
     xl: number;
+  };
+  shape?: {
+    borderRadius: {
+      small: number;
+      medium: number;
+      large: number;
+    };
   };
   dark?: boolean;
 }

@@ -10,47 +10,47 @@ import { TravelVanAnimation } from '@/src/components/TravelVanAnimation';
 
 const PUNS = [
   "Let's make it official! Pick a username your crew will remember.",
-  "Your username is your passport to adventure ✈️.",
+  'Your username is your passport to adventure ✈️.',
   "No more 'user1234'—let's get creative!",
-  "This is your NomadCrew nickname. Make it fun!",
-  "What should we call you on your next trip?",
-  "Claim your travel alias!",
-  "Your username, your vibe.",
-  "Give us a name. We promise not to judge. Probably.",
-  "The crew needs to know who to blame for getting lost.",
-  "Your identity on this trip. Choose wisely (or not).",
-  "No pressure, but this name might end up on a group T-shirt.",
-  "Be the legend. Start with the name.",
+  'This is your NomadCrew nickname. Make it fun!',
+  'What should we call you on your next trip?',
+  'Claim your travel alias!',
+  'Your username, your vibe.',
+  'Give us a name. We promise not to judge. Probably.',
+  'The crew needs to know who to blame for getting lost.',
+  'Your identity on this trip. Choose wisely (or not).',
+  'No pressure, but this name might end up on a group T-shirt.',
+  'Be the legend. Start with the name.',
   "This isn't just a username. It's your call sign.",
   "You're one username away from becoming the group's meme.",
-  "Make it epic. Or weird. We support both.",
-  "Think Bond. But like... budget-travel Bond.",
-  "Pick a name. The campfire stories start here.",
-  "Avoid names you used on Facebook. Trust us.",
-  "Type a name. Feel powerful. Become unstoppable.",
+  'Make it epic. Or weird. We support both.',
+  'Think Bond. But like... budget-travel Bond.',
+  'Pick a name. The campfire stories start here.',
+  'Avoid names you used on Facebook. Trust us.',
+  'Type a name. Feel powerful. Become unstoppable.',
 ];
 
 const usernames = [
-  "xXx_SlayerBoi420_xXx",
-  "password123",
-  "toenail_collector",
-  "notavirus.exe",
-  "__underscore__king__",
-  "69_cheeseburgerz_69",
-  "i_luv_taxidermy",
-  "ur_mom_dot_com",
-  "flat_earth_daddy",
-  "emotional_baggage69",
-  "crustybagel",
-  "C0d3r_B0y_2008",
-  "grandmas_wrath",
-  "twerky_turtle",
-  "butter_fartz",
-  "sadboi.vibes.only",
-  "why_am_I_like_this",
-  "uncle_touchy",
-  "milkman_returns",
-  "secretnachos"
+  'xXx_SlayerBoi420_xXx',
+  'password123',
+  'toenail_collector',
+  'notavirus.exe',
+  '__underscore__king__',
+  '69_cheeseburgerz_69',
+  'i_luv_taxidermy',
+  'ur_mom_dot_com',
+  'flat_earth_daddy',
+  'emotional_baggage69',
+  'crustybagel',
+  'C0d3r_B0y_2008',
+  'grandmas_wrath',
+  'twerky_turtle',
+  'butter_fartz',
+  'sadboi.vibes.only',
+  'why_am_I_like_this',
+  'uncle_touchy',
+  'milkman_returns',
+  'secretnachos',
 ];
 
 function getRandomPun() {
@@ -78,10 +78,10 @@ export default function UsernameStep() {
   const [pun] = useState(getRandomPun());
   const { theme } = useAppTheme();
 
-  const isUnchanged = username.trim() === initialUsername.trim();
+  const isUnchanged = (username?.trim() ?? '') === (initialUsername?.trim() ?? '');
 
   const handleSubmit = async () => {
-    if (!username.trim()) {
+    if (!username?.trim()) {
       setError('Username is required');
       return;
     }
@@ -111,15 +111,34 @@ export default function UsernameStep() {
 
   return (
     <ThemedView fullScreen style={{ justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-      <ThemedText variant="heading.h1" style={{ fontSize: 32, marginBottom: 8, textAlign: 'center' }}>
+      <ThemedText
+        variant="heading.h1"
+        style={{ fontSize: 32, marginBottom: 8, textAlign: 'center' }}
+      >
         👋 Welcome, Nomad!
       </ThemedText>
       <TravelVanAnimation />
-      <ThemedText variant="body.large" color="content.secondary" style={{ marginBottom: 20, textAlign: 'center', fontSize: 18 }}>
+      <ThemedText
+        variant="body.large"
+        color="content.secondary"
+        style={{ marginBottom: 20, textAlign: 'center', fontSize: 18 }}
+      >
         {pun}
       </ThemedText>
-      <ThemedView style={[styles.card, { backgroundColor: theme.colors.surface.default, borderRadius: theme.borderRadius.lg, shadowColor: theme.colors.primary.main }]}> 
-        <ThemedText variant="body.medium" style={{ marginBottom: 8, textAlign: 'center', fontWeight: '600' }}>
+      <ThemedView
+        style={[
+          styles.card,
+          {
+            backgroundColor: theme.colors.surface.default,
+            borderRadius: theme.borderRadius.lg,
+            shadowColor: theme.colors.primary.main,
+          },
+        ]}
+      >
+        <ThemedText
+          variant="body.medium"
+          style={{ marginBottom: 8, textAlign: 'center', fontWeight: '600' }}
+        >
           Choose your username
         </ThemedText>
         <TextInput
@@ -139,7 +158,9 @@ export default function UsernameStep() {
           placeholderTextColor={theme.colors.content.tertiary}
         />
         {error ? (
-          <ThemedText color="error.main" style={styles.error}>{error}</ThemedText>
+          <ThemedText color="error.main" style={styles.error}>
+            {error}
+          </ThemedText>
         ) : null}
         <Pressable
           style={({ pressed }) => [
@@ -204,4 +225,4 @@ const styles = StyleSheet.create({
     fontSize: 18,
     letterSpacing: 0.5,
   },
-}); 
+});

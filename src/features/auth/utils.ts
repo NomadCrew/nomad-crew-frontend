@@ -11,18 +11,15 @@ import { User } from '@supabase/supabase-js';
  */
 export function getUserDisplayName(user: User | null | undefined): string {
   if (!user) return 'Unknown User';
-  
-  // Try to get name from user_metadata, then raw_user_meta_data, then email
-  const name = user.user_metadata?.full_name || 
-               user.user_metadata?.name ||
-               user.raw_user_meta_data?.full_name ||
-               user.raw_user_meta_data?.name;
-  
+
+  // Try to get name from user_metadata, then email
+  const name = user.user_metadata?.full_name || user.user_metadata?.name;
+
   if (name) return name;
-  
+
   if (user.email) {
-    return user.email.split('@')[0]; // Fallback to part of email
+    return user.email.split('@')[0] || 'Unknown User'; // Fallback to part of email
   }
-  
+
   return `User ${user.id?.substring(0, 4) || ''}`; // Fallback to part of ID
-} 
+}

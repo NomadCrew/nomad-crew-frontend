@@ -88,7 +88,7 @@ describe('useCancellableRequest', () => {
       const { result, rerender } = renderHook(() => useCancellableRequest());
 
       const getSignal1 = result.current.getSignal;
-      rerender();
+      rerender({});
       const getSignal2 = result.current.getSignal;
 
       expect(getSignal1).toBe(getSignal2);
@@ -123,9 +123,9 @@ describe('useCancellableRequest', () => {
 
       // All except the last one should be aborted
       for (let i = 0; i < 4; i++) {
-        expect(signals[i].aborted).toBe(true);
+        expect(signals[i]?.aborted).toBe(true);
       }
-      expect(signals[4].aborted).toBe(false);
+      expect(signals[4]?.aborted).toBe(false);
     });
   });
 

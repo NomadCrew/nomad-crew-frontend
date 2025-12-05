@@ -17,7 +17,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
   onPress,
 }) => {
   const theme = useAppTheme().theme;
-  
+
   const handlePress = () => {
     if (onPress) {
       onPress();
@@ -26,13 +26,13 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
       router.push('/notifications');
     }
   };
-  
+
   return (
     <View style={styles.container}>
       <IconButton
         icon="bell"
         size={size}
-        iconColor={color || theme.colors.onSurface}
+        iconColor={color || theme.colors.text.primary}
         onPress={handlePress}
       />
       <NotificationBadge />
@@ -44,4 +44,4 @@ const styles = StyleSheet.create({
   container: {
     position: 'relative',
   },
-}); 
+});

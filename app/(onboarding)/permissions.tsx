@@ -3,11 +3,7 @@ import { StyleSheet, Platform, Linking } from 'react-native';
 import { router } from 'expo-router';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
-import Animated, { 
-  FadeInDown, 
-  FadeIn,
-  BounceIn,
-} from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeIn, BounceIn } from 'react-native-reanimated';
 import { MapPin, Bell, CheckCircle2, XCircle } from 'lucide-react';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { ThemedView } from '@/components/ThemedView';
@@ -30,14 +26,14 @@ export default function PermissionsScreen() {
   const requestLocationPermission = useCallback(async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      setPermissions(prev => ({
+      setPermissions((prev) => ({
         ...prev,
-        location: status === 'granted'
+        location: status === 'granted',
       }));
     } catch (error) {
-      setPermissions(prev => ({
+      setPermissions((prev) => ({
         ...prev,
-        location: false
+        location: false,
       }));
     }
   }, []);
@@ -45,14 +41,14 @@ export default function PermissionsScreen() {
   const requestNotificationPermission = useCallback(async () => {
     try {
       const { status } = await Notifications.requestPermissionsAsync();
-      setPermissions(prev => ({
+      setPermissions((prev) => ({
         ...prev,
-        notifications: status === 'granted'
+        notifications: status === 'granted',
       }));
     } catch (error) {
-      setPermissions(prev => ({
+      setPermissions((prev) => ({
         ...prev,
-        notifications: false
+        notifications: false,
       }));
     }
   }, []);
@@ -76,7 +72,7 @@ export default function PermissionsScreen() {
 
   const handleContinue = async () => {
     await setFirstTimeDone();
-    router.replace('/(tabs)');
+    router.replace('/(tabs)' as never);
   };
 
   const openSettings = useCallback(() => {
@@ -93,79 +89,58 @@ export default function PermissionsScreen() {
     const isPending = isGranted === null;
     const isDenied = isGranted === false;
 
-    const requestPermission = type === 'location' 
-      ? requestLocationPermission 
-      : requestNotificationPermission;
+    const requestPermission =
+      type === 'location' ? requestLocationPermission : requestNotificationPermission;
 
     return (
-      <Animated.View 
+      <Animated.View
         entering={FadeInDown.duration(600).delay(type === 'location' ? 0 : 200)}
         style={[
           styles.card,
           {
             backgroundColor: theme.colors.surface.default,
-            borderColor: isGranted 
-              ? theme.colors.status.success.border 
-              : isDenied 
+            borderColor: isGranted
+              ? theme.colors.status.success.border
+              : isDenied
                 ? theme.colors.status.error.border
                 : theme.colors.border.default,
-          }
+          },
         ]}
       >
         <ThemedView style={styles.cardHeader}>
-          <Icon 
-            size={24} 
-            color={isGranted 
-              ? theme.colors.status.success.content
-              : theme.colors.primary.main} 
+          <Icon
+            size={24}
+            color={isGranted ? theme.colors.status.success.content : theme.colors.primary.main}
           />
-          <ThemedText style={styles.cardTitle}>
-            {title}
-          </ThemedText>
+          <ThemedText style={styles.cardTitle}>{title}</ThemedText>
         </ThemedView>
 
-        <ThemedText style={styles.cardDescription}>
-          {description}
-        </ThemedText>
+        <ThemedText style={styles.cardDescription}>{description}</ThemedText>
 
         {isPending ? (
-          <Animated.View 
-            entering={FadeIn}
-            style={styles.buttonContainer}
-          >
+          <Animated.View entering={FadeIn} style={styles.buttonContainer}>
             <ThemedView
               style={[styles.button, { backgroundColor: theme.colors.primary.main }]}
               onPress={requestPermission}
             >
-              <ThemedText style={styles.buttonText}>
-                Enable {type}
-              </ThemedText>
+              <ThemedText style={styles.buttonText}>Enable {type}</ThemedText>
             </ThemedView>
           </Animated.View>
         ) : (
-          <Animated.View 
-            entering={BounceIn}
-            style={styles.statusContainer}
-          >
+          <Animated.View entering={BounceIn} style={styles.statusContainer}>
             {isGranted ? (
-              <CheckCircle2 
-                size={24} 
-                color={theme.colors.status.success.content}
-              />
+              <CheckCircle2 size={24} color={theme.colors.status.success.content} />
             ) : (
-              <XCircle 
-                size={24} 
-                color={theme.colors.status.error.content}
-              />
+              <XCircle size={24} color={theme.colors.status.error.content} />
             )}
             <ThemedText
               style={[
                 styles.statusText,
                 {
-                  color: isGranted 
+                  color: isGranted
                     ? theme.colors.status.success.content
-                    : theme.colors.status.error.content
-                }
+                    : theme.colors.status.error.content,
+                },
               ]}
             >
               {isGranted ? 'Enabled' : 'Disabled'}
@@ -183,13 +158,8 @@ export default function PermissionsScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <Animated.View 
-        entering={FadeInDown.duration(800)}
-        style={styles.header}
-      >
-        <ThemedText style={styles.title}>
-          Just a few things...
-        </ThemedText>
+      <Animated.View entering={FadeInDown.duration(800)} style={styles.header}>
+        <ThemedText style={styles.title}>Just a few things...</ThemedText>
         <ThemedText style={styles.subtitle}>
           NomadCrew needs a couple of permissions to work its magic
         </ThemedText>
@@ -212,29 +182,18 @@ export default function PermissionsScreen() {
       </ThemedView>
 
       {canContinue && (
-        <Animated.View 
-          entering={FadeIn.duration(400)}
-          style={styles.footer}
-        >
+        <Animated.View entering={FadeIn.duration(400)} style={styles.footer}>
           {hasAnyDenied && (
-            <ThemedText 
-              style={styles.settingsText}
-              onPress={openSettings}
-            >
+            <ThemedText style={styles.settingsText} onPress={openSettings}>
               Open settings to enable permissions
             </ThemedText>
           )}
 
           <ThemedView
-            style={[
-              styles.continueButton,
-              { backgroundColor: theme.colors.primary.main }
-            ]}
+            style={[styles.continueButton, { backgroundColor: theme.colors.primary.main }]}
             onPress={handleContinue}
           >
-            <ThemedText style={styles.continueButtonText}>
-              Continue to NomadCrew
-            </ThemedText>
+            <ThemedText style={styles.continueButtonText}>Continue to NomadCrew</ThemedText>
           </ThemedView>
         </Animated.View>
       )}

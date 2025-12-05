@@ -19,25 +19,28 @@ export const InviteModal = ({ visible, onClose, tripId }: InviteModalProps) => {
   const theme = useAppTheme().theme;
   const { user } = useAuthStore();
   const { trips, inviteMember } = useTripStore();
-  
+
   // Get the current trip
-  const trip = trips.find(t => t.id === tripId);
-  
+  const trip = trips.find((t) => t.id === tripId);
+
   // Check if current user is owner or admin
   const members = trip?.members || [];
-  const currentUserRole = members.find(member => member.userId === user?.id)?.role || 'member';
+  const currentUserRole = members.find((member) => member.userId === user?.id)?.role || 'member';
   const isOwner = currentUserRole === 'owner';
 
   const handleSubmit = async () => {
     if (!email.trim()) return;
-    
+
     try {
       setLoading(true);
       await inviteMember(tripId, email.trim(), role);
       setEmail('');
       onClose();
     } catch (error) {
-      Alert.alert('Invitation Failed', error instanceof Error ? error.message : 'Could not send invitation');
+      Alert.alert(
+        'Invitation Failed',
+        error instanceof Error ? error.message : 'Could not send invitation'
+      );
     } finally {
       setLoading(false);
     }
@@ -50,7 +53,7 @@ export const InviteModal = ({ visible, onClose, tripId }: InviteModalProps) => {
         onDismiss={onClose}
         contentContainerStyle={[styles.modalContainer, { overflow: 'hidden' }]}
       >
-        <View style={[styles.content, { backgroundColor: theme.colors.background }]}>
+        <View style={[styles.content, { backgroundColor: theme.colors.background.default }]}>
           <TextInput
             label="Email"
             value={email}
@@ -60,14 +63,17 @@ export const InviteModal = ({ visible, onClose, tripId }: InviteModalProps) => {
             keyboardType="email-address"
             autoCapitalize="none"
           />
-          
+
           <Text style={styles.roleLabel}>Role</Text>
-          <RadioButton.Group onValueChange={value => setRole(value as 'member' | 'admin')} value={role}>
+          <RadioButton.Group
+            onValueChange={(value) => setRole(value as 'member' | 'admin')}
+            value={role}
+          >
             <View style={styles.radioOption}>
               <RadioButton value="member" />
               <Text>Member</Text>
             </View>
-            
+
             {isOwner && (
               <View style={styles.radioOption}>
                 <RadioButton value="admin" />
@@ -75,7 +81,7 @@ export const InviteModal = ({ visible, onClose, tripId }: InviteModalProps) => {
               </View>
             )}
           </RadioButton.Group>
-          
+
           <Button
             mode="contained"
             onPress={handleSubmit}
@@ -116,4 +122,4 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-}); 
+});

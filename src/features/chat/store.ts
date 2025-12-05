@@ -152,8 +152,11 @@ export const useChatStore = create<ChatState>()(
 
           // Set up callbacks for WebSocket events
           const callbacks = {
-            onMessage: (event: ServerEvent) => {
-              get().handleChatEvent(event);
+            onMessage: (event: any) => {
+              // Only handle ServerEvent types, not Notification types
+              if (event && typeof event === 'object' && 'type' in event && 'tripId' in event) {
+                get().handleChatEvent(event as ServerEvent);
+              }
             },
             onError: (error: Error) => {
               logger.error('ChatStore', 'WebSocket error:', error);
@@ -342,7 +345,12 @@ export const useChatStore = create<ChatState>()(
             logger.warn('ChatStore', 'WebSocket not connected, attempting to connect');
             // Try to connect to the WebSocket
             await wsManager.connect(tripId, {
-              onMessage: (event) => get().handleChatEvent(event),
+              onMessage: (event: any) => {
+                // Only handle ServerEvent types
+                if (event && typeof event === 'object' && 'type' in event && 'tripId' in event) {
+                  get().handleChatEvent(event as ServerEvent);
+                }
+              },
             });
           }
 
@@ -517,10 +525,13 @@ export const useChatStore = create<ChatState>()(
 
         if (messageIndex >= 0) {
           const updatedMessages = [...messages];
-          updatedMessages[messageIndex] = {
-            ...updatedMessages[messageIndex],
-            readBy: updatedMessageReadReceipts,
-          };
+          const currentMessage = updatedMessages[messageIndex];
+          if (currentMessage && currentMessage.message) {
+            updatedMessages[messageIndex] = {
+              ...currentMessage,
+              readBy: updatedMessageReadReceipts,
+            };
+          }
 
           set((state) => ({
             messagesByTripId: {
@@ -645,7 +656,7 @@ export const useChatStore = create<ChatState>()(
                 // User not in typing list, add them
                 const updatedTypingUsers = [
                   ...currentTypingUsers,
-                  { userId, name: username, timestamp: Date.now() },
+                  { userId: userId, name: username || 'Unknown', timestamp: Date.now() },
                 ];
 
                 set((state) => ({
@@ -657,10 +668,14 @@ export const useChatStore = create<ChatState>()(
               } else {
                 // User already in typing list, update timestamp
                 const updatedTypingUsers = [...currentTypingUsers];
-                updatedTypingUsers[userIndex] = {
-                  ...updatedTypingUsers[userIndex],
-                  timestamp: Date.now(),
-                };
+                const existingUser = updatedTypingUsers[userIndex];
+                if (existingUser) {
+                  updatedTypingUsers[userIndex] = {
+                    userId: existingUser.userId,
+                    name: existingUser.name,
+                    timestamp: Date.now(),
+                  };
+                }
 
                 set((state) => ({
                   typingUsers: {

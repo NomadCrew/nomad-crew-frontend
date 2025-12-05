@@ -1,5 +1,5 @@
+import React, { useEffect, useState } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
-import { useEffect, useState } from 'react';
 import { ActivityIndicator, Text, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '@/src/features/auth/store';
@@ -22,9 +22,15 @@ export default function InvitationScreen() {
   const [errorMessage, setErrorMessage] = useState<string>('');
 
   useEffect(() => {
-    logger.debug('INVITATION', `Invitation screen mounted with token: ${typeof token === 'string' ? token.substring(0, 15) + '...' : 'none'}`);
-    logger.debug('INVITATION', `Auth state: ${user ? 'Logged in as ' + user.email : 'Not logged in'}`);
-    
+    logger.debug(
+      'INVITATION',
+      `Invitation screen mounted with token: ${typeof token === 'string' ? token.substring(0, 15) + '...' : 'none'}`
+    );
+    logger.debug(
+      'INVITATION',
+      `Auth state: ${user ? 'Logged in as ' + user.email : 'Not logged in'}`
+    );
+
     const handleInvitation = async () => {
       if (!token) {
         logger.debug('INVITATION', 'No invitation token provided');
@@ -46,31 +52,43 @@ export default function InvitationScreen() {
         try {
           decodedToken = jwtDecode(token);
           logger.debug('INVITATION', `Token decoded successfully:`, decodedToken);
-          
+
           // Check if token is expired
           if (decodedToken.exp && decodedToken.exp * 1000 < Date.now()) {
-            logger.debug('INVITATION', `Token expired: ${new Date(decodedToken.exp * 1000).toISOString()}`);
+            logger.debug(
+              'INVITATION',
+              `Token expired: ${new Date(decodedToken.exp * 1000).toISOString()}`
+            );
             setStatus('error');
             setErrorMessage('Invitation has expired');
             return;
           }
-          
+
           // Check if token has required fields
           if (!decodedToken.tripId) {
             logger.debug('INVITATION', 'Token missing tripId');
             // Token missing tripId
           }
-          
+
           if (!decodedToken.invitationId) {
             logger.debug('INVITATION', 'Token missing invitationId');
             // Token missing invitationId
           }
 
           // Check if email in token matches current user
-          if (decodedToken.inviteeEmail && user?.email && decodedToken.inviteeEmail !== user.email) {
-            logger.debug('INVITATION', `Email mismatch: token has ${decodedToken.inviteeEmail}, user is ${user.email}`);
+          if (
+            decodedToken.inviteeEmail &&
+            user?.email &&
+            decodedToken.inviteeEmail !== user.email
+          ) {
+            logger.debug(
+              'INVITATION',
+              `Email mismatch: token has ${decodedToken.inviteeEmail}, user is ${user.email}`
+            );
             setStatus('error');
-            setErrorMessage(`This invitation was sent to ${decodedToken.inviteeEmail}, but you're logged in as ${user.email}`);
+            setErrorMessage(
+              `This invitation was sent to ${decodedToken.inviteeEmail}, but you're logged in as ${user.email}`
+            );
             return;
           }
         } catch (decodeError) {
@@ -108,23 +126,23 @@ export default function InvitationScreen() {
   return (
     <ThemedView style={styles.container}>
       {status === 'loading' && (
-        <>
+        <React.Fragment>
           <ActivityIndicator size="large" />
           <Text style={styles.text}>Processing invitation...</Text>
-        </>
+        </React.Fragment>
       )}
-      
+
       {status === 'success' && (
         <>
           <Text style={styles.title}>Invitation Accepted!</Text>
           <Text style={styles.text}>
-            {user 
-              ? 'You have been added to the trip. Redirecting to your trips...' 
+            {user
+              ? 'You have been added to the trip. Redirecting to your trips...'
               : 'Please log in to join the trip. Redirecting to login...'}
           </Text>
         </>
       )}
-      
+
       {status === 'error' && (
         <>
           <Text style={styles.title}>Invitation Error</Text>
@@ -160,4 +178,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
   },
-}); 
+});

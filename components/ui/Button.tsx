@@ -21,47 +21,47 @@ export interface ButtonProps extends Omit<TouchableOpacityProps, 'style'> {
    * The label text of the button
    */
   label: string;
-  
+
   /**
    * The variant of the button
    */
   variant?: ButtonVariant;
-  
+
   /**
    * The size of the button
    */
   size?: ButtonSize;
-  
+
   /**
    * Whether the button is in a loading state
    */
   loading?: boolean;
-  
+
   /**
    * Whether the button is disabled
    */
   disabled?: boolean;
-  
+
   /**
    * Whether the button should take up the full width of its container
    */
   fullWidth?: boolean;
-  
+
   /**
    * Icon to display at the start of the button
    */
   startIcon?: React.ReactNode;
-  
+
   /**
    * Icon to display at the end of the button
    */
   endIcon?: React.ReactNode;
-  
+
   /**
    * Additional styles for the button container
    */
   style?: StyleProp<ViewStyle>;
-  
+
   /**
    * Additional styles for the button text
    */
@@ -101,7 +101,7 @@ export function Button({
     const surfaceDefault = theme?.colors?.surface?.default || '#FFFFFF';
     const borderDefault = theme?.colors?.border?.default || '#E5E7EB';
     const borderRadius = theme?.borderRadius?.md || 8;
-    
+
     // Size mappings
     const sizeMap = {
       sm: {
@@ -123,23 +123,35 @@ export function Button({
         iconSize: 20,
       },
     };
-    
+
     // Get colors based on variant and state
     const getBackgroundColor = () => {
       if (disabled) return theme?.colors?.disabled?.background || surfaceDefault;
-      return theme?.colors?.[variant]?.background || primarySurface;
+
+      // Handle variant colors safely
+      const variantColors = theme?.colors?.[variant as keyof typeof theme.colors];
+      if (variantColors && typeof variantColors === 'object' && 'background' in variantColors) {
+        return (variantColors as { background: string }).background;
+      }
+      return primarySurface;
     };
-    
+
     const getBorderColor = () => {
       if (disabled) return theme?.colors?.disabled?.border || borderDefault;
       return variant === 'outlined' ? primaryColor : 'transparent';
     };
-    
+
     const getTextColor = () => {
       if (disabled) return theme?.colors?.disabled?.text || contentDisabled;
-      return theme?.colors?.[variant]?.text || primaryColor;
+
+      // Handle variant text colors safely
+      const variantColors = theme?.colors?.[variant as keyof typeof theme.colors];
+      if (variantColors && typeof variantColors === 'object' && 'text' in variantColors) {
+        return (variantColors as { text: string }).text;
+      }
+      return primaryColor;
     };
-    
+
     // Variant styles
     const getVariantStyles = () => {
       if (disabled) {
@@ -150,7 +162,7 @@ export function Button({
           color: getTextColor(),
         };
       }
-      
+
       switch (variant) {
         case 'filled':
           return {
@@ -175,9 +187,9 @@ export function Button({
           return {};
       }
     };
-    
+
     const variantStyles = getVariantStyles();
-    
+
     return {
       button: {
         flexDirection: 'row' as const,
@@ -190,7 +202,7 @@ export function Button({
         borderWidth: variant === 'outlined' ? 1 : undefined,
         borderColor: getBorderColor(),
         opacity: loading ? 0.8 : 1,
-        width: fullWidth ? '100%' as const : 'auto' as const,
+        width: fullWidth ? ('100%' as const) : ('auto' as const),
       },
       label: {
         fontSize: sizeMap[size].fontSize,
@@ -209,12 +221,12 @@ export function Button({
       },
     };
   });
-  
+
   const isDisabled = disabled || loading;
-  
+
   const getLoadingColor = () => {
     if (disabled) return styles.label.color;
-    
+
     switch (variant) {
       case 'filled':
         return '#FFFFFF';
@@ -225,13 +237,13 @@ export function Button({
         return styles.label.color;
     }
   };
-  
+
   const loadingSize = {
     sm: 16,
     md: 20,
     lg: 24,
   }[size];
-  
+
   return (
     <TouchableOpacity
       style={[styles.button, style]}
@@ -255,4 +267,4 @@ export function Button({
   );
 }
 
-export default React.memo(Button); 
+export default React.memo(Button);

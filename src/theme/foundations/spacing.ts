@@ -4,14 +4,14 @@ const SPACE_UNIT = 4;
 // Core spacing scale - multiples of our base unit
 export const spaceScale = {
   none: 0,
-  xxs: SPACE_UNIT * 0.5,    // 2px
-  xs: SPACE_UNIT,           // 4px
-  sm: SPACE_UNIT * 2,       // 8px
-  md: SPACE_UNIT * 4,       // 16px
-  lg: SPACE_UNIT * 6,       // 24px
-  xl: SPACE_UNIT * 8,       // 32px
-  xxl: SPACE_UNIT * 12,     // 48px
-  xxxl: SPACE_UNIT * 16,    // 64px
+  xxs: SPACE_UNIT * 0.5, // 2px
+  xs: SPACE_UNIT, // 4px
+  sm: SPACE_UNIT * 2, // 8px
+  md: SPACE_UNIT * 4, // 16px
+  lg: SPACE_UNIT * 6, // 24px
+  xl: SPACE_UNIT * 8, // 32px
+  xxl: SPACE_UNIT * 12, // 48px
+  xxxl: SPACE_UNIT * 16, // 64px
 } as const;
 
 // Semantic spacing system
@@ -31,6 +31,14 @@ export const createSemanticSpacing = () => ({
     container: {
       padding: spaceScale.md,
       gap: spaceScale.sm,
+    },
+    card: {
+      padding: {
+        horizontal: spaceScale.md,
+        vertical: spaceScale.md,
+      },
+      gap: spaceScale.sm,
+      marginBottom: spaceScale.md,
     },
   },
 
@@ -145,7 +153,7 @@ export const createLayoutHelpers = (spacing: SemanticSpacing) => ({
     padding: spacing.layout.screen.padding,
   },
   containerPadding: {
-    padding: spacing.components.container.padding
+    padding: spacing.components.container.padding,
   },
   centeredContent: {
     justifyContent: 'center',

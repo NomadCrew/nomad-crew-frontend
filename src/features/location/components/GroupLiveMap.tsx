@@ -51,8 +51,8 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
   } = useLocationStore();
 
   const [region, setRegion] = useState<Region>({
-    latitude: trip.destination.coordinates?.lat || DEFAULT_COORDINATES.latitude,
-    longitude: trip.destination.coordinates?.lng || DEFAULT_COORDINATES.longitude,
+    latitude: trip.destination?.coordinates?.lat ?? DEFAULT_COORDINATES.latitude,
+    longitude: trip.destination?.coordinates?.lng ?? DEFAULT_COORDINATES.longitude,
     latitudeDelta: 0.05,
     longitudeDelta: 0.05,
   });
@@ -106,8 +106,8 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
     ) {
       setRegion((prevRegion) => ({
         ...prevRegion, // Keep delta values if already set
-        latitude: trip.destination.coordinates.lat,
-        longitude: trip.destination.coordinates.lng,
+        latitude: trip.destination.coordinates!.lat,
+        longitude: trip.destination.coordinates!.lng,
       }));
       console.log(
         '[MapDebug] Initial region set from trip destination:',
@@ -178,8 +178,8 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
         console.log('[MapDebug] Animating to initial trip destination region');
         mapRef.current?.animateToRegion(
           {
-            latitude: trip.destination.coordinates.lat,
-            longitude: trip.destination.coordinates.lng,
+            latitude: trip.destination.coordinates!.lat,
+            longitude: trip.destination.coordinates!.lng,
             latitudeDelta: region.latitudeDelta, // Keep existing delta
             longitudeDelta: region.longitudeDelta, // Keep existing delta
           },
@@ -233,7 +233,6 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
       provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
       initialRegion={region} // Use state `region` which is updated
       onMapReady={handleMapReady}
-      onError={handleMapError} // Added onError handler
       loadingEnabled={isLoading} // Controlled by isLoading state
       showsUserLocation={isLocationSharingEnabled} // Show blue dot for user
       showsMyLocationButton // Default button to center on user
@@ -265,7 +264,7 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
             longitude: trip.destination.coordinates.lng,
           }}
           title={trip.destination.address || 'Destination'}
-          pinColor={theme.colors.accent?.main || 'blue'} // Example: Different color for destination
+          pinColor={theme.colors.primary?.main || 'blue'} // Example: Different color for destination
         />
       )}
     </MapView>
@@ -425,7 +424,7 @@ const styles = (theme: Theme) =>
       marginTop: theme.spacing.inset.sm,
     },
     retryButtonText: {
-      color: theme.colors.primary.content,
+      color: theme.colors.primary?.text || '#FFFFFF',
       fontWeight: 'bold',
       fontSize: theme.typography.size.sm,
     },

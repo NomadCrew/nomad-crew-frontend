@@ -27,6 +27,7 @@ export default function ParallaxScrollView({
 }: Props) {
   const colorScheme = useColorScheme() ?? 'light';
   const scrollRef = useAnimatedRef<Animated.FlatList<{ key: string }>>();
+  // @ts-expect-error - useScrollViewOffset works with FlatList but types don't match
   const scrollOffset = useScrollViewOffset(scrollRef);
   const bottom = useBottomTabOverflow();
 
@@ -47,11 +48,7 @@ export default function ParallaxScrollView({
     };
   });
 
-  const renderItem = () => (
-    <ThemedView style={styles.content}>
-      {children}
-    </ThemedView>
-  );
+  const renderItem = () => <ThemedView style={styles.content}>{children}</ThemedView>;
 
   return (
     <ThemedView style={styles.container}>
@@ -68,7 +65,8 @@ export default function ParallaxScrollView({
               styles.header,
               { backgroundColor: headerBackgroundColor[colorScheme] },
               headerAnimatedStyle,
-            ]}>
+            ]}
+          >
             {headerImage}
           </Animated.View>
         )}

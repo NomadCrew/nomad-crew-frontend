@@ -12,13 +12,13 @@ interface NotificationListProps {
 
 export const NotificationList: React.FC<NotificationListProps> = ({ onItemPress }) => {
   const theme = useAppTheme().theme;
-  const { 
+  const {
     notifications,
     unreadCount,
     isFetching: loading,
     error,
     fetchNotifications,
-    markAllNotificationsRead: markAllAsRead
+    markAllNotificationsRead: markAllAsRead,
   } = useNotificationStore();
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onItemPress 
   if (loading && notifications.length === 0) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <ActivityIndicator size="large" color={theme.colors.primary.main} />
       </View>
     );
   }
@@ -78,26 +78,20 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onItemPress 
           <Text variant="bodyMedium">
             You have {unreadCount} unread {unreadCount === 1 ? 'notification' : 'notifications'}
           </Text>
-          <Button 
-            mode="text" 
-            onPress={handleMarkAllAsRead}
-            compact
-          >
+          <Button mode="text" onPress={handleMarkAllAsRead} compact>
             Mark all as read
           </Button>
         </View>
       )}
-      
+
       <FlashList
         data={notifications}
         renderItem={({ item }) => (
-          <NotificationItem 
-            notification={item} 
-            onPress={() => handleItemPress(item.id)} 
-          />
+          <NotificationItem notification={item} onPress={() => handleItemPress(item.id)} />
         )}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
+        // @ts-ignore - estimatedItemSize exists in FlashList but types may be outdated
         estimatedItemSize={120}
         onRefresh={handleRefresh}
         refreshing={loading}
@@ -137,4 +131,4 @@ const styles = StyleSheet.create({
   retryButton: {
     marginTop: 8,
   },
-}); 
+});

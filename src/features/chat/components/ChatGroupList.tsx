@@ -57,7 +57,6 @@ export const ChatGroupList: React.FC<ChatGroupListProps> = ({
       renderItem={renderItem}
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles(theme).listContent}
-      estimatedItemSize={70}
       refreshControl={
         onRefresh ? (
           <RefreshControl

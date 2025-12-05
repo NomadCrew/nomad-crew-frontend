@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Platform, useWindowDimensions, Image, TextStyle } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  Platform,
+  useWindowDimensions,
+  Image,
+  TextStyle,
+  StyleProp,
+  ImageStyle,
+} from 'react-native';
 import Onboarding from 'react-native-onboarding-swiper';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { ThemedText } from '@/src/components/ThemedText';
@@ -20,31 +29,31 @@ export function OnboardingCarousel({ slides, onComplete }: Props) {
   const { width: _screenWidth } = useWindowDimensions();
 
   // Components for the onboarding pages
-  const Title = ({ title, titleStyles }: { title: string; titleStyles?: TextStyle }) => (
-    <ThemedText 
-      style={[styles.title, titleStyles]}
-      variant="heading.h1"
-    >
+  const Title = ({ title, titleStyles }: { title: string; titleStyles?: StyleProp<TextStyle> }) => (
+    <ThemedText style={[styles.title, titleStyles]} variant="heading.h1">
       {title}
     </ThemedText>
   );
 
-  const Subtitle = ({ subtitle, subtitleStyles }: { subtitle: string; subtitleStyles?: TextStyle }) => (
-    <ThemedText 
-      style={[styles.subtitle, subtitleStyles]}
-      variant="body.large"
-    >
+  const Subtitle = ({
+    subtitle,
+    subtitleStyles,
+  }: {
+    subtitle: string;
+    subtitleStyles?: StyleProp<TextStyle>;
+  }) => (
+    <ThemedText style={[styles.subtitle, subtitleStyles]} variant="body.large">
       {subtitle}
     </ThemedText>
   );
 
-  const pages = slides.map(slide => ({
+  const pages = slides.map((slide) => ({
     backgroundColor: slide.backgroundColor,
     image: (
       <Animated.View entering={FadeIn.duration(120)}>
         <Image
           source={slide.image}
-          style={[styles.image, slide.imageStyles]}
+          style={[styles.image, slide.imageStyles as ImageStyle]}
           resizeMode="contain"
         />
       </Animated.View>

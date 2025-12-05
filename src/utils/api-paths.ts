@@ -9,6 +9,9 @@ export const createApiPath = (path: string) => {
 // Define all API endpoints
 export const API_PATHS = {
   auth: {
+    login: createApiPath('auth/login'),
+    register: createApiPath('auth/register'),
+    refresh: createApiPath('auth/refresh'),
     logout: createApiPath('auth/logout'),
     validate: createApiPath('auth/validate'),
   },
@@ -45,5 +48,5 @@ export const API_PATHS = {
   // Add chat endpoints
   CHAT: {
     UPDATE_LAST_READ: (tripId: string) => createApiPath(`trips/${tripId}/messages/read`),
-  }
+  },
 } as const;

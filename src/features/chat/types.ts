@@ -101,6 +101,17 @@ export interface ChatUser {
   avatar?: string;
 }
 
+// Chat Group Types (for multi-group chats)
+export interface ChatGroup {
+  id: string;
+  name: string;
+  tripId: string;
+  isDefault: boolean;
+  unreadCount?: number;
+  lastMessage?: ChatMessage;
+  lastMessageAt?: string;
+}
+
 export interface ChatState {
   // Messages
   messagesByTripId: Record<string, ChatMessageWithStatus[]>;

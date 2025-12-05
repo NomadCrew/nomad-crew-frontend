@@ -3,7 +3,6 @@ import { persist, createJSONStorage, devtools } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   Notification,
-  NotificationBase,
   TripInvitationNotification,
   ChatMessageNotification,
   MarkNotificationsReadPayload,
@@ -127,7 +126,7 @@ export const useNotificationStore = create<NotificationState>()(
 
         markNotificationRead: async (notificationId: string) => {
           const notification = get().notifications.find((n) => n.id === notificationId);
-          if (!notification || notification.isRead || get().isMarkingRead) return;
+          if (!notification || notification.read || get().isMarkingRead) return;
 
           set({ isMarkingRead: true, error: null });
           try {
@@ -136,7 +135,7 @@ export const useNotificationStore = create<NotificationState>()(
 
             set((state) => ({
               notifications: state.notifications.map((n) =>
-                n.id === notificationId ? { ...n, isRead: true } : n
+                n.id === notificationId ? { ...n, read: true } : n
               ),
             }));
 
@@ -159,7 +158,7 @@ export const useNotificationStore = create<NotificationState>()(
             await api.patch('/v1/notifications/read-all');
 
             set((state) => ({
-              notifications: state.notifications.map((n) => ({ ...n, isRead: true })),
+              notifications: state.notifications.map((n) => ({ ...n, read: true })),
               unreadCount: 0,
             }));
           } catch (err: any) {
@@ -276,11 +275,7 @@ export const useNotificationStore = create<NotificationState>()(
             logger.info(`Declined trip invitation: ${inviteId}`);
 
             set((state) => ({
-              notifications: state.notifications.map((n) =>
-                n.id === notification.id
-                  ? { ...n, read: true, metadata: { ...n.metadata, status: 'declined' } }
-                  : n
-              ),
+              notifications: state.notifications.filter((n) => n.id !== notification.id),
               unreadCount: !notification.read
                 ? Math.max(0, state.unreadCount - 1)
                 : state.unreadCount,
@@ -373,17 +368,10 @@ export const selectLatestChatMessageToast = (state: NotificationState) =>
  * This can be called from a WebSocket manager or similar event source.
  */
 export const handleIncomingServerEventForNotifications = (event: ServerEvent) => {
-  if (event.type === 'NOTIFICATION' && event.payload) {
-    const notification = event.payload as Notification; // Assume payload is a Notification
-    useNotificationStore.getState().handleIncomingNotification(notification);
-  } else if (event.type === 'CHAT_MESSAGE_RECEIVED' && event.payload) {
-    // Convert CHAT_MESSAGE_RECEIVED to a ChatMessageNotification structure if needed
-    // This assumes your backend sends a specific structure for chat messages that maps to ChatMessageNotification
-    // For now, assuming the event.payload is already in the correct ChatMessageNotification format or similar enough.
-    // If not, a transformation function would be needed here.
-    const chatNotification = event.payload as ChatMessageNotification; // This might need adjustment
-    useNotificationStore.getState().handleIncomingNotification(chatNotification);
-  }
+  // For now, we're not handling generic server events as notifications
+  // Notifications will come through a dedicated notification channel
+  // This function can be extended when we add notification-specific event types
+  logger.debug('Server event received, but not converted to notification:', event.type);
 };
 
 // ====================

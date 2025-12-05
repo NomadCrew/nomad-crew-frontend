@@ -1,6 +1,6 @@
 // Authentication hooks
 export { useAuth } from './useAuth';
-export { useProtectedRoute } from './useProtectedRoute';
+export { default as useProtectedRoute } from './useProtectedRoute';
 export { useGoogleSignIn } from './useGoogleSignIn';
 export { useAppleSignIn } from './useAppleSignIn';
 

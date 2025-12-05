@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Text,
+  ActivityIndicator,
+  ViewStyle,
+  TextStyle,
+} from 'react-native';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { useChatStore } from '@/src/features/chat/store';
 import { useAuthStore } from '@/src/features/auth/store';
@@ -11,28 +19,25 @@ import { ChatAuthError } from '../components/ChatAuthError';
 import { WebSocketManager } from '@/src/features/websocket/WebSocketManager';
 import { Theme } from '@/src/theme/types';
 import { StatusBar } from 'expo-status-bar';
-import { StatusBarStyle } from 'expo-status-bar/build/StatusBar.types';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemedStyles } from '@/src/theme/utils';
 import { logger } from '@/src/utils/logger';
 import { SafeAreaView } from 'react-native-safe-area-context';
+type StatusBarStyle = 'auto' | 'inverted' | 'light' | 'dark';
 
 interface MobileChatScreenProps {
   tripId: string;
   onBack?: () => void;
 }
 
-export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({ 
-  tripId, 
-  onBack 
-}) => {
+export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({ tripId, onBack }) => {
   const { theme } = useAppTheme();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [authError, setAuthError] = useState(false);
-  
+
   // Auth store state
   const { token, isInitialized } = useAuthStore();
-  
+
   // Chat store state and actions
   const {
     messagesByTripId,
@@ -44,21 +49,21 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({
     sendMessage,
     markAsRead,
     initializeStore,
-    setTypingStatus
+    setTypingStatus,
   } = useChatStore();
-  
+
   // Trip store to get trip name
   const { getTripById } = useTripStore();
   const trip = getTripById(tripId);
   const tripName = trip?.name || 'Trip Chat';
-  
+
   // Get messages for the trip
   const messages = messagesByTripId[tripId] || [];
   const hasMore = hasMoreMessages[tripId] || false;
-  
+
   // Get typing users for the trip
   const currentTypingUsers = typingUsers[tripId] || [];
-  
+
   // Check for authentication before fetching
   useEffect(() => {
     if (isInitialized && !token) {
@@ -67,7 +72,7 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({
       setAuthError(false);
     }
   }, [isInitialized, token]);
-  
+
   // Initialize store with persisted data
   useEffect(() => {
     const loadPersistedData = async () => {
@@ -75,13 +80,17 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({
         await initializeStore();
         logger.debug('Mobile Chat Screen', 'Initialized store with persisted data');
       } catch (error) {
-        logger.error('Mobile Chat Screen', 'Failed to initialize store with persisted data:', error);
+        logger.error(
+          'Mobile Chat Screen',
+          'Failed to initialize store with persisted data:',
+          error
+        );
       }
     };
-    
+
     loadPersistedData();
   }, [initializeStore]);
-  
+
   // Fetch messages on mount
   useEffect(() => {
     const loadMessages = async () => {
@@ -97,53 +106,62 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({
         }
       }
     };
-    
+
     if (!authError) {
       loadMessages();
     }
   }, [fetchMessages, authError, token, tripId]);
-  
+
   // Handle refreshing the messages
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await fetchMessages(tripId, true);
     setIsRefreshing(false);
   };
-  
+
   // Handle sending a message
   const handleSendMessage = (content: string) => {
-    logger.info('Mobile Chat Screen', `handleSendMessage called with content: "${content.substring(0, 20)}${content.length > 20 ? '...' : ''}"`);
-    
+    logger.info(
+      'Mobile Chat Screen',
+      `handleSendMessage called with content: "${content.substring(0, 20)}${content.length > 20 ? '...' : ''}"`
+    );
+
     if (!tripId) {
       logger.error('Mobile Chat Screen', 'Cannot send message: tripId is undefined');
       return;
     }
-    
+
     // Check WebSocket connection
     const wsManager = WebSocketManager.getInstance();
     const isConnected = wsManager.isConnected();
-    logger.info('Mobile Chat Screen', `WebSocket connection status before sending: ${isConnected ? 'connected' : 'disconnected'}`);
-    
+    logger.info(
+      'Mobile Chat Screen',
+      `WebSocket connection status before sending: ${isConnected ? 'connected' : 'disconnected'}`
+    );
+
     if (!isConnected) {
       logger.warn('Mobile Chat Screen', 'WebSocket not connected, message may not be delivered');
       // Don't attempt to reconnect here as it's managed at the trip level
       // Just inform the user that the message might not be delivered
     }
-    
+
     try {
-      logger.info('Mobile Chat Screen', `Sending message in trip ${tripId}: "${content.substring(0, 20)}${content.length > 20 ? '...' : ''}"`);
+      logger.info(
+        'Mobile Chat Screen',
+        `Sending message in trip ${tripId}: "${content.substring(0, 20)}${content.length > 20 ? '...' : ''}"`
+      );
       sendMessage({ tripId, content });
       logger.info('Mobile Chat Screen', 'sendMessage function called successfully');
     } catch (error) {
       logger.error('Mobile Chat Screen', 'Error calling sendMessage:', error);
     }
   };
-  
+
   // Handle typing status change
   const handleTypingStatusChange = (isTyping: boolean) => {
     setTypingStatus(tripId, isTyping);
   };
-  
+
   // Handle retry after auth error
   const handleAuthRetry = async () => {
     try {
@@ -154,90 +172,89 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({
       logger.error('AUTH', 'Failed to refresh authentication:', error);
     }
   };
-  
-  const styles = useThemedStyles((theme) => {
-    return StyleSheet.create({
-      container: {
-        flex: 1,
-        backgroundColor: theme?.colors?.surface?.default || '#FFFFFF',
-      } as ViewStyle,
-      header: {
-        flexDirection: 'row' as const,
-        alignItems: 'center' as const,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: theme?.colors?.border?.default || '#EEEEEE',
-        backgroundColor: theme?.colors?.surface?.default || '#FFFFFF',
-        minHeight: 60,
-      } as ViewStyle,
-      backButton: {
-        marginRight: 16,
-        padding: 4,
-      } as ViewStyle,
-      headerTitle: {
-        flex: 1,
-        fontSize: 18,
-        fontWeight: '600' as const,
-        color: theme?.colors?.content?.primary || '#1A1A1A',
-      } as TextStyle,
-      chatContainer: {
-        flex: 1,
-      } as ViewStyle,
-      emptyState: {
-        flex: 1,
-        justifyContent: 'center' as const,
-        alignItems: 'center' as const,
-        padding: 20,
-      } as ViewStyle,
-      emptyStateText: {
-        fontSize: 16,
-        color: theme?.colors?.content?.secondary || '#757575',
-        textAlign: 'center' as const,
-        marginBottom: 20,
-      } as TextStyle,
-      statusBarStyle: (theme?.dark ? 'light' : 'dark') as StatusBarStyle,
-      loadingContainer: {
-        flex: 1,
-        justifyContent: 'center' as const,
-        alignItems: 'center' as const,
-        padding: 20,
-      } as ViewStyle,
-      loadingText: {
-        fontSize: 16,
-        color: theme?.colors?.content?.secondary || '#757575',
-        textAlign: 'center' as const,
-        marginTop: 12,
-      } as TextStyle,
-    });
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme?.colors?.surface?.default || '#FFFFFF',
+    },
+    header: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: theme?.colors?.border?.default || '#EEEEEE',
+      backgroundColor: theme?.colors?.surface?.default || '#FFFFFF',
+      minHeight: 60,
+    },
+    backButton: {
+      marginRight: 16,
+      padding: 4,
+    },
+    headerTitle: {
+      flex: 1,
+      fontSize: 18,
+      fontWeight: '600' as const,
+      color: theme?.colors?.content?.primary || '#1A1A1A',
+    },
+    chatContainer: {
+      flex: 1,
+    },
+    emptyState: {
+      flex: 1,
+      justifyContent: 'center' as const,
+      alignItems: 'center' as const,
+      padding: 20,
+    },
+    emptyStateText: {
+      fontSize: 16,
+      color: theme?.colors?.content?.secondary || '#757575',
+      textAlign: 'center' as const,
+      marginBottom: 20,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center' as const,
+      alignItems: 'center' as const,
+      padding: 20,
+    },
+    loadingText: {
+      fontSize: 16,
+      color: theme?.colors?.content?.secondary || '#757575',
+      textAlign: 'center' as const,
+      marginTop: 12,
+    },
   });
-  
+
+  const statusBarStyle: StatusBarStyle = theme?.dark ? 'light' : 'dark';
+
   // If there's an auth error, show the error component
   if (authError) {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
-        <StatusBar style={styles.statusBarStyle} />
+        <StatusBar style={statusBarStyle} />
         <ChatAuthError onRetry={handleAuthRetry} />
       </SafeAreaView>
     );
   }
-  
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
-      <StatusBar style={styles.statusBarStyle} />
-      
+      <StatusBar style={statusBarStyle} />
+
       <View style={styles.header}>
         {onBack && (
-          <TouchableOpacity 
-            style={styles.backButton} 
+          <TouchableOpacity
+            style={styles.backButton}
             onPress={onBack}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             activeOpacity={0.7}
           >
-            <Ionicons 
-              name="chevron-back" 
-              size={24} 
-              color={theme?.colors?.content?.primary || '#1A1A1A'} 
+            <Ionicons
+              name="chevron-back"
+              size={24}
+              color={theme?.colors?.content?.primary || '#1A1A1A'}
             />
           </TouchableOpacity>
         )}
@@ -245,7 +262,7 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({
           {tripName}
         </Text>
       </View>
-      
+
       <View style={styles.chatContainer}>
         {isLoadingMessages && messages.length === 0 ? (
           <View style={styles.loadingContainer}>
@@ -261,11 +278,10 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({
             ) : (
               <ChatList
                 messages={messages}
-                currentTypingUsers={currentTypingUsers}
+                typingUsers={currentTypingUsers}
                 onRefresh={handleRefresh}
                 isRefreshing={isRefreshing}
-                onSendMessage={handleSendMessage}
-                onTypingStatusChange={handleTypingStatusChange}
+                tripId={tripId}
               />
             )}
           </>
@@ -273,4 +289,4 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({
       </View>
     </SafeAreaView>
   );
-}; 
+};
