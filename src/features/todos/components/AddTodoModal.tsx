@@ -35,7 +35,7 @@ export const AddTodoModal = ({ visible, onClose, tripId }: AddTodoModalProps) =>
   return (
     <Portal>
       <Modal visible={visible} onDismiss={onClose} contentContainerStyle={styles.modalContainer}>
-        <View style={[styles.content, { backgroundColor: theme.colors.background }]}>
+        <View style={[styles.content, { backgroundColor: theme.colors.surface.default }]}>
           <TextInput
             label="To Do"
             value={text}

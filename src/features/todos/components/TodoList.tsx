@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, ActivityIndicator, Pressable } from 'react-native';
 import { Text, Surface, Button } from 'react-native-paper';
-import { FlashList } from '@shopify/flash-list';
+import { FlashList, type ListRenderItem } from '@shopify/flash-list';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { Theme } from '@/src/theme/types';
 import { useTodos, useUpdateTodo, useDeleteTodo } from '../hooks';
@@ -63,26 +63,40 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
   }, [refetch]);
 
   // Render items
-  const renderItem = React.useCallback(
-    ({ item }: { item: Todo }) => (
+  const renderItem: ListRenderItem<Todo> = React.useCallback(
+    ({ item }) => (
       <TodoItem
         todo={item}
         onComplete={async () => {
           const newStatus = item.status === 'COMPLETE' ? 'INCOMPLETE' : 'COMPLETE';
-          updateTodo.mutate(
-            { tripId, id: item.id, input: { status: newStatus } },
-            {
-              onSuccess: (updatedTodo) => {
-                if (updatedTodo.status === 'COMPLETE') {
-                  setShowCompletionAnimation(true);
-                  setTimeout(() => setShowCompletionAnimation(false), 2000);
-                }
-              },
-            }
-          );
+          return new Promise<Todo>((resolve, reject) => {
+            updateTodo.mutate(
+              { tripId, id: item.id, input: { status: newStatus } },
+              {
+                onSuccess: (updatedTodo) => {
+                  if (updatedTodo.status === 'COMPLETE') {
+                    setShowCompletionAnimation(true);
+                    setTimeout(() => setShowCompletionAnimation(false), 2000);
+                  }
+                  resolve(updatedTodo);
+                },
+                onError: (error) => {
+                  reject(error);
+                },
+              }
+            );
+          });
         }}
-        onDelete={() => {
-          deleteTodo.mutate({ tripId, id: item.id });
+        onDelete={async () => {
+          return new Promise<void>((resolve, reject) => {
+            deleteTodo.mutate(
+              { tripId, id: item.id },
+              {
+                onSuccess: () => resolve(),
+                onError: (error) => reject(error),
+              }
+            );
+          });
         }}
         disabled={isLoading}
         textColor={getColorForUUID(item.createdBy)}
@@ -145,16 +159,18 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
         </View>
       )}
 
+      {/* @ts-ignore FlashList type issue with props - all props are valid */}
       <FlashList
         data={dedupedTodos}
         renderItem={renderItem}
+        keyExtractor={(item) => item.id}
         estimatedItemSize={60}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
         ListFooterComponent={
           isLoading ? (
             <ActivityIndicator style={styles(theme).loader} color={theme.colors.primary.main} />
-          ) : null
+          ) : undefined
         }
       />
 
