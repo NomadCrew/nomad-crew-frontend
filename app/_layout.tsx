@@ -11,6 +11,8 @@ import { AuthProvider } from '@/src/features/auth/components/AuthProvider';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { OnboardingProvider } from '@/src/providers/OnboardingProvider';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '@/src/lib/query-client';
 
 console.log('[RootLayout] Rendering');
 
@@ -33,11 +35,7 @@ function ThemedRoot() {
       style={{ flex: 1, backgroundColor: statusBarBg }}
       edges={['top', 'left', 'right']}
     >
-      <StatusBar
-        style={statusBarStyle}
-        backgroundColor={statusBarBg}
-        translucent={false}
-      />
+      <StatusBar style={statusBarStyle} backgroundColor={statusBarBg} translucent={false} />
       <AuthProvider>
         <Slot />
       </AuthProvider>
@@ -49,19 +47,21 @@ export default function RootLayout() {
   try {
     SplashScreen.hideAsync();
     return (
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <ThemeProvider>
-          <OnboardingProvider>
-            <Providers>
-              <AuthErrorBoundary>
-                <AppInitializer>
-                  <ThemedRoot />
-                </AppInitializer>
-              </AuthErrorBoundary>
-            </Providers>
-          </OnboardingProvider>
-        </ThemeProvider>
-      </GestureHandlerRootView>
+      <QueryClientProvider client={queryClient}>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <ThemeProvider>
+            <OnboardingProvider>
+              <Providers>
+                <AuthErrorBoundary>
+                  <AppInitializer>
+                    <ThemedRoot />
+                  </AppInitializer>
+                </AuthErrorBoundary>
+              </Providers>
+            </OnboardingProvider>
+          </ThemeProvider>
+        </GestureHandlerRootView>
+      </QueryClientProvider>
     );
   } catch (e: any) {
     SplashScreen.hideAsync();
