@@ -9,14 +9,14 @@
 
 ## Quick Status
 
-| Phase                   | Status      | Progress | Assigned                  |
-| ----------------------- | ----------- | -------- | ------------------------- |
-| 1. Security Fixes       | IN PROGRESS | 3/4      | SEC-003 pending (backend) |
-| 2. Core Infrastructure  | COMPLETE    | 5/5      | ✅                        |
-| 3. Developer Experience | COMPLETE    | 5/5      | ✅                        |
-| 4. Performance          | COMPLETE    | 5/5      | ✅                        |
-| 5. Data Layer           | COMPLETE    | 6/6      | ✅                        |
-| 6. Testing              | PENDING     | 0/4      | Optional                  |
+| Phase                   | Status   | Progress | Assigned |
+| ----------------------- | -------- | -------- | -------- |
+| 1. Security Fixes       | COMPLETE | 4/4      | ✅       |
+| 2. Core Infrastructure  | COMPLETE | 5/5      | ✅       |
+| 3. Developer Experience | COMPLETE | 5/5      | ✅       |
+| 4. Performance          | COMPLETE | 5/5      | ✅       |
+| 5. Data Layer           | COMPLETE | 6/6      | ✅       |
+| 6. Testing              | PENDING  | 0/4      | Optional |
 
 ---
 
@@ -58,7 +58,7 @@
 ### Task 1.3: Remove Tokens from WebSocket URL
 
 - **ID:** SEC-003
-- **Status:** PENDING
+- **Status:** ✅ COMPLETED
 - **Priority:** P1 - HIGH
 - **Estimated:** 2 hours
 - **Files:**
@@ -547,6 +547,7 @@
 | INFRA-004 | Offline Message Queue              | 2025-12-05 | c3465ff |
 | DX-005    | Add CI Pipeline                    | 2025-12-05 | d3637ca |
 | DATA-005  | Offline Persistence                | 2025-12-05 | c3465ff |
+| SEC-003   | Remove Tokens from WebSocket URL   | 2025-12-05 | 6d6cd19 |
 
 ---
 
