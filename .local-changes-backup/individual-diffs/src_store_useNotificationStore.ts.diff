@@ -1,0 +1,528 @@
+diff --git a/src/store/useNotificationStore.ts b/src/store/useNotificationStore.ts
+index da1566d..7fe66a7 100644
+--- a/src/store/useNotificationStore.ts
++++ b/src/store/useNotificationStore.ts
+@@ -1,41 +1,55 @@
++/**
++ * Notification Store with Auth-Aware Fetching
++ *
++ * Best Practice Pattern (2025):
++ * - Uses Zustand's subscribeWithSelector to react to auth state changes
++ * - Automatically fetches notifications when user becomes authenticated
++ * - Clears notifications when user logs out
++ * - No need for manual auth checks in individual methods
++ *
++ * References:
++ * - Obytes Expo Starter: https://starter.obytes.com/guides/authentication/
++ * - Zustand subscribeWithSelector: https://zustand.docs.pmnd.rs/middlewares/subscribe-with-selector
++ * - Expo Router Auth: https://docs.expo.dev/router/advanced/authentication/
++ */
+ import { create } from 'zustand';
+ import { persist, createJSONStorage } from 'zustand/middleware';
+ import AsyncStorage from '@react-native-async-storage/async-storage';
+ import {
+   Notification,
+-  NotificationBase,
+   TripInvitationNotification,
+   ChatMessageNotification,
+   MarkNotificationsReadPayload,
+   isChatMessageNotification,
+   isTripInvitationNotification
+ } from '../types/notification';
+-import { ServerEvent } from '../types/events';
+-import { apiClient } from '../api/api-client';
++import { api } from '../api/api-client';
+ import { logger } from '../utils/logger';
++import { useAuthStore } from './useAuthStore';
++import type { AuthStatus } from '../types/auth';
+ 
+ const NOTIFICATION_LIMIT = 100; // Max notifications to keep in state/storage
+ const API_PAGE_LIMIT = 20; // How many notifications to fetch per API call
+-const STORAGE_KEY = '@nomad_crew_notifications_v2'; // Use new key due to structure change
++const STORAGE_KEY = '@nomad_crew_notifications_v2';
+ 
+ interface NotificationState {
+   // Data
+   notifications: Notification[];
+   unreadCount: number;
+-  hasHydrated: boolean; // To track store hydration from AsyncStorage
+-  latestChatMessageToast: ChatMessageNotification | null; // For transient toast display
+-  
++  hasHydrated: boolean;
++  latestChatMessageToast: ChatMessageNotification | null;
++
+   // Loading and error states
+   isFetching: boolean;
+   isFetchingUnreadCount: boolean;
+   isMarkingRead: boolean;
+-  isHandlingAction: boolean; // e.g., accepting/declining invites
++  isHandlingAction: boolean;
+   error: string | null;
+-  
++
+   // Pagination
+   offset: number;
+   hasMore: boolean;
+-  
++
+   // Actions
+   fetchUnreadCount: () => Promise<void>;
+   fetchNotifications: (options?: { loadMore?: boolean }) => Promise<void>;
+@@ -47,6 +61,8 @@ interface NotificationState {
+   clearChatToast: () => void;
+   setHasHydrated: (state: boolean) => void;
+   clearNotifications: () => void;
++  // Internal: called when auth status changes
++  _onAuthStatusChange: (status: AuthStatus, previousStatus: AuthStatus) => void;
+ }
+ 
+ export const useNotificationStore = create<NotificationState>()(
+@@ -68,33 +84,70 @@ export const useNotificationStore = create<NotificationState>()(
+         set({ hasHydrated: state });
+       },
+ 
++      /**
++       * Internal handler for auth status changes
++       * Called by the subscription to useAuthStore
++       */
++      _onAuthStatusChange: (status: AuthStatus, previousStatus: AuthStatus) => {
++        logger.debug('NOTIFICATION', `Auth status changed: ${previousStatus} -> ${status}`);
++
++        if (status === 'authenticated' && previousStatus !== 'authenticated') {
++          // User just logged in - fetch notifications
++          logger.info('NOTIFICATION', 'User authenticated, fetching notifications...');
++          const state = get();
++          state.fetchUnreadCount();
++          state.fetchNotifications();
++        } else if (status === 'unauthenticated' && previousStatus === 'authenticated') {
++          // User just logged out - clear notifications
++          logger.info('NOTIFICATION', 'User logged out, clearing notifications');
++          get().clearNotifications();
++        }
++      },
++
+       fetchUnreadCount: async () => {
++        // Guard: check auth status (not just token, for proper three-state handling)
++        const authStatus = useAuthStore.getState().status;
++        if (authStatus !== 'authenticated') {
++          logger.debug('NOTIFICATION', `fetchUnreadCount skipped: auth status is '${authStatus}'`);
++          return;
++        }
++
+         if (get().isFetchingUnreadCount) return;
+         set({ isFetchingUnreadCount: true, error: null });
++
+         try {
+-          const response = await apiClient.get<{ count: number }>('/api/notifications/count?status=unread');
++          const response = await api.get<{ count: number }>('/api/notifications/count?status=unread');
+           set({ unreadCount: response.data.count });
+-        } catch (err: any) {
+-          const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch unread count';
++        } catch (err: unknown) {
++          const error = err as { response?: { data?: { message?: string } }; message?: string };
++          const errorMessage = error.response?.data?.message || error.message || 'Failed to fetch unread count';
+           set({ error: errorMessage });
+-          logger.error('fetchUnreadCount failed:', err);
++          logger.error('NOTIFICATION', 'fetchUnreadCount failed:', err);
+         } finally {
+           set({ isFetchingUnreadCount: false });
+         }
+       },
+ 
+       fetchNotifications: async (options = { loadMore: false }) => {
++        // Guard: check auth status
++        const authStatus = useAuthStore.getState().status;
++        if (authStatus !== 'authenticated') {
++          logger.debug('NOTIFICATION', `fetchNotifications skipped: auth status is '${authStatus}'`);
++          return;
++        }
++
+         const { isFetching, offset, hasMore } = get();
+         const limit = API_PAGE_LIMIT;
++
+         if (isFetching || (!options.loadMore && offset > 0) || (options.loadMore && !hasMore)) {
+-            return;
++          return;
+         }
+ 
+         set({ isFetching: true, error: null });
+         const currentOffset = options.loadMore ? offset : 0;
+ 
+         try {
+-          const response = await apiClient.get<Notification[]>('/api/notifications', {
++          const response = await api.get<Notification[]>('/api/notifications', {
+             params: { limit, offset: currentOffset },
+           });
+           const fetchedNotifications = response.data || [];
+@@ -110,104 +163,94 @@ export const useNotificationStore = create<NotificationState>()(
+           if (!options.loadMore) {
+             get().fetchUnreadCount();
+           }
+-
+-        } catch (err: any) {
+-          const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch notifications';
++        } catch (err: unknown) {
++          const error = err as { response?: { data?: { message?: string } }; message?: string };
++          const errorMessage = error.response?.data?.message || error.message || 'Failed to fetch notifications';
+           set({ error: errorMessage });
+-          logger.error('fetchNotifications failed:', err);
++          logger.error('NOTIFICATION', 'fetchNotifications failed:', err);
+         } finally {
+-           set({ isFetching: false });
++          set({ isFetching: false });
+         }
+       },
+ 
+       markNotificationRead: async (notificationId: string) => {
+         const notification = get().notifications.find(n => n.id === notificationId);
+-        if (!notification || notification.isRead || get().isMarkingRead) return;
++        if (!notification || notification.read || get().isMarkingRead) return;
+ 
+         set({ isMarkingRead: true, error: null });
+         try {
+-          await apiClient.patch(`/api/notifications/${notificationId}`);
++          await api.patch(`/api/notifications/${notificationId}`);
+ 
+           set(state => ({
+             notifications: state.notifications.map(n =>
+-              n.id === notificationId ? { ...n, isRead: true } : n
++              n.id === notificationId ? { ...n, read: true } : n
+             ),
+           }));
+ 
+           get().fetchUnreadCount();
+-
+-        } catch (err: any) {
+-          const errorMessage = err.response?.data?.message || err.message || 'Failed to mark notification as read';
++        } catch (err: unknown) {
++          const error = err as { response?: { data?: { message?: string } }; message?: string };
++          const errorMessage = error.response?.data?.message || error.message || 'Failed to mark notification as read';
+           set({ error: errorMessage });
+-          logger.error('markNotificationRead failed:', err);
++          logger.error('NOTIFICATION', 'markNotificationRead failed:', err);
+         } finally {
+-            set({ isMarkingRead: false });
++          set({ isMarkingRead: false });
+         }
+       },
+ 
+       markAllNotificationsRead: async () => {
+         if (get().isMarkingRead || get().unreadCount === 0) return;
+         set({ isMarkingRead: true, error: null });
++
+         try {
+           const payload: MarkNotificationsReadPayload = { status: 'read' };
+-          await apiClient.patch('/api/notifications', payload);
++          await api.patch('/api/notifications', payload);
+ 
+           set(state => ({
+-            notifications: state.notifications.map(n => ({ ...n, isRead: true })),
++            notifications: state.notifications.map(n => ({ ...n, read: true })),
+             unreadCount: 0,
+           }));
+-        } catch (err: any) {
+-          const errorMessage = err.response?.data?.message || err.message || 'Failed to mark all notifications as read';
++        } catch (err: unknown) {
++          const error = err as { response?: { data?: { message?: string } }; message?: string };
++          const errorMessage = error.response?.data?.message || error.message || 'Failed to mark all notifications as read';
++          set({ error: errorMessage });
+           get().fetchUnreadCount();
+-          logger.error('markAllNotificationsRead failed:', err);
++          logger.error('NOTIFICATION', 'markAllNotificationsRead failed:', err);
+         } finally {
+-            set({ isMarkingRead: false });
++          set({ isMarkingRead: false });
+         }
+       },
+ 
+       handleIncomingNotification: (notification: Notification) => {
+-        // Ensure the notification object is valid (basic check)
+         if (!notification || !notification.id || !notification.type) {
+-          logger.warn('Received invalid notification object via WebSocket', notification);
++          logger.warn('NOTIFICATION', 'Received invalid notification object via WebSocket', notification);
+           return;
+         }
+ 
+         // Handle CHAT_MESSAGE specifically
+         if (isChatMessageNotification(notification)) {
+           set(state => ({
+-            // Set the transient state for the toast component to pick up
+             latestChatMessageToast: notification,
+-            // Increment count only if the backend marked it as unread
+-            // Or potentially if the chat screen for this message isn't active (requires more context)
+             unreadCount: notification.read ? state.unreadCount : state.unreadCount + 1,
+           }));
+-          // Note: The UI component displaying the toast will be responsible for calling clearChatToast
+-          return; // Don't add chat messages to the persistent notification list
++          return;
+         }
+ 
+         // Handle all other notification types
+         set(state => {
+-          // Prevent duplicates if the same notification arrives multiple times via WS
+           if (state.notifications.some(n => n.id === notification.id)) {
+-            logger.debug('Duplicate notification received via WS, ignoring:', notification.id);
+-            return state; // Return current state without modification
++            logger.debug('NOTIFICATION', 'Duplicate notification received via WS, ignoring:', notification.id);
++            return state;
+           }
+ 
+-          // Add the new notification to the beginning of the array
+           const newNotifications = [notification, ...state.notifications];
+-
+-          // Pruning Logic: Enforce the notification limit
+           if (newNotifications.length > NOTIFICATION_LIMIT) {
+-            // Remove the oldest notification (the last element in the array)
+             newNotifications.pop();
+           }
+ 
+           return {
+             notifications: newNotifications,
+-            // Increment count only if the backend marked it as unread
+             unreadCount: notification.read ? state.unreadCount : state.unreadCount + 1,
+-            // Decide if receiving a notification should reset pagination/scroll
+-            // For now, let's not reset offset/hasMore automatically
+           };
+         });
+       },
+@@ -215,7 +258,7 @@ export const useNotificationStore = create<NotificationState>()(
+       acceptTripInvitation: async (notification: TripInvitationNotification) => {
+         if (get().isHandlingAction) return;
+         if (!isTripInvitationNotification(notification)) {
+-          logger.warn('acceptTripInvitation called with non-invite notification:', notification);
++          logger.warn('NOTIFICATION', 'acceptTripInvitation called with non-invite notification:', notification);
+           return;
+         }
+ 
+@@ -223,28 +266,20 @@ export const useNotificationStore = create<NotificationState>()(
+         const inviteId = notification.metadata.inviteId;
+ 
+         try {
+-          // POST to the backend's business logic endpoint for accepting
+-          await apiClient.post(`/api/invitations/${inviteId}/accept`);
+-
+-          // Success! We rely on the backend to potentially send a follow-up
+-          // WebSocket message (e.g., MEMBER_ADDED or TRIP_UPDATE) to reflect the change.
+-          // Alternatively, we could optimistically remove/update the notification here.
+-          // For now, just log success and potentially mark as read locally if desired.
+-          logger.info(`Accepted trip invitation: ${inviteId}`);
++          await api.post(`/api/invitations/${inviteId}/accept`);
++          logger.info('NOTIFICATION', `Accepted trip invitation: ${inviteId}`);
+ 
+-          // Optional: Mark as read locally after accepting
+           set(state => ({
+-             notifications: state.notifications.map(n =>
+-               n.id === notification.id ? { ...n, read: true } : n
+-             ),
+-             // Adjust unreadCount if it was unread
+-             unreadCount: !notification.read ? Math.max(0, state.unreadCount - 1) : state.unreadCount,
++            notifications: state.notifications.map(n =>
++              n.id === notification.id ? { ...n, read: true } : n
++            ),
++            unreadCount: !notification.read ? Math.max(0, state.unreadCount - 1) : state.unreadCount,
+           }));
+-
+-        } catch (err: any) {
+-          const errorMessage = err.response?.data?.message || err.message || 'Failed to accept trip invitation';
++        } catch (err: unknown) {
++          const error = err as { response?: { data?: { message?: string } }; message?: string };
++          const errorMessage = error.response?.data?.message || error.message || 'Failed to accept trip invitation';
+           set({ error: errorMessage });
+-          logger.error('acceptTripInvitation failed:', err);
++          logger.error('NOTIFICATION', 'acceptTripInvitation failed:', err);
+         } finally {
+           set({ isHandlingAction: false });
+         }
+@@ -253,31 +288,26 @@ export const useNotificationStore = create<NotificationState>()(
+       declineTripInvitation: async (notification: TripInvitationNotification) => {
+         if (get().isHandlingAction) return;
+         if (!isTripInvitationNotification(notification)) {
+-           logger.warn('declineTripInvitation called with non-invite notification:', notification);
+-           return;
++          logger.warn('NOTIFICATION', 'declineTripInvitation called with non-invite notification:', notification);
++          return;
+         }
+ 
+         set({ isHandlingAction: true, error: null });
+         const inviteId = notification.metadata.inviteId;
+ 
+         try {
+-          // POST to the backend's business logic endpoint for declining
+-          await apiClient.post(`/api/invitations/${inviteId}/decline`);
+-
+-          // Success! Similar to accept, rely on backend for subsequent state updates via WS.
+-          logger.info(`Declined trip invitation: ${inviteId}`);
++          await api.post(`/api/invitations/${inviteId}/decline`);
++          logger.info('NOTIFICATION', `Declined trip invitation: ${inviteId}`);
+ 
+-          // Optional: Remove the notification locally after declining
+           set(state => ({
+             notifications: state.notifications.filter(n => n.id !== notification.id),
+-            // Adjust unreadCount if it was unread
+             unreadCount: !notification.read ? Math.max(0, state.unreadCount - 1) : state.unreadCount,
+           }));
+-
+-        } catch (err: any) {
+-          const errorMessage = err.response?.data?.message || err.message || 'Failed to decline trip invitation';
++        } catch (err: unknown) {
++          const error = err as { response?: { data?: { message?: string } }; message?: string };
++          const errorMessage = error.response?.data?.message || error.message || 'Failed to decline trip invitation';
+           set({ error: errorMessage });
+-          logger.error('declineTripInvitation failed:', err);
++          logger.error('NOTIFICATION', 'declineTripInvitation failed:', err);
+         } finally {
+           set({ isHandlingAction: false });
+         }
+@@ -289,8 +319,14 @@ export const useNotificationStore = create<NotificationState>()(
+ 
+       clearNotifications: () => {
+         AsyncStorage.removeItem(STORAGE_KEY)
+-          .catch(err => logger.error('Failed to clear notifications', err));
+-        set({ notifications: [], unreadCount: 0, offset: 0, hasMore: true, error: null });
++          .catch(err => logger.error('NOTIFICATION', 'Failed to clear notifications from storage', err));
++        set({
++          notifications: [],
++          unreadCount: 0,
++          offset: 0,
++          hasMore: true,
++          error: null
++        });
+       }
+     }),
+     {
+@@ -300,76 +336,71 @@ export const useNotificationStore = create<NotificationState>()(
+         notifications: state.notifications,
+       }),
+       onRehydrateStorage: () => (state) => {
+-         if (state) {
+-            state.setHasHydrated(true);
+-            logger.info('Notification store rehydrated from AsyncStorage.');
+-         } else {
+-            logger.warn('Notification store rehydration resulted in null state.');
+-            useNotificationStore.setState({ hasHydrated: true });
+-         }
++        if (state) {
++          state.setHasHydrated(true);
++          logger.info('NOTIFICATION', 'Store rehydrated from AsyncStorage');
++        } else {
++          logger.warn('NOTIFICATION', 'Store rehydration resulted in null state');
++          useNotificationStore.setState({ hasHydrated: true });
++        }
+       },
+     }
+   )
+ );
+ 
+-// --- Post-Hydration Initial Data Fetching ---
+-// We use a flag to ensure this runs only once after hydration completes.
+-let hydrationCompleted = false;
+-const unsubscribe = useNotificationStore.subscribe((state) => {
+-  // Check if hydration is complete AND we haven't run this logic yet
+-  if (state.hasHydrated && !hydrationCompleted) {
+-    hydrationCompleted = true; // Mark as completed to prevent re-running
+-    logger.info('Notification store hydration complete. Fetching initial data...');
+-
+-    // Use a microtask to delay execution slightly, ensuring the current state
+-    // update cycle finishes and we get the truly latest state after hydration.
+-    queueMicrotask(() => {
+-       const currentState = useNotificationStore.getState(); // Get latest state inside microtask
+-
+-        // Fetch the accurate unread count from the server first
+-        currentState.fetchUnreadCount().then(() => {
+-          // After getting the count, fetch the first page of notifications
+-          // only if the persisted list is empty. Adjust this condition if needed
+-          // (e.g., fetch always, fetch if data is older than X).
+-          if (currentState.notifications.length === 0) {
+-             logger.info('No persisted notifications found, fetching first page.');
+-             currentState.fetchNotifications(); // Fetch initial page (offset 0)
+-          } else {
+-             logger.info(`Loaded ${currentState.notifications.length} notifications from storage.`);
+-             // If notifications were loaded, we might still want to refresh the count
+-             // based on potentially missed WS messages while offline.
+-             // fetchUnreadCount() already ran, so the count should be accurate.
+-          }
+-        }).catch(error => {
+-            logger.error('Error during post-hydration fetchUnreadCount:', error);
+-        });
+-    });
+-
+-    // Optional: Unsubscribe after running once if we don't need to listen for further state changes here.
+-    // However, keeping it subscribed is harmless.
+-    // unsubscribe();
++// --- Auth Status Subscription (Best Practice Pattern) ---
++// Subscribe to auth status changes using subscribeWithSelector
++// This is the idiomatic way to react to auth state changes in Zustand
++// Reference: https://zustand.docs.pmnd.rs/middlewares/subscribe-with-selector
++const unsubscribeFromAuth = useAuthStore.subscribe(
++  // Selector: only react to status changes
++  (state) => state.status,
++  // Callback: called when status changes
++  (status, previousStatus) => {
++    const notificationStore = useNotificationStore.getState();
++    notificationStore._onAuthStatusChange(status, previousStatus);
++  },
++  {
++    // fireImmediately: false means don't call on initial subscription
++    // We only want to react to CHANGES in auth status
++    fireImmediately: false,
+   }
+-});
++);
+ 
+-// --- WebSocket Integration Hook (Example - Keep for reference) ---
+-/*
+-import React, { useEffect } from 'react';
+-import { useWebSocket } from './useWebSocket'; // Your WebSocket hook/manager
+-import { useNotificationStore } from './useNotificationStore';
+-import { Notification } from '../types/notification';
+-
+-const useNotificationWebSocket = () => {
+-  const handleIncomingNotification = useNotificationStore(state => state.handleIncomingNotification);
+-  const { lastJsonMessage } = useWebSocket(); // Assuming your hook provides the last message
+-
+-  useEffect(() => {
+-    if (lastJsonMessage) {
+-      // TODO: Add strong type checking/validation here (e.g., using Zod)
+-      const notification = lastJsonMessage as Notification; // Replace with validation
+-      if (notification && notification.id && notification.type) { // Basic check
+-         handleIncomingNotification(notification);
++// --- Store Hydration Handler ---
++// When notification store finishes hydrating, check if we should fetch
++// (in case user was already authenticated before app restart)
++let hydrationHandled = false;
++const unsubscribeHydration = useNotificationStore.subscribe((state) => {
++  if (state.hasHydrated && !hydrationHandled) {
++    hydrationHandled = true;
++
++    // Check current auth status - if already authenticated, fetch notifications
++    // This handles the case where user was logged in before app restart
++    const authStatus = useAuthStore.getState().status;
++
++    if (authStatus === 'authenticated') {
++      logger.info('NOTIFICATION', 'Store hydrated with authenticated user, fetching notifications');
++      const notificationState = useNotificationStore.getState();
++      notificationState.fetchUnreadCount();
++
++      // Only fetch if no persisted notifications
++      if (notificationState.notifications.length === 0) {
++        notificationState.fetchNotifications();
+       }
++    } else if (authStatus === 'idle') {
++      // Auth store hasn't initialized yet - the auth subscription will handle it
++      logger.debug('NOTIFICATION', 'Store hydrated, waiting for auth initialization');
++    } else {
++      logger.debug('NOTIFICATION', `Store hydrated, auth status: ${authStatus}`);
+     }
+-  }, [lastJsonMessage, handleIncomingNotification]);
++
++    // Unsubscribe after handling
++    unsubscribeHydration();
++  }
++});
++
++// Export for cleanup (useful for testing)
++export const cleanupNotificationSubscriptions = () => {
++  unsubscribeFromAuth();
+ };
+-*/ 
+\ No newline at end of file

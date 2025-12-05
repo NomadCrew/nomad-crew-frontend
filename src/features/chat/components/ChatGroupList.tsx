@@ -1,12 +1,6 @@
 import React from 'react';
-import { 
-  View, 
-  FlatList, 
-  StyleSheet, 
-  ActivityIndicator, 
-  Text,
-  RefreshControl
-} from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Text, RefreshControl } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { ChatGroup } from '../types';
 import { ChatGroupItem } from './ChatGroupItem';
@@ -27,7 +21,7 @@ export const ChatGroupList: React.FC<ChatGroupListProps> = ({
   isLoading,
   onSelectGroup,
   onRefresh,
-  isRefreshing = false
+  isRefreshing = false,
 }) => {
   const { theme } = useAppTheme();
 
@@ -52,19 +46,18 @@ export const ChatGroupList: React.FC<ChatGroupListProps> = ({
   if (groups.length === 0) {
     return (
       <View style={styles(theme).emptyContainer}>
-        <Text style={styles(theme).emptyText}>
-          No chat groups available
-        </Text>
+        <Text style={styles(theme).emptyText}>No chat groups available</Text>
       </View>
     );
   }
 
   return (
-    <FlatList
+    <FlashList
       data={groups}
       renderItem={renderItem}
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles(theme).listContent}
+      estimatedItemSize={70}
       refreshControl={
         onRefresh ? (
           <RefreshControl
@@ -79,24 +72,25 @@ export const ChatGroupList: React.FC<ChatGroupListProps> = ({
   );
 };
 
-const styles = (theme: Theme) => StyleSheet.create({
-  listContent: {
-    flexGrow: 1,
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: theme.spacing.stack.lg,
-  },
-  emptyText: {
-    fontSize: theme.typography.fontSizes.md,
-    color: theme.colors.text.secondary,
-    textAlign: 'center',
-  },
-}); 
+const styles = (theme: Theme) =>
+  StyleSheet.create({
+    listContent: {
+      flexGrow: 1,
+    },
+    loaderContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: theme.spacing.stack.lg,
+    },
+    emptyText: {
+      fontSize: theme.typography.fontSizes.md,
+      color: theme.colors.text.secondary,
+      textAlign: 'center',
+    },
+  });

@@ -1,0 +1,71 @@
+diff --git a/app/index.tsx b/app/index.tsx
+index d1d4aa7..19c9fb9 100644
+--- a/app/index.tsx
++++ b/app/index.tsx
+@@ -1,39 +1,37 @@
+-// app/index.tsx (Temporary Minimal Version for Testing)
++// app/index.tsx - Home Screen
+ import React from 'react';
+-import { Stack, SplashScreen } from 'expo-router';
+-import { ThemeProvider, useTheme } from '@/src/theme/ThemeProvider';
+-import { View, Text, Button } from 'react-native';
+-import { PaperProvider } from 'react-native-paper';
++import { View, Text, Button, StyleSheet } from 'react-native';
++import { useTheme } from '@/src/theme/ThemeProvider';
+ 
+-// Keep splash screen visible initially
+-SplashScreen.preventAutoHideAsync();
+-
+-function TestScreen() {
+-  // Hooks must be called unconditionally at the top level
++export default function HomeScreen() {
+   const { theme, mode, toggleColorScheme } = useTheme();
+ 
+-  // Hide splash if theme is accessible
+-  React.useEffect(() => {
+-    SplashScreen.hideAsync();
+-  }, []);
+-
+   return (
+-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background.default }}>
+-      <Text style={{ color: theme.colors.content.primary }}>Theme mode: {mode}</Text>
+-      <Text style={{ color: theme.colors.content.primary }}>Test Screen: Theme loaded!</Text>
++    <View style={[styles.container, { backgroundColor: theme.colors.background.default }]}>
++      <Text style={[styles.title, { color: theme.colors.content.primary }]}>
++        NomadCrew
++      </Text>
++      <Text style={[styles.subtitle, { color: theme.colors.content.secondary }]}>
++        Theme mode: {mode}
++      </Text>
+       <Button title="Toggle Theme" onPress={toggleColorScheme} />
+     </View>
+   );
+ }
+ 
+-export default function MinimalRootLayout() {
+-  return (
+-    <PaperProvider>
+-      <ThemeProvider>
+-        <Stack>
+-          <Stack.Screen name="index" component={TestScreen} options={{ title: 'Test' }} />
+-        </Stack>
+-      </ThemeProvider>
+-    </PaperProvider>
+-  );
+-}
++const styles = StyleSheet.create({
++  container: {
++    flex: 1,
++    justifyContent: 'center',
++    alignItems: 'center',
++  },
++  title: {
++    fontSize: 24,
++    fontWeight: 'bold',
++    marginBottom: 8,
++  },
++  subtitle: {
++    fontSize: 16,
++    marginBottom: 16,
++  },
++});

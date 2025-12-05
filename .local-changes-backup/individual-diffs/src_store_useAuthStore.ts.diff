@@ -1,0 +1,248 @@
+diff --git a/src/store/useAuthStore.ts b/src/store/useAuthStore.ts
+index aa92acd..823db42 100644
+--- a/src/store/useAuthStore.ts
++++ b/src/store/useAuthStore.ts
+@@ -1,14 +1,15 @@
+ import { create } from 'zustand';
++import { subscribeWithSelector } from 'zustand/middleware';
+ import { supabase } from '@/src/auth/supabaseClient';
+ import type { AuthState, LoginCredentials, RegisterCredentials, User, AuthStatus } from '@/src/types/auth';
+ import { Session } from '@supabase/supabase-js';
+ import AsyncStorage from '@react-native-async-storage/async-storage';
+ import { logger } from '@/src/utils/logger';
+-import { authApi } from '@/src/api/auth-api';
+-import { ERROR_CODES, ERROR_MESSAGES } from '@/src/api/constants';
++import { ERROR_MESSAGES } from '@/src/api/constants';
+ import { registerAuthHandlers } from '@/src/api/api-client';
+-import * as Notifications from 'expo-notifications';
++import { Platform } from 'react-native';
+ import { api } from '@/src/api/api-client';
++import Constants from 'expo-constants';
+ 
+ // API Error interface for better type safety
+ interface ApiError extends Error {
+@@ -44,9 +45,11 @@ const recoverSession = async () => {
+   return null;
+ };
+ 
+-export const useAuthStore = create<AuthState>((set, get) => {
+-  // State for user, token, loading, etc.
+-  const store = {
++// Use subscribeWithSelector middleware to allow external subscriptions to auth state changes
++// This enables other stores (like notifications) to react when auth status changes
++export const useAuthStore = create<AuthState>()(
++  subscribeWithSelector((set, get) => ({
++    // State for user, token, loading, etc.
+     user: null,
+     token: null,
+     loading: false,
+@@ -54,28 +57,30 @@ export const useAuthStore = create<AuthState>((set, get) => {
+     isInitialized: false,
+     isFirstTime: false,
+     isVerifying: false,
+-    status: 'unauthenticated' as AuthStatus,
++    // Start with 'idle' - we don't know auth status until we check storage/Supabase
++    status: 'idle' as AuthStatus,
+     refreshToken: null,
+     pushToken: null,
+ 
+     /**
+-     * Called on app start to recover session
++     * Called on app start to recover session (hydration pattern)
++     * Sets status from 'idle' to either 'authenticated' or 'unauthenticated'
+      */
+     initialize: async () => {
+       try {
+-        logger.debug('AUTH', 'Initializing auth store');
++        logger.debug('AUTH', 'Initializing auth store (hydrating)');
+         const { data: { session }, error } = await supabase.auth.getSession();
+ 
+         if (error || !session) {
+           logger.debug('AUTH', 'No valid session found');
+-          return set({ isInitialized: true });
++          return set({ isInitialized: true, status: 'unauthenticated' });
+         }
+ 
+         logger.debug('AUTH', 'Session restored', {
+           userId: session.user.id,
+           expiresAt: session.expires_at
+         });
+-        set({ 
++        set({
+           user: {
+             id: session.user.id,
+             email: session.user.email ?? '',
+@@ -86,12 +91,13 @@ export const useAuthStore = create<AuthState>((set, get) => {
+           },
+           token: session.access_token,
+           refreshToken: session.refresh_token,
+-          isInitialized: true
++          isInitialized: true,
++          status: 'authenticated'
+         });
+ 
+       } catch (error) {
+         logger.error('AUTH', 'Initialization error:', error);
+-        set({ isInitialized: true });
++        set({ isInitialized: true, status: 'unauthenticated' });
+       }
+     },
+ 
+@@ -304,8 +310,9 @@ export const useAuthStore = create<AuthState>((set, get) => {
+           error: null,
+           loading: false,
+           isVerifying: false,
++          status: 'authenticated',
+         });
+-    
++
+       } catch (error: unknown) {
+         console.error('[Auth] Login failed:', error);
+         set({
+@@ -387,17 +394,19 @@ export const useAuthStore = create<AuthState>((set, get) => {
+           refreshToken: data.session.refresh_token,
+           loading: false,
+           error: null,
+-          isVerifying: false
++          isVerifying: false,
++          status: 'authenticated'
+         });
+-        
++
+         console.log('AUTH: Authentication successful', {
+           accessToken: data.session.access_token.substring(0, 10) + '...',
+           refreshToken: data.session.refresh_token ? data.session.refresh_token.substring(0, 10) + '...' : 'none'
+         });
+-      } catch (error: ApiError) {
+-        console.error('AUTH: Google sign-in error:', error);
++      } catch (error: unknown) {
++        const err = error as ApiError;
++        console.error('AUTH: Google sign-in error:', err);
+         set({
+-          error: error.message || 'Google sign-in failed',
++          error: err.message || 'Google sign-in failed',
+           loading: false
+         });
+         throw error;
+@@ -428,13 +437,15 @@ export const useAuthStore = create<AuthState>((set, get) => {
+           refreshToken: session.refresh_token,
+           loading: false,
+           error: null,
+-          isVerifying: false
++          isVerifying: false,
++          status: 'authenticated'
+         });
+ 
+-      } catch (error: ApiError) {
+-        console.error('AUTH: Apple sign-in error:', error);
++      } catch (error: unknown) {
++        const err = error as ApiError;
++        console.error('AUTH: Apple sign-in error:', err);
+         set({
+-          error: error.message || 'Apple sign-in failed',
++          error: err.message || 'Apple sign-in failed',
+           loading: false
+         });
+         throw error;
+@@ -500,21 +511,60 @@ export const useAuthStore = create<AuthState>((set, get) => {
+       set({ isFirstTime: false });
+     },
+ 
++    /**
++     * Register for push notifications
++     * Uses dynamic import to prevent Keychain errors on iOS simulators
++     * Reference: https://docs.expo.dev/push-notifications/push-notifications-setup/
++     */
+     registerPushToken: async () => {
+       try {
+-        // Check if we already have permission
+-        const { status } = await Notifications.getPermissionsAsync();
+-        if (status !== 'granted') {
++        // Guard: Push notifications only work on physical devices
++        // Constants.isDevice is false on simulators/emulators
++        if (Constants.isDevice !== true) {
++          logger.debug('AUTH', 'Push notifications skipped: not a physical device (simulator/emulator)');
+           return;
+         }
+ 
+-        // Get the token
+-        const token = await Notifications.getExpoPushTokenAsync({
+-          projectId: process.env.EXPO_PUBLIC_PROJECT_ID // Add this to your env
+-        });
++        // Dynamic import - only loads on physical devices to avoid Keychain errors
++        const Notifications = await import('expo-notifications');
++
++        // Android 13+ requires notification channel before requesting permissions
++        if (Platform.OS === 'android') {
++          await Notifications.setNotificationChannelAsync('default', {
++            name: 'default',
++            importance: Notifications.AndroidImportance.MAX,
++            vibrationPattern: [0, 250, 250, 250],
++            lightColor: '#FF231F7C',
++          });
++        }
++
++        // Check current permission status
++        const { status: existingStatus } = await Notifications.getPermissionsAsync();
++        let finalStatus = existingStatus;
++
++        // Request permission if not already granted
++        if (existingStatus !== 'granted') {
++          const { status } = await Notifications.requestPermissionsAsync();
++          finalStatus = status;
++        }
++
++        if (finalStatus !== 'granted') {
++          logger.debug('AUTH', 'Push notification permission not granted');
++          return;
++        }
++
++        // Get the Expo push token
++        const projectId = process.env.EXPO_PUBLIC_PROJECT_ID;
++        if (!projectId) {
++          logger.warn('AUTH', 'EXPO_PUBLIC_PROJECT_ID not set, cannot get push token');
++          return;
++        }
++
++        const token = await Notifications.getExpoPushTokenAsync({ projectId });
+ 
+         // Store it locally
+         set({ pushToken: token.data });
++        logger.debug('AUTH', 'Push token registered successfully');
+ 
+         // Send it to the backend
+         const { user } = get();
+@@ -522,19 +572,19 @@ export const useAuthStore = create<AuthState>((set, get) => {
+           await api.post('/users/push-token', { token: token.data });
+         }
+       } catch (error) {
+-        console.error('Failed to register push token:', error);
++        // Log but don't throw - push notifications are non-critical
++        logger.error('AUTH', 'Failed to register push token:', error);
+       }
+-    }
+-  };
+-
+-  // Register auth handlers with the API client
+-  registerAuthHandlers({
+-    getToken: () => get().token,
+-    getRefreshToken: () => get().refreshToken,
+-    isInitialized: () => get().isInitialized,
+-    refreshSession: async () => await get().refreshSession(),
+-    logout: () => get().logout(),
+-  });
++    },
++  }))
++);
+ 
+-  return store;
++// Register auth handlers with the API client after store creation
++// This must be done outside the store creation to avoid circular dependencies
++registerAuthHandlers({
++  getToken: () => useAuthStore.getState().token,
++  getRefreshToken: () => useAuthStore.getState().refreshToken,
++  isInitialized: () => useAuthStore.getState().isInitialized,
++  refreshSession: async () => await useAuthStore.getState().refreshSession(),
++  logout: () => useAuthStore.getState().logout(),
+ });
+\ No newline at end of file
