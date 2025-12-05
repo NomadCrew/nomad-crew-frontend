@@ -116,7 +116,9 @@ export const TripStatusUpdateModal: React.FC<TripStatusUpdateModalProps> = ({
   return (
     <Modal animationType="fade" transparent={true} visible={visible} onRequestClose={onClose}>
       <View style={styles(theme).modalOverlay}>
-        <View style={[styles(theme).modalContent, { backgroundColor: theme.colors.background }]}>
+        <View
+          style={[styles(theme).modalContent, { backgroundColor: theme.colors.background.default }]}
+        >
           <View style={styles(theme).modalHeader}>
             <Text style={styles(theme).modalTitle}>Update Trip Status</Text>
             <Pressable onPress={onClose} style={styles(theme).closeButton}>
@@ -240,8 +242,8 @@ const styles = (theme: Theme) =>
     rulesContainer: {
       flexDirection: 'row',
       alignItems: 'flex-start',
-      backgroundColor: theme.colors.surface.containerHighest, // Subtle background for rules
-      borderRadius: theme.shape.borderRadius.medium,
+      backgroundColor: theme.colors.surface.variant,
+      borderRadius: theme.shape?.borderRadius.medium ?? 8,
       padding: theme.spacing.inset.md,
       marginBottom: theme.spacing.stack.lg,
     },
@@ -261,24 +263,25 @@ const styles = (theme: Theme) =>
       paddingHorizontal: theme.spacing.inset.sm,
       marginBottom: theme.spacing.stack.sm,
       borderWidth: 1,
-      borderColor: theme.colors.outline.default,
-      borderRadius: theme.shape.borderRadius.medium,
+      borderColor: theme.colors.outlined.border ?? theme.colors.border.default,
+      borderRadius: theme.shape?.borderRadius.medium ?? 8,
       backgroundColor: theme.colors.surface.default,
     },
     selectedStatusOption: {
       borderColor: theme.colors.primary.main,
-      backgroundColor: theme.colors.primary.containerSoft,
+      backgroundColor: theme.colors.primary.surface,
     },
     disabledStatusOption: {
       opacity: 0.5,
-      backgroundColor: theme.colors.surface.disabled,
+      backgroundColor: theme.colors.disabled.background,
     },
     statusTextContainer: {
       marginLeft: theme.spacing.stack.sm,
       flex: 1, // Allow text to take remaining space
     },
     statusDescription: {
-      ...theme.typography.body.largeBold,
+      ...theme.typography.body.large,
+      fontWeight: '600',
       color: theme.colors.content.primary,
     },
     disabledText: {
@@ -286,7 +289,7 @@ const styles = (theme: Theme) =>
     },
     invalidReasonText: {
       ...theme.typography.body.small,
-      color: theme.colors.feedback.error.main,
+      color: theme.colors.status.error.main,
       marginTop: theme.spacing.stack.xxs,
     },
     loadingContainer: {
@@ -302,7 +305,7 @@ const styles = (theme: Theme) =>
     },
     errorText: {
       ...theme.typography.body.medium,
-      color: theme.colors.feedback.error.main,
+      color: theme.colors.status.error.main,
       textAlign: 'center',
       marginTop: theme.spacing.stack.md,
     },

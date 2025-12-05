@@ -13,11 +13,7 @@ interface GroupLiveMapModalProps {
   trip: Trip;
 }
 
-export const GroupLiveMapModal: React.FC<GroupLiveMapModalProps> = ({
-  visible,
-  onClose,
-  trip,
-}) => {
+export const GroupLiveMapModal: React.FC<GroupLiveMapModalProps> = ({ visible, onClose, trip }) => {
   const { theme } = useAppTheme();
 
   return (
@@ -35,9 +31,10 @@ export const GroupLiveMapModal: React.FC<GroupLiveMapModalProps> = ({
   );
 };
 
-const styles = (theme: Theme) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-}); 
+const styles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background.default,
+    },
+  });

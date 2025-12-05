@@ -17,41 +17,48 @@ interface BentoCarouselProps {
   onProgressChange?: (offsetProgress: number) => void;
 }
 
-export const BentoCarousel = ({ 
-  items, 
-  width, 
-  height, 
-  onProgressChange 
-}: BentoCarouselProps) => {
+export const BentoCarousel = ({ items, width, height, onProgressChange }: BentoCarouselProps) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const _currentIndex = useSharedValue(0);
 
-  const renderItem = React.useCallback(({ item, animationValue }: { 
-    item: CarouselItem; 
-    index: number;
-    animationValue: Animated.SharedValue<number>;
-  }) => {
-    const Component = item.component;
-    
-    return (
-      <Animated.View style={{ width, height }}>
-        <Component {...(item.props || {})} />
-      </Animated.View>
-    );
-  }, [width, height]);
+  const renderItem = React.useCallback(
+    ({
+      item,
+      animationValue,
+    }: {
+      item: CarouselItem;
+      index: number;
+      animationValue: Animated.SharedValue<number>;
+    }) => {
+      const Component = item.component;
 
-  const baseOptions = React.useMemo(() => ({
-    vertical: false,
-    width,
-    height,
-  }), [width, height]);
+      return (
+        <Animated.View style={{ width, height }}>
+          <Component {...(item.props || {})} />
+        </Animated.View>
+      );
+    },
+    [width, height]
+  );
 
-  const handleProgressChange = React.useCallback((offsetProgress: number) => {
-    runOnJS(setActiveIndex)(Math.round(offsetProgress));
-    if (onProgressChange) {
-      runOnJS(onProgressChange)(offsetProgress);
-    }
-  }, [onProgressChange]);
+  const baseOptions = React.useMemo(
+    () => ({
+      vertical: false,
+      width,
+      height,
+    }),
+    [width, height]
+  );
+
+  const handleProgressChange = React.useCallback(
+    (offsetProgress: number) => {
+      runOnJS(setActiveIndex)(Math.round(offsetProgress));
+      if (onProgressChange) {
+        runOnJS(onProgressChange)(offsetProgress);
+      }
+    },
+    [onProgressChange]
+  );
 
   const renderDot = (_animationValue: number, index: number) => {
     // ... existing code ...
@@ -79,6 +86,7 @@ export const BentoCarousel = ({
             },
           }}
           enabled={items.length > 1}
+          // @ts-expect-error - panGestureHandlerProps is valid but types are outdated
           panGestureHandlerProps={{
             activeOffsetX: [-10, 10],
             failOffsetY: [-5, 5],

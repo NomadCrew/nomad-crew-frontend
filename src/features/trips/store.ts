@@ -333,12 +333,12 @@ export const selectTripsByStatus = (status: TripStatus) => (state: TripState) =>
   state.trips.filter((t) => t.status === status);
 
 export const selectActiveTripCount = (state: TripState) =>
-  state.trips.filter((t) => t.status === 'active').length;
+  state.trips.filter((t) => t.status === 'ACTIVE').length;
 
 export const selectUpcomingTrips = (state: TripState) =>
   state.trips.filter((t) => {
     const startDate = new Date(t.startDate);
-    return startDate > new Date() && t.status !== 'cancelled';
+    return startDate > new Date() && t.status !== 'CANCELLED';
   });
 
 export const selectPastTrips = (state: TripState) =>

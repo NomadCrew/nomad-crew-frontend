@@ -6,7 +6,7 @@ interface AuthButtonProps {
 }
 
 export default function AuthButton({ onPress }: AuthButtonProps) {
-  const signIn = useGoogleSignIn();
+  const { signIn } = useGoogleSignIn();
 
   return (
     <GoogleSigninButton

@@ -1,73 +1,85 @@
 import { useNotificationStore } from '../store/useNotificationStore';
 import { useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { Notification } from '../types/notification';
 
 export const useTestNotifications = () => {
-  const { addNotification } = useNotificationStore();
-  
+  const { handleIncomingNotification } = useNotificationStore();
+
   const addTripInviteNotification = useCallback(() => {
     const inviteId = uuidv4();
     const tripId = uuidv4();
-    
-    addNotification({
-      id: inviteId,
-      type: 'TRIP_INVITE',
-      inviteId,
-      tripId,
-      inviterName: 'Test User',
-      message: 'You have been invited to join a trip!',
-      timestamp: new Date().toISOString(),
-      status: 'pending',
-      isRead: false
-    });
-  }, [addNotification]);
-  
-  const addSystemNotification = useCallback(() => {
-    addNotification({
+
+    const notification: Notification = {
       id: uuidv4(),
-      type: 'SYSTEM',
-      title: 'System Notification',
+      type: 'TRIP_INVITATION',
+      metadata: {
+        inviteId,
+        tripId,
+        inviterName: 'Test User',
+        tripName: 'Test Trip to Barcelona',
+      },
+      message: 'You have been invited to join Test Trip to Barcelona!',
+      createdAt: new Date().toISOString(),
+      read: false,
+    };
+
+    handleIncomingNotification(notification);
+  }, [handleIncomingNotification]);
+
+  const addSystemNotification = useCallback(() => {
+    const notification: Notification = {
+      id: uuidv4(),
+      type: 'UNKNOWN',
+      metadata: {},
       message: 'This is a test system notification.',
-      timestamp: new Date().toISOString(),
-      isRead: false
-    });
-  }, [addNotification]);
-  
+      createdAt: new Date().toISOString(),
+      read: false,
+    };
+
+    handleIncomingNotification(notification);
+  }, [handleIncomingNotification]);
+
   const addChatNotification = useCallback(() => {
-    addNotification({
+    const notification: Notification = {
       id: uuidv4(),
       type: 'CHAT_MESSAGE',
-      title: 'New Message',
-      message: 'You have a new message from Test User.',
-      timestamp: new Date().toISOString(),
-      isRead: false,
-      data: {
-        userId: uuidv4(),
-        tripId: uuidv4(),
-        userName: 'Test User'
-      }
-    });
-  }, [addNotification]);
-  
+      metadata: {
+        chatId: uuidv4(),
+        messageId: uuidv4(),
+        senderName: 'Test User',
+        messagePreview: 'You have a new message from Test User.',
+      },
+      message: 'New message in chat',
+      createdAt: new Date().toISOString(),
+      read: false,
+    };
+
+    handleIncomingNotification(notification);
+  }, [handleIncomingNotification]);
+
   const addTripUpdateNotification = useCallback(() => {
-    addNotification({
+    const notification: Notification = {
       id: uuidv4(),
       type: 'TRIP_UPDATE',
-      title: 'Trip Updated',
-      message: 'Your trip to Barcelona has been updated with new dates.',
-      timestamp: new Date().toISOString(),
-      isRead: false,
-      data: {
+      metadata: {
         tripId: uuidv4(),
-        updatedBy: 'Trip Owner'
-      }
-    });
-  }, [addNotification]);
-  
+        tripName: 'Barcelona Trip',
+        updaterName: 'Trip Owner',
+        changedFields: ['dates', 'location'],
+      },
+      message: 'Your trip to Barcelona has been updated with new dates.',
+      createdAt: new Date().toISOString(),
+      read: false,
+    };
+
+    handleIncomingNotification(notification);
+  }, [handleIncomingNotification]);
+
   return {
     addTripInviteNotification,
     addSystemNotification,
     addChatNotification,
-    addTripUpdateNotification
+    addTripUpdateNotification,
   };
-}; 
+};

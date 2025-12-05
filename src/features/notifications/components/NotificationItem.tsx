@@ -3,22 +3,16 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Text, Button, Surface, Avatar, Divider, Icon } from 'react-native-paper';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { formatDistanceToNow } from 'date-fns';
-import { 
-  Notification, 
-  TripInviteNotification,
+import {
+  Notification,
+  TripInvitationNotification,
   TripUpdateNotification,
-  TodoNotification,
-  MemberNotification,
-  WeatherNotification,
-  ChatNotification,
-  LocationNotification,
-  isTripInviteNotification,
+  ChatMessageNotification,
+  MemberAddedNotification,
+  isTripInvitationNotification,
   isTripUpdateNotification,
-  isTodoNotification,
-  isMemberNotification,
-  isWeatherNotification,
-  isChatNotification,
-  isLocationNotification
+  isChatMessageNotification,
+  isMemberAddedNotification,
 } from '../types/notification';
 import { useNotificationStore } from '../store/useNotificationStore';
 import { router } from 'expo-router';
@@ -29,327 +23,208 @@ interface NotificationItemProps {
   onPress?: () => void;
 }
 
-export const NotificationItem: React.FC<NotificationItemProps> = ({ 
-  notification, 
-  onPress 
-}) => {
+export const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onPress }) => {
   const theme = useAppTheme().theme;
   const notificationStore = useNotificationStore();
-  
+
   const formattedTime = React.useMemo(() => {
     try {
-      return formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true });
+      return formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true });
     } catch (error) {
       return 'recently';
     }
-  }, [notification.timestamp]);
+  }, [notification.createdAt]);
 
   const handleMarkAsRead = async () => {
-    await notificationStore.markAsRead(notification.id);
+    await notificationStore.markNotificationRead(notification.id);
   };
 
   const handlePress = () => {
     // Mark notification as read when pressed
     handleMarkAsRead();
-    
+
     // Handle navigation based on notification type
-    if (isTripInviteNotification(notification) || 
-        isTripUpdateNotification(notification) || 
-        isTodoNotification(notification) ||
-        isMemberNotification(notification) ||
-        isWeatherNotification(notification) ||
-        isLocationNotification(notification)) {
+    if (
+      isTripInvitationNotification(notification) ||
+      isTripUpdateNotification(notification) ||
+      isMemberAddedNotification(notification)
+    ) {
       // Navigate to the trip screen
-      router.push(`/trips/${notification.tripId}`);
-    } else if (isChatNotification(notification)) {
+      router.push(`/(authenticated)/(tabs)/trips/${notification.metadata.tripId}` as any);
+    } else if (isChatMessageNotification(notification)) {
       // Navigate to the chat screen
-      router.push(`/trips/${notification.tripId}/chat`);
+      router.push(`/(authenticated)/(tabs)/trips/${notification.metadata.chatId}/chat` as any);
     }
-    
+
     // Call the onPress handler if provided
     if (onPress) {
       onPress();
     }
   };
-  
-  const handleAccept = async (inviteId: string) => {
-    await notificationStore.acceptTripInvite(inviteId);
+
+  const handleAccept = async (notification: TripInvitationNotification) => {
+    await notificationStore.acceptTripInvitation(notification);
     // Navigate to the trip screen after accepting
-    router.push(`/trips/${(notification as TripInviteNotification).tripId}`);
+    router.push(`/(authenticated)/(tabs)/trips/${notification.metadata.tripId}` as any);
   };
-  
-  const handleDecline = async (inviteId: string) => {
-    await notificationStore.declineTripInvite(inviteId);
+
+  const handleDecline = async (notification: TripInvitationNotification) => {
+    await notificationStore.declineTripInvitation(notification);
   };
 
   // Decide which icon to show based on notification type
   const getNotificationIcon = () => {
-    if (isTripInviteNotification(notification)) return "account-plus";
-    if (isTripUpdateNotification(notification)) return "map-marker-path";
-    if (isTodoNotification(notification)) return "checkbox-marked-circle-outline";
-    if (isMemberNotification(notification)) return "account-group";
-    if (isWeatherNotification(notification)) return notification.type === 'WEATHER_ALERT' ? "weather-lightning" : "weather";
-    if (isChatNotification(notification)) return "chat";
-    if (isLocationNotification(notification)) return "map-marker";
-    return "bell";  // Default
+    if (isTripInvitationNotification(notification)) return 'account-plus';
+    if (isTripUpdateNotification(notification)) return 'map-marker-path';
+    if (isMemberAddedNotification(notification)) return 'account-group';
+    if (isChatMessageNotification(notification)) return 'chat';
+    return 'bell'; // Default
   };
 
   // Decide icon color
   const getIconColor = () => {
-    if (isTripInviteNotification(notification)) return theme.colors.primary;
-    if (isTripUpdateNotification(notification)) return theme.colors.primary;
-    if (isTodoNotification(notification)) return theme.colors.secondary;
-    if (isMemberNotification(notification)) return theme.colors.tertiary;
-    if (isWeatherNotification(notification)) {
-      return notification.type === 'WEATHER_ALERT' ? theme.colors.error : theme.colors.primary;
-    }
-    if (isChatNotification(notification)) return theme.colors.primary;
-    if (isLocationNotification(notification)) return theme.colors.secondary;
-    return theme.colors.onPrimary;
+    if (isTripInvitationNotification(notification)) return theme.colors.primary.main;
+    if (isTripUpdateNotification(notification)) return theme.colors.primary.main;
+    if (isMemberAddedNotification(notification)) return theme.colors.primary.main;
+    if (isChatMessageNotification(notification)) return theme.colors.primary.main;
+    return theme.colors.text.primary;
   };
 
   const renderContent = () => {
-    if (isTripInviteNotification(notification)) {
+    if (isTripInvitationNotification(notification)) {
       return renderTripInvite(notification);
     } else if (isTripUpdateNotification(notification)) {
       return renderTripUpdate(notification);
-    } else if (isTodoNotification(notification)) {
-      return renderTodo(notification);
-    } else if (isMemberNotification(notification)) {
+    } else if (isMemberAddedNotification(notification)) {
       return renderMember(notification);
-    } else if (isWeatherNotification(notification)) {
-      return renderWeather(notification);
-    } else if (isChatNotification(notification)) {
+    } else if (isChatMessageNotification(notification)) {
       return renderChat(notification);
-    } else if (isLocationNotification(notification)) {
-      return renderLocation(notification);
     }
-    
+
     // Generic notification rendering
     return (
       <View>
-        <Text variant="titleMedium">{(notification as any).title}</Text>
-        <Text variant="bodyMedium">{(notification as any).message}</Text>
+        <Text variant="titleMedium">Notification</Text>
+        <Text variant="bodyMedium">{notification.message}</Text>
       </View>
     );
   };
-  
-  const renderTripInvite = (invite: TripInviteNotification) => {
+
+  const renderTripInvite = (invite: TripInvitationNotification) => {
     return (
       <View>
         <Text variant="titleMedium">Trip Invitation</Text>
         <Text variant="bodyMedium">
-          <Text style={{ fontWeight: 'bold' }}>{invite.inviterName}</Text> has invited you to join their trip
+          <Text style={{ fontWeight: 'bold' }}>{invite.metadata.inviterName}</Text> has invited you
+          to join <Text style={{ fontWeight: 'bold' }}>{invite.metadata.tripName}</Text>
         </Text>
         {invite.message && (
           <Text variant="bodyMedium" style={styles.message}>
             "{invite.message}"
           </Text>
         )}
-        
-        {invite.status === 'pending' && (
-          <View style={styles.actionButtons}>
-            <Button 
-              mode="contained" 
-              onPress={() => handleAccept(invite.inviteId)}
-              style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
-              loading={notificationStore.loading}
-              disabled={notificationStore.loading}
-            >
-              Accept
-            </Button>
-            <Button 
-              mode="outlined" 
-              onPress={() => handleDecline(invite.inviteId)}
-              style={styles.actionButton}
-              loading={notificationStore.loading}
-              disabled={notificationStore.loading}
-            >
-              Decline
-            </Button>
-          </View>
-        )}
-        
-        {invite.status === 'accepted' && (
-          <Text style={[styles.statusText, { color: theme.colors.primary }]}>
-            You accepted this invitation
-          </Text>
-        )}
-        
-        {invite.status === 'declined' && (
-          <Text style={[styles.statusText, { color: theme.colors.error }]}>
-            You declined this invitation
-          </Text>
-        )}
+
+        <View style={styles.actionButtons}>
+          <Button
+            mode="contained"
+            onPress={() => handleAccept(invite)}
+            style={styles.actionButton}
+            buttonColor={theme.colors.primary.main}
+            loading={notificationStore.isHandlingAction}
+            disabled={notificationStore.isHandlingAction}
+          >
+            Accept
+          </Button>
+          <Button
+            mode="outlined"
+            onPress={() => handleDecline(invite)}
+            style={styles.actionButton}
+            loading={notificationStore.isHandlingAction}
+            disabled={notificationStore.isHandlingAction}
+          >
+            Decline
+          </Button>
+        </View>
       </View>
     );
   };
 
   const renderTripUpdate = (tripUpdate: TripUpdateNotification) => {
-    if (tripUpdate.type === 'TRIP_STATUS') {
-      return (
-        <View>
-          <Text variant="titleMedium">Trip Status Changed</Text>
-          <Text variant="bodyMedium">
-            <Text style={{ fontWeight: 'bold' }}>{tripUpdate.updaterName}</Text> changed the status of{' '}
-            <Text style={{ fontWeight: 'bold' }}>{tripUpdate.tripName}</Text> from{' '}
-            {tripUpdate.data.statusChange?.from} to{' '}
-            <Text style={{ fontWeight: 'bold' }}>{tripUpdate.data.statusChange?.to}</Text>
-          </Text>
-        </View>
-      );
-    }
-    
     return (
       <View>
         <Text variant="titleMedium">Trip Updated</Text>
         <Text variant="bodyMedium">
-          <Text style={{ fontWeight: 'bold' }}>{tripUpdate.updaterName}</Text> updated{' '}
-          <Text style={{ fontWeight: 'bold' }}>{tripUpdate.tripName}</Text>
+          <Text style={{ fontWeight: 'bold' }}>{tripUpdate.metadata.updaterName}</Text> updated{' '}
+          <Text style={{ fontWeight: 'bold' }}>{tripUpdate.metadata.tripName}</Text>
         </Text>
-        {tripUpdate.data.oldValue && tripUpdate.data.newValue && (
+        {tripUpdate.metadata.changedFields.length > 0 && (
           <Text variant="bodySmall" style={styles.detailText}>
-            Changed from "{tripUpdate.data.oldValue}" to "{tripUpdate.data.newValue}"
+            Changed: {tripUpdate.metadata.changedFields.join(', ')}
           </Text>
         )}
       </View>
     );
   };
 
-  const renderTodo = (todo: TodoNotification) => {
-    const getTitle = () => {
-      switch (todo.type) {
-        case 'TODO_CREATED': return 'New Todo Added';
-        case 'TODO_UPDATED': return 'Todo Updated';
-        case 'TODO_COMPLETED': return 'Todo Completed';
-        default: return 'Todo Activity';
-      }
-    };
-    
+  const renderMember = (member: MemberAddedNotification) => {
     return (
       <View>
-        <Text variant="titleMedium">{getTitle()}</Text>
+        <Text variant="titleMedium">New Member Added</Text>
         <Text variant="bodyMedium">
-          <Text style={{ fontWeight: 'bold' }}>{todo.creatorName}</Text>{' '}
-          {todo.type === 'TODO_CREATED' ? 'created' : 
-           todo.type === 'TODO_UPDATED' ? 'updated' : 'completed'} a todo
+          <Text style={{ fontWeight: 'bold' }}>{member.metadata.adderUserName}</Text> added{' '}
+          <Text style={{ fontWeight: 'bold' }}>{member.metadata.addedUserName}</Text> to{' '}
+          <Text style={{ fontWeight: 'bold' }}>{member.metadata.tripName}</Text>
         </Text>
-        <Text variant="bodyMedium" style={styles.todoText}>
-          "{todo.todoText}"
-        </Text>
-        {todo.data?.assignedToName && (
-          <Text variant="bodySmall" style={styles.detailText}>
-            Assigned to {todo.data.assignedToName}
-          </Text>
-        )}
-        {todo.data?.completedByName && (
-          <Text variant="bodySmall" style={styles.detailText}>
-            Completed by {todo.data.completedByName}
-          </Text>
-        )}
       </View>
     );
   };
 
-  const renderMember = (member: MemberNotification) => {
-    const getTitle = () => {
-      switch (member.type) {
-        case 'MEMBER_JOINED': return 'New Member Joined';
-        case 'MEMBER_LEFT': return 'Member Left';
-        case 'MEMBER_ROLE_CHANGED': return 'Member Role Changed';
-        default: return 'Member Activity';
-      }
-    };
-    
-    return (
-      <View>
-        <Text variant="titleMedium">{getTitle()}</Text>
-        <Text variant="bodyMedium">
-          <Text style={{ fontWeight: 'bold' }}>{member.memberName}</Text>
-          {member.type === 'MEMBER_JOINED' && ' has joined the trip!'}
-          {member.type === 'MEMBER_LEFT' && ' has left the trip.'}
-          {member.type === 'MEMBER_ROLE_CHANGED' && `'s role was changed to ${member.data.newRole}`}
-        </Text>
-        {member.data.changedByName && (
-          <Text variant="bodySmall" style={styles.detailText}>
-            By {member.data.changedByName}
-          </Text>
-        )}
-      </View>
-    );
-  };
-
-  const renderWeather = (weather: WeatherNotification) => {
-    const getTitle = () => {
-      switch (weather.type) {
-        case 'WEATHER_ALERT': return 'Weather Alert!';
-        case 'WEATHER_UPDATE': return 'Weather Update';
-        default: return 'Weather Info';
-      }
-    };
-    
-    return (
-      <View>
-        <Text variant="titleMedium">{getTitle()}</Text>
-        <Text variant="bodyMedium">
-          {weather.data.location}: {weather.data.temp}°C, {weatherCodeToName(weather.data.weatherCode)}
-        </Text>
-        {weather.type === 'WEATHER_ALERT' && weather.data.alertDetails && (
-          <Text variant="bodySmall" style={[styles.detailText, { color: theme.colors.error }]}>
-            {weather.data.alertDetails}
-          </Text>
-        )}
-      </View>
-    );
-  };
-
-  const renderChat = (chat: ChatNotification) => {
+  const renderChat = (chat: ChatMessageNotification) => {
     return (
       <View>
         <Text variant="titleMedium">New Message</Text>
         <Text variant="bodyMedium">
-          <Text style={{ fontWeight: 'bold' }}>{chat.senderName}</Text> in{' '}
-          <Text style={{ fontWeight: 'bold' }}>{chat.tripName}</Text>
+          <Text style={{ fontWeight: 'bold' }}>{chat.metadata.senderName}</Text>
         </Text>
         <Text variant="bodyMedium" style={styles.message} numberOfLines={2} ellipsizeMode="tail">
-          {chat.messageText}
-        </Text>
-      </View>
-    );
-  };
-
-  const renderLocation = (location: LocationNotification) => {
-    return (
-      <View>
-        <Text variant="titleMedium">Location Update</Text>
-        <Text variant="bodyMedium">
-          {location.type === 'LOCATION_SHARED' ? 
-            `${location.memberName} started sharing their location.` :
-            `${location.memberName} stopped sharing their location.`
-          }
+          {chat.metadata.messagePreview}
         </Text>
       </View>
     );
   };
 
   return (
-    <Surface style={[styles.container, { backgroundColor: notification.isRead ? theme.colors.surface : theme.colors.primaryContainer }]} elevation={1}>
+    <Surface
+      style={[
+        styles.container,
+        {
+          backgroundColor: notification.read
+            ? theme.colors.surface.default
+            : theme.colors.primary.surface,
+        },
+      ]}
+      elevation={1}
+    >
       <TouchableOpacity onPress={handlePress} style={styles.touchableContent}>
         <View style={styles.iconContainer}>
-          <Avatar.Icon 
-            icon={getNotificationIcon()} 
-            size={40} 
-            style={{ backgroundColor: 'transparent' }} 
+          <Avatar.Icon
+            icon={getNotificationIcon()}
+            size={40}
+            style={{ backgroundColor: 'transparent' }}
             color={getIconColor()}
           />
         </View>
         <View style={styles.contentContainer}>
           {renderContent()}
-          <Text variant="bodySmall" style={styles.timestamp}>{formattedTime}</Text>
+          <Text variant="bodySmall" style={styles.timestamp}>
+            {formattedTime}
+          </Text>
         </View>
-        {!notification.isRead && (
+        {!notification.read && (
           <View style={styles.unreadIndicatorContainer}>
-            <View style={[styles.unreadIndicator, { backgroundColor: theme.colors.primary }]} />
+            <View
+              style={[styles.unreadIndicator, { backgroundColor: theme.colors.primary.main }]}
+            />
           </View>
         )}
       </TouchableOpacity>
@@ -412,4 +287,4 @@ const styles = StyleSheet.create({
   actionButton: {
     marginRight: 8,
   },
-}); 
+});

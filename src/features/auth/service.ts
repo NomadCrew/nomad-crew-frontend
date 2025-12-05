@@ -8,7 +8,7 @@ const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
 logger.debug('AUTH SERVICE', 'Supabase configuration loaded', {
   hasUrl: !!supabaseUrl,
-  hasAnonKey: !!supabaseAnonKey
+  hasAnonKey: !!supabaseAnonKey,
 });
 
 if (!supabaseUrl || !supabaseAnonKey) {
@@ -42,7 +42,8 @@ export const registerPushTokenService = async (pushToken: string) => {
   // if we want to strictly avoid global imports in services, though often services do import the client.
   // For now, assuming `api` can be imported and used if it's appropriately set up.
   // If api client is not directly accessible, this function might need to be part of a class that gets api client injected.
-  const { api } = await import('@/src/api/api-client'); // Dynamically importing to resolve if api client is set up
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { api } = require('@/src/api/api-client'); // Dynamically importing to resolve if api client is set up
   return api.post('/users/push-token', { token: pushToken });
 };
 

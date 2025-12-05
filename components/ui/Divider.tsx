@@ -10,17 +10,17 @@ export interface DividerProps extends ViewProps {
    * The orientation of the divider
    */
   orientation?: DividerOrientation;
-  
+
   /**
    * The variant of the divider
    */
   variant?: DividerVariant;
-  
+
   /**
    * The thickness of the divider
    */
   thickness?: number;
-  
+
   /**
    * Additional styles for the divider
    */
@@ -41,7 +41,7 @@ export function Divider({
     // Safely access theme properties with fallbacks
     const borderDefault = theme?.colors?.border?.default || '#E5E7EB';
     const borderStrong = theme?.colors?.border?.strong || '#9CA3AF';
-    
+
     // Variant mappings
     const variantMap = {
       default: {
@@ -57,12 +57,12 @@ export function Divider({
         borderStyle: 'dashed',
       },
     };
-    
+
     const thicknessValue = thickness || 1;
-    
+
     return {
       divider: {
-        ...(orientation === 'horizontal' 
+        ...(orientation === 'horizontal'
           ? {
               width: '100%',
               height: thicknessValue,
@@ -72,14 +72,13 @@ export function Divider({
               height: '100%',
               width: thicknessValue,
               borderRightWidth: thicknessValue,
-            }
-        ),
+            }),
         ...variantMap[variant],
       },
     };
   });
-  
-  return <View style={[styles.divider, style]} {...rest} />;
+
+  return <View style={[styles.divider as object, style]} {...rest} />;
 }
 
-export default React.memo(Divider); 
+export default React.memo(Divider);

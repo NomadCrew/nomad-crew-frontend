@@ -1,19 +1,19 @@
 import React, { useCallback, useMemo, useState, memo } from 'react';
-import { 
-  TextInput as RNTextInput, 
-  TextInputProps as RNTextInputProps, 
-  Platform, 
-  StyleSheet, 
-  View, 
+import {
+  TextInput as RNTextInput,
+  TextInputProps as RNTextInputProps,
+  Platform,
+  StyleSheet,
+  View,
   ViewStyle,
   NativeSyntheticEvent,
-  TextInputFocusEventData
+  TextInputFocusEventData,
 } from 'react-native';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 
 /**
  * PerformantTextInput - A high-performance TextInput component
- * 
+ *
  * This component addresses common performance issues with React Native TextInput:
  * 1. Runs on native thread where possible
  * 2. Minimizes re-renders with proper memoization
@@ -40,59 +40,71 @@ function TextInputComponent({
   const [isFocused, setIsFocused] = useState(false);
 
   // Memoize the container style
-  const containerStyles = useMemo(() => [
-    styles.container,
-    containerStyle
-  ], [containerStyle]);
+  const containerStyles = useMemo(() => [styles.container, containerStyle], [containerStyle]);
 
   // Memoize the input style
-  const inputStyles = useMemo(() => [
-    styles.input,
-    {
-      color: theme.colors.content.onSurface,
-      backgroundColor: theme.colors.surface.default,
-      borderColor: isFocused ? theme.colors.primary.main : theme.colors.border.default,
-    },
-    style
-  ], [style, theme.colors, isFocused]);
+  const inputStyles = useMemo(
+    () => [
+      styles.input,
+      {
+        color: theme.colors.content.onSurface,
+        backgroundColor: theme.colors.surface.default,
+        borderColor: isFocused ? theme.colors.primary.main : theme.colors.border.default,
+      },
+      style,
+    ],
+    [style, theme.colors, isFocused]
+  );
 
   // Memoize event handlers with correct types
-  const handleFocus = useCallback((e: NativeSyntheticEvent<TextInputFocusEventData>) => {
-    setIsFocused(true);
-    if (rest.onFocus) {
-      rest.onFocus(e);
-    }
-  }, [rest.onFocus]);
+  const handleFocus = useCallback(
+    (e: NativeSyntheticEvent<TextInputFocusEventData>) => {
+      setIsFocused(true);
+      if (rest.onFocus) {
+        rest.onFocus(e);
+      }
+    },
+    [rest.onFocus]
+  );
 
-  const handleBlur = useCallback((e: NativeSyntheticEvent<TextInputFocusEventData>) => {
-    setIsFocused(false);
-    if (rest.onBlur) {
-      rest.onBlur(e);
-    }
-  }, [rest.onBlur]);
+  const handleBlur = useCallback(
+    (e: NativeSyntheticEvent<TextInputFocusEventData>) => {
+      setIsFocused(false);
+      if (rest.onBlur) {
+        rest.onBlur(e);
+      }
+    },
+    [rest.onBlur]
+  );
 
-  const handleChangeText = useCallback((text: string) => {
-    if (onChangeText) {
-      onChangeText(text);
-    }
-  }, [onChangeText]);
+  const handleChangeText = useCallback(
+    (text: string) => {
+      if (onChangeText) {
+        onChangeText(text);
+      }
+    },
+    [onChangeText]
+  );
 
   // Performance optimizations for TextInput
-  const textInputProps = useMemo(() => ({
-    // Better performance by reducing JS processing
-    autoCapitalize: 'none',
-    autoCorrect: false,
-    spellCheck: false,
-    // Critical for Android performance
-    disableFullscreenUI: true,
-    // Reduce unnecessary re-renders
-    placeholderTextColor: theme.colors.border.default,
-    selectionColor: theme.colors.primary.main,
-    // Modern platforms support better keyboard handling
-    keyboardType: rest.keyboardType || 'default',
-    returnKeyType: rest.returnKeyType || 'done',
-    ...rest
-  }), [theme.colors.border.default, theme.colors.primary.main, rest]);
+  const textInputProps = useMemo(
+    () => ({
+      // Better performance by reducing JS processing
+      autoCapitalize: 'none' as const,
+      autoCorrect: false,
+      spellCheck: false,
+      // Critical for Android performance
+      disableFullscreenUI: true,
+      // Reduce unnecessary re-renders
+      placeholderTextColor: theme.colors.border.default,
+      selectionColor: theme.colors.primary.main,
+      // Modern platforms support better keyboard handling
+      keyboardType: rest.keyboardType || 'default',
+      returnKeyType: rest.returnKeyType || 'done',
+      ...rest,
+    }),
+    [theme.colors.border.default, theme.colors.primary.main, rest]
+  );
 
   return (
     <View style={containerStyles}>
@@ -141,4 +153,4 @@ const styles = StyleSheet.create({
       },
     }),
   },
-}); 
+});

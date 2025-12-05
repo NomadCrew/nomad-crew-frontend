@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, ActivityIndicator, Pressable } from 'react-native';
 import { Text, Surface, Button } from 'react-native-paper';
-import { FlashList, type ListRenderItem } from '@shopify/flash-list';
+import { FlashList, ListRenderItem } from '@shopify/flash-list';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { Theme } from '@/src/theme/types';
 import { useTodos, useUpdateTodo, useDeleteTodo } from '../hooks';
@@ -159,18 +159,16 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
         </View>
       )}
 
-      {/* @ts-ignore FlashList type issue with props - all props are valid */}
-      <FlashList
+      <FlashList<Todo>
         data={dedupedTodos}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
-        estimatedItemSize={60}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
         ListFooterComponent={
           isLoading ? (
             <ActivityIndicator style={styles(theme).loader} color={theme.colors.primary.main} />
-          ) : undefined
+          ) : null
         }
       />
 

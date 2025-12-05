@@ -26,21 +26,27 @@ const GHOST_CARD: Trip = {
   isGhostCard: true,
   createdAt: '',
   updatedAt: '',
-  members: [],
+  members: [
+    {
+      userId: 'system',
+      role: 'owner' as const,
+      joinedAt: new Date().toISOString(),
+    },
+  ],
 };
 
 export function TripList({ onTripPress, style, trips: propTrips = [] }: Props) {
   const trips = propTrips;
 
   // Defensive normalization: ensure every trip has a valid members array
-  const safeTrips = trips.map((trip) => {
+  const safeTrips: Trip[] = trips.map((trip) => {
     if (!Array.isArray(trip.members)) {
       console.error('[TripList] Malformed members array:', trip.id, trip.members, trip);
     }
     return {
       ...trip,
       members: Array.isArray(trip.members) ? trip.members : [],
-    };
+    } as Trip;
   });
 
   const sections = useMemo(() => {
@@ -76,7 +82,9 @@ export function TripList({ onTripPress, style, trips: propTrips = [] }: Props) {
     // Add ghost card to the last section if there are any sections
     if (sections.length > 0) {
       const lastSection = sections[sections.length - 1];
-      lastSection.data = [...lastSection.data, GHOST_CARD];
+      if (lastSection) {
+        lastSection.data = [...lastSection.data, GHOST_CARD];
+      }
     }
 
     return sections;

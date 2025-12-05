@@ -1,11 +1,5 @@
-import { useState } from 'react';
-import {
-  StyleSheet,
-  TextInput,
-  Pressable,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, TextInput, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { Loader2, ArrowLeft } from 'lucide-react-native';
 import { useAuthStore } from '@/src/features/auth/store';
@@ -53,38 +47,33 @@ export default function EmailLoginScreen() {
     >
       <ThemedView style={styles.content}>
         {/* Back Button */}
-        <Pressable 
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
+        <Pressable onPress={() => router.back()} style={styles.backButton}>
           <ArrowLeft size={24} color={theme.colors.content.primary} />
         </Pressable>
 
         {/* Header Section */}
         <ThemedView style={styles.header}>
           <ThemedText style={styles.title}>Sign in with email</ThemedText>
-          <ThemedText style={styles.subtitle}>
-            Enter your email and password to continue
-          </ThemedText>
+          <ThemedText style={styles.subtitle}>Enter your email and password to continue</ThemedText>
         </ThemedView>
 
         {/* Error Message */}
         {error && (
           <ThemedView style={styles.errorContainer}>
-            <ThemedText style={styles.errorText}>
-              {getFriendlyErrorMessage(error)}
-            </ThemedText>
+            <ThemedText style={styles.errorText}>{getFriendlyErrorMessage(error)}</ThemedText>
           </ThemedView>
         )}
 
         {/* Form Section */}
         <ThemedView style={styles.form}>
-          <ThemedView style={styles.inputWrapper}>
+          <ThemedView
+            style={[
+              styles.inputWrapper,
+              inputStyles.states[focusedInput === 'email' ? 'focus' : 'idle'].container,
+            ]}
+          >
             <TextInput
-              style={[
-                inputStyles.states[focusedInput === 'email' ? 'focus' : 'idle'],
-                inputStyles.text,
-              ]}
+              style={inputStyles.states[focusedInput === 'email' ? 'focus' : 'idle'].text}
               placeholder="Enter your email"
               placeholderTextColor={theme.colors.content.tertiary}
               value={email}
@@ -97,12 +86,14 @@ export default function EmailLoginScreen() {
             />
           </ThemedView>
 
-          <ThemedView style={styles.inputWrapper}>
+          <ThemedView
+            style={[
+              styles.inputWrapper,
+              inputStyles.states[focusedInput === 'password' ? 'focus' : 'idle'].container,
+            ]}
+          >
             <TextInput
-              style={[
-                inputStyles.states[focusedInput === 'password' ? 'focus' : 'idle'],
-                inputStyles.text,
-              ]}
+              style={inputStyles.states[focusedInput === 'password' ? 'focus' : 'idle'].text}
               placeholder="Enter your password"
               placeholderTextColor={theme.colors.content.tertiary}
               value={password}

@@ -34,7 +34,7 @@ export const ChatList: React.FC<ChatListProps> = ({
 
   const { theme } = useAppTheme();
   const { user } = useAuth();
-  const flashListRef = useRef<FlashList<ChatMessageWithStatus>>(null);
+  const flashListRef = useRef<any>(null);
   const { markAsRead, getLastReadMessageId } = useChatStore();
 
   // Get the last read message ID for this trip
@@ -102,8 +102,9 @@ export const ChatList: React.FC<ChatListProps> = ({
 
       // Check if the latest message is not from the current user and is newer than the last read message
       if (
-        latestMessage.message.sender?.id !== user.id &&
-        latestMessage.message.id !== lastReadMessageId
+        latestMessage?.message?.sender?.id !== user.id &&
+        latestMessage?.message?.id !== lastReadMessageId &&
+        latestMessage?.message?.id
       ) {
         logger.debug('UI', `Marking message ${latestMessage.message.id} as read`);
         markAsRead(tripId, latestMessage.message.id);
@@ -190,7 +191,7 @@ export const ChatList: React.FC<ChatListProps> = ({
       // Determine if we should show the avatar
       // Show avatar if it's the last message or if the sender is different from the next message
       const showAvatar =
-        index === 0 || sortedMessages[index - 1].message.sender.id !== item.message.sender.id;
+        index === 0 || sortedMessages[index - 1]?.message?.sender?.id !== item.message.sender.id;
 
       return <ChatMessage messageWithStatus={item} showAvatar={showAvatar} />;
     },
@@ -214,9 +215,9 @@ export const ChatList: React.FC<ChatListProps> = ({
 
     let typingText = '';
     if (activeTypingUsers.length === 1) {
-      typingText = `${activeTypingUsers[0].name} is typing...`;
+      typingText = `${activeTypingUsers[0]?.name || 'Someone'} is typing...`;
     } else if (activeTypingUsers.length === 2) {
-      typingText = `${activeTypingUsers[0].name} and ${activeTypingUsers[1].name} are typing...`;
+      typingText = `${activeTypingUsers[0]?.name || 'Someone'} and ${activeTypingUsers[1]?.name || 'someone'} are typing...`;
     } else {
       typingText = 'Several people are typing...';
     }
@@ -268,7 +269,6 @@ export const ChatList: React.FC<ChatListProps> = ({
         onEndReachedThreshold={0.5}
         onRefresh={handleRefresh}
         refreshing={isRefreshing}
-        estimatedItemSize={80}
         // Performance optimization: Only render items visible on screen
         drawDistance={400}
       />
