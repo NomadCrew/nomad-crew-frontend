@@ -12,10 +12,10 @@
 | Phase                   | Status      | Progress | Assigned                  |
 | ----------------------- | ----------- | -------- | ------------------------- |
 | 1. Security Fixes       | IN PROGRESS | 3/4      | SEC-003 pending (backend) |
-| 2. Core Infrastructure  | IN PROGRESS | 1/5      | -                         |
+| 2. Core Infrastructure  | IN PROGRESS | 2/5      | -                         |
 | 3. Developer Experience | IN PROGRESS | 4/5      | -                         |
-| 4. Performance          | IN PROGRESS | 1/5      | -                         |
-| 5. Data Layer           | PENDING     | 0/6      | -                         |
+| 4. Performance          | IN PROGRESS | 2/5      | -                         |
+| 5. Data Layer           | IN PROGRESS | 1/6      | -                         |
 | 6. Testing              | PENDING     | 0/4      | -                         |
 
 ---
@@ -160,7 +160,7 @@
 ### Task 2.5: Standardize Error Types
 
 - **ID:** INFRA-005
-- **Status:** PENDING
+- **Status:** ✅ COMPLETED
 - **Priority:** P2 - MEDIUM
 - **Estimated:** 2 hours
 - **Files:**
@@ -281,7 +281,7 @@
 ### Task 4.2: Add Zustand Selectors
 
 - **ID:** PERF-002
-- **Status:** PENDING
+- **Status:** ✅ COMPLETED
 - **Priority:** P1 - HIGH
 - **Estimated:** 4 hours
 - **Files:**
@@ -349,7 +349,7 @@
 ### Task 5.1: Install and Configure TanStack Query
 
 - **ID:** DATA-001
-- **Status:** PENDING
+- **Status:** ✅ COMPLETED
 - **Priority:** P1 - HIGH
 - **Estimated:** 2 hours
 - **Files:**
@@ -532,6 +532,9 @@
 | DX-004    | Update TypeScript Configuration    | 2025-12-05 | 77b86ef |
 | INFRA-002 | Add Retry Logic with axios-retry   | 2025-12-05 | 01d26ad |
 | PERF-001  | Replace FlatList with FlashList    | 2025-12-05 | e1c43d1 |
+| PERF-002  | Add Zustand Selectors              | 2025-12-05 | e054a5c |
+| INFRA-005 | Standardize Error Types            | 2025-12-05 | d49fc28 |
+| DATA-001  | Install TanStack Query             | 2025-12-05 | f8e28d0 |
 
 ---
 
