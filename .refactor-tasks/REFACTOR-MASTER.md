@@ -12,10 +12,10 @@
 | Phase                   | Status      | Progress | Assigned                  |
 | ----------------------- | ----------- | -------- | ------------------------- |
 | 1. Security Fixes       | IN PROGRESS | 3/4      | SEC-003 pending (backend) |
-| 2. Core Infrastructure  | IN PROGRESS | 2/5      | -                         |
-| 3. Developer Experience | IN PROGRESS | 4/5      | -                         |
+| 2. Core Infrastructure  | IN PROGRESS | 4/5      | INFRA-004 pending         |
+| 3. Developer Experience | IN PROGRESS | 4/5      | DX-005 pending            |
 | 4. Performance          | COMPLETE    | 5/5      | ✅                        |
-| 5. Data Layer           | IN PROGRESS | 4/6      | -                         |
+| 5. Data Layer           | IN PROGRESS | 5/6      | DATA-005 pending          |
 | 6. Testing              | PENDING     | 0/4      | -                         |
 
 ---
@@ -93,7 +93,7 @@
 ### Task 2.1: Add Request Cancellation (AbortController)
 
 - **ID:** INFRA-001
-- **Status:** PENDING
+- **Status:** ✅ COMPLETED
 - **Priority:** P1 - HIGH
 - **Estimated:** 3 hours
 - **Files:**
@@ -126,7 +126,7 @@
 ### Task 2.3: Add Network Reconnection with NetInfo
 
 - **ID:** INFRA-003
-- **Status:** PENDING
+- **Status:** ✅ COMPLETED
 - **Priority:** P1 - HIGH
 - **Estimated:** 2 hours
 - **Files:**
@@ -383,7 +383,7 @@
 ### Task 5.3: Migrate Trip Components to Query Hooks
 
 - **ID:** DATA-003
-- **Status:** PENDING
+- **Status:** ✅ COMPLETED
 - **Priority:** P1 - HIGH
 - **Estimated:** 3 hours
 - **Files:**
@@ -541,6 +541,9 @@
 | DATA-004  | Migrate Todo to TanStack Query     | 2025-12-05 | 99f8e34 |
 | DATA-006  | Create Error Boundaries            | 2025-12-05 | 482055a |
 | PERF-003  | Add Zustand Devtools Middleware    | 2025-12-05 | 36ff12b |
+| INFRA-001 | Add AbortController                | 2025-12-05 | ae228f3 |
+| INFRA-003 | Add NetInfo Reconnection           | 2025-12-05 | a9c119d |
+| DATA-003  | Migrate Trip Components            | 2025-12-05 | 91fb2f8 |
 
 ---
 
