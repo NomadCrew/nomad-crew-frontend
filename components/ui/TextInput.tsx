@@ -9,7 +9,7 @@ import {
   NativeSyntheticEvent,
   TextInputFocusEventData
 } from 'react-native';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 
 /**
  * PerformantTextInput - A high-performance TextInput component
@@ -36,7 +36,7 @@ function TextInputComponent({
   placeholder,
   ...rest
 }: TextInputProps) {
-  const theme = useTheme().theme;
+  const theme = useAppTheme().theme;
   const [isFocused, setIsFocused] = useState(false);
 
   // Memoize the container style

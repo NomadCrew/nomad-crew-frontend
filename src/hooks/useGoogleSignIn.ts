@@ -1,9 +1,10 @@
 import { Platform } from 'react-native';
-import { useAuthStore } from '@/src/store/useAuthStore';
-import { useState } from 'react';
+import { useAuthStore } from '@/src/features/auth/store';
+import { useState, useCallback } from 'react';
 import Constants from 'expo-constants';
-import { supabase } from '@/src/auth/supabaseClient';
-import { GoogleSignInResponse } from '@/src/types/auth';
+import { supabase } from '@/src/features/auth/service';
+import * as SecureStore from 'expo-secure-store';
+import { logger } from '@/src/utils/logger';
 
 // Define interfaces for the Google Sign-In module
 interface GoogleSigninStatusCodes {
@@ -25,6 +26,10 @@ interface GoogleUser {
 interface GoogleSigninResponse {
   idToken: string | null;
   user: GoogleUser;
+  data?: {
+    idToken: string | null;
+    user: GoogleUser;
+  };
 }
 
 interface GoogleSigninTokens {
@@ -82,73 +87,83 @@ if (!isExpoGo) {
   }
 }
 
+const ACCESS_TOKEN_KEY = 'supabase_access_token'; // Ensure this matches the store's key
+
+// Configure Google Sign-In
+// You must run this configuration early in your app's lifecycle, e.g., in App.tsx
+// Make sure webClientId is retrieved from your Google Cloud console
+// and iosClientId from the .plist file (if you followed Firebase setup for iOS)
+export const configureGoogleSignIn = () => {
+  const webClientId = Platform.select({
+    android: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID_ANDROID,
+    ios: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID_IOS,
+  });
+  if (!webClientId) {
+    logger.warn('AUTH', 'Google Sign-In webClientId is not configured for this platform.');
+    return;
+  }
+  GoogleSignin.configure({
+    webClientId: webClientId,
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID, // Optional, for iOS specific client ID
+    scopes: ['openid', 'email', 'profile']
+  });
+};
+
 export function useGoogleSignIn() {
-  const { handleGoogleSignInSuccess } = useAuthStore();
-  const [isInitialized, setIsInitialized] = useState(!isExpoGo);
+  const { handleGoogleSignInSuccess } = useAuthStore.getState(); // Use getState for actions outside components
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Sign-In Logic
-  const signIn = async () => {
-    if (isExpoGo) {
-      alert('Google Sign-In is not available in Expo Go. Please use a development build.');
-      return;
-    }
-
+  const signIn = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
     try {
-      if (!isInitialized) {
-        console.warn('Google Sign-In is not initialized yet');
-        return;
-      }
-      
-      // Check if Play Services are available (Android only)
-      if (Platform.OS === 'android') {
-        await GoogleSignin.hasPlayServices({
-          showPlayServicesUpdateDialog: true,
-        });
-      }
-      
-      // Sign in with Google
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
       const userInfo = await GoogleSignin.signIn();
-      
-      // Get the ID token
-      const { accessToken, idToken } = await GoogleSignin.getTokens();
-      
-      // Sign in with Supabase using the Google token
-      const { data, error } = await supabase.auth.signInWithIdToken({
-        provider: 'google',
-        token: idToken
-      });
-      
-      if (error) throw error;
-      
-      if (data.session) {
-        // Convert Supabase session to expected format
-        const googleSignInResponse: GoogleSignInResponse = {
-          user: {
-            email: userInfo.user.email,
-            name: userInfo.user.name,
-            photo: userInfo.user.photo || undefined
-          },
-          authentication: {
-            accessToken,
-            idToken
-          }
-        };
-        await handleGoogleSignInSuccess(googleSignInResponse);
-      }
-      
-    } catch (error: unknown) {
-      const googleError = error as GoogleSigninError;
-      if (googleError.code === statusCodes.SIGN_IN_CANCELLED) {
-        console.log('Sign in cancelled');
-      } else if (googleError.code === statusCodes.IN_PROGRESS) {
-        console.log('Sign in in progress');
-      } else if (googleError.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        console.log('Play services not available');
-      } else {
-        console.error('Google Sign-In error:', error);
-      }
-    }
-  };
+      console.log('Google userInfo:', userInfo);
 
-  return signIn;
+      // Support both possible return shapes
+      const idToken = userInfo.idToken || userInfo.data?.idToken;
+      if (!idToken) {
+        throw new Error('Google Sign-In did not return an ID token.');
+      }
+
+      // --- SUPABASE AUTH ---
+      const { data, error: supabaseError } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: idToken,
+      });
+      console.log('Supabase signInWithIdToken response:', { data, supabaseError });
+
+      if (supabaseError) {
+        await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
+        throw new Error(`Supabase signInWithIdToken error: ${supabaseError.message}`);
+      }
+
+      if (!data.session) {
+        await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
+        throw new Error('Supabase did not return a session after Google sign-in.');
+      }
+
+      await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, data.session.access_token);
+      // @ts-expect-error: handleGoogleSignInSuccess expects a Session, not GoogleSignInResponse
+      await handleGoogleSignInSuccess(data.session);
+      setIsLoading(false);
+      return data.session;
+    } catch (err: any) {
+      logger.error('AUTH', 'Google or Supabase sign-in failed:', err.message, err.code);
+      await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
+      setError(err.message || 'An error occurred during Google Sign-In.');
+      useAuthStore.setState({
+        user: null,
+        token: null,
+        status: 'unauthenticated',
+        loading: false,
+        error: err.message,
+      });
+      setIsLoading(false);
+    }
+  }, [handleGoogleSignInSuccess]);
+
+  return { signIn, isLoading, error };
 }

@@ -20,10 +20,10 @@ The theme system is built around a consistent structure that provides access to 
 To use the theme in your components, import the `useTheme` hook from `src/theme/ThemeProvider`:
 
 ```tsx
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 
 const MyComponent = () => {
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   
   return (
     <View style={styles(theme).container}>

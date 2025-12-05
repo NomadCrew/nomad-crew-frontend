@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { Theme } from '@/src/theme/types';
 
 interface HeaderWithBackProps {
@@ -15,7 +15,7 @@ export const HeaderWithBack: React.FC<HeaderWithBackProps> = ({
   onBackPress,
   rightComponent
 }) => {
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
 
   return (
     <View style={styles(theme).header}>

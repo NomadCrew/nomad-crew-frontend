@@ -1,39 +1,43 @@
-// app/index.tsx (Temporary Minimal Version for Testing)
-import React from 'react';
-import { Stack, SplashScreen } from 'expo-router';
-import { ThemeProvider, useTheme } from '@/src/theme/ThemeProvider';
-import { View, Text, Button } from 'react-native';
-import { PaperProvider } from 'react-native-paper';
+import { useEffect } from 'react';
+import { Redirect } from 'expo-router';
+import { useOnboarding } from '@/src/providers/OnboardingProvider';
+import { View, ActivityIndicator } from 'react-native';
 
-// Keep splash screen visible initially
-SplashScreen.preventAutoHideAsync();
-
-function TestScreen() {
-  // Hooks must be called unconditionally at the top level
-  const { theme, mode, toggleColorScheme } = useTheme();
-
-  // Hide splash if theme is accessible
-  React.useEffect(() => {
-    SplashScreen.hideAsync();
+export default function Index() {
+  const { isFirstTime, isInitialized } = useOnboarding();
+  
+  // Log state for debugging
+  useEffect(() => {
+    console.log('[Index] Initial render - isFirstTime:', isFirstTime, 'isInitialized:', isInitialized);
   }, []);
+  
+  // While initializing, show a loading spinner
+  if (!isInitialized) {
+    console.log('[Index] Not initialized yet, showing loading spinner');
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#ff6600" />
+      </View>
+    );
+  }
+  
+  // If onboarding is initialized and user is first time, redirect to onboarding flow
+  if (isInitialized && isFirstTime) {
+    console.log('[Index] Redirecting to (onboarding)/welcome because isFirstTime is true');
+    return <Redirect href="/(onboarding)/welcome" />;
+  }
+  
+  // If onboarding is initialized and user is not first time, redirect to tabs
+  if (isInitialized && !isFirstTime) {
+    console.log('[Index] Redirecting to (tabs) because isFirstTime is false');
+    return <Redirect href="/(tabs)/trips" />;
+  }
 
+  // This should never be reached, but just in case
+  console.log('[Index] Fallback case reached, this should not happen');
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background.default }}>
-      <Text style={{ color: theme.colors.content.primary }}>Theme mode: {mode}</Text>
-      <Text style={{ color: theme.colors.content.primary }}>Test Screen: Theme loaded!</Text>
-      <Button title="Toggle Theme" onPress={toggleColorScheme} />
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <ActivityIndicator size="large" color="#ff6600" />
     </View>
-  );
-}
-
-export default function MinimalRootLayout() {
-  return (
-    <PaperProvider>
-      <ThemeProvider>
-        <Stack>
-          <Stack.Screen name="index" component={TestScreen} options={{ title: 'Test' }} />
-        </Stack>
-      </ThemeProvider>
-    </PaperProvider>
   );
 }

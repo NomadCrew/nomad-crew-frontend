@@ -1,4 +1,4 @@
-import { useAuthStore } from '@/src/store/useAuthStore';
+import { useAuthStore } from '@/src/features/auth/store';
 
 /**
  * Hook to access authentication state and methods

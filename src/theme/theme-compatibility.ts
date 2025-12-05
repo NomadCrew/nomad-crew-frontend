@@ -1,4 +1,12 @@
+/**
+ * theme-compatibility.ts
+ * -----------------------------------
+ * Provides a compatibility layer for the theme, using tokens from theme.ts.
+ * Imports borderRadius and typographySizes from the single source of truth.
+ */
+
 import { Theme } from './types';
+import { borderRadius, typographySizes } from './theme';
 
 /**
  * This file provides a compatibility layer for the theme.
@@ -34,8 +42,8 @@ export const BORDER_RADIUS = {
  * and consistent access across components.
  */
 export function extendTheme(theme: Theme): Theme & {
-  typography: Theme['typography'] & { size: typeof TYPOGRAPHY_SIZES };
-  borderRadius: typeof BORDER_RADIUS;
+  typography: Theme['typography'] & { size: typeof typographySizes };
+  borderRadius: typeof borderRadius;
   dark: boolean;
 } {
   return {
@@ -43,10 +51,10 @@ export function extendTheme(theme: Theme): Theme & {
     // Add size property to typography for backward compatibility
     typography: {
       ...theme.typography,
-      size: TYPOGRAPHY_SIZES,
+      size: typographySizes,
     },
     // Add borderRadius property for consistent access
-    borderRadius: BORDER_RADIUS,
+    borderRadius,
     // Add dark property
     dark: theme.dark ?? false,
   };
@@ -58,8 +66,8 @@ export function extendTheme(theme: Theme): Theme & {
  * @param size The size key (xs, sm, md, lg, xl, etc.)
  * @returns The font size value
  */
-export function getTypographySize(theme: Theme, size: keyof typeof TYPOGRAPHY_SIZES): number {
-  return TYPOGRAPHY_SIZES[size];
+export function getTypographySize(theme: Theme, size: keyof typeof typographySizes): number {
+  return typographySizes[size];
 }
 
 /**
@@ -68,6 +76,6 @@ export function getTypographySize(theme: Theme, size: keyof typeof TYPOGRAPHY_SI
  * @param size The size key (none, sm, md, lg, xl, full)
  * @returns The border radius value
  */
-export function getBorderRadius(theme: Theme, size: keyof typeof BORDER_RADIUS): number {
-  return BORDER_RADIUS[size];
+export function getBorderRadius(theme: Theme, size: keyof typeof borderRadius): number {
+  return borderRadius[size];
 } 

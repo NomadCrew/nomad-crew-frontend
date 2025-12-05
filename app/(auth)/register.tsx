@@ -10,10 +10,10 @@ import {
   Alert,
 } from 'react-native';
 import { Link, router } from 'expo-router';
-import { useAuthStore } from '@/src/store/useAuthStore';
-import { ThemedText } from '@/components/ThemedText';
+import { useAuthStore } from '@/src/features/auth/store';
+import { ThemedText } from '@/src/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { getInputStyles } from '@/src/theme/styles';
 import { Theme } from '@/src/theme/types';
 
@@ -27,7 +27,7 @@ export default function RegisterScreen() {
   });
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
   const { register, loading, error, isVerifying } = useAuthStore();
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
 
   // Use shared input styles
   const inputStyles = getInputStyles(theme);
@@ -35,6 +35,11 @@ export default function RegisterScreen() {
   const handleRegister = async () => {
     try {
       await register(formData);
+      const { user } = useAuthStore.getState();
+      if (user && !user.username) {
+        router.replace('/(onboarding)/username');
+        return;
+      }
       Alert.alert(
         "Registration Successful",
         "We've sent you a verification email. Please click the link in the email to verify and login again.",
@@ -69,7 +74,7 @@ export default function RegisterScreen() {
           {/* Username Input */}
           <TextInput
             style={[
-              inputStyles.states[focusedInput === 'username' ? 'focus' : 'idle'],
+              inputStyles.states[focusedInput === 'username' ? 'focus' : 'idle'].text,
               inputStyles.text,
             ]}
             placeholder="Username"
@@ -85,7 +90,7 @@ export default function RegisterScreen() {
           {/* Email Input */}
           <TextInput
             style={[
-              inputStyles.states[focusedInput === 'email' ? 'focus' : 'idle'],
+              inputStyles.states[focusedInput === 'email' ? 'focus' : 'idle'].text,
               inputStyles.text,
             ]}
             placeholder="Email"
@@ -103,7 +108,7 @@ export default function RegisterScreen() {
           {/* Password Input */}
           <TextInput
             style={[
-              inputStyles.states[focusedInput === 'password' ? 'focus' : 'idle'],
+              inputStyles.states[focusedInput === 'password' ? 'focus' : 'idle'].text,
               inputStyles.text,
             ]}
             placeholder="Password"
@@ -120,7 +125,7 @@ export default function RegisterScreen() {
           {/* First Name Input */}
           <TextInput
             style={[
-              inputStyles.states[focusedInput === 'firstName' ? 'focus' : 'idle'],
+              inputStyles.states[focusedInput === 'firstName' ? 'focus' : 'idle'].text,
               inputStyles.text,
             ]}
             placeholder="First Name (Optional)"
@@ -136,7 +141,7 @@ export default function RegisterScreen() {
           {/* Last Name Input */}
           <TextInput
             style={[
-              inputStyles.states[focusedInput === 'lastName' ? 'focus' : 'idle'],
+              inputStyles.states[focusedInput === 'lastName' ? 'focus' : 'idle'].text,
               inputStyles.text,
             ]}
             placeholder="Last Name (Optional)"

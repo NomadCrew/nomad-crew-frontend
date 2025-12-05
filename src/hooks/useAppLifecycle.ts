@@ -1,6 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { AppState, AppStateStatus, Platform } from 'react-native';
-import { WebSocketManager } from '../websocket/WebSocketManager';
+import { WebSocketManager } from '../features/websocket/WebSocketManager';
 
 export function useAppLifecycle() {
   const handleAppStateChange = useCallback((nextAppState: AppStateStatus) => {

@@ -1,17 +1,11 @@
-import { Platform } from 'react-native';
+/**
+ * typography.ts
+ * -----------------------------------
+ * Typography foundation using typographySizes from theme.ts as the single source of truth.
+ */
 
-// Font scaling system
-export const scale = {
-  xs: 12,
-  sm: 14,
-  base: 16,
-  lg: 18,
-  xl: 20,
-  '2xl': 24,
-  '3xl': 30,
-  '4xl': 36,
-  '5xl': 48,
-} as const;
+import { Platform } from 'react-native';
+import { typographySizes } from '../theme';
 
 // Font weights - platform specific for better rendering
 export const weights = {
@@ -60,33 +54,27 @@ export const letterSpacing = {
 // Create typography styles based on font family
 export const createTypography = (baseFontFamily = 'Manrope') => ({
   // Font size tokens
-  size: {
-    xs: scale.xs,
-    sm: scale.sm,
-    md: scale.base,
-    lg: scale.lg,
-    xl: scale.xl,
-  },
+  size: typographySizes,
   
   // Display text styles
   display: {
     large: {
-      fontSize: scale['5xl'],
-      lineHeight: scale['5xl'] * lineHeights.tight,
+      fontSize: typographySizes['4xl'],
+      lineHeight: typographySizes['4xl'] * lineHeights.tight,
       fontWeight: weights.bold,
       fontFamily: baseFontFamily,
       letterSpacing: letterSpacing.tight,
     },
     medium: {
-      fontSize: scale['4xl'],
-      lineHeight: scale['4xl'] * lineHeights.tight,
+      fontSize: typographySizes['3xl'],
+      lineHeight: typographySizes['3xl'] * lineHeights.tight,
       fontWeight: weights.bold,
       fontFamily: baseFontFamily,
       letterSpacing: letterSpacing.tight,
     },
     small: {
-      fontSize: scale['3xl'],
-      lineHeight: scale['3xl'] * lineHeights.tight,
+      fontSize: typographySizes['2xl'],
+      lineHeight: typographySizes['2xl'] * lineHeights.tight,
       fontWeight: weights.bold,
       fontFamily: baseFontFamily,
       letterSpacing: letterSpacing.tight,
@@ -96,43 +84,43 @@ export const createTypography = (baseFontFamily = 'Manrope') => ({
   // Heading text styles
   heading: {
     h1: {
-      fontSize: scale['3xl'],
-      lineHeight: scale['3xl'] * lineHeights.tight,
+      fontSize: typographySizes['2xl'],
+      lineHeight: typographySizes['2xl'] * lineHeights.tight,
       fontWeight: weights.bold,
       fontFamily: baseFontFamily,
       letterSpacing: letterSpacing.tight,
     },
     h2: {
-      fontSize: scale['2xl'],
-      lineHeight: scale['2xl'] * lineHeights.tight,
+      fontSize: typographySizes.xl,
+      lineHeight: typographySizes.xl * lineHeights.tight,
       fontWeight: weights.bold,
       fontFamily: baseFontFamily,
       letterSpacing: letterSpacing.tight,
     },
     h3: {
-      fontSize: scale.xl,
-      lineHeight: scale.xl * lineHeights.tight,
+      fontSize: typographySizes.lg,
+      lineHeight: typographySizes.lg * lineHeights.tight,
       fontWeight: weights.semibold,
       fontFamily: baseFontFamily,
       letterSpacing: letterSpacing.normal,
     },
     h4: {
-      fontSize: scale.lg,
-      lineHeight: scale.lg * lineHeights.tight,
+      fontSize: typographySizes.md,
+      lineHeight: typographySizes.md * lineHeights.tight,
       fontWeight: weights.semibold,
       fontFamily: baseFontFamily,
       letterSpacing: letterSpacing.normal,
     },
     h5: {
-      fontSize: scale.base,
-      lineHeight: scale.base * lineHeights.tight,
+      fontSize: typographySizes.sm,
+      lineHeight: typographySizes.sm * lineHeights.tight,
       fontWeight: weights.semibold,
       fontFamily: baseFontFamily,
       letterSpacing: letterSpacing.normal,
     },
     h6: {
-      fontSize: scale.sm,
-      lineHeight: scale.sm * lineHeights.tight,
+      fontSize: typographySizes.xs,
+      lineHeight: typographySizes.xs * lineHeights.tight,
       fontWeight: weights.semibold,
       fontFamily: baseFontFamily,
       letterSpacing: letterSpacing.normal,
@@ -142,22 +130,22 @@ export const createTypography = (baseFontFamily = 'Manrope') => ({
   // Body text styles
   body: {
     large: {
-      fontSize: scale.lg,
-      lineHeight: scale.lg * lineHeights.normal,
+      fontSize: typographySizes.lg,
+      lineHeight: typographySizes.lg * lineHeights.normal,
       fontWeight: weights.normal,
       fontFamily: baseFontFamily,
       letterSpacing: letterSpacing.normal,
     },
     medium: {
-      fontSize: scale.base,
-      lineHeight: scale.base * lineHeights.normal,
+      fontSize: typographySizes.md,
+      lineHeight: typographySizes.md * lineHeights.normal,
       fontWeight: weights.normal,
       fontFamily: baseFontFamily,
       letterSpacing: letterSpacing.normal,
     },
     small: {
-      fontSize: scale.sm,
-      lineHeight: scale.sm * lineHeights.normal,
+      fontSize: typographySizes.sm,
+      lineHeight: typographySizes.sm * lineHeights.normal,
       fontWeight: weights.normal,
       fontFamily: baseFontFamily,
       letterSpacing: letterSpacing.normal,
@@ -167,22 +155,22 @@ export const createTypography = (baseFontFamily = 'Manrope') => ({
   // Interactive element text styles
   button: {
     large: {
-      fontSize: scale.lg,
-      lineHeight: scale.lg * lineHeights.snug,
+      fontSize: typographySizes.lg,
+      lineHeight: typographySizes.lg * lineHeights.snug,
       fontWeight: weights.semibold,
       fontFamily: baseFontFamily,
       letterSpacing: letterSpacing.wide,
     },
     medium: {
-      fontSize: scale.base,
-      lineHeight: scale.base * lineHeights.snug,
+      fontSize: typographySizes.md,
+      lineHeight: typographySizes.md * lineHeights.snug,
       fontWeight: weights.semibold,
       fontFamily: baseFontFamily,
       letterSpacing: letterSpacing.wide,
     },
     small: {
-      fontSize: scale.sm,
-      lineHeight: scale.sm * lineHeights.snug,
+      fontSize: typographySizes.sm,
+      lineHeight: typographySizes.sm * lineHeights.snug,
       fontWeight: weights.semibold,
       fontFamily: baseFontFamily,
       letterSpacing: letterSpacing.wide,
@@ -192,22 +180,22 @@ export const createTypography = (baseFontFamily = 'Manrope') => ({
   // Form element text styles
   input: {
     label: {
-      fontSize: scale.sm,
-      lineHeight: scale.sm * lineHeights.normal,
+      fontSize: typographySizes.sm,
+      lineHeight: typographySizes.sm * lineHeights.normal,
       fontWeight: weights.medium,
       fontFamily: baseFontFamily,
       letterSpacing: letterSpacing.wide,
     },
     text: {
-      fontSize: scale.base,
-      lineHeight: scale.base * lineHeights.normal,
+      fontSize: typographySizes.md,
+      lineHeight: typographySizes.md * lineHeights.normal,
       fontWeight: weights.normal,
       fontFamily: baseFontFamily,
       letterSpacing: letterSpacing.normal,
     },
     helper: {
-      fontSize: scale.xs,
-      lineHeight: scale.xs * lineHeights.normal,
+      fontSize: typographySizes.xs,
+      lineHeight: typographySizes.xs * lineHeights.normal,
       fontWeight: weights.normal,
       fontFamily: baseFontFamily,
       letterSpacing: letterSpacing.normal,
@@ -216,15 +204,15 @@ export const createTypography = (baseFontFamily = 'Manrope') => ({
 
   // Special text styles
   caption: {
-    fontSize: scale.xs,
-    lineHeight: scale.xs * lineHeights.normal,
+    fontSize: typographySizes.xs,
+    lineHeight: typographySizes.xs * lineHeights.normal,
     fontWeight: weights.normal,
     fontFamily: baseFontFamily,
     letterSpacing: letterSpacing.wide,
   },
   overline: {
-    fontSize: scale.xs,
-    lineHeight: scale.xs * lineHeights.normal,
+    fontSize: typographySizes.xs,
+    lineHeight: typographySizes.xs * lineHeights.normal,
     fontWeight: weights.medium,
     fontFamily: baseFontFamily,
     letterSpacing: letterSpacing.widest,
@@ -233,7 +221,7 @@ export const createTypography = (baseFontFamily = 'Manrope') => ({
 });
 
 // Type exports
-export type TypographyScale = typeof scale;
+export type TypographyScale = typeof typographySizes;
 export type FontWeights = typeof weights;
 export type LineHeights = typeof lineHeights;
 export type LetterSpacing = typeof letterSpacing;

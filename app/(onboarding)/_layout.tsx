@@ -1,6 +1,9 @@
 import { Stack } from 'expo-router';
 
+console.log('[OnboardingLayout] File loaded, starting OnboardingLayout component render');
+
 export default function OnboardingLayout() {
+    console.log('[OnboardingLayout] Inside OnboardingLayout function - rendering');
     return (
       <Stack 
         screenOptions={{ 
@@ -18,6 +21,13 @@ export default function OnboardingLayout() {
         />
         <Stack.Screen 
           name="permissions" 
+          options={{ 
+            gestureEnabled: false,
+            headerBackVisible: false,
+          }} 
+        />
+        <Stack.Screen 
+          name="username" 
           options={{ 
             gestureEnabled: false,
             headerBackVisible: false,

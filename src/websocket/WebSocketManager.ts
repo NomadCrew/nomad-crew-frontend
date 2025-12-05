@@ -1,12 +1,13 @@
-import { WebSocketConnection, ServerMessage } from './WebSocketConnection';
-import { WebSocketStatus, ServerEvent, isLocationEvent, isChatEvent } from '../types/events';
-import { useAuthStore } from '../store/useAuthStore';
+import { WebSocketConnection } from '../features/websocket/WebSocketConnection';
+import { WebSocketStatus, ServerEvent, BaseEventSchema, isLocationEvent, isChatEvent } from '../types/events';
+import { useAuthStore } from '../features/auth/store';
 import { API_CONFIG } from '../api/env';
 import { jwtDecode } from 'jwt-decode';
 import { logger } from '../utils/logger';
-import { useLocationStore } from '../store/useLocationStore';
-import { useNotificationStore } from '../store/useNotificationStore';
-import { ZodNotificationSchema, Notification } from '../types/notification';
+import { useLocationStore } from '../features/location/store/useLocationStore';
+import { useNotificationStore } from '../features/notifications/store/useNotificationStore';
+import { ZodNotificationSchema, Notification } from '../features/notifications/types/notification';
+import { ZodError } from 'zod';
 
 interface ConnectionCallbacks {
   onMessage?: (event: Notification | ServerEvent) => void;
@@ -14,31 +15,16 @@ interface ConnectionCallbacks {
   onError?: (error: Error) => void;
 }
 
-interface ConnectedPayload {
-  userId: string;
-  tripCount: number;
-  trips: string[];
-}
-
-/**
- * WebSocketManager - Single connection per user architecture
- *
- * This manager maintains ONE WebSocket connection per user (not per trip).
- * The server automatically subscribes the user to all their trips.
- * Dynamic trip subscriptions can be added/removed via messages.
- */
 export class WebSocketManager {
   private static instance: WebSocketManager;
   private connection: WebSocketConnection | null = null;
-  private tokenRefreshTimer: ReturnType<typeof setInterval> | null = null;
+  private currentTripId: string | null = null;
+  private tokenRefreshTimer: NodeJS.Timeout | null = null;
   private reconnectAttempts = 0;
   private readonly maxReconnectAttempts = API_CONFIG.WEBSOCKET.RECONNECT_ATTEMPTS;
-  private callbacks: ConnectionCallbacks = {};
-  private subscribedTrips: Set<string> = new Set();
-  private isConnecting = false;
 
   private constructor() {
-    // Singleton - use getInstance()
+    // Simplified constructor - we handle auth state changes directly
   }
 
   public static getInstance(): WebSocketManager {
@@ -48,183 +34,120 @@ export class WebSocketManager {
     return WebSocketManager.instance;
   }
 
-  private getWebSocketUrl(token: string): string {
+  private getWebSocketUrl(tripId: string, token: string, apiKey: string): string {
     const base = API_CONFIG.BASE_URL.replace(/^http/, 'ws');
-    const params = new URLSearchParams({ token });
-    return `${base}/v1/ws?${params.toString()}`;
+    const params = new URLSearchParams({
+      token: token,
+      apikey: apiKey
+    });
+    return `${base}/v1/trips/${tripId}/ws?${params.toString()}`;
   }
 
-  /**
-   * Connect to WebSocket server.
-   * This establishes a single connection for the user.
-   * The server automatically subscribes to all user's trips.
-   */
-  public async connect(callbacks?: ConnectionCallbacks): Promise<void> {
-    // Prevent multiple simultaneous connection attempts
-    if (this.isConnecting) {
-      logger.debug('WS', 'Connection already in progress');
-      return;
-    }
-
+  public async connect(tripId: string, callbacks?: ConnectionCallbacks): Promise<void> {
     try {
-      this.isConnecting = true;
       const { token, user } = useAuthStore.getState();
-
       if (!token || !user?.id) {
         throw new Error('Not authenticated');
       }
 
-      // If already connected, just update callbacks
-      if (this.connection?.isConnected()) {
-        if (callbacks) {
-          this.callbacks = { ...this.callbacks, ...callbacks };
-        }
-        this.isConnecting = false;
+      // If already connected to this trip, just update callbacks
+      if (this.currentTripId === tripId && this.connection?.isConnected()) {
+        this.connection.updateCallbacks(callbacks || {});
         return;
       }
 
       // Check token expiration
       const decoded = jwtDecode<{ exp: number }>(token);
       const timeUntilExpiry = decoded.exp * 1000 - Date.now();
-
+      
       // If token expires in less than 5 minutes, refresh it
       if (timeUntilExpiry < 300000) {
         logger.debug('WS', 'Token near expiry, refreshing before connection');
         await useAuthStore.getState().refreshSession();
-        this.isConnecting = false;
-        return this.connect(callbacks);
+        return this.connect(tripId, callbacks);
       }
 
-      // Store callbacks
-      if (callbacks) {
-        this.callbacks = { ...this.callbacks, ...callbacks };
+      const apiKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+      if (!apiKey) {
+        throw new Error('Missing Supabase API key');
       }
 
-      // Create connection with message handler
-      this.connection = new WebSocketConnection({
-        url: this.getWebSocketUrl(token),
-        token,
-        userId: user.id,
-        onMessage: (message) => this.handleServerMessage(message),
-        onStatus: (status) => {
-          this.callbacks.onStatus?.(status);
-          if (status === 'DISCONNECTED') {
-            this.subscribedTrips.clear();
+      // Create a wrapper for the onMessage callback
+      const wrappedCallbacks: ConnectionCallbacks = {
+        ...callbacks,
+        onMessage: (messageData: any) => {
+          let parsedData: any;
+          try {
+            parsedData = JSON.parse(messageData);
+          } catch (error) {
+            logger.error('WS', 'Failed to parse incoming JSON message:', error);
+            return;
+          }
+
+          // Attempt 1: Validate as a standardized Notification object
+          const notificationResult = ZodNotificationSchema.safeParse(parsedData);
+
+          if (notificationResult.success) {
+            const validatedNotification = notificationResult.data;
+            logger.debug('WS', `Received valid Notification object, type: ${validatedNotification.type}`);
+
+            // Handle with the notification store
+            useNotificationStore.getState().handleIncomingNotification(validatedNotification);
+
+            // Pass the validated Notification object to the original callback
+            callbacks?.onMessage?.(validatedNotification);
+            return;
+          }
+
+          // Attempt 2: Handle as other ServerEvent types (e.g., Location, Chat)
+          if (typeof parsedData === 'object' && parsedData !== null && parsedData.type) {
+             const eventData = parsedData as ServerEvent;
+              logger.debug('WS', `Attempting to handle as ServerEvent, type: ${eventData.type}`);
+
+              let handled = false;
+              if (isLocationEvent(eventData)) {
+                this.handleLocationEvent(eventData, tripId);
+                handled = true;
+              }
+
+              if (isChatEvent(eventData)) {
+                this.handleChatEvent(eventData);
+                handled = true;
+              }
+
+              callbacks?.onMessage?.(eventData);
+
+          } else {
+              logger.warn('WS', 'Received message is not a valid Notification or recognizable ServerEvent:', parsedData);
           }
         },
         onError: (error) => {
-          this.callbacks.onError?.(error);
+          callbacks?.onError?.(error);
           if (error.message === 'Authentication failed') {
             useAuthStore.getState().refreshSession()
-              .then(() => this.reconnect())
-              .catch((err) => logger.error('WS', 'Token refresh failed:', err));
+              .then(() => this.reconnect(tripId, callbacks))
+              .catch((err: Error) => logger.error('WS', 'Token refresh failed:', err));
           }
         },
+        onStatus: callbacks?.onStatus,
+      };
+
+      this.connection = new WebSocketConnection({
+        url: this.getWebSocketUrl(tripId, token, apiKey),
+        token,
+        apiKey,
+        tripId,
+        userId: user.id,
+        ...wrappedCallbacks,
       });
 
       await this.connection.connect();
+      this.currentTripId = tripId;
       this.reconnectAttempts = 0;
-      logger.info('WS', 'WebSocket connected');
 
     } catch (error) {
       logger.error('WS', 'Connection failed:', error);
-      await this.handleConnectionError();
-    } finally {
-      this.isConnecting = false;
-    }
-  }
-
-  /**
-   * Handle incoming server messages
-   */
-  private handleServerMessage(message: ServerMessage): void {
-    switch (message.type) {
-      case 'connected':
-        this.handleConnectedMessage(message.payload as ConnectedPayload);
-        break;
-
-      case 'event':
-        this.handleEventMessage(message.payload);
-        break;
-
-      case 'subscribed':
-        {
-          const payload = message.payload as { tripId: string };
-          this.subscribedTrips.add(payload.tripId);
-          logger.debug('WS', `Subscribed to trip: ${payload.tripId}`);
-        }
-        break;
-
-      case 'unsubscribed':
-        {
-          const payload = message.payload as { tripId: string };
-          this.subscribedTrips.delete(payload.tripId);
-          logger.debug('WS', `Unsubscribed from trip: ${payload.tripId}`);
-        }
-        break;
-
-      case 'pong':
-        // Server responded to our ping
-        break;
-
-      case 'error':
-        logger.error('WS', 'Server error:', message.error);
-        this.callbacks.onError?.(new Error(message.error || 'Unknown server error'));
-        break;
-
-      default:
-        logger.warn('WS', 'Unknown message type:', message.type);
-    }
-  }
-
-  /**
-   * Handle the 'connected' message from server
-   */
-  private handleConnectedMessage(payload: ConnectedPayload): void {
-    logger.info('WS', `Connected as user ${payload.userId}, subscribed to ${payload.tripCount} trips`);
-
-    // Update subscribed trips set
-    this.subscribedTrips.clear();
-    payload.trips.forEach(tripId => this.subscribedTrips.add(tripId));
-  }
-
-  /**
-   * Handle event messages (trip events, chat, location, etc.)
-   */
-  private handleEventMessage(payload: unknown): void {
-    if (!payload || typeof payload !== 'object') {
-      logger.warn('WS', 'Invalid event payload');
-      return;
-    }
-
-    const event = payload as ServerEvent;
-
-    // Try to parse as notification first
-    const notificationResult = ZodNotificationSchema.safeParse(payload);
-    if (notificationResult.success) {
-      const notification = notificationResult.data;
-      logger.debug('WS', `Received notification: ${notification.type}`);
-      useNotificationStore.getState().handleIncomingNotification(notification);
-      this.callbacks.onMessage?.(notification);
-      return;
-    }
-
-    // Handle as ServerEvent
-    if (event.type) {
-      logger.debug('WS', `Received event: ${event.type}`);
-
-      // Handle location events
-      if (isLocationEvent(event) && event.tripId) {
-        this.handleLocationEvent(event, event.tripId);
-      }
-
-      // Handle chat events
-      if (isChatEvent(event)) {
-        this.handleChatEvent(event);
-      }
-
-      // Forward to callbacks
-      this.callbacks.onMessage?.(event);
+      await this.handleConnectionError(tripId, callbacks);
     }
   }
 
@@ -240,7 +163,7 @@ export class WebSocketManager {
           timestamp: number;
         }
       };
-
+      
       if (userId && location) {
         useLocationStore.getState().updateMemberLocation(tripId, {
           userId,
@@ -254,31 +177,44 @@ export class WebSocketManager {
         });
       }
     } else if (event.type === 'LOCATION_SHARING_CHANGED' && event.payload) {
+      // Handle location sharing status changes if needed
       const { userId, isSharingEnabled } = event.payload as {
         userId: string;
         isSharingEnabled: boolean;
       };
+      
+      // You might want to update UI or take other actions based on this event
       logger.debug('WS', `User ${userId} ${isSharingEnabled ? 'enabled' : 'disabled'} location sharing`);
     }
   }
 
   private handleChatEvent(event: ServerEvent): void {
-    const { useChatStore } = require('../store/useChatStore');
-
+    // Forward the chat event to the chat store
+    const { useChatStore } = require('../features/chat/store');
+    
+    // Add detailed logging of the raw event
     logger.debug('WS', 'Received chat event type:', event.type);
-
-    // Handle CHAT_MESSAGE_SEND as MESSAGE_SENT
+    logger.debug('WS', 'Raw event data:', JSON.stringify(event, null, 2));
+    
+    // Special handling for CHAT_MESSAGE_SEND events (not in the ServerEventType enum)
+    // Use type assertion to handle custom event type
     const eventType = event.type as string;
     if (eventType === 'CHAT_MESSAGE_SEND') {
+      logger.debug('WS', 'Handling CHAT_MESSAGE_SEND event as MESSAGE_SENT');
+      
       try {
         const payload = event.payload as {
           messageId: string;
           tripId: string;
           content: string;
-          user: { id: string; name: string; avatar?: string };
+          user: {
+            id: string;
+            name: string;
+            avatar?: string;
+          };
           timestamp: string;
         };
-
+        
         const mappedEvent = {
           id: event.id,
           type: 'MESSAGE_SENT',
@@ -289,23 +225,28 @@ export class WebSocketManager {
             message: {
               id: payload.messageId,
               content: payload.content,
-              sender: payload.user,
+              sender: {
+                id: payload.user.id,
+                name: payload.user.name,
+                avatar: payload.user.avatar
+              },
               createdAt: payload.timestamp
             }
           }
         };
-
+        
+        logger.debug('WS', 'Created MESSAGE_SENT event from CHAT_MESSAGE_SEND with message ID:', payload.messageId);
         useChatStore.getState().handleChatEvent(mappedEvent);
         return;
       } catch (error) {
-        logger.error('WS', 'Error handling CHAT_MESSAGE_SEND:', error);
+        logger.error('WS', 'Error handling CHAT_MESSAGE_SEND event:', error);
         return;
       }
     }
-
-    // Map event types to what chat store expects
+    
+    // Map the new event types to the ones expected by the chat store
     let mappedEvent;
-
+    
     switch (event.type) {
       case 'CHAT_MESSAGE_SENT':
         {
@@ -313,10 +254,16 @@ export class WebSocketManager {
             messageId: string;
             tripId: string;
             content: string;
-            user: { id: string; name: string; avatar?: string };
+            user: {
+              id: string;
+              name: string;
+              avatar?: string;
+            };
             timestamp: string;
           };
-
+          
+          logger.debug('WS', 'Mapping CHAT_MESSAGE_SENT event to MESSAGE_SENT');
+          
           mappedEvent = {
             id: event.id,
             type: 'MESSAGE_SENT',
@@ -327,80 +274,118 @@ export class WebSocketManager {
               message: {
                 id: payload.messageId,
                 content: payload.content,
-                sender: payload.user,
+                sender: {
+                  id: payload.user.id,
+                  name: payload.user.name,
+                  avatar: payload.user.avatar
+                },
                 createdAt: payload.timestamp
               }
             }
           };
+          
+          logger.debug('WS', 'Created MESSAGE_SENT event with message ID:', payload.messageId);
         }
         break;
-
+        
       case 'CHAT_MESSAGE_EDITED':
         {
-          const payload = event.payload as { messageId: string; tripId: string; content: string };
+          const payload = event.payload as {
+            messageId: string;
+            tripId: string;
+            content: string;
+          };
+          
           mappedEvent = {
             id: event.id,
             type: 'MESSAGE_EDITED',
             tripId: payload.tripId,
             userId: event.userId,
             timestamp: event.timestamp,
-            payload: { messageId: payload.messageId, content: payload.content }
+            payload: {
+              messageId: payload.messageId,
+              content: payload.content
+            }
           };
         }
         break;
-
+        
       case 'CHAT_MESSAGE_DELETED':
         {
-          const payload = event.payload as { messageId: string; tripId: string };
+          const payload = event.payload as {
+            messageId: string;
+            tripId: string;
+          };
+          
           mappedEvent = {
             id: event.id,
             type: 'MESSAGE_DELETED',
             tripId: payload.tripId,
             userId: event.userId,
             timestamp: event.timestamp,
-            payload: { messageId: payload.messageId }
+            payload: {
+              messageId: payload.messageId
+            }
           };
         }
         break;
-
+        
       case 'CHAT_REACTION_ADDED':
         {
           const payload = event.payload as {
             messageId: string;
             tripId: string;
             reaction: string;
-            user: { id: string; name: string; avatar?: string };
+            user: {
+              id: string;
+              name: string;
+              avatar?: string;
+            };
           };
+          
           mappedEvent = {
             id: event.id,
             type: 'REACTION_ADDED',
             tripId: payload.tripId,
             userId: event.userId,
             timestamp: event.timestamp,
-            payload: { messageId: payload.messageId, reaction: payload.reaction, user: payload.user }
+            payload: {
+              messageId: payload.messageId,
+              reaction: payload.reaction,
+              user: payload.user
+            }
           };
         }
         break;
-
+        
       case 'CHAT_REACTION_REMOVED':
         {
           const payload = event.payload as {
             messageId: string;
             tripId: string;
             reaction: string;
-            user: { id: string; name: string; avatar?: string };
+            user: {
+              id: string;
+              name: string;
+              avatar?: string;
+            };
           };
+          
           mappedEvent = {
             id: event.id,
             type: 'REACTION_REMOVED',
             tripId: payload.tripId,
             userId: event.userId,
             timestamp: event.timestamp,
-            payload: { messageId: payload.messageId, reaction: payload.reaction, userId: payload.user.id }
+            payload: {
+              messageId: payload.messageId,
+              reaction: payload.reaction,
+              userId: payload.user.id
+            }
           };
         }
         break;
-
+        
       case 'CHAT_READ_RECEIPT':
         {
           const payload = event.payload as {
@@ -411,6 +396,9 @@ export class WebSocketManager {
             userAvatar?: string;
             timestamp: string;
           };
+          
+          logger.debug('WS', 'Mapping CHAT_READ_RECEIPT event');
+          
           mappedEvent = {
             id: event.id,
             type: 'CHAT_READ_RECEIPT',
@@ -419,13 +407,19 @@ export class WebSocketManager {
             timestamp: event.timestamp,
             payload: {
               messageId: payload.messageId,
-              user: { id: payload.userId, name: payload.userName, avatar: payload.userAvatar },
+              user: {
+                id: payload.userId,
+                name: payload.userName,
+                avatar: payload.userAvatar
+              },
               timestamp: payload.timestamp || event.timestamp
             }
           };
+          
+          logger.debug('WS', 'Created CHAT_READ_RECEIPT event for message ID:', payload.messageId);
         }
         break;
-
+        
       case 'CHAT_TYPING_STATUS':
         {
           const payload = event.payload as {
@@ -434,30 +428,39 @@ export class WebSocketManager {
             isTyping: boolean;
             username: string;
           };
+          
           mappedEvent = {
             id: event.id,
             type: 'TYPING_STATUS',
             tripId: payload.tripId,
             userId: event.userId,
             timestamp: event.timestamp,
-            payload: { userId: payload.userId, isTyping: payload.isTyping, username: payload.username }
+            payload: {
+              userId: payload.userId,
+              isTyping: payload.isTyping,
+              username: payload.username
+            }
           };
         }
         break;
-
+        
       default:
+        // Unknown chat event type
         logger.warn('WS', `Unknown chat event type: ${event.type}`);
         return;
     }
-
-    if (mappedEvent) {
-      useChatStore.getState().handleChatEvent(mappedEvent);
-    }
+    
+    // Log the mapped event
+    logger.debug('WS', 'Mapped event type:', mappedEvent?.type);
+    logger.debug('WS', 'Mapped event data:', JSON.stringify(mappedEvent, null, 2));
+    
+    // Forward the mapped event to the chat store
+    useChatStore.getState().handleChatEvent(mappedEvent);
   }
 
-  private async handleConnectionError(): Promise<void> {
+  private async handleConnectionError(tripId: string, callbacks?: ConnectionCallbacks): Promise<void> {
     this.reconnectAttempts++;
-
+    
     if (this.reconnectAttempts <= this.maxReconnectAttempts) {
       const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 30000);
       logger.debug('WS', `Attempting reconnection in ${delay}ms`, {
@@ -466,73 +469,17 @@ export class WebSocketManager {
       });
 
       await new Promise(resolve => setTimeout(resolve, delay));
-      return this.connect();
+      return this.connect(tripId, callbacks);
     }
-
+    
     logger.error('WS', 'Max reconnection attempts reached');
     this.disconnect();
   }
 
-  private async reconnect(): Promise<void> {
+  private async reconnect(tripId: string, callbacks?: ConnectionCallbacks): Promise<void> {
     this.disconnect();
     await new Promise(resolve => setTimeout(resolve, 1000));
-    await this.connect();
-  }
-
-  /**
-   * Subscribe to a specific trip's events
-   * Used when user joins a new trip while connected
-   */
-  public subscribeToTrip(tripId: string): boolean {
-    if (!this.connection?.isConnected()) {
-      logger.warn('WS', 'Cannot subscribe to trip: not connected');
-      return false;
-    }
-
-    if (this.subscribedTrips.has(tripId)) {
-      logger.debug('WS', `Already subscribed to trip: ${tripId}`);
-      return true;
-    }
-
-    return this.connection.send({
-      type: 'subscribe',
-      payload: { tripId }
-    });
-  }
-
-  /**
-   * Unsubscribe from a specific trip's events
-   * Used when user leaves a trip while connected
-   */
-  public unsubscribeFromTrip(tripId: string): boolean {
-    if (!this.connection?.isConnected()) {
-      logger.warn('WS', 'Cannot unsubscribe from trip: not connected');
-      return false;
-    }
-
-    if (!this.subscribedTrips.has(tripId)) {
-      logger.debug('WS', `Not subscribed to trip: ${tripId}`);
-      return true;
-    }
-
-    return this.connection.send({
-      type: 'unsubscribe',
-      payload: { tripId }
-    });
-  }
-
-  /**
-   * Check if subscribed to a specific trip
-   */
-  public isSubscribedToTrip(tripId: string): boolean {
-    return this.subscribedTrips.has(tripId);
-  }
-
-  /**
-   * Get list of subscribed trip IDs
-   */
-  public getSubscribedTrips(): string[] {
-    return Array.from(this.subscribedTrips);
+    await this.connect(tripId, callbacks);
   }
 
   public disconnect(): void {
@@ -544,15 +491,14 @@ export class WebSocketManager {
     if (this.connection) {
       this.connection.disconnect();
       this.connection = null;
+      this.currentTripId = null;
     }
 
-    this.subscribedTrips.clear();
     this.reconnectAttempts = 0;
-    this.isConnecting = false;
   }
 
   /**
-   * Pause connection when app goes to background
+   * Pause all WebSocket connections when app goes to background
    */
   public pauseAllConnections(): void {
     if (this.connection) {
@@ -561,33 +507,60 @@ export class WebSocketManager {
   }
 
   /**
-   * Resume connection when app comes to foreground
+   * Resume all WebSocket connections when app comes to foreground
    */
   public resumeAllConnections(): void {
-    this.connect();
+    if (this.currentTripId) {
+      this.connect(this.currentTripId);
+    }
   }
 
-  /**
-   * Send a message through the WebSocket
-   */
   public send(type: string, payload: Record<string, unknown>): boolean {
-    if (!this.connection?.isConnected()) {
+    logger.debug('WS', `send method called with type: ${type}`);
+    
+    if (!this.connection) {
+      logger.error('WS', 'Cannot send message, no connection object');
+      return false;
+    }
+    
+    if (!this.isConnected()) {
       logger.error('WS', 'Cannot send message, not connected');
       return false;
     }
-
-    const userId = useAuthStore.getState().user?.id;
-    if (!userId) {
-      logger.error('WS', 'Cannot send message, no user ID');
+    
+    if (!this.currentTripId) {
+      logger.error('WS', 'Cannot send message, no current trip ID');
       return false;
     }
-
-    return this.connection.send({ type, payload: { ...payload, userId } });
+    
+    try {
+      const userId = useAuthStore.getState().user?.id;
+      if (!userId) {
+        logger.error('WS', 'Cannot send message, no user ID');
+        return false;
+      }
+      
+      const message = {
+        type,
+        tripId: this.currentTripId,
+        userId,
+        payload
+      };
+      
+      logger.debug('WS', `Sending message of type ${type} to trip ${this.currentTripId}`);
+      logger.debug('WS', 'Message payload:', JSON.stringify(payload, null, 2));
+      
+      const result = this.connection.send(message);
+      logger.debug('WS', `Message send result: ${result ? 'success' : 'failure'}`);
+      
+      return result;
+    } catch (error) {
+      logger.error('WS', 'Error sending message:', error);
+      return false;
+    }
   }
 
-  /**
-   * Send a chat message
-   */
+  // Simplified method to send chat messages
   public sendChatMessage(tripId: string, content: string, messageId: string): boolean {
     const user = useAuthStore.getState().user;
     if (!user) {
@@ -595,7 +568,7 @@ export class WebSocketManager {
       return false;
     }
 
-    return this.send('CHAT_MESSAGE_SEND', {
+    const messagePayload = {
       tripId,
       content,
       messageId,
@@ -605,47 +578,64 @@ export class WebSocketManager {
         avatar: user.profilePicture
       },
       timestamp: new Date().toISOString()
-    });
+    };
+
+    return this.send('CHAT_MESSAGE_SEND', messagePayload);
   }
 
-  /**
-   * Send typing status
-   */
+  // Simplified method to send typing status
   public sendTypingStatus(tripId: string, isTyping: boolean): boolean {
     const user = useAuthStore.getState().user;
     if (!user) {
+      logger.error('WS', 'Cannot send typing status, user not logged in');
       return false;
     }
 
-    return this.send('TYPING_STATUS', {
+    const typingPayload = {
       tripId,
       isTyping,
       userId: user.id,
       username: user.username || user.firstName || 'You'
-    });
-  }
+    };
 
-  /**
-   * Send read receipt
-   */
-  public sendReadReceipt(tripId: string, messageId: string): boolean {
-    const user = useAuthStore.getState().user;
-    if (!user) {
-      return false;
-    }
-
-    return this.send('READ_RECEIPT', {
-      tripId,
-      messageId,
-      userId: user.id,
-      userName: user.username || user.firstName || 'You',
-      userAvatar: user.profilePicture,
-      timestamp: new Date().toISOString()
-    });
+    return this.send('TYPING_STATUS', typingPayload);
   }
 
   public isConnected(): boolean {
-    return this.connection?.isConnected() || false;
+    const connected = this.connection?.isConnected() || false;
+    logger.debug('WS', `WebSocketManager.isConnected() called, result: ${connected}`);
+    return connected;
+  }
+
+  public sendReadReceipt(tripId: string, messageId: string): boolean {
+    logger.debug('WS', `Sending read receipt for message ${messageId} in trip ${tripId}`);
+    
+    if (!this.connection || !this.connection.isConnected()) {
+      logger.warn('WS', 'Cannot send read receipt: WebSocket not connected');
+      return false;
+    }
+    
+    try {
+      const { user } = useAuthStore.getState();
+      if (!user) {
+        logger.warn('WS', 'Cannot send read receipt: User not authenticated');
+        return false;
+      }
+      
+      const payload = {
+        tripId,
+        messageId,
+        userId: user.id,
+        userName: user.username || user.firstName || 'You',
+        userAvatar: user.profilePicture,
+        timestamp: new Date().toISOString()
+      };
+      
+      return this.send('READ_RECEIPT', payload);
+    } catch (error) {
+      logger.error('WS', 'Error sending read receipt:', error);
+      return false;
+    }
   }
 }
 

@@ -2,9 +2,9 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Text, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAuthStore } from '@/src/store/useAuthStore';
+import { useAuthStore } from '@/src/features/auth/store';
 import { ThemedView } from '@/components/ThemedView';
-import { useTripStore } from '@/src/store/useTripStore';
+import { useTripStore } from '@/src/features/trips/store';
 import { jwtDecode } from 'jwt-decode';
 import { logger } from '@/src/utils/logger';
 
