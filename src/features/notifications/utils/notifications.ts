@@ -52,7 +52,7 @@ export function configureNotifications() {
 
     if (data?.type === 'TRIP_INVITE' && data.token) {
       const token = data.token;
-      logger.debug('NOTIFICATION', `Processing invitation token: ${token.substring(0, 15)}...`);
+      logger.debug('NOTIFICATION', 'Processing invitation token', { hasToken: !!token });
       
       const { user } = useAuthStore.getState();
       
@@ -65,7 +65,12 @@ export function configureNotifications() {
           
           try {
             const decodedToken: InvitationToken = jwtDecode(token);
-            logger.debug('NOTIFICATION', 'Decoded token:', decodedToken);
+            logger.debug('NOTIFICATION', 'Decoded token', {
+              hasTripId: !!decodedToken.tripId,
+              hasInviteeEmail: !!decodedToken.inviteeEmail,
+              hasInvitationId: !!decodedToken.invitationId,
+              isExpired: decodedToken.exp ? decodedToken.exp * 1000 < Date.now() : false
+            });
             
             // Check if token is expired
             if (decodedToken.exp && decodedToken.exp * 1000 < Date.now()) {
