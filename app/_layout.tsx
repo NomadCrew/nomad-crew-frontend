@@ -11,8 +11,8 @@ import { AuthProvider } from '@/src/features/auth/components/AuthProvider';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { OnboardingProvider } from '@/src/providers/OnboardingProvider';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { queryClient } from '@/src/lib/query-client';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { queryClient, queryPersister } from '@/src/lib/query-client';
 
 console.log('[RootLayout] Rendering');
 
@@ -47,7 +47,10 @@ export default function RootLayout() {
   try {
     SplashScreen.hideAsync();
     return (
-      <QueryClientProvider client={queryClient}>
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{ persister: queryPersister }}
+      >
         <GestureHandlerRootView style={{ flex: 1 }}>
           <ThemeProvider>
             <OnboardingProvider>
@@ -61,7 +64,7 @@ export default function RootLayout() {
             </OnboardingProvider>
           </ThemeProvider>
         </GestureHandlerRootView>
-      </QueryClientProvider>
+      </PersistQueryClientProvider>
     );
   } catch (e: any) {
     SplashScreen.hideAsync();
