@@ -111,7 +111,7 @@ export const colorTokens = {
     content: {
       primary: isDark ? '#F8FAFC' : '#1A1A1A',
       secondary: isDark ? '#CBD5E1' : '#404040',
-      tertiary: isDark ? '#94A3B8' : '#555555',
+      tertiary: isDark ? '#555555' : '#555555',
       disabled: isDark ? '#475569' : '#D4D4D4',
       onSurface: isDark ? '#FFFFFF' : colorTokens.gray[900],
       onSurfaceVariant: isDark ? colorTokens.gray[300] : colorTokens.gray[700],

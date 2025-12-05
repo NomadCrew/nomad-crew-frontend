@@ -1,9 +1,9 @@
 import React from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { Mail, Facebook, Apple } from 'lucide-react-native';
-import { ThemedText } from '@/components/ThemedText';
+import { ThemedText } from '@/src/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import  GoogleIcon  from '../icons/google';
 
 interface AuthOptionButtonProps {
@@ -19,7 +19,7 @@ export function AuthOptionButton({
   onPress,
   disabled = false
 }: AuthOptionButtonProps) {
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   
   const getIcon = () => {
     switch(provider) {

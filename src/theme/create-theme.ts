@@ -1,8 +1,15 @@
+/**
+ * create-theme.ts
+ * -----------------------------------
+ * Theme creation logic using tokens from theme.ts as the single source of truth.
+ */
+
 import { ThemeOptions, Theme, BREAKPOINTS } from './types';
 import { createSemanticColors } from './foundations/colors';
 import { createTypography } from './foundations/typography';
 import { createSemanticSpacing } from './foundations/spacing';
 import { createSemanticElevation } from './foundations/elevation';
+import { borderRadius } from './theme';
 
 const defaultBorderRadius = {
   none: 0,
@@ -39,18 +46,15 @@ export function createTheme(options: ThemeOptions = {}): Theme {
     elevation,
     breakpoints,
     borderRadius: {
-      xs: customBorderRadius?.xs ?? 2,
-      sm: customBorderRadius?.sm ?? 4,
-      md: customBorderRadius?.md ?? 8,
-      lg: customBorderRadius?.lg ?? 12,
-      xl: customBorderRadius?.xl ?? 16,
+      ...borderRadius,
+      ...customBorderRadius,
     },
     dark: isDark,
     components: {
       Button: {
         base: {
           height: 48,
-          borderRadius: defaultBorderRadius.md,
+          borderRadius: borderRadius.md,
           paddingHorizontal: spacing.components.button.paddingHorizontal,
           flexDirection: 'row',
           alignItems: 'center',

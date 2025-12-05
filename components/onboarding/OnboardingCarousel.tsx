@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { StyleSheet, View, Platform, useWindowDimensions, Image, TextStyle } from 'react-native';
 import Onboarding from 'react-native-onboarding-swiper';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { ThemedText } from '@/components/ThemedText';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { ThemedText } from '@/src/components/ThemedText';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import type { OnboardingSlide } from '@/src/types/onboarding';
 
 // Add declaration for the module
@@ -16,7 +16,7 @@ interface Props {
 
 export function OnboardingCarousel({ slides, onComplete }: Props) {
   const [_currentIndex, _setCurrentIndex] = useState(0);
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   const { width: _screenWidth } = useWindowDimensions();
 
   // Components for the onboarding pages

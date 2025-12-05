@@ -1,9 +1,9 @@
 import { useWindowDimensions } from 'react-native';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 
 export function useResponsiveLayout() {
   const { width } = useWindowDimensions();
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
   
   return {
     isTablet: width >= theme.breakpoints.tablet,

@@ -8,10 +8,10 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Loader2, ArrowLeft } from 'lucide-react-native';
-import { useAuthStore } from '@/src/store/useAuthStore';
-import { ThemedText } from '@/components/ThemedText';
+import { useAuthStore } from '@/src/features/auth/store';
+import { ThemedText } from '@/src/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { useTheme } from '@/src/theme/ThemeProvider';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { getInputStyles, getButtonStyles } from '@/src/theme/styles';
 
 const getFriendlyErrorMessage = (error: string) => {
@@ -30,7 +30,7 @@ export default function EmailLoginScreen() {
   const [password, setPassword] = useState('');
   const [focusedInput, setFocusedInput] = useState<'email' | 'password' | null>(null);
   const { login, loading, error } = useAuthStore();
-  const { theme } = useTheme();
+  const { theme } = useAppTheme();
 
   const inputStyles = getInputStyles(theme);
   const buttonStyles = getButtonStyles(theme, loading);
