@@ -1,5 +1,45 @@
 /* global jest */
 
+// Mock localStorage FIRST before any imports
+const localStorageMock = {
+  getItem: jest.fn(),
+  setItem: jest.fn(),
+  removeItem: jest.fn(),
+  clear: jest.fn(),
+  key: jest.fn(),
+  length: 0,
+};
+Object.defineProperty(global, 'localStorage', {
+  value: localStorageMock,
+  writable: true,
+});
+
+// Mock TanStack Query persisters that use localStorage
+jest.mock('@tanstack/query-sync-storage-persister', () => ({
+  createSyncStoragePersister: jest.fn(() => ({
+    persistClient: jest.fn(),
+    removeClient: jest.fn(),
+  })),
+}));
+
+jest.mock('@tanstack/react-query-persist-client', () => ({
+  PersistQueryClientProvider: ({ children }) => children,
+}));
+
+// Mock the query client module to prevent persister initialization
+jest.mock('./src/lib/query-client', () => {
+  const { QueryClient } = jest.requireActual('@tanstack/react-query');
+  return {
+    queryClient: new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    }),
+    queryPersister: { persistClient: jest.fn(), removeClient: jest.fn() },
+  };
+});
+
 // Mock expo-router
 jest.mock('expo-router/entry');
 jest.mock('expo-router', () => ({
