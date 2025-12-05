@@ -130,7 +130,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
             if (!backendUser?.username) {
               set({ needsUsername: true }); // Only set needsUsername, keep user object
-              console.warn('[AUTH] Session restored but backend user missing or username not set. needsUsername=true');
+              logger.warn('AUTH', 'Session restored but backend user missing or username not set', { needsUsername: true });
             } else {
               // If backend user has a username, ensure needsUsername is false
               set({ needsUsername: false });
@@ -138,10 +138,10 @@ export const useAuthStore = create<AuthState>((set, get) => {
           } catch (err: any) {
             if (err?.response?.status === 404) {
               set({ needsUsername: true }); // Only set needsUsername, keep user object
-              console.warn('[AUTH] Session restored but backend user not found. needsUsername=true');
+              logger.warn('AUTH', 'Session restored but backend user not found', { needsUsername: true });
             } else {
               // Handle other errors as needed
-              console.error('[AUTH] Error validating backend user profile on session restore:', err);
+              logger.error('AUTH', 'Error validating backend user profile on session restore', err);
               // Potentially set needsUsername to true here as well, as we don't know the state
               // Or, keep it as is and rely on a loading/error state elsewhere.
               // For now, let's assume if we can't fetch the profile, we might need username.
@@ -318,7 +318,11 @@ export const useAuthStore = create<AuthState>((set, get) => {
           },
         });
 
-        console.log('Supabase register response:', data);
+        logger.debug('AUTH', 'Supabase register response received', {
+          hasSession: !!data.session,
+          hasUser: !!data.user,
+          userId: data.user?.id
+        });
         if (error) throw error;
         // After successful Supabase signUp, the user is created, and a session might be returned directly,
         // or the user might need to verify their email first depending on Supabase project settings.
@@ -333,9 +337,11 @@ export const useAuthStore = create<AuthState>((set, get) => {
             lastName: data.session.user.user_metadata?.lastName,
             profilePicture: data.session.user.user_metadata?.avatar_url,
           };
-          console.log('Setting Zustand user after register:', user);
-          console.log('Setting Zustand token after register:', data.session.access_token);
-          console.log('Setting Zustand refreshToken after register:', data.session.refresh_token);
+          logger.debug('AUTH', 'Setting user state after register', {
+            userId: user.id,
+            hasToken: !!data.session.access_token,
+            hasRefreshToken: !!data.session.refresh_token
+          });
           // Onboard user with backend
           try {
             user = await onboardUser(user.username || user.email?.split('@')[0] || '');
@@ -403,7 +409,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
           await registerPushTokenService(token.data); // Use service method
         }
       } catch (error) {
-        console.error('Failed to register push token:', error);
+        logger.error('AUTH', 'Failed to register push token', error);
       }
     },
 
@@ -415,7 +421,10 @@ export const useAuthStore = create<AuthState>((set, get) => {
           password: credentials.password,
         });
 
-        console.log('Supabase login response:', data);
+        logger.debug('AUTH', 'Supabase login response received', {
+          hasSession: !!data.session,
+          userId: data.session?.user.id
+        });
         if (error) throw error;
         if (!data.session) throw new Error('Login successful but no session returned.');
 
@@ -424,7 +433,10 @@ export const useAuthStore = create<AuthState>((set, get) => {
         let user: User;
         try {
           user = await getCurrentUserProfile();
-          console.log('Fetched backend user profile after login:', user);
+          logger.debug('AUTH', 'Fetched backend user profile after login', {
+            userId: user.id,
+            hasUsername: !!user.username
+          });
         } catch (profileError) {
           logger.warn('AUTH', 'Failed to fetch backend user profile after login:', profileError);
           throw profileError;
@@ -437,7 +449,10 @@ export const useAuthStore = create<AuthState>((set, get) => {
           status: 'authenticated',
           error: null,
         });
-        console.log('Final Zustand user after login:', user);
+        logger.debug('AUTH', 'User state updated after login', {
+          userId: user.id,
+          status: 'authenticated'
+        });
       } catch (e: any) {
         logger.error('AUTH', 'Login failed:', e.message);
         await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY); // Clear token on failure
@@ -456,29 +471,38 @@ export const useAuthStore = create<AuthState>((set, get) => {
     handleGoogleSignInSuccess: async (session: Session) => {
       try {
         set({ loading: true, error: null, status: 'verifying' });
-        console.log('Supabase Google sign-in session:', session);
+        logger.debug('AUTH', 'Supabase Google sign-in session received', {
+          userId: session.user.id,
+          hasToken: !!session.access_token
+        });
         await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, session.access_token);
         let user: User | null = null;
         let needsUsername = false;
         try {
           user = await getCurrentUserProfile();
-          console.log('[AUTH] Got backend user profile after Google sign-in:', user);
+          logger.debug('AUTH', 'Got backend user profile after Google sign-in', {
+            userId: user?.id,
+            hasUsername: !!user?.username
+          });
         } catch (profileError: any) {
           if (profileError?.response?.status === 404) {
-            console.warn('[AUTH] Backend user not found after Google sign-in, attempting onboarding...');
+            logger.warn('AUTH', 'Backend user not found after Google sign-in, attempting onboarding');
             try {
               const defaultUsername = session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'user';
               user = await onboardUser(defaultUsername);
               needsUsername = !user.username;
-              console.log('[AUTH] User onboarded after 404:', user);
+              logger.info('AUTH', 'User onboarded after 404', {
+                userId: user?.id,
+                hasUsername: !!user?.username
+              });
             } catch (onboardError) {
               // Onboarding failed, force needsUsername
               needsUsername = true;
               user = null;
-              console.error('[AUTH] Onboarding failed after 404:', onboardError);
+              logger.error('AUTH', 'Onboarding failed after 404', onboardError);
             }
           } else {
-            console.warn('[AUTH] Failed to fetch backend user profile after Google sign-in:', profileError);
+            logger.warn('AUTH', 'Failed to fetch backend user profile after Google sign-in', profileError);
             // If it's a different error, still allow user to recover via username screen
             needsUsername = true;
             user = null;
@@ -486,7 +510,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         }
         if (!user?.username) {
           needsUsername = true;
-          console.warn('[AUTH] User profile missing username after Google sign-in. needsUsername set to true.');
+          logger.warn('AUTH', 'User profile missing username after Google sign-in', { needsUsername: true });
         }
         set({
           user: needsUsername ? { // If needs username, construct user from session, merging parts of local user if available
@@ -507,10 +531,14 @@ export const useAuthStore = create<AuthState>((set, get) => {
           error: null,
           needsUsername,
         });
-        console.log('[AUTH] Final Zustand user after Google sign-in:', user, 'needsUsername:', needsUsername);
+        logger.debug('AUTH', 'User state updated after Google sign-in', {
+          userId: user?.id,
+          needsUsername,
+          status: 'authenticated'
+        });
         get().registerPushToken();
       } catch (e: any) {
-        console.error('[AUTH] Error in handleGoogleSignInSuccess:', e.message);
+        logger.error('AUTH', 'Error in handleGoogleSignInSuccess', e.message);
         await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
         set({
           loading: false,
@@ -532,29 +560,35 @@ export const useAuthStore = create<AuthState>((set, get) => {
         let needsUsername = false;
         try {
           user = await getCurrentUserProfile();
-          console.log('[AUTH] Got backend user profile after Apple sign-in:', user);
+          logger.debug('AUTH', 'Got backend user profile after Apple sign-in', {
+            userId: user?.id,
+            hasUsername: !!user?.username
+          });
         } catch (profileError: any) {
           if (profileError?.response?.status === 404) {
-            console.warn('[AUTH] Backend user not found after Apple sign-in, attempting onboarding...');
+            logger.warn('AUTH', 'Backend user not found after Apple sign-in, attempting onboarding');
             try {
               const defaultUsername = session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'user';
               user = await onboardUser(defaultUsername);
               needsUsername = !user.username;
-              console.log('[AUTH] User onboarded after 404:', user);
+              logger.info('AUTH', 'User onboarded after 404', {
+                userId: user?.id,
+                hasUsername: !!user?.username
+              });
             } catch (onboardError) {
               needsUsername = true;
               user = null;
-              console.error('[AUTH] Onboarding failed after 404:', onboardError);
+              logger.error('AUTH', 'Onboarding failed after 404', onboardError);
             }
           } else {
-            console.warn('[AUTH] Failed to fetch backend user profile after Apple sign-in:', profileError);
+            logger.warn('AUTH', 'Failed to fetch backend user profile after Apple sign-in', profileError);
             needsUsername = true;
             user = null;
           }
         }
         if (!user?.username) {
           needsUsername = true;
-          console.warn('[AUTH] User profile missing username after Apple sign-in. needsUsername set to true.');
+          logger.warn('AUTH', 'User profile missing username after Apple sign-in', { needsUsername: true });
         }
         set({
           user: needsUsername ? { // If needs username, construct user from session, merging parts of local user if available
@@ -575,10 +609,14 @@ export const useAuthStore = create<AuthState>((set, get) => {
           error: null,
           needsUsername,
         });
-        console.log('[AUTH] Final Zustand user after Apple sign-in:', user, 'needsUsername:', needsUsername);
+        logger.debug('AUTH', 'User state updated after Apple sign-in', {
+          userId: user?.id,
+          needsUsername,
+          status: 'authenticated'
+        });
         get().registerPushToken(); 
       } catch (e: any) {
-        console.error('[AUTH] Error in handleAppleSignInSuccess:', e.message);
+        logger.error('AUTH', 'Error in handleAppleSignInSuccess', e.message);
         await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY); // Ensure cleanup
         set({
           loading: false,
