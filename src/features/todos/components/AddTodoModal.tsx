@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Portal, Modal, TextInput, Button } from 'react-native-paper';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
-import { useTodoStore } from '../store';
+import { useCreateTodo } from '../hooks';
 
 interface AddTodoModalProps {
   visible: boolean;
@@ -12,28 +12,29 @@ interface AddTodoModalProps {
 
 export const AddTodoModal = ({ visible, onClose, tripId }: AddTodoModalProps) => {
   const [text, setText] = useState('');
-  const { createTodo } = useTodoStore();
+  const createTodo = useCreateTodo();
   const theme = useAppTheme().theme;
 
   const handleSubmit = async () => {
     if (!text.trim()) return;
-    
-    await createTodo({
-      tripId,
-      text: text.trim()
-    });
-    
-    setText('');
-    onClose();
+
+    createTodo.mutate(
+      {
+        tripId,
+        text: text.trim(),
+      },
+      {
+        onSuccess: () => {
+          setText('');
+          onClose();
+        },
+      }
+    );
   };
 
   return (
     <Portal>
-      <Modal
-        visible={visible}
-        onDismiss={onClose}
-        contentContainerStyle={styles.modalContainer}
-      >
+      <Modal visible={visible} onDismiss={onClose} contentContainerStyle={styles.modalContainer}>
         <View style={[styles.content, { backgroundColor: theme.colors.background }]}>
           <TextInput
             label="To Do"
@@ -42,11 +43,7 @@ export const AddTodoModal = ({ visible, onClose, tripId }: AddTodoModalProps) =>
             mode="outlined"
             style={styles.input}
           />
-          <Button
-            mode="contained"
-            onPress={handleSubmit}
-            style={styles.button}
-          >
+          <Button mode="contained" onPress={handleSubmit} style={styles.button}>
             Add
           </Button>
         </View>
@@ -70,4 +67,4 @@ const styles = StyleSheet.create({
   button: {
     marginTop: 8,
   },
-}); 
+});
