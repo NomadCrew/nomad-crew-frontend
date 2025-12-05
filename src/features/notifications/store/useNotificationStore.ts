@@ -8,7 +8,7 @@ import {
   ChatMessageNotification,
   MarkNotificationsReadPayload,
   isChatMessageNotification,
-  isTripInvitationNotification
+  isTripInvitationNotification,
 } from '../types/notification';
 import { ServerEvent } from '@/src/types/events';
 import { apiClient, api } from '@/src/api/api-client';
@@ -24,18 +24,18 @@ interface NotificationState {
   unreadCount: number;
   hasHydrated: boolean; // To track store hydration from AsyncStorage
   latestChatMessageToast: ChatMessageNotification | null; // For transient toast display
-  
+
   // Loading and error states
   isFetching: boolean;
   isFetchingUnreadCount: boolean;
   isMarkingRead: boolean;
   isHandlingAction: boolean; // e.g., accepting/declining invites
   error: string | null;
-  
+
   // Pagination
   offset: number;
   hasMore: boolean;
-  
+
   // Actions
   fetchUnreadCount: () => Promise<void>;
   fetchNotifications: (options?: { loadMore?: boolean }) => Promise<void>;
@@ -74,11 +74,12 @@ export const useNotificationStore = create<NotificationState>()(
         try {
           // Get all notifications with status=unread and use the response length as the count
           const response = await api.get<Notification[]>('/v1/notifications', {
-            params: { status: 'unread' }
+            params: { status: 'unread' },
           });
           set({ unreadCount: response.data.length });
         } catch (err: any) {
-          const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch unread count';
+          const errorMessage =
+            err.response?.data?.message || err.message || 'Failed to fetch unread count';
           set({ error: errorMessage });
           logger.error('fetchUnreadCount failed:', err);
         } finally {
@@ -90,7 +91,7 @@ export const useNotificationStore = create<NotificationState>()(
         const { isFetching, offset, hasMore } = get();
         const limit = API_PAGE_LIMIT;
         if (isFetching || (!options.loadMore && offset > 0) || (options.loadMore && !hasMore)) {
-            return;
+          return;
         }
 
         set({ isFetching: true, error: null });
@@ -102,7 +103,7 @@ export const useNotificationStore = create<NotificationState>()(
           });
           const fetchedNotifications = response.data || [];
 
-          set(state => ({
+          set((state) => ({
             notifications: options.loadMore
               ? [...state.notifications, ...fetchedNotifications]
               : fetchedNotifications,
@@ -113,18 +114,18 @@ export const useNotificationStore = create<NotificationState>()(
           if (!options.loadMore) {
             get().fetchUnreadCount();
           }
-
         } catch (err: any) {
-          const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch notifications';
+          const errorMessage =
+            err.response?.data?.message || err.message || 'Failed to fetch notifications';
           set({ error: errorMessage });
           logger.error('fetchNotifications failed:', err);
         } finally {
-           set({ isFetching: false });
+          set({ isFetching: false });
         }
       },
 
       markNotificationRead: async (notificationId: string) => {
-        const notification = get().notifications.find(n => n.id === notificationId);
+        const notification = get().notifications.find((n) => n.id === notificationId);
         if (!notification || notification.isRead || get().isMarkingRead) return;
 
         set({ isMarkingRead: true, error: null });
@@ -132,20 +133,20 @@ export const useNotificationStore = create<NotificationState>()(
           // Use the correct endpoint for marking a single notification as read
           await api.patch(`/v1/notifications/${notificationId}/read`);
 
-          set(state => ({
-            notifications: state.notifications.map(n =>
+          set((state) => ({
+            notifications: state.notifications.map((n) =>
               n.id === notificationId ? { ...n, isRead: true } : n
             ),
           }));
 
           get().fetchUnreadCount();
-
         } catch (err: any) {
-          const errorMessage = err.response?.data?.message || err.message || 'Failed to mark notification as read';
+          const errorMessage =
+            err.response?.data?.message || err.message || 'Failed to mark notification as read';
           set({ error: errorMessage });
           logger.error('markNotificationRead failed:', err);
         } finally {
-            set({ isMarkingRead: false });
+          set({ isMarkingRead: false });
         }
       },
 
@@ -156,16 +157,19 @@ export const useNotificationStore = create<NotificationState>()(
           // Use the correct endpoint for marking all notifications as read
           await api.patch('/v1/notifications/read-all');
 
-          set(state => ({
-            notifications: state.notifications.map(n => ({ ...n, isRead: true })),
+          set((state) => ({
+            notifications: state.notifications.map((n) => ({ ...n, isRead: true })),
             unreadCount: 0,
           }));
         } catch (err: any) {
-          const errorMessage = err.response?.data?.message || err.message || 'Failed to mark all notifications as read';
+          const errorMessage =
+            err.response?.data?.message ||
+            err.message ||
+            'Failed to mark all notifications as read';
           get().fetchUnreadCount();
           logger.error('markAllNotificationsRead failed:', err);
         } finally {
-            set({ isMarkingRead: false });
+          set({ isMarkingRead: false });
         }
       },
 
@@ -178,7 +182,7 @@ export const useNotificationStore = create<NotificationState>()(
 
         // Handle CHAT_MESSAGE specifically
         if (isChatMessageNotification(notification)) {
-          set(state => ({
+          set((state) => ({
             // Set the transient state for the toast component to pick up
             latestChatMessageToast: notification,
             // Increment count only if the backend marked it as unread
@@ -190,9 +194,9 @@ export const useNotificationStore = create<NotificationState>()(
         }
 
         // Handle all other notification types
-        set(state => {
+        set((state) => {
           // Prevent duplicates if the same notification arrives multiple times via WS
-          if (state.notifications.some(n => n.id === notification.id)) {
+          if (state.notifications.some((n) => n.id === notification.id)) {
             logger.debug('Duplicate notification received via WS, ignoring:', notification.id);
             return state; // Return current state without modification
           }
@@ -237,16 +241,18 @@ export const useNotificationStore = create<NotificationState>()(
           logger.info(`Accepted trip invitation: ${inviteId}`);
 
           // Optional: Mark as read locally after accepting
-          set(state => ({
-             notifications: state.notifications.map(n =>
-               n.id === notification.id ? { ...n, read: true } : n
-             ),
-             // Adjust unreadCount if it was unread
-             unreadCount: !notification.read ? Math.max(0, state.unreadCount - 1) : state.unreadCount,
+          set((state) => ({
+            notifications: state.notifications.map((n) =>
+              n.id === notification.id ? { ...n, read: true } : n
+            ),
+            // Adjust unreadCount if it was unread
+            unreadCount: !notification.read
+              ? Math.max(0, state.unreadCount - 1)
+              : state.unreadCount,
           }));
-
         } catch (err: any) {
-          const errorMessage = err.response?.data?.message || err.message || 'Failed to accept trip invitation';
+          const errorMessage =
+            err.response?.data?.message || err.message || 'Failed to accept trip invitation';
           set({ error: errorMessage });
           logger.error('acceptTripInvitation failed:', err);
         } finally {
@@ -268,14 +274,19 @@ export const useNotificationStore = create<NotificationState>()(
           await api.post(`/v1/invitations/${inviteId}/decline`);
           logger.info(`Declined trip invitation: ${inviteId}`);
 
-          set(state => ({
-            notifications: state.notifications.map(n =>
-              n.id === notification.id ? { ...n, read: true, metadata: { ...n.metadata, status: 'declined' } } : n
+          set((state) => ({
+            notifications: state.notifications.map((n) =>
+              n.id === notification.id
+                ? { ...n, read: true, metadata: { ...n.metadata, status: 'declined' } }
+                : n
             ),
-            unreadCount: !notification.read ? Math.max(0, state.unreadCount - 1) : state.unreadCount,
+            unreadCount: !notification.read
+              ? Math.max(0, state.unreadCount - 1)
+              : state.unreadCount,
           }));
         } catch (err: any) {
-          const errorMessage = err.response?.data?.message || err.message || 'Failed to decline trip invitation';
+          const errorMessage =
+            err.response?.data?.message || err.message || 'Failed to decline trip invitation';
           set({ error: errorMessage });
           logger.error('declineTripInvitation failed:', err);
         } finally {
@@ -351,7 +362,8 @@ export const useNotificationStore = create<NotificationState>()(
 /**
  * Selector to get the latest unread chat message notification for toast display.
  */
-export const selectLatestChatMessageToast = (state: NotificationState) => state.latestChatMessageToast;
+export const selectLatestChatMessageToast = (state: NotificationState) =>
+  state.latestChatMessageToast;
 
 /**
  * Helper function to handle incoming server events that might contain notifications.
@@ -369,4 +381,70 @@ export const handleIncomingServerEventForNotifications = (event: ServerEvent) =>
     const chatNotification = event.payload as ChatMessageNotification; // This might need adjustment
     useNotificationStore.getState().handleIncomingNotification(chatNotification);
   }
-}; 
+};
+
+// ====================
+// SELECTORS
+// ====================
+
+/**
+ * Selectors for efficient component re-renders.
+ * Use these to select only the specific state needed by components.
+ */
+
+// Basic state selectors
+export const selectNotifications = (state: NotificationState) => state.notifications;
+export const selectUnreadCount = (state: NotificationState) => state.unreadCount;
+export const selectHasHydrated = (state: NotificationState) => state.hasHydrated;
+
+// Loading state selectors
+export const selectIsFetching = (state: NotificationState) => state.isFetching;
+export const selectIsFetchingUnreadCount = (state: NotificationState) =>
+  state.isFetchingUnreadCount;
+export const selectIsMarkingRead = (state: NotificationState) => state.isMarkingRead;
+export const selectIsHandlingAction = (state: NotificationState) => state.isHandlingAction;
+export const selectError = (state: NotificationState) => state.error;
+
+// Pagination selectors
+export const selectHasMore = (state: NotificationState) => state.hasMore;
+export const selectOffset = (state: NotificationState) => state.offset;
+
+// Derived selectors
+export const selectUnreadNotifications = (state: NotificationState) =>
+  state.notifications.filter((n) => !n.read);
+
+export const selectReadNotifications = (state: NotificationState) =>
+  state.notifications.filter((n) => n.read);
+
+export const selectNotificationById = (id: string) => (state: NotificationState) =>
+  state.notifications.find((n) => n.id === id);
+
+export const selectNotificationsByType = (type: string) => (state: NotificationState) =>
+  state.notifications.filter((n) => n.type === type);
+
+export const selectTripInvitations = (state: NotificationState) =>
+  state.notifications.filter(isTripInvitationNotification);
+
+export const selectChatNotifications = (state: NotificationState) =>
+  state.notifications.filter(isChatMessageNotification);
+
+// Action selectors (for components that only need actions)
+export const selectNotificationActions = (state: NotificationState) => ({
+  fetchNotifications: state.fetchNotifications,
+  fetchUnreadCount: state.fetchUnreadCount,
+  markNotificationRead: state.markNotificationRead,
+  markAllNotificationsRead: state.markAllNotificationsRead,
+  acceptTripInvitation: state.acceptTripInvitation,
+  declineTripInvitation: state.declineTripInvitation,
+  clearChatToast: state.clearChatToast,
+  clearNotifications: state.clearNotifications,
+});
+
+// Composite selectors (for common combinations)
+export const selectNotificationsWithStatus = (state: NotificationState) => ({
+  notifications: state.notifications,
+  unreadCount: state.unreadCount,
+  isFetching: state.isFetching,
+  hasMore: state.hasMore,
+  error: state.error,
+});
