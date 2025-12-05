@@ -7,6 +7,7 @@ import {
   PaginationInfo,
   ReadReceipt,
   ChatMessage,
+  QueuedMessage,
 } from './types';
 import { chatService } from './service';
 import { useAuthStore } from '@/src/features/auth/store';
@@ -24,6 +25,7 @@ const MESSAGES_STORAGE_KEY = 'nomad_crew_chat_messages';
 const READ_RECEIPTS_STORAGE_KEY = 'nomad_crew_read_receipts';
 const LAST_READ_STORAGE_KEY = 'nomad_crew_last_read';
 const TYPING_TIMEOUT = 5000; // 5 seconds
+const MAX_RETRY_COUNT = 3; // Maximum number of retries for offline messages
 
 // Helper functions for persistence
 const persistMessages = async (messagesByTripId: Record<string, ChatMessageWithStatus[]>) => {
@@ -113,6 +115,8 @@ export const useChatStore = create<ChatState>()(
       // Add read receipt state
       lastReadMessageIds: {},
       readReceipts: {},
+      // Offline queue state
+      offlineQueue: [],
 
       // Initialize store with persisted data
       initializeStore: async () => {
@@ -738,6 +742,108 @@ export const useChatStore = create<ChatState>()(
         } catch (error) {
           logger.error('ChatStore', 'Failed to send typing status:', error);
         }
+      },
+
+      // Queue a message for offline sending
+      queueMessage: (message: Omit<QueuedMessage, 'id' | 'retryCount' | 'status'>) => {
+        logger.debug('ChatStore', 'Queueing message for offline sending');
+
+        const queuedMessage: QueuedMessage = {
+          ...message,
+          id: uuidv4(),
+          retryCount: 0,
+          status: 'pending',
+        };
+
+        set((state) => ({
+          offlineQueue: [...state.offlineQueue, queuedMessage],
+        }));
+
+        logger.debug('ChatStore', `Message queued with ID: ${queuedMessage.id}`);
+      },
+
+      // Process the offline queue
+      processQueue: async () => {
+        const { offlineQueue } = get();
+
+        if (offlineQueue.length === 0) {
+          logger.debug('ChatStore', 'No messages in offline queue');
+          return;
+        }
+
+        logger.debug('ChatStore', `Processing ${offlineQueue.length} messages from offline queue`);
+
+        // Get all pending messages
+        const pendingMessages = offlineQueue.filter(
+          (msg) =>
+            msg.status === 'pending' ||
+            (msg.status === 'failed' && msg.retryCount < MAX_RETRY_COUNT)
+        );
+
+        for (const message of pendingMessages) {
+          try {
+            logger.debug('ChatStore', `Attempting to send queued message: ${message.id}`);
+
+            // Mark as sending
+            set((state) => ({
+              offlineQueue: state.offlineQueue.map((msg) =>
+                msg.id === message.id ? { ...msg, status: 'sending' as const } : msg
+              ),
+            }));
+
+            // Attempt to send the message
+            await get().sendMessage({
+              tripId: message.tripId,
+              content: message.content,
+            });
+
+            // Remove from queue on success
+            get().removeFromQueue(message.id);
+            logger.debug('ChatStore', `Successfully sent queued message: ${message.id}`);
+          } catch (error) {
+            logger.error('ChatStore', `Failed to send queued message: ${message.id}`, error);
+
+            // Check if we should retry
+            if (message.retryCount < MAX_RETRY_COUNT - 1) {
+              // Increment retry count and mark as failed
+              set((state) => ({
+                offlineQueue: state.offlineQueue.map((msg) =>
+                  msg.id === message.id
+                    ? { ...msg, status: 'failed' as const, retryCount: msg.retryCount + 1 }
+                    : msg
+                ),
+              }));
+              logger.debug(
+                'ChatStore',
+                `Will retry message ${message.id} (retry ${message.retryCount + 1}/${MAX_RETRY_COUNT})`
+              );
+            } else {
+              // Max retries reached, mark as permanently failed
+              get().markQueueItemFailed(message.id);
+              logger.error('ChatStore', `Max retries reached for message: ${message.id}`);
+            }
+          }
+        }
+      },
+
+      // Remove a message from the queue
+      removeFromQueue: (id: string) => {
+        logger.debug('ChatStore', `Removing message from queue: ${id}`);
+
+        set((state) => ({
+          offlineQueue: state.offlineQueue.filter((msg) => msg.id !== id),
+        }));
+      },
+
+      // Mark a queued message as permanently failed
+      markQueueItemFailed: (id: string) => {
+        logger.debug('ChatStore', `Marking queued message as failed: ${id}`);
+
+        set((state) => ({
+          offlineQueue: state.offlineQueue.map((msg) =>
+            msg.id === id ? { ...msg, status: 'failed' as const, retryCount: MAX_RETRY_COUNT } : msg
+          ),
+        }));
       },
     }),
     { name: 'ChatStore' }
