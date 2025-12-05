@@ -1,20 +1,29 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, StyleSheet, TextInput, Animated, TouchableOpacity, ScrollView, RefreshControl, Platform, Text, Dimensions } from 'react-native';
+import React, { useState, useRef, useCallback } from 'react';
+import {
+  StyleSheet,
+  TextInput,
+  Animated,
+  TouchableOpacity,
+  ScrollView,
+  RefreshControl,
+  Platform,
+  Text,
+  Dimensions,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TripList } from '@/src/features/trips/components/TripList';
-import { useTripStore } from '@/src/features/trips/store';
+import { useTrips, useCreateTrip } from '@/src/features/trips/hooks';
 import { router } from 'expo-router';
 import { ThemedView } from '@/src/components/ThemedView';
 import { ThemedText } from '@/src/components/ThemedText';
-import { Trip, TripStatus, CreateTripInput } from '@/src/features/trips/types';
+import { Trip, CreateTripInput } from '@/src/features/trips/types';
 import { FAB, ActivityIndicator } from 'react-native-paper';
 import CreateTripModal from '@/src/features/trips/components/CreateTripModal';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useAuthStore } from '@/src/features/auth/store';
 import { logger } from '@/src/utils/logger';
 
-const TABS: { key: 'Active' | 'History' | 'Cancelled', label: string }[] = [
+const TABS: { key: 'Active' | 'History' | 'Cancelled'; label: string }[] = [
   { key: 'Active', label: 'Active' },
   { key: 'History', label: 'History' },
   { key: 'Cancelled', label: 'Cancelled' },
@@ -106,7 +115,8 @@ function getStyles(theme: any) {
 
 export default function TripsScreen() {
   const insets = useSafeAreaInsets();
-  const { trips, fetchTrips, createTrip, loading: tripsLoading } = useTripStore();
+  const { data: trips = [], isLoading: tripsLoading, refetch } = useTrips();
+  const createTripMutation = useCreateTrip();
   const [modalVisible, setModalVisible] = useState(false);
   const { theme } = useAppTheme();
   const styles = getStyles(theme);
@@ -116,17 +126,6 @@ export default function TripsScreen() {
   const screenWidth = Dimensions.get('window').width;
   const searchWidth = useRef(new Animated.Value(40)).current;
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const { token, isInitialized } = useAuthStore();
-
-  useEffect(() => {
-    logger.info('UI', 'TripsScreen useEffect: isInitialized:', isInitialized, 'token exists:', !!token);
-    if (isInitialized && token) {
-      logger.info('UI', 'TripsScreen: Calling fetchTrips()');
-      fetchTrips();
-    } else {
-      logger.info('UI', 'TripsScreen: Conditions not met to fetch trips.');
-    }
-  }, [fetchTrips, token, isInitialized]);
 
   const toggleSearch = () => {
     Animated.timing(searchWidth, {
@@ -142,15 +141,20 @@ export default function TripsScreen() {
   };
 
   const filteredTrips = React.useMemo(() => {
-    logger.info('UI', 'TripsScreen: Recalculating filteredTrips. Trips from store:', trips);
+    logger.info(
+      'UI',
+      'TripsScreen: Recalculating filteredTrips. Trips from TanStack Query:',
+      trips
+    );
     logger.info('UI', 'TripsScreen: tripsLoading state:', tripsLoading);
     let filtered = [...trips];
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((trip) =>
-        trip.name.toLowerCase().includes(query) ||
-        (trip.destination?.address && trip.destination.address.toLowerCase().includes(query))
+      filtered = filtered.filter(
+        (trip) =>
+          trip.name.toLowerCase().includes(query) ||
+          (trip.destination?.address && trip.destination.address.toLowerCase().includes(query))
       );
     }
     const now = new Date();
@@ -179,13 +183,13 @@ export default function TripsScreen() {
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      await fetchTrips();
-    } catch (error) {
+      await refetch();
+    } catch (_error) {
       // Optionally handle error
     } finally {
       setIsRefreshing(false);
     }
-  }, [fetchTrips]);
+  }, [refetch]);
 
   const handleOpenModal = () => setModalVisible(true);
   const handleCloseModal = () => setModalVisible(false);
@@ -202,17 +206,21 @@ export default function TripsScreen() {
       startDate: new Date(tripData.startDate),
       endDate: new Date(tripData.endDate),
     };
-    console.log('[TripsScreen] handleSubmit input:', input);
-    const createdTrip = await createTrip(input);
-    console.log('[TripsScreen] handleSubmit createdTrip:', createdTrip);
-    await fetchTrips();
-    console.log('[TripsScreen] trips after fetch:', useTripStore.getState().trips);
-    setModalVisible(false);
-    return createdTrip;
+    logger.info('UI', 'TripsScreen handleSubmit input:', input);
+
+    try {
+      const createdTrip = await createTripMutation.mutateAsync(input);
+      logger.info('UI', 'TripsScreen handleSubmit createdTrip:', createdTrip);
+      setModalVisible(false);
+      return createdTrip;
+    } catch (error) {
+      logger.error('UI', 'Failed to create trip:', error);
+      throw error;
+    }
   };
 
   return (
-    <ThemedView style={[styles.container, { paddingTop: insets.top }]}> 
+    <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header with search */}
       <ThemedView style={styles.header}>
         <ThemedText variant="display.medium">My Trips</ThemedText>
@@ -245,17 +253,9 @@ export default function TripsScreen() {
           <TouchableOpacity
             key={tab.key}
             onPress={() => setActiveTab(tab.key)}
-            style={[
-              styles.tabButton,
-              activeTab === tab.key && styles.activeTabButton,
-            ]}
+            style={[styles.tabButton, activeTab === tab.key && styles.activeTabButton]}
           >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === tab.key && styles.activeTabText,
-              ]}
-            >
+            <Text style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
               {tab.label}
             </Text>
           </TouchableOpacity>
@@ -287,19 +287,13 @@ export default function TripsScreen() {
           <TripList trips={filteredTrips} onTripPress={handleTripPress} />
         ) : (
           <ThemedView style={styles.emptyContainer}>
-            <ThemedText style={styles.emptyText}>
-              No trips found for this filter
-            </ThemedText>
+            <ThemedText style={styles.emptyText}>No trips found for this filter</ThemedText>
           </ThemedView>
         )}
       </ScrollView>
 
       {/* Create Trip Modal */}
-      <CreateTripModal
-        visible={modalVisible}
-        onClose={handleCloseModal}
-        onSubmit={handleSubmit}
-      />
+      <CreateTripModal visible={modalVisible} onClose={handleCloseModal} onSubmit={handleSubmit} />
 
       {/* Add Trip FAB */}
       <FAB
@@ -314,4 +308,4 @@ export default function TripsScreen() {
       />
     </ThemedView>
   );
-} 
+}
