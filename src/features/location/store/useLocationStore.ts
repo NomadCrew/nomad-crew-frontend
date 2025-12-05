@@ -13,12 +13,12 @@ const MOCK_MODE = true; // Set to false when backend is ready
 
 // Generate mock member locations around a given center point
 const generateMockMemberLocations = (
-  centerLat: number, 
-  centerLng: number, 
+  centerLat: number,
+  centerLng: number,
   count: number = 3
 ): MemberLocation[] => {
   logger.debug('Generating mock member locations around', { centerLat, centerLng, count });
-  
+
   const mockLocations = Array.from({ length: count }).map((_, index) => ({
     userId: `mock-user-${index + 1}`,
     name: `Test User ${index + 1}`,
@@ -26,10 +26,10 @@ const generateMockMemberLocations = (
       latitude: centerLat + (Math.random() - 0.5) * 0.01, // Random offset within ~1km
       longitude: centerLng + (Math.random() - 0.5) * 0.01,
       accuracy: 10,
-      timestamp: Date.now() - Math.floor(Math.random() * 300000) // Random time in last 5 minutes
-    }
+      timestamp: Date.now() - Math.floor(Math.random() * 300000), // Random time in last 5 minutes
+    },
   }));
-  
+
   logger.debug('Generated mock locations:', mockLocations);
   return mockLocations;
 };
@@ -37,30 +37,30 @@ const generateMockMemberLocations = (
 export const useLocationStore = create<LocationState>((set, get) => ({
   // Settings
   isLocationSharingEnabled: false,
-  
+
   // Current user's location
   currentLocation: null,
   locationError: null,
   isTrackingLocation: false,
-  
+
   // Trip member locations
   memberLocations: {},
-  
+
   // Location tracking subscription
   locationSubscription: null as Location.LocationSubscription | null,
-  
+
   setLocationSharingEnabled: async (enabled: boolean) => {
     try {
       logger.debug('Setting location sharing enabled:', enabled);
       await AsyncStorage.setItem('locationSharingEnabled', JSON.stringify(enabled));
       set({ isLocationSharingEnabled: enabled });
-      
+
       // If enabling, start tracking if not already tracking
       if (enabled && !get().isTrackingLocation) {
         // Get the active trip ID from the trip store if available
         const tripStore = useTripStore.getState();
         const activeTripId = tripStore.selectedTrip?.id;
-        
+
         if (activeTripId) {
           get().startLocationTracking(activeTripId);
         } else {
@@ -73,91 +73,91 @@ export const useLocationStore = create<LocationState>((set, get) => ({
       logger.error('Failed to save location sharing preference', error);
     }
   },
-  
+
   startLocationTracking: async (tripId: string) => {
     // Don't start tracking if location sharing is disabled
     if (!get().isLocationSharingEnabled) {
       logger.debug('Not starting location tracking because sharing is disabled');
       return;
     }
-    
+
     // Don't start tracking if already tracking
     if (get().isTrackingLocation) {
       logger.debug('Already tracking location, not starting again');
       return;
     }
-    
+
     try {
       logger.debug('Starting location tracking for trip:', tripId);
-      
+
       // Request permissions if not already granted
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         logger.debug('Location permission not granted:', status);
-        set({ 
+        set({
           locationError: 'Location permission not granted',
-          isTrackingLocation: false
+          isTrackingLocation: false,
         });
         return;
       }
-      
+
       // Start watching position
       const subscription = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.Balanced,
           distanceInterval: 10, // Update if moved by 10 meters
-          timeInterval: 30000,  // Or every 30 seconds
+          timeInterval: 30000, // Or every 30 seconds
         },
         async (location) => {
           logger.debug('Location update received:', {
             latitude: location.coords.latitude,
-            longitude: location.coords.longitude
+            longitude: location.coords.longitude,
           });
-          
+
           // Update local state
           set({ currentLocation: location });
-          
+
           // Send to server
           await get().updateLocation(location);
         }
       );
-      
-      set({ 
+
+      set({
         isTrackingLocation: true,
         locationError: null,
-        locationSubscription: subscription
+        locationSubscription: subscription,
       });
-      
+
       logger.debug('Location tracking started successfully');
     } catch (error) {
       logger.error('Failed to start location tracking:', error);
-      set({ 
+      set({
         locationError: error instanceof Error ? error.message : 'Failed to start location tracking',
-        isTrackingLocation: false
+        isTrackingLocation: false,
       });
     }
   },
-  
+
   stopLocationTracking: () => {
     logger.debug('Stopping location tracking');
     const { locationSubscription } = get();
     if (locationSubscription) {
       locationSubscription.remove();
     }
-    
-    set({ 
+
+    set({
       isTrackingLocation: false,
-      locationSubscription: null
+      locationSubscription: null,
     });
   },
-  
+
   updateLocation: async (location: Location.LocationObject) => {
     const { user } = useAuthStore.getState();
     if (!user) {
       logger.debug('No user found, not updating location');
       return;
     }
-    
+
     try {
       // Only send location update if sharing is enabled
       if (get().isLocationSharingEnabled) {
@@ -167,16 +167,16 @@ export const useLocationStore = create<LocationState>((set, get) => ({
             latitude: location.coords.latitude,
             longitude: location.coords.longitude,
             accuracy: location.coords.accuracy,
-            timestamp: location.timestamp
+            timestamp: location.timestamp,
           });
           return;
         }
-        
+
         await api.post(API_PATHS.location.update, {
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
           accuracy: location.coords.accuracy,
-          timestamp: location.timestamp
+          timestamp: location.timestamp,
         });
       }
     } catch (error) {
@@ -184,36 +184,36 @@ export const useLocationStore = create<LocationState>((set, get) => ({
       logger.error('Failed to update location', error);
     }
   },
-  
+
   getMemberLocations: async (tripId: string) => {
     try {
       logger.debug('Getting member locations for trip:', tripId);
-      
+
       // Only fetch locations if sharing is enabled
       if (!get().isLocationSharingEnabled) {
         logger.debug('Location sharing disabled, not fetching member locations');
         return [];
       }
-      
+
       let locations: MemberLocation[] = [];
-      
+
       if (MOCK_MODE) {
         // Use mock data in mock mode
         const currentLocation = get().currentLocation;
         if (currentLocation) {
           logger.debug('Using current location for mock data:', {
             latitude: currentLocation.coords.latitude,
-            longitude: currentLocation.coords.longitude
+            longitude: currentLocation.coords.longitude,
           });
-          
+
           // Generate mock locations around the user's current location
           locations = generateMockMemberLocations(
             currentLocation.coords.latitude,
             currentLocation.coords.longitude
           );
-          
+
           // Add a slight delay to simulate network request
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise((resolve) => setTimeout(resolve, 500));
         } else {
           logger.debug('No current location, using default coordinates for mock data');
           // Default mock locations if no current location
@@ -226,27 +226,29 @@ export const useLocationStore = create<LocationState>((set, get) => ({
       }
 
       // Update state with fetched/mocked locations for the specific tripId
-      set(state => ({
+      set((state) => ({
         memberLocations: {
           ...state.memberLocations,
-          [tripId]: locations.reduce((acc, loc) => {
-            acc[loc.userId] = loc;
-            return acc;
-          }, {} as Record<string, MemberLocation>)
-        }
+          [tripId]: locations.reduce(
+            (acc, loc) => {
+              acc[loc.userId] = loc;
+              return acc;
+            },
+            {} as Record<string, MemberLocation>
+          ),
+        },
       }));
-      
+
       logger.debug('Successfully fetched/mocked member locations for trip:', tripId, locations);
       return locations;
-      
     } catch (error) {
       logger.error('Failed to get member locations for trip:', tripId, error);
       // Set empty array for this tripId in case of error to avoid stale data
-      set(state => ({
+      set((state) => ({
         memberLocations: {
           ...state.memberLocations,
-          [tripId]: {}
-        }
+          [tripId]: {},
+        },
       }));
       return [];
     }
@@ -254,7 +256,7 @@ export const useLocationStore = create<LocationState>((set, get) => ({
 
   updateMemberLocation: (tripId: string, memberLocation: MemberLocation) => {
     logger.debug('Updating single member location for trip:', tripId, memberLocation);
-    set(state => ({
+    set((state) => ({
       memberLocations: {
         ...state.memberLocations,
         [tripId]: {
@@ -267,14 +269,14 @@ export const useLocationStore = create<LocationState>((set, get) => ({
 
   clearMemberLocations: (tripId: string) => {
     logger.debug('Clearing member locations for trip:', tripId);
-    set(state => ({
+    set((state) => ({
       memberLocations: {
         ...state.memberLocations,
         [tripId]: {},
       },
     }));
   },
-  
+
   // Initialize store from AsyncStorage
   async init() {
     try {
@@ -291,4 +293,66 @@ export const useLocationStore = create<LocationState>((set, get) => ({
 }));
 
 // Call init function to load initial state from AsyncStorage
-useLocationStore.getState().init(); 
+useLocationStore.getState().init();
+
+// ====================
+// SELECTORS
+// ====================
+
+/**
+ * Selectors for efficient component re-renders.
+ * Use these to select only the specific state needed by components.
+ */
+
+// Settings selectors
+export const selectIsLocationSharingEnabled = (state: LocationState) =>
+  state.isLocationSharingEnabled;
+
+// Current location selectors
+export const selectCurrentLocation = (state: LocationState) => state.currentLocation;
+export const selectLocationError = (state: LocationState) => state.locationError;
+export const selectIsTrackingLocation = (state: LocationState) => state.isTrackingLocation;
+
+// Member locations selectors
+export const selectMemberLocationsByTrip = (tripId: string) => (state: LocationState) =>
+  state.memberLocations[tripId] || {};
+
+export const selectMemberLocationsByTripArray = (tripId: string) => (state: LocationState) => {
+  const locations = state.memberLocations[tripId] || {};
+  return Object.values(locations);
+};
+
+export const selectMemberLocationByUser =
+  (tripId: string, userId: string) => (state: LocationState) => {
+    const tripLocations = state.memberLocations[tripId] || {};
+    return tripLocations[userId];
+  };
+
+export const selectMemberCount = (tripId: string) => (state: LocationState) => {
+  const locations = state.memberLocations[tripId] || {};
+  return Object.keys(locations).length;
+};
+
+// Action selectors (for components that only need actions)
+export const selectLocationActions = (state: LocationState) => ({
+  setLocationSharingEnabled: state.setLocationSharingEnabled,
+  startLocationTracking: state.startLocationTracking,
+  stopLocationTracking: state.stopLocationTracking,
+  getMemberLocations: state.getMemberLocations,
+  updateMemberLocation: state.updateMemberLocation,
+  clearMemberLocations: state.clearMemberLocations,
+});
+
+// Composite selectors (for common combinations)
+export const selectLocationState = (state: LocationState) => ({
+  currentLocation: state.currentLocation,
+  isTrackingLocation: state.isTrackingLocation,
+  isLocationSharingEnabled: state.isLocationSharingEnabled,
+  locationError: state.locationError,
+});
+
+export const selectTripLocationState = (tripId: string) => (state: LocationState) => ({
+  memberLocations: Object.values(state.memberLocations[tripId] || {}),
+  isTrackingLocation: state.isTrackingLocation,
+  currentLocation: state.currentLocation,
+});

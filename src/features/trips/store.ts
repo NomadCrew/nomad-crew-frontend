@@ -33,9 +33,17 @@ interface TripState {
   getTripById: (id: string) => Trip | undefined;
   setSelectedTrip: (trip: Trip | null) => void;
   // Member operations
-  inviteMember: (tripId: string, email: string, role: 'owner' | 'admin' | 'member') => Promise<void>;
+  inviteMember: (
+    tripId: string,
+    email: string,
+    role: 'owner' | 'admin' | 'member'
+  ) => Promise<void>;
   revokeInvitation: (tripId: string, invitationId: string) => Promise<void>;
-  updateMemberRole: (tripId: string, userId: string, role: 'owner' | 'admin' | 'member') => Promise<void>;
+  updateMemberRole: (
+    tripId: string,
+    userId: string,
+    role: 'owner' | 'admin' | 'member'
+  ) => Promise<void>;
   removeMember: (tripId: string, userId: string) => Promise<void>;
   // Status operations
   updateTripStatus: (id: string, status: TripStatus) => Promise<void>;
@@ -72,12 +80,16 @@ export const useTripStore = create<TripState>((set, get) => ({
         destinationName: tripData.destination.address, // fallback if no name field
         destinationLatitude: tripData.destination.coordinates?.lat,
         destinationLongitude: tripData.destination.coordinates?.lng,
-        startDate: (tripData.startDate instanceof Date ? tripData.startDate.toISOString() : tripData.startDate),
-        endDate: (tripData.endDate instanceof Date ? tripData.endDate.toISOString() : tripData.endDate),
+        startDate:
+          tripData.startDate instanceof Date
+            ? tripData.startDate.toISOString()
+            : tripData.startDate,
+        endDate:
+          tripData.endDate instanceof Date ? tripData.endDate.toISOString() : tripData.endDate,
       };
       const response = await api.post<Trip>(API_PATHS.trips.create, payload);
       const normalizedTrip = normalizeTrip(response.data);
-      set(state => ({
+      set((state) => ({
         trips: [...state.trips, normalizedTrip],
         loading: false,
       }));
@@ -95,8 +107,8 @@ export const useTripStore = create<TripState>((set, get) => ({
     try {
       const response = await api.put<Trip>(`${API_PATHS.trips.byId(id)}`, input);
       const normalizedTrip = normalizeTrip(response.data);
-      set(state => ({
-        trips: state.trips.map(trip => trip.id === id ? normalizedTrip : trip),
+      set((state) => ({
+        trips: state.trips.map((trip) => (trip.id === id ? normalizedTrip : trip)),
         loading: false,
       }));
       return normalizedTrip;
@@ -115,8 +127,8 @@ export const useTripStore = create<TripState>((set, get) => ({
       logger.info('TRIP', 'Raw API response:', response.data);
       const trips = response.data.map(normalizeTrip);
       logger.info('TRIP', 'Normalized trips:', trips);
-      set({ 
-        trips: trips || [] as Trip[],
+      set({
+        trips: trips || ([] as Trip[]),
         loading: false,
       });
     } catch (error) {
@@ -131,8 +143,8 @@ export const useTripStore = create<TripState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       await api.delete(`${API_PATHS.trips.byId(id)}`);
-      set(state => ({
-        trips: state.trips.filter(trip => trip.id !== id),
+      set((state) => ({
+        trips: state.trips.filter((trip) => trip.id !== id),
         loading: false,
       }));
     } catch (error) {
@@ -143,7 +155,7 @@ export const useTripStore = create<TripState>((set, get) => ({
   },
 
   getTripById: (id) => {
-    const trip = get().trips.find(t => t.id === id);
+    const trip = get().trips.find((t) => t.id === id);
     return trip;
   },
 
@@ -151,14 +163,9 @@ export const useTripStore = create<TripState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const requestBody: UpdateTripStatusRequest = { status };
-      await api.patch<UpdateTripStatusResponse>(
-        API_PATHS.trips.updateStatus(id),
-        requestBody
-      );
-      set(state => ({
-        trips: state.trips.map(trip =>
-          trip.id === id ? { ...trip, status } : trip
-        ),
+      await api.patch<UpdateTripStatusResponse>(API_PATHS.trips.updateStatus(id), requestBody);
+      set((state) => ({
+        trips: state.trips.map((trip) => (trip.id === id ? { ...trip, status } : trip)),
         loading: false,
       }));
     } catch (error) {
@@ -222,7 +229,7 @@ export const useTripStore = create<TripState>((set, get) => ({
       throw error;
     }
   },
-  
+
   acceptInvitation: async (token: string) => {
     set({ loading: true, error: null });
     try {
@@ -250,12 +257,12 @@ export const useTripStore = create<TripState>((set, get) => ({
       throw error;
     }
   },
-  
+
   checkPendingInvitations: async () => {
     logger.info('TRIP', 'Checking for pending invitations...');
     try {
       const keys = await AsyncStorage.getAllKeys();
-      const invitationKeys = keys.filter(key => key.startsWith('pendingInvitation_'));
+      const invitationKeys = keys.filter((key) => key.startsWith('pendingInvitation_'));
       if (invitationKeys.length > 0) {
         logger.info('TRIP', `Found ${invitationKeys.length} pending invitation(s).`);
         for (const key of invitationKeys) {
@@ -266,7 +273,11 @@ export const useTripStore = create<TripState>((set, get) => ({
               await get().acceptInvitation(token);
               logger.info('TRIP', `Successfully accepted invitation with token: ${token}`);
             } catch (error) {
-              logger.error('TRIP', `Failed to automatically accept pending invitation: ${token}`, error);
+              logger.error(
+                'TRIP',
+                `Failed to automatically accept pending invitation: ${token}`,
+                error
+              );
             }
           }
         }
@@ -285,4 +296,60 @@ export const useTripStore = create<TripState>((set, get) => ({
   },
 }));
 
-// Import getUserDisplayName from auth utilsimport { getUserDisplayName } from '../auth/utils'; 
+// ====================
+// SELECTORS
+// ====================
+
+/**
+ * Selectors for efficient component re-renders.
+ * Use these to select only the specific state needed by components.
+ */
+
+// Basic state selectors
+export const selectTrips = (state: TripState) => state.trips;
+export const selectLoading = (state: TripState) => state.loading;
+export const selectError = (state: TripState) => state.error;
+export const selectSelectedTrip = (state: TripState) => state.selectedTrip;
+
+// Derived selectors
+export const selectTripById = (id: string) => (state: TripState) =>
+  state.trips.find((t) => t.id === id);
+
+export const selectTripsByStatus = (status: TripStatus) => (state: TripState) =>
+  state.trips.filter((t) => t.status === status);
+
+export const selectActiveTripCount = (state: TripState) =>
+  state.trips.filter((t) => t.status === 'active').length;
+
+export const selectUpcomingTrips = (state: TripState) =>
+  state.trips.filter((t) => {
+    const startDate = new Date(t.startDate);
+    return startDate > new Date() && t.status !== 'cancelled';
+  });
+
+export const selectPastTrips = (state: TripState) =>
+  state.trips.filter((t) => {
+    const endDate = new Date(t.endDate);
+    return endDate < new Date();
+  });
+
+// Action selectors (for components that only need actions)
+export const selectTripActions = (state: TripState) => ({
+  createTrip: state.createTrip,
+  updateTrip: state.updateTrip,
+  deleteTrip: state.deleteTrip,
+  fetchTrips: state.fetchTrips,
+  setSelectedTrip: state.setSelectedTrip,
+  updateTripStatus: state.updateTripStatus,
+  inviteMember: state.inviteMember,
+  acceptInvitation: state.acceptInvitation,
+});
+
+// Composite selectors (for common combinations)
+export const selectTripsWithLoading = (state: TripState) => ({
+  trips: state.trips,
+  loading: state.loading,
+  error: state.error,
+});
+
+// Import getUserDisplayName from auth utilsimport { getUserDisplayName } from '../auth/utils';

@@ -2,10 +2,7 @@ import { create } from 'zustand';
 import { api } from '@/src/api/api-client';
 import { Todo, CreateTodoInput, UpdateTodoInput, TodosResponse } from './types'; // Corrected path
 import { API_PATHS } from '@/src/utils/api-paths';
-import { 
-  ServerEvent,
-  isTodoEvent
-} from '@/src/types/events';
+import { ServerEvent, isTodoEvent } from '@/src/types/events';
 
 interface TodoState {
   todos: Todo[];
@@ -14,15 +11,15 @@ interface TodoState {
   total: number;
   hasMore: boolean;
   processedEvents: Set<string>;
-  
+
   // Core operations
   createTodo: (input: CreateTodoInput) => Promise<Todo>;
   updateTodo: (id: string, input: UpdateTodoInput) => Promise<Todo>;
   deleteTodo: (id: string) => Promise<void>;
-  
+
   // List operations with pagination
   fetchTodos: (tripId: string, offset: number, limit: number) => Promise<void>;
-  
+
   // WebSocket operations
   handleTodoEvent: (event: ServerEvent) => void;
 }
@@ -34,14 +31,14 @@ export const useTodoStore = create<TodoState>((set, get) => ({
   total: 0,
   hasMore: true,
   processedEvents: new Set(),
-  
+
   createTodo: async (input) => {
     set({ loading: true, error: null });
     try {
       const response = await api.post<Todo>(API_PATHS.todos.create(input.tripId), input);
-      set(state => ({
+      set((state) => ({
         todos: [response.data, ...state.todos],
-        total: state.total + 1
+        total: state.total + 1,
       }));
       return response.data;
     } catch (error) {
@@ -54,14 +51,14 @@ export const useTodoStore = create<TodoState>((set, get) => ({
   },
 
   updateTodo: async (id, input) => {
-    const todo = get().todos.find(t => t.id === id);
+    const todo = get().todos.find((t) => t.id === id);
     if (!todo) throw new Error('Todo not found');
 
     set({ loading: true, error: null });
     try {
       const response = await api.put<Todo>(API_PATHS.todos.update(todo.tripId, id), input);
-      set(state => ({
-        todos: state.todos.map(t => t.id === id ? { ...t, ...response.data } : t)
+      set((state) => ({
+        todos: state.todos.map((t) => (t.id === id ? { ...t, ...response.data } : t)),
       }));
       return response.data;
     } catch (error) {
@@ -74,15 +71,15 @@ export const useTodoStore = create<TodoState>((set, get) => ({
   },
 
   deleteTodo: async (id) => {
-    const todo = get().todos.find(t => t.id === id);
+    const todo = get().todos.find((t) => t.id === id);
     if (!todo) return;
 
     set({ loading: true, error: null });
     try {
       await api.delete(API_PATHS.todos.delete(todo.tripId, id));
-      set(state => ({
-        todos: state.todos.filter(t => t.id !== id),
-        total: state.total - 1
+      set((state) => ({
+        todos: state.todos.filter((t) => t.id !== id),
+        total: state.total - 1,
       }));
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to delete todo';
@@ -100,11 +97,11 @@ export const useTodoStore = create<TodoState>((set, get) => ({
         `${API_PATHS.todos.list(tripId)}?offset=${offset}&limit=${limit}`
       );
       const todoData = response.data.data ?? [];
-      set(state => ({
+      set((state) => ({
         todos: offset === 0 ? todoData : [...state.todos, ...todoData],
         total: response.data.pagination.total,
         hasMore: todoData.length === limit,
-        loading: false
+        loading: false,
       }));
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to fetch todos';
@@ -160,4 +157,54 @@ export const useTodoStore = create<TodoState>((set, get) => ({
       });
     }
   },
-})); 
+}));
+
+// ====================
+// SELECTORS
+// ====================
+
+/**
+ * Selectors for efficient component re-renders.
+ * Use these to select only the specific state needed by components.
+ */
+
+// Basic state selectors
+export const selectTodos = (state: TodoState) => state.todos;
+export const selectLoading = (state: TodoState) => state.loading;
+export const selectError = (state: TodoState) => state.error;
+export const selectTotal = (state: TodoState) => state.total;
+export const selectHasMore = (state: TodoState) => state.hasMore;
+
+// Derived selectors
+export const selectTodoById = (id: string) => (state: TodoState) =>
+  state.todos.find((t) => t.id === id);
+
+export const selectCompletedTodos = (state: TodoState) => state.todos.filter((t) => t.completed);
+
+export const selectIncompleteTodos = (state: TodoState) => state.todos.filter((t) => !t.completed);
+
+export const selectTodosByAssignee = (userId: string) => (state: TodoState) =>
+  state.todos.filter((t) => t.assignedTo === userId);
+
+export const selectCompletionProgress = (state: TodoState) => {
+  const total = state.todos.length;
+  if (total === 0) return 0;
+  const completed = state.todos.filter((t) => t.completed).length;
+  return (completed / total) * 100;
+};
+
+// Action selectors (for components that only need actions)
+export const selectTodoActions = (state: TodoState) => ({
+  createTodo: state.createTodo,
+  updateTodo: state.updateTodo,
+  deleteTodo: state.deleteTodo,
+  fetchTodos: state.fetchTodos,
+});
+
+// Composite selectors (for common combinations)
+export const selectTodosWithLoading = (state: TodoState) => ({
+  todos: state.todos,
+  loading: state.loading,
+  error: state.error,
+  hasMore: state.hasMore,
+});
