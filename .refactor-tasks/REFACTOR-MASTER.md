@@ -12,11 +12,11 @@
 | Phase                   | Status      | Progress | Assigned                  |
 | ----------------------- | ----------- | -------- | ------------------------- |
 | 1. Security Fixes       | IN PROGRESS | 3/4      | SEC-003 pending (backend) |
-| 2. Core Infrastructure  | IN PROGRESS | 4/5      | INFRA-004 pending         |
-| 3. Developer Experience | IN PROGRESS | 4/5      | DX-005 pending            |
+| 2. Core Infrastructure  | COMPLETE    | 5/5      | ✅                        |
+| 3. Developer Experience | COMPLETE    | 5/5      | ✅                        |
 | 4. Performance          | COMPLETE    | 5/5      | ✅                        |
-| 5. Data Layer           | IN PROGRESS | 5/6      | DATA-005 pending          |
-| 6. Testing              | PENDING     | 0/4      | -                         |
+| 5. Data Layer           | COMPLETE    | 6/6      | ✅                        |
+| 6. Testing              | PENDING     | 0/4      | Optional                  |
 
 ---
 
@@ -144,7 +144,7 @@
 ### Task 2.4: Implement Offline Message Queue
 
 - **ID:** INFRA-004
-- **Status:** PENDING
+- **Status:** ✅ COMPLETED
 - **Priority:** P1 - HIGH
 - **Estimated:** 4 hours
 - **Files:**
@@ -245,7 +245,7 @@
 ### Task 3.5: Add CI Pipeline
 
 - **ID:** DX-005
-- **Status:** PENDING
+- **Status:** ✅ COMPLETED
 - **Priority:** P2 - MEDIUM
 - **Estimated:** 2 hours
 - **Files:**
@@ -419,7 +419,7 @@
 ### Task 5.5: Add Offline Persistence
 
 - **ID:** DATA-005
-- **Status:** PENDING
+- **Status:** ✅ COMPLETED
 - **Priority:** P2 - MEDIUM
 - **Estimated:** 3 hours
 - **Files:**
@@ -544,6 +544,9 @@
 | INFRA-001 | Add AbortController                | 2025-12-05 | ae228f3 |
 | INFRA-003 | Add NetInfo Reconnection           | 2025-12-05 | a9c119d |
 | DATA-003  | Migrate Trip Components            | 2025-12-05 | 91fb2f8 |
+| INFRA-004 | Offline Message Queue              | 2025-12-05 | c3465ff |
+| DX-005    | Add CI Pipeline                    | 2025-12-05 | d3637ca |
+| DATA-005  | Offline Persistence                | 2025-12-05 | c3465ff |
 
 ---
 
