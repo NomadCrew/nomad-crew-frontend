@@ -8,31 +8,67 @@ import { logger } from '@/src/utils/logger';
 import { MemberLocation, LocationState } from '../types';
 import { useTripStore } from '@/src/features/trips/store';
 
-// Mock data for testing while backend endpoints are being implemented
-const MOCK_MODE = true; // Set to false when backend is ready
+/**
+ * Simple throttle implementation to limit function execution frequency.
+ * Ensures the function is called at most once every `delay` milliseconds.
+ */
+function throttle<T extends (...args: any[]) => any>(
+  func: T,
+  delay: number
+): (...args: Parameters<T>) => void {
+  let lastCall = 0;
+  let timeoutId: NodeJS.Timeout | null = null;
 
-// Generate mock member locations around a given center point
-const generateMockMemberLocations = (
-  centerLat: number,
-  centerLng: number,
-  count: number = 3
-): MemberLocation[] => {
-  logger.debug('Generating mock member locations around', { centerLat, centerLng, count });
+  return (...args: Parameters<T>) => {
+    const now = Date.now();
+    const timeSinceLastCall = now - lastCall;
 
-  const mockLocations = Array.from({ length: count }).map((_, index) => ({
-    userId: `mock-user-${index + 1}`,
-    name: `Test User ${index + 1}`,
-    location: {
-      latitude: centerLat + (Math.random() - 0.5) * 0.01, // Random offset within ~1km
-      longitude: centerLng + (Math.random() - 0.5) * 0.01,
-      accuracy: 10,
-      timestamp: Date.now() - Math.floor(Math.random() * 300000), // Random time in last 5 minutes
-    },
-  }));
+    if (timeSinceLastCall >= delay) {
+      // Execute immediately if enough time has passed
+      lastCall = now;
+      func(...args);
+    } else {
+      // Schedule execution for when the delay period ends
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      timeoutId = setTimeout(() => {
+        lastCall = Date.now();
+        func(...args);
+      }, delay - timeSinceLastCall);
+    }
+  };
+}
 
-  logger.debug('Generated mock locations:', mockLocations);
-  return mockLocations;
-};
+/**
+ * Throttled server update function to save battery.
+ * Updates are sent to the server at most once every 10 seconds.
+ */
+const throttledServerUpdate = throttle(
+  async (location: Location.LocationObject) => {
+    const { user } = useAuthStore.getState();
+    if (!user) {
+      logger.debug('No user found, not updating location on server');
+      return;
+    }
+
+    try {
+      await api.post(API_PATHS.location.update, {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        accuracy: location.coords.accuracy,
+        timestamp: location.timestamp,
+      });
+      logger.debug('Location successfully sent to server:', {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+    } catch (error) {
+      logger.error('Failed to send location update to server', error);
+    }
+  },
+  10000 // 10 seconds minimum between server updates
+);
 
 export const useLocationStore = create<LocationState>((set, get) => ({
   // Settings
@@ -101,11 +137,11 @@ export const useLocationStore = create<LocationState>((set, get) => ({
         return;
       }
 
-      // Start watching position
+      // Start watching position with battery-optimized settings
       const subscription = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.Balanced,
-          distanceInterval: 10, // Update if moved by 10 meters
+          distanceInterval: 50, // Update if moved by 50 meters (battery optimized)
           timeInterval: 30000, // Or every 30 seconds
         },
         async (location) => {
@@ -114,10 +150,10 @@ export const useLocationStore = create<LocationState>((set, get) => ({
             longitude: location.coords.longitude,
           });
 
-          // Update local state
+          // Update local state immediately for responsive UI
           set({ currentLocation: location });
 
-          // Send to server
+          // Send to server with throttling for battery optimization
           await get().updateLocation(location);
         }
       );
@@ -158,30 +194,11 @@ export const useLocationStore = create<LocationState>((set, get) => ({
       return;
     }
 
-    try {
-      // Only send location update if sharing is enabled
-      if (get().isLocationSharingEnabled) {
-        if (MOCK_MODE) {
-          // In mock mode, just log the update but don't make the API call
-          logger.debug('MOCK', 'Location update:', {
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-            accuracy: location.coords.accuracy,
-            timestamp: location.timestamp,
-          });
-          return;
-        }
-
-        await api.post(API_PATHS.location.update, {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          accuracy: location.coords.accuracy,
-          timestamp: location.timestamp,
-        });
-      }
-    } catch (error) {
-      // Log the error but don't set an error state to avoid disrupting the UI
-      logger.error('Failed to update location', error);
+    // Only send location update if sharing is enabled
+    if (get().isLocationSharingEnabled) {
+      // Use throttled server update for battery optimization
+      // This ensures updates are sent at most once every 10 seconds
+      throttledServerUpdate(location);
     }
   },
 
@@ -195,37 +212,11 @@ export const useLocationStore = create<LocationState>((set, get) => ({
         return [];
       }
 
-      let locations: MemberLocation[] = [];
+      // Fetch actual locations from backend
+      const response = await api.get<MemberLocation[]>(API_PATHS.location.byTrip(tripId));
+      const locations = response.data;
 
-      if (MOCK_MODE) {
-        // Use mock data in mock mode
-        const currentLocation = get().currentLocation;
-        if (currentLocation) {
-          logger.debug('Using current location for mock data:', {
-            latitude: currentLocation.coords.latitude,
-            longitude: currentLocation.coords.longitude,
-          });
-
-          // Generate mock locations around the user's current location
-          locations = generateMockMemberLocations(
-            currentLocation.coords.latitude,
-            currentLocation.coords.longitude
-          );
-
-          // Add a slight delay to simulate network request
-          await new Promise((resolve) => setTimeout(resolve, 500));
-        } else {
-          logger.debug('No current location, using default coordinates for mock data');
-          // Default mock locations if no current location
-          locations = generateMockMemberLocations(34.0522, -118.2437); // Default to LA
-        }
-      } else {
-        // Fetch actual locations from backend
-        const response = await api.get<MemberLocation[]>(API_PATHS.location.members(tripId));
-        locations = response.data;
-      }
-
-      // Update state with fetched/mocked locations for the specific tripId
+      // Update state with fetched locations for the specific tripId
       set((state) => ({
         memberLocations: {
           ...state.memberLocations,
@@ -239,7 +230,7 @@ export const useLocationStore = create<LocationState>((set, get) => ({
         },
       }));
 
-      logger.debug('Successfully fetched/mocked member locations for trip:', tripId, locations);
+      logger.debug('Successfully fetched member locations for trip:', tripId, locations);
       return locations;
     } catch (error) {
       logger.error('Failed to get member locations for trip:', tripId, error);
