@@ -58,7 +58,8 @@ export const useAuthStore = create<AuthState>((set, get) => {
     isInitialized: false,
     isFirstTime: false,
     isVerifying: false,
-    status: 'unauthenticated' as AuthStatus,
+    // Start with 'idle' - we don't know auth status until we check storage/Supabase
+    status: 'idle' as AuthStatus,
     refreshToken: null,
     pushToken: null,
     needsUsername: false,

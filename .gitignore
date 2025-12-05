@@ -50,4 +50,4 @@ op.txt
 GOOGLE_API_KEYS.txt
 
 .cursorrules
-.cursor/*
+.cursor/*.local-changes-backup/
