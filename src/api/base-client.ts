@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
+import axiosRetry from 'axios-retry';
 import { API_CONFIG } from './env';
 import { ERROR_MESSAGES } from './constants';
 import { logger } from '@/src/utils/logger';
@@ -16,7 +17,35 @@ export class BaseApiClient {
       ...config,
     });
 
+    this.setupRetryLogic();
     this.setupBaseInterceptors();
+  }
+
+  private setupRetryLogic(): void {
+    axiosRetry(this.api, {
+      retries: 3,
+      retryDelay: axiosRetry.exponentialDelay,
+      retryCondition: (error) => {
+        // Retry on network errors
+        if (axiosRetry.isNetworkError(error)) {
+          return true;
+        }
+
+        // Retry on 5xx server errors and 429 (rate limit)
+        if (error.response) {
+          const status = error.response.status;
+          return status >= 500 || status === 429;
+        }
+
+        return false;
+      },
+      onRetry: (retryCount, error, requestConfig) => {
+        logger.warn('API', `Retry attempt ${retryCount} for ${requestConfig.url}`, {
+          error: error.message,
+          status: error.response?.status,
+        });
+      },
+    });
   }
 
   private setupBaseInterceptors(): void {
@@ -54,7 +83,7 @@ export class BaseApiClient {
           // Network error details
           isAxiosError: error.isAxiosError,
           stack: error.stack,
-          cause: error.cause
+          cause: error.cause,
         });
 
         // Handle network errors
@@ -66,9 +95,9 @@ export class BaseApiClient {
         switch (error.response.status) {
           case 400:
             // Extract error message from response if available
-            const badRequestMessage = 
-              (error.response.data as { message?: string; error?: string })?.message || 
-              (error.response.data as { message?: string; error?: string })?.error || 
+            const badRequestMessage =
+              (error.response.data as { message?: string; error?: string })?.message ||
+              (error.response.data as { message?: string; error?: string })?.error ||
               'Bad request: The server could not process your request';
             return Promise.reject(new Error(badRequestMessage));
           case 403:
@@ -79,7 +108,9 @@ export class BaseApiClient {
             return Promise.reject(new Error(ERROR_MESSAGES.SERVER_ERROR));
           default:
             return Promise.reject(
-              new Error((error.response.data as { message?: string })?.message || ERROR_MESSAGES.UNEXPECTED)
+              new Error(
+                (error.response.data as { message?: string })?.message || ERROR_MESSAGES.UNEXPECTED
+              )
             );
         }
       }
