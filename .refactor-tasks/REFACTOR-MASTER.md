@@ -14,8 +14,8 @@
 | 1. Security Fixes       | IN PROGRESS | 3/4      | SEC-003 pending (backend) |
 | 2. Core Infrastructure  | IN PROGRESS | 2/5      | -                         |
 | 3. Developer Experience | IN PROGRESS | 4/5      | -                         |
-| 4. Performance          | IN PROGRESS | 2/5      | -                         |
-| 5. Data Layer           | IN PROGRESS | 1/6      | -                         |
+| 4. Performance          | COMPLETE    | 5/5      | ✅                        |
+| 5. Data Layer           | IN PROGRESS | 2/6      | -                         |
 | 6. Testing              | PENDING     | 0/4      | -                         |
 
 ---
@@ -316,7 +316,7 @@
 ### Task 4.4: Throttle Location Updates
 
 - **ID:** PERF-004
-- **Status:** PENDING
+- **Status:** ✅ COMPLETED
 - **Priority:** P2 - MEDIUM
 - **Estimated:** 1 hour
 - **Files:**
@@ -331,7 +331,7 @@
 ### Task 4.5: Remove Polling from GroupLiveMap
 
 - **ID:** PERF-005
-- **Status:** PENDING
+- **Status:** ✅ COMPLETED
 - **Priority:** P2 - MEDIUM
 - **Estimated:** 1 hour
 - **Files:**
@@ -366,7 +366,7 @@
 ### Task 5.2: Create Trip Service Layer
 
 - **ID:** DATA-002
-- **Status:** PENDING
+- **Status:** ✅ COMPLETED
 - **Priority:** P1 - HIGH
 - **Estimated:** 3 hours
 - **Files:**
@@ -535,6 +535,9 @@
 | PERF-002  | Add Zustand Selectors              | 2025-12-05 | e054a5c |
 | INFRA-005 | Standardize Error Types            | 2025-12-05 | d49fc28 |
 | DATA-001  | Install TanStack Query             | 2025-12-05 | f8e28d0 |
+| DATA-002  | Create Trip Service Layer          | 2025-12-05 | a387397 |
+| PERF-004  | Throttle Location Updates          | 2025-12-05 | cda65a1 |
+| PERF-005  | Remove Polling from GroupLiveMap   | 2025-12-05 | aad3a16 |
 
 ---
 
