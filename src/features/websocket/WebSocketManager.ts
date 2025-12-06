@@ -10,6 +10,7 @@ import { useAuthStore } from '../auth/store';
 import { API_CONFIG } from '../../api/env';
 import { jwtDecode } from 'jwt-decode';
 import { logger } from '../../utils/logger';
+import { shouldBypassAuth, MOCK_SIMULATOR_TOKEN } from '../../utils/simulator-auth';
 import { useLocationStore } from '../location/store/useLocationStore';
 import { useNotificationStore } from '../notifications/store/useNotificationStore';
 import { ZodNotificationSchema, Notification } from '../notifications/types/notification';
@@ -64,15 +65,22 @@ export class WebSocketManager {
         return;
       }
 
-      // Check token expiration
-      const decoded = jwtDecode<{ exp: number }>(token);
-      const timeUntilExpiry = decoded.exp * 1000 - Date.now();
+      // Check if using simulator bypass - skip JWT validation for mock tokens
+      const isSimulatorBypass = shouldBypassAuth() && token === MOCK_SIMULATOR_TOKEN;
 
-      // If token expires in less than 5 minutes, refresh it
-      if (timeUntilExpiry < 300000) {
-        logger.debug('WS', 'Token near expiry, refreshing before connection');
-        await useAuthStore.getState().refreshSession();
-        return this.connect(tripId, callbacks);
+      if (!isSimulatorBypass) {
+        // Check token expiration (only for real JWTs)
+        const decoded = jwtDecode<{ exp: number }>(token);
+        const timeUntilExpiry = decoded.exp * 1000 - Date.now();
+
+        // If token expires in less than 5 minutes, refresh it
+        if (timeUntilExpiry < 300000) {
+          logger.debug('WS', 'Token near expiry, refreshing before connection');
+          await useAuthStore.getState().refreshSession();
+          return this.connect(tripId, callbacks);
+        }
+      } else {
+        logger.debug('WS', 'Simulator bypass active - skipping JWT validation');
       }
 
       const apiKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
