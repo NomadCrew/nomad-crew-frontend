@@ -1,20 +1,24 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import { SplashScreen, Slot } from 'expo-router';
+import { Slot } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import AppInitializer from './AppInitializer';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { PaperProvider } from 'react-native-paper';
 import { ThemeProvider, useCurrentAppTheme } from '@/src/theme/ThemeProvider';
 import { createPaperTheme } from '@/src/theme/paper-adapter';
 import AuthErrorBoundary from '@/components/AuthErrorBoundary';
-import { AuthProvider } from '@/src/features/auth/components/AuthProvider';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { OnboardingProvider } from '@/src/providers/OnboardingProvider';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { queryClient, queryPersister } from '@/src/lib/query-client';
 
-console.log('[RootLayout] Rendering');
+// CRITICAL: Call preventAutoHideAsync at global scope, NOT inside component
+// This prevents the splash screen from auto-hiding before we're ready
+SplashScreen.preventAutoHideAsync().catch(console.warn);
+
+console.log('[RootLayout] File loaded');
 
 function Providers({ children }: { children: React.ReactNode }) {
   // Get the current semantic theme
@@ -36,16 +40,17 @@ function ThemedRoot() {
       edges={['top', 'left', 'right']}
     >
       <StatusBar style={statusBarStyle} backgroundColor={statusBarBg} translucent={false} />
-      <AuthProvider>
-        <Slot />
-      </AuthProvider>
+      {/* Slot ALWAYS renders - never block it conditionally in root layout */}
+      <Slot />
     </SafeAreaView>
   );
 }
 
 export default function RootLayout() {
+  console.log('[RootLayout] Rendering');
+
   try {
-    SplashScreen.hideAsync();
+    // Root layout ALWAYS renders <Slot /> - auth redirects happen in nested layouts
     return (
       <PersistQueryClientProvider
         client={queryClient}
@@ -56,6 +61,7 @@ export default function RootLayout() {
             <OnboardingProvider>
               <Providers>
                 <AuthErrorBoundary>
+                  {/* AppInitializer handles fonts, auth init, and splash screen hiding */}
                   <AppInitializer>
                     <ThemedRoot />
                   </AppInitializer>
@@ -67,7 +73,8 @@ export default function RootLayout() {
       </PersistQueryClientProvider>
     );
   } catch (e: any) {
-    SplashScreen.hideAsync();
+    // On error, hide splash and show error message
+    SplashScreen.hideAsync().catch(console.warn);
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <Text>Error in RootLayout:</Text>

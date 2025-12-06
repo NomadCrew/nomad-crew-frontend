@@ -23,6 +23,7 @@ import { registerAuthHandlers } from '@/src/api/api-client'; // This needs caref
 import * as Notifications from 'expo-notifications';
 import { api } from '@/src/api/api-client'; // This will likely be replaced by AuthService methods
 import { onboardUser, getCurrentUserProfile } from '@/src/api/api-client';
+import { getSimulatorAuthState } from '@/src/utils/simulator-auth';
 
 const ACCESS_TOKEN_KEY = 'supabase_access_token'; // Added constant
 
@@ -86,6 +87,22 @@ export const useAuthStore = create<AuthState>()(
         initialize: async () => {
           try {
             logger.debug('AUTH', 'Initializing auth store');
+
+            // Check for simulator auth bypass (only in __DEV__ mode on simulators)
+            const simulatorAuth = getSimulatorAuthState();
+            if (simulatorAuth) {
+              logger.warn('AUTH', '🔓 SIMULATOR AUTH BYPASS ACTIVE - Using mock auth');
+              set({
+                user: simulatorAuth.user,
+                token: simulatorAuth.token,
+                refreshToken: simulatorAuth.refreshToken,
+                status: 'authenticated',
+                isInitialized: true,
+                needsUsername: false,
+              });
+              return; // Skip normal auth flow
+            }
+
             let initialToken: string | null = null;
             try {
               initialToken = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);

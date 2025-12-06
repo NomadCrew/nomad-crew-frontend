@@ -58,7 +58,7 @@ const throttledServerUpdate = throttle(
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
         accuracy: location.coords.accuracy,
-        timestamp: location.timestamp,
+        timestamp: Math.floor(location.timestamp), // Backend expects int64, not float
       });
       logger.debug('Location successfully sent to server:', {
         latitude: location.coords.latitude,

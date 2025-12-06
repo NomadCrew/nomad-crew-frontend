@@ -17,7 +17,8 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "eas-build-pre-install": "npm ci --legacy-peer-deps || npm install --legacy-peer-deps",
-    "prepare": "husky"
+    "prepare": "husky",
+    "postinstall": "patch-package"
   },
   "jest": {
     "preset": "jest-expo",
@@ -69,6 +70,7 @@
     "expo-constants": "~17.0.3",
     "expo-crypto": "~14.0.1",
     "expo-dev-client": "~5.0.14",
+    "expo-dev-menu": "^6.0.21",
     "expo-font": "~13.0.2",
     "expo-google-places-autocomplete": "^1.2.0",
     "expo-haptics": "~14.0.1",
@@ -134,6 +136,7 @@
     "jest": "^29.7.0",
     "jest-expo": "~52.0.2",
     "lint-staged": "^16.2.7",
+    "patch-package": "^8.0.1",
     "prettier": "^3.7.4",
     "react-native-svg-transformer": "^1.5.0",
     "react-test-renderer": "18.3.1",

@@ -1,67 +1,111 @@
 import React from 'react';
-import { Tabs } from 'expo-router';
+import { Tabs, Redirect } from 'expo-router';
+import { View, ActivityIndicator } from 'react-native';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { Home, MapPin, Bell, User } from 'lucide-react-native';
-import { AuthGuard } from '@/src/features/auth/components/AuthGuard';
-import { OnboardingGate } from '@/src/components/common/OnboardingGate';
+import { useAuthStore } from '@/src/features/auth/store';
+import { useOnboarding } from '@/src/providers/OnboardingProvider';
 
-console.log('[TabsLayout] File loaded, starting TabsLayout component render');
+console.log('[TabsLayout] File loaded');
 
 export default function TabsLayout() {
   const { theme } = useAppTheme();
-  console.log('[TabsLayout] Inside TabsLayout function - rendering');
+  const { status, token, isInitialized: authInitialized, needsUsername } = useAuthStore();
+  const { isFirstTime, isInitialized: onboardingInitialized } = useOnboarding();
 
-  return (
-    <AuthGuard>
-      <OnboardingGate>
-        <Tabs
-          screenOptions={{
-            tabBarActiveTintColor: theme.colors.primary.main,
-            tabBarInactiveTintColor: theme.colors.content.tertiary,
-            tabBarStyle: {
-              backgroundColor: theme.colors.background.default,
-              borderTopColor: theme.colors.border?.default || '#E5E7EB',
-            },
-            headerStyle: {
-              backgroundColor: theme.colors.background.default,
-            },
-            headerTintColor: theme.colors.content.primary,
-          }}
-        >
-          <Tabs.Screen
-            name="trips"
-            options={{
-              title: 'Trips',
-              tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
-              headerShown: false,
-            }}
-          />
-          <Tabs.Screen
-            name="location"
-            options={{
-              title: 'Location',
-              tabBarIcon: ({ color, size }) => <MapPin color={color} size={size} />,
-              headerShown: false,
-            }}
-          />
-          <Tabs.Screen
-            name="notifications"
-            options={{
-              title: 'Notifications',
-              tabBarIcon: ({ color, size }) => <Bell color={color} size={size} />,
-              headerShown: false,
-            }}
-          />
-          <Tabs.Screen
-            name="profile"
-            options={{
-              title: 'Profile',
-              tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
-              headerShown: false,
-            }}
-          />
-        </Tabs>
-      </OnboardingGate>
-    </AuthGuard>
+  console.log(
+    '[TabsLayout] Rendering - auth:',
+    status,
+    'isFirstTime:',
+    isFirstTime,
+    'needsUsername:',
+    needsUsername
   );
-} 
+
+  // Show loading while checking auth state
+  if (!authInitialized || !onboardingInitialized) {
+    console.log('[TabsLayout] Still initializing, showing loading');
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: theme.colors.background.default,
+        }}
+      >
+        <ActivityIndicator size="large" color={theme.colors.primary.main} />
+      </View>
+    );
+  }
+
+  // If first time user, redirect to onboarding
+  if (isFirstTime) {
+    console.log('[TabsLayout] First time user, redirecting to onboarding');
+    return <Redirect href="/(onboarding)/welcome" />;
+  }
+
+  // If not authenticated, redirect to login
+  if (status !== 'authenticated' || !token) {
+    console.log('[TabsLayout] Not authenticated, redirecting to login');
+    return <Redirect href="/(auth)/login" />;
+  }
+
+  // If user needs to set username, redirect to username screen
+  if (needsUsername) {
+    console.log('[TabsLayout] User needs username, redirecting to username screen');
+    return <Redirect href="/(onboarding)/username" />;
+  }
+
+  // User is authenticated and onboarded - render tabs
+  console.log('[TabsLayout] User authenticated, rendering tabs');
+  return (
+    <Tabs
+      screenOptions={{
+        tabBarActiveTintColor: theme.colors.primary.main,
+        tabBarInactiveTintColor: theme.colors.content.tertiary,
+        tabBarStyle: {
+          backgroundColor: theme.colors.background.default,
+          borderTopColor: theme.colors.border?.default || '#E5E7EB',
+        },
+        headerStyle: {
+          backgroundColor: theme.colors.background.default,
+        },
+        headerTintColor: theme.colors.content.primary,
+      }}
+    >
+      <Tabs.Screen
+        name="trips"
+        options={{
+          title: 'Trips',
+          tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="location"
+        options={{
+          title: 'Location',
+          tabBarIcon: ({ color, size }) => <MapPin color={color} size={size} />,
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          title: 'Notifications',
+          tabBarIcon: ({ color, size }) => <Bell color={color} size={size} />,
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
+          headerShown: false,
+        }}
+      />
+    </Tabs>
+  );
+}
