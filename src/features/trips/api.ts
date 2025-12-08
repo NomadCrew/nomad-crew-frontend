@@ -6,6 +6,7 @@ import {
   UpdateTripInput,
   TripStatus,
   UpdateTripStatusRequest,
+  InvitationDetails,
 } from './types';
 import { normalizeTrip } from './adapters/normalizeTrip';
 import { useAuthStore } from '@/src/features/auth/store';
@@ -99,6 +100,23 @@ export const tripApi = {
    */
   acceptInvitation: async (token: string): Promise<void> => {
     await api.post(API_PATHS.trips.acceptInvitation, { token });
+  },
+
+  /**
+   * Decline a trip invitation
+   */
+  declineInvitation: async (token: string): Promise<void> => {
+    await api.post(API_PATHS.trips.declineInvitation, { token });
+  },
+
+  /**
+   * Get invitation details by token (for preview before accepting)
+   */
+  getInvitationDetails: async (token: string): Promise<InvitationDetails> => {
+    const response = await api.get<InvitationDetails>(
+      `${API_PATHS.trips.invitationDetails}?token=${encodeURIComponent(token)}`
+    );
+    return response.data;
   },
 
   // Member operations (TODO: implement when backend endpoints are ready)

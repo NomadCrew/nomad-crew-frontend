@@ -87,8 +87,8 @@ export interface UpdateTripStatusResponse {
 }
 
 // Response types for REST API
-export interface CreateTripResponse extends Trip {}
-export interface UpdateTripResponse extends Trip {}
+export type CreateTripResponse = Trip;
+export type UpdateTripResponse = Trip;
 export interface DeleteTripResponse {
   id: string;
   success: boolean;
@@ -103,4 +103,39 @@ export interface PlaceDetails {
   formattedAddress: string;
   name: string;
   placeId: string;
-} 
+}
+
+// Invitation types
+export type InvitationStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED';
+export type MemberRole = 'OWNER' | 'ADMIN' | 'MEMBER';
+
+export interface InvitationDetails {
+  id: string;
+  tripId: string;
+  email: string;
+  status: InvitationStatus;
+  role: MemberRole;
+  createdAt: string;
+  expiresAt?: string;
+  trip?: {
+    id: string;
+    name: string;
+    description?: string;
+    startDate: string;
+    endDate: string;
+  };
+  inviter?: {
+    id: string;
+    username: string;
+    email: string;
+    displayName: string;
+    avatarURL?: string;
+  };
+}
+
+export interface InvitationError {
+  title: string;
+  message: string;
+  action?: 'go_to_trips' | 'switch_account' | 'view_trip' | 'retry';
+  tripId?: string;
+}
