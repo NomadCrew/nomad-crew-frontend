@@ -13,6 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 import { OnboardingProvider } from '@/src/providers/OnboardingProvider';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { queryClient, queryPersister } from '@/src/lib/query-client';
+import { AbilityProvider } from '@/src/features/auth/permissions';
 
 // CRITICAL: Call preventAutoHideAsync at global scope, NOT inside component
 // This prevents the splash screen from auto-hiding before we're ready
@@ -59,14 +60,16 @@ export default function RootLayout() {
         <GestureHandlerRootView style={{ flex: 1 }}>
           <ThemeProvider>
             <OnboardingProvider>
-              <Providers>
-                <AuthErrorBoundary>
-                  {/* AppInitializer handles fonts, auth init, and splash screen hiding */}
-                  <AppInitializer>
-                    <ThemedRoot />
-                  </AppInitializer>
-                </AuthErrorBoundary>
-              </Providers>
+              <AbilityProvider>
+                <Providers>
+                  <AuthErrorBoundary>
+                    {/* AppInitializer handles fonts, auth init, and splash screen hiding */}
+                    <AppInitializer>
+                      <ThemedRoot />
+                    </AppInitializer>
+                  </AuthErrorBoundary>
+                </Providers>
+              </AbilityProvider>
             </OnboardingProvider>
           </ThemeProvider>
         </GestureHandlerRootView>

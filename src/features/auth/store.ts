@@ -4,6 +4,7 @@ import {
   supabase,
   refreshSupabaseSession,
   registerPushTokenService,
+  deregisterPushTokenService,
 } from '@/src/features/auth/service'; // Corrected import
 import type {
   AuthState,
@@ -22,7 +23,11 @@ import { ERROR_CODES, ERROR_MESSAGES } from '@/src/api/constants'; // Path might
 import { registerAuthHandlers } from '@/src/api/api-client'; // This needs careful review for new service structure
 import * as Notifications from 'expo-notifications';
 import { api } from '@/src/api/api-client'; // This will likely be replaced by AuthService methods
-import { onboardUser, getCurrentUserProfile } from '@/src/api/api-client';
+import {
+  onboardUser,
+  getCurrentUserProfile,
+  updateContactEmail as updateContactEmailApi,
+} from '@/src/api/api-client';
 import { getSimulatorAuthState } from '@/src/utils/simulator-auth';
 
 const ACCESS_TOKEN_KEY = 'supabase_access_token'; // Added constant
@@ -80,6 +85,7 @@ export const useAuthStore = create<AuthState>()(
         refreshToken: null,
         pushToken: null,
         needsUsername: false,
+        needsContactEmail: false,
 
         /**
          * Called on app start to recover session
@@ -730,6 +736,20 @@ export const useAuthStore = create<AuthState>()(
                 needsUsername: true,
               });
             }
+
+            // Check if user has Apple private relay email and needs to provide contact email
+            const isPrivateRelayEmail = session.user.email?.includes('@privaterelay.appleid.com');
+            const needsContactEmail = isPrivateRelayEmail === true;
+            if (needsContactEmail) {
+              logger.info(
+                'AUTH',
+                'Apple private relay email detected, contact email collection required',
+                {
+                  email: session.user.email,
+                }
+              );
+            }
+
             set({
               user: needsUsername
                 ? {
@@ -766,10 +786,12 @@ export const useAuthStore = create<AuthState>()(
               status: 'authenticated',
               error: null,
               needsUsername,
+              needsContactEmail,
             });
             logger.debug('AUTH', 'User state updated after Apple sign-in', {
               userId: user?.id,
               needsUsername,
+              needsContactEmail,
               status: 'authenticated',
             });
             get().registerPushToken();
@@ -784,6 +806,7 @@ export const useAuthStore = create<AuthState>()(
               token: null,
               refreshToken: null,
               needsUsername: false,
+              needsContactEmail: false,
             });
             // Do not re-throw, hook will handle its own errors
           }
@@ -798,9 +821,7 @@ export const useAuthStore = create<AuthState>()(
             // 1. Attempt to deregister push token from backend FIRST
             if (pushToken) {
               try {
-                // Assuming your API client (api) is set up and handles auth token automatically
-                // The endpoint /users/push-token/deregister is hypothetical; replace with your actual endpoint
-                await api.post('/users/push-token/deregister', { token: pushToken });
+                await deregisterPushTokenService(pushToken);
                 logger.info('AUTH', 'Push token deregistered successfully.');
               } catch (e: any) {
                 logger.warn('AUTH', 'Failed to deregister push token:', e.message);
@@ -866,6 +887,20 @@ export const useAuthStore = create<AuthState>()(
         setUser: (user: User) => set({ user }),
 
         setNeedsUsername: (value: boolean) => set({ needsUsername: value }),
+
+        setNeedsContactEmail: (value: boolean) => set({ needsContactEmail: value }),
+
+        updateContactEmail: async (email: string) => {
+          try {
+            logger.debug('AUTH', 'Updating contact email', { email });
+            await updateContactEmailApi(email);
+            set({ needsContactEmail: false });
+            logger.info('AUTH', 'Contact email updated successfully');
+          } catch (error: any) {
+            logger.error('AUTH', 'Failed to update contact email:', error);
+            throw error;
+          }
+        },
       };
 
       // Setup Supabase onAuthStateChange listener

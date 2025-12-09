@@ -1,5 +1,12 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, ScrollView, useWindowDimensions, SafeAreaView, StyleSheet, ViewStyle } from 'react-native';
+import {
+  View,
+  ScrollView,
+  useWindowDimensions,
+  SafeAreaView,
+  StyleSheet,
+  ViewStyle,
+} from 'react-native';
 import { router } from 'expo-router';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { BentoGrid } from '@/components/ui/BentoGrid';
@@ -18,10 +25,25 @@ import { StatusBar } from 'expo-status-bar';
 import { useChatStore } from '@/src/features/chat/store';
 import { TripStats } from '@/src/features/trips/components/TripStats';
 import { useThemedStyles } from '@/src/theme/utils';
-import { BaseEventSchema, ServerEvent, isChatEvent, isServerEvent, isTodoEvent, isTripEvent, isWeatherEvent, isMemberEvent, isMemberInviteEvent } from '@/src/types/events';
-import { ZodNotificationSchema, Notification, isTripInvitationNotification } from '@/src/features/notifications/types/notification';
+import {
+  BaseEventSchema,
+  ServerEvent,
+  isChatEvent,
+  isServerEvent,
+  isTodoEvent,
+  isTripEvent,
+  isWeatherEvent,
+  isMemberEvent,
+  isMemberInviteEvent,
+} from '@/src/types/events';
+import {
+  ZodNotificationSchema,
+  Notification,
+  isTripInvitationNotification,
+} from '@/src/features/notifications/types/notification';
 import { useNotificationStore } from '@/src/features/notifications/store/useNotificationStore';
 import { logger } from '@/src/utils/logger';
+import { useTripPermissions } from '@/src/features/auth/permissions';
 
 interface TripDetailScreenProps {
   trip: Trip;
@@ -33,14 +55,18 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
   const { width: screenWidth } = useWindowDimensions();
   const [showAddTodo, setShowAddTodo] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const { isLocationSharingEnabled, startLocationTracking, stopLocationTracking } = useLocationStore();
+  const { isLocationSharingEnabled, startLocationTracking, stopLocationTracking } =
+    useLocationStore();
   const { connectToChat, fetchMessages } = useChatStore();
+
+  // Set up permission context for this trip
+  const { can, isAdminOrOwner, isOwner } = useTripPermissions({ trip });
 
   const styles = useThemedStyles((theme) => {
     const backgroundDefault = theme?.colors?.background?.default || '#FFFFFF';
     const spacingStackXl = theme?.spacing?.stack?.xl || 40;
     const breakpointDesktop = theme?.breakpoints?.desktop || 1024;
-    
+
     return {
       container: {
         flex: 1,
@@ -61,11 +87,11 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
   const GRID_MARGIN = theme.spacing.layout.screen.padding;
   const GRID_GAP = theme.spacing.layout.section.gap;
   const MAX_WIDTH = Math.min(screenWidth, theme.breakpoints.desktop);
-  const CONTENT_WIDTH = MAX_WIDTH - (GRID_MARGIN * 2);
-  
+  const CONTENT_WIDTH = MAX_WIDTH - GRID_MARGIN * 2;
+
   const BASE_CARD_HEIGHT = 180;
-  const TALL_CARD_HEIGHT = (BASE_CARD_HEIGHT * 2) + GRID_GAP;
-  
+  const TALL_CARD_HEIGHT = BASE_CARD_HEIGHT * 2 + GRID_GAP;
+
   const CARD_WIDTH = (CONTENT_WIDTH - GRID_GAP) / 2;
 
   const containerWidth = Math.min(screenWidth, theme.breakpoints.desktop);
@@ -74,10 +100,10 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
     {
       id: 'todo-list',
       component: TodoList,
-      props: { 
+      props: {
         tripId: tripId,
-        onAddTodoPress: () => setShowAddTodo(true)
-      }, 
+        onAddTodoPress: () => setShowAddTodo(true),
+      },
     },
   ];
 
@@ -86,27 +112,21 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
       {
         id: 'carousel',
         element: (
-          <BentoCarousel
-            items={carouselItems}
-            width={CARD_WIDTH}
-            height={TALL_CARD_HEIGHT}
-          />
+          <BentoCarousel items={carouselItems} width={CARD_WIDTH} height={TALL_CARD_HEIGHT} />
         ),
         height: 'tall' as const,
         position: 'left' as const,
       },
       {
         id: 'trip-stats',
-        element: (
-          <TripStats />
-        ),
+        element: <TripStats />,
         height: 'normal' as const,
         position: 'right' as const,
       },
       {
         id: 'quick-actions',
         element: (
-          <QuickActions 
+          <QuickActions
             trip={trip}
             setShowInviteModal={setShowInviteModal}
             onLocationPress={() => router.push(`/location/${tripId}`)}
@@ -124,57 +144,82 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
   useEffect(() => {
     logger.info('Trip Detail Screen', `Setting up WebSocket connection for trip ${tripId}`);
     const manager = WebSocketManager.getInstance();
-    
+
     const isConnectedBefore = manager.isConnected();
-    logger.info('Trip Detail Screen', `WebSocket connection status before connect: ${isConnectedBefore ? 'connected' : 'disconnected'}`);
-    
-    manager.connect(tripId, {
-      onMessage: (rawEvent: unknown) => {
-        const serverEventParseResult = BaseEventSchema.safeParse(rawEvent);
-        if (serverEventParseResult.success) {
-          const eventData = serverEventParseResult.data;
-          if (isServerEvent(eventData)) {
-            logger.debug('WS', 'TripDetailScreen: Confirmed ServerEvent', eventData);
+    logger.info(
+      'Trip Detail Screen',
+      `WebSocket connection status before connect: ${isConnectedBefore ? 'connected' : 'disconnected'}`
+    );
 
-            useTripStore.getState().handleTripEvent(eventData);
+    manager
+      .connect(tripId, {
+        onMessage: (rawEvent: unknown) => {
+          const serverEventParseResult = BaseEventSchema.safeParse(rawEvent);
+          if (serverEventParseResult.success) {
+            const eventData = serverEventParseResult.data;
+            if (isServerEvent(eventData)) {
+              logger.debug('WS', 'TripDetailScreen: Confirmed ServerEvent', eventData);
 
-            if (isChatEvent(eventData)) {
-              useChatStore.getState().handleChatEvent(eventData);
-            }
-          } else {
-            logger.warn('WS', 'TripDetailScreen: Parsed as ServerEvent by Zod, but failed isServerEvent guard:', eventData);
-            const notificationParseResult = ZodNotificationSchema.safeParse(rawEvent);
-            if (notificationParseResult.success) {
-                const notification = notificationParseResult.data;
-                logger.debug('WS', 'TripDetailScreen: Fallback - Received Notification after ServerEvent parse mismatch', notification);
-                useNotificationStore.getState().handleIncomingNotification(notification);
+              useTripStore.getState().handleTripEvent(eventData);
+
+              if (isChatEvent(eventData)) {
+                useChatStore.getState().handleChatEvent(eventData);
+              }
             } else {
-                logger.error('WS', 'TripDetailScreen: Unknown event structure after failing ServerEvent specific guard:', rawEvent);
+              logger.warn(
+                'WS',
+                'TripDetailScreen: Parsed as ServerEvent by Zod, but failed isServerEvent guard:',
+                eventData
+              );
+              const notificationParseResult = ZodNotificationSchema.safeParse(rawEvent);
+              if (notificationParseResult.success) {
+                const notification = notificationParseResult.data;
+                logger.debug(
+                  'WS',
+                  'TripDetailScreen: Fallback - Received Notification after ServerEvent parse mismatch',
+                  notification
+                );
+                useNotificationStore.getState().handleIncomingNotification(notification);
+              } else {
+                logger.error(
+                  'WS',
+                  'TripDetailScreen: Unknown event structure after failing ServerEvent specific guard:',
+                  rawEvent
+                );
+              }
             }
+            return;
           }
-          return;
-        }
 
-        const notificationParseResult = ZodNotificationSchema.safeParse(rawEvent);
-        if (notificationParseResult.success) {
-          const notification = notificationParseResult.data;
-          logger.debug('WS', 'TripDetailScreen: Received Notification', notification);
-          useNotificationStore.getState().handleIncomingNotification(notification);
-          return;
-        }
-        
-        logger.error('WS', 'TripDetailScreen: Received completely unknown event from WebSocket', rawEvent);
-      }
-    }).then(() => {
-      const isConnectedAfter = manager.isConnected();
-      logger.info('UI', `WebSocket connection status after connect: ${isConnectedAfter ? 'connected' : 'disconnected'}`);
-    }).catch(error => {
-      logger.error('UI', `Failed to connect to WebSocket for trip ${tripId}:`, error);
-    });
-    
+          const notificationParseResult = ZodNotificationSchema.safeParse(rawEvent);
+          if (notificationParseResult.success) {
+            const notification = notificationParseResult.data;
+            logger.debug('WS', 'TripDetailScreen: Received Notification', notification);
+            useNotificationStore.getState().handleIncomingNotification(notification);
+            return;
+          }
+
+          logger.error(
+            'WS',
+            'TripDetailScreen: Received completely unknown event from WebSocket',
+            rawEvent
+          );
+        },
+      })
+      .then(() => {
+        const isConnectedAfter = manager.isConnected();
+        logger.info(
+          'UI',
+          `WebSocket connection status after connect: ${isConnectedAfter ? 'connected' : 'disconnected'}`
+        );
+      })
+      .catch((error) => {
+        logger.error('UI', `Failed to connect to WebSocket for trip ${tripId}:`, error);
+      });
+
     connectToChat(tripId);
     fetchMessages(tripId);
-    
+
     if (isLocationSharingEnabled) {
       startLocationTracking(tripId);
     }
@@ -187,10 +232,16 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
 
   useEffect(() => {
     if (isLocationSharingEnabled) {
-      logger.info('TripDetailScreen', `Starting location tracking for trip ${tripId} (state change)`);
+      logger.info(
+        'TripDetailScreen',
+        `Starting location tracking for trip ${tripId} (state change)`
+      );
       startLocationTracking(tripId);
     } else {
-      logger.info('TripDetailScreen', `Stopping location tracking for trip ${tripId} (state change)`);
+      logger.info(
+        'TripDetailScreen',
+        `Stopping location tracking for trip ${tripId} (state change)`
+      );
       stopLocationTracking();
     }
   }, [isLocationSharingEnabled, tripId, startLocationTracking, stopLocationTracking]);
@@ -198,28 +249,17 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
-      <TripDetailHeader 
-        trip={trip} 
-        onBack={() => router.back()} 
-        containerWidth={containerWidth}
-      />
+      <TripDetailHeader trip={trip} onBack={() => router.back()} containerWidth={containerWidth} />
 
       <ScrollView
         style={styles.scrollContainer}
-        contentContainerStyle={[
-          styles.contentContainer,
-          { maxWidth: containerWidth }
-        ]}
+        contentContainerStyle={[styles.contentContainer, { maxWidth: containerWidth }]}
         showsVerticalScrollIndicator={false}
       >
         <BentoGrid items={bentoItems} />
       </ScrollView>
 
-      <AddTodoModal
-        visible={showAddTodo}
-        onClose={() => setShowAddTodo(false)}
-        tripId={tripId}
-      />
+      <AddTodoModal visible={showAddTodo} onClose={() => setShowAddTodo(false)} tripId={tripId} />
 
       <InviteModal
         visible={showInviteModal}
@@ -228,4 +268,4 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
       />
     </SafeAreaView>
   );
-} 
+}

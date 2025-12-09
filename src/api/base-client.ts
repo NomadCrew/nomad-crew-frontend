@@ -81,22 +81,18 @@ export class BaseApiClient {
         return response;
       },
       (error: AxiosError) => {
+        // Improved error logging with expected values for better debugging
+        // Note: error.config may be incomplete when network fails before request initialization
         logger.error('API', 'Request failed:', {
           message: error.message,
           code: error.code,
-          url: error.config?.url,
+          url: error.config?.url || 'unknown',
           status: error.response?.status,
           data: error.response?.data,
-          // Add these additional debug fields
-          config: {
-            baseURL: error.config?.baseURL,
-            headers: error.config?.headers,
-            method: error.config?.method,
-          },
-          // Network error details
-          isAxiosError: error.isAxiosError,
-          stack: error.stack,
-          cause: error.cause,
+          // Always show expected baseURL for debugging (not from error.config which may be undefined)
+          expectedBaseURL: API_CONFIG.BASE_URL,
+          method: error.config?.method || 'unknown',
+          isNetworkError: !error.response,
         });
 
         // Handle network errors (no response from server)

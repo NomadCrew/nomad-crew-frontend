@@ -44,28 +44,52 @@ function throttle<T extends (...args: any[]) => any>(
 /**
  * Throttled server update function to save battery.
  * Updates are sent to the server at most once every 10 seconds.
+ *
+ * Important: This function includes auth guards to prevent API calls
+ * before authentication is fully initialized (following industry best practice
+ * of checking isInitialized, user, and token before making authenticated requests).
+ *
+ * The tripId parameter is required because the Supabase locations table
+ * requires a trip_id foreign key. Location updates must be associated with a trip.
  */
 const throttledServerUpdate = throttle(
-  async (location: Location.LocationObject) => {
-    const { user } = useAuthStore.getState();
-    if (!user) {
-      logger.debug('No user found, not updating location on server');
+  async (location: Location.LocationObject, tripId: string) => {
+    const { user, isInitialized, token } = useAuthStore.getState();
+
+    // Guard 1: Check if auth is initialized (three-state pattern: idle → signIn | signOut)
+    if (!isInitialized) {
+      logger.debug('LOCATION', 'Auth not initialized yet, skipping server update');
+      return;
+    }
+
+    // Guard 2: Check if user and token are available
+    if (!user || !token) {
+      logger.debug('LOCATION', 'No user/token available, skipping server update');
+      return;
+    }
+
+    // Guard 3: Require tripId - the locations table requires trip_id as NOT NULL
+    if (!tripId) {
+      logger.debug('LOCATION', 'No tripId available, skipping server update');
       return;
     }
 
     try {
-      await api.post(API_PATHS.location.update, {
+      // Use trip-specific endpoint: POST /v1/trips/{tripId}/locations
+      // This ensures the location is properly associated with the trip
+      await api.post(API_PATHS.location.byTrip(tripId), {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
         accuracy: location.coords.accuracy,
         timestamp: Math.floor(location.timestamp), // Backend expects int64, not float
       });
-      logger.debug('Location successfully sent to server:', {
+      logger.debug('LOCATION', 'Location successfully sent to server:', {
+        tripId,
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
       });
     } catch (error) {
-      logger.error('Failed to send location update to server', error);
+      logger.error('LOCATION', 'Failed to send location update to server', error);
     }
   },
   10000 // 10 seconds minimum between server updates
@@ -81,6 +105,10 @@ export const useLocationStore = create<LocationState>()(
       currentLocation: null,
       locationError: null,
       isTrackingLocation: false,
+
+      // Active trip for location tracking
+      // This is stored to pass to throttled updates since locations are trip-specific
+      activeTripId: null as string | null,
 
       // Trip member locations
       memberLocations: {},
@@ -114,20 +142,31 @@ export const useLocationStore = create<LocationState>()(
       },
 
       startLocationTracking: async (tripId: string) => {
+        // Auth guard: Check if auth is initialized and user has token
+        const { user, isInitialized, token } = useAuthStore.getState();
+        if (!isInitialized) {
+          logger.debug('LOCATION', 'Auth not initialized yet, deferring location tracking');
+          return;
+        }
+        if (!user || !token) {
+          logger.debug('LOCATION', 'No user/token available, deferring location tracking');
+          return;
+        }
+
         // Don't start tracking if location sharing is disabled
         if (!get().isLocationSharingEnabled) {
-          logger.debug('Not starting location tracking because sharing is disabled');
+          logger.debug('LOCATION', 'Not starting location tracking because sharing is disabled');
           return;
         }
 
         // Don't start tracking if already tracking
         if (get().isTrackingLocation) {
-          logger.debug('Already tracking location, not starting again');
+          logger.debug('LOCATION', 'Already tracking location, not starting again');
           return;
         }
 
         try {
-          logger.debug('Starting location tracking for trip:', tripId);
+          logger.debug('LOCATION', 'Starting location tracking for trip:', tripId);
 
           // Request permissions if not already granted
           const { status } = await Location.requestForegroundPermissionsAsync();
@@ -139,6 +178,9 @@ export const useLocationStore = create<LocationState>()(
             });
             return;
           }
+
+          // Store the active trip ID for use in throttled updates
+          set({ activeTripId: tripId });
 
           // Start watching position with battery-optimized settings
           const subscription = await Location.watchPositionAsync(
@@ -157,7 +199,11 @@ export const useLocationStore = create<LocationState>()(
               set({ currentLocation: location });
 
               // Send to server with throttling for battery optimization
-              await get().updateLocation(location);
+              // Pass the active tripId for the trip-specific endpoint
+              const currentTripId = get().activeTripId;
+              if (currentTripId) {
+                await get().updateLocation(location, currentTripId);
+              }
             }
           );
 
@@ -167,13 +213,14 @@ export const useLocationStore = create<LocationState>()(
             locationSubscription: subscription,
           });
 
-          logger.debug('Location tracking started successfully');
+          logger.debug('Location tracking started successfully for trip:', tripId);
         } catch (error) {
           logger.error('Failed to start location tracking:', error);
           set({
             locationError:
               error instanceof Error ? error.message : 'Failed to start location tracking',
             isTrackingLocation: false,
+            activeTripId: null,
           });
         }
       },
@@ -188,10 +235,11 @@ export const useLocationStore = create<LocationState>()(
         set({
           isTrackingLocation: false,
           locationSubscription: null,
+          activeTripId: null, // Clear active trip when stopping
         });
       },
 
-      updateLocation: async (location: Location.LocationObject) => {
+      updateLocation: async (location: Location.LocationObject, tripId: string) => {
         const { user } = useAuthStore.getState();
         if (!user) {
           logger.debug('No user found, not updating location');
@@ -202,23 +250,52 @@ export const useLocationStore = create<LocationState>()(
         if (get().isLocationSharingEnabled) {
           // Use throttled server update for battery optimization
           // This ensures updates are sent at most once every 10 seconds
-          throttledServerUpdate(location);
+          // Pass tripId for the trip-specific endpoint
+          throttledServerUpdate(location, tripId);
         }
       },
 
       getMemberLocations: async (tripId: string) => {
+        // Auth guard: Check if auth is initialized and user has token
+        const { user, isInitialized, token } = useAuthStore.getState();
+        if (!isInitialized) {
+          logger.debug('LOCATION', 'Auth not initialized yet, skipping member locations fetch');
+          return [];
+        }
+        if (!user || !token) {
+          logger.debug('LOCATION', 'No user/token available, skipping member locations fetch');
+          return [];
+        }
+
         try {
-          logger.debug('Getting member locations for trip:', tripId);
+          logger.debug('LOCATION', 'Getting member locations for trip:', tripId);
 
           // Only fetch locations if sharing is enabled
           if (!get().isLocationSharingEnabled) {
-            logger.debug('Location sharing disabled, not fetching member locations');
+            logger.debug('LOCATION', 'Location sharing disabled, not fetching member locations');
             return [];
           }
 
           // Fetch actual locations from backend
           const response = await api.get<MemberLocation[]>(API_PATHS.location.byTrip(tripId));
           const locations = response.data;
+
+          // Validate that locations is an array before processing
+          if (!Array.isArray(locations)) {
+            logger.warn('LOCATION', 'API returned non-array for member locations:', {
+              tripId,
+              responseType: typeof locations,
+              response: locations,
+            });
+            // Set empty object for this trip to avoid stale data
+            set((state) => ({
+              memberLocations: {
+                ...state.memberLocations,
+                [tripId]: {},
+              },
+            }));
+            return [];
+          }
 
           // Update state with fetched locations for the specific tripId
           set((state) => ({
@@ -310,6 +387,7 @@ export const selectIsLocationSharingEnabled = (state: LocationState) =>
 export const selectCurrentLocation = (state: LocationState) => state.currentLocation;
 export const selectLocationError = (state: LocationState) => state.locationError;
 export const selectIsTrackingLocation = (state: LocationState) => state.isTrackingLocation;
+export const selectActiveTripId = (state: LocationState) => state.activeTripId;
 
 // Member locations selectors
 export const selectMemberLocationsByTrip = (tripId: string) => (state: LocationState) =>
@@ -347,6 +425,7 @@ export const selectLocationState = (state: LocationState) => ({
   isTrackingLocation: state.isTrackingLocation,
   isLocationSharingEnabled: state.isLocationSharingEnabled,
   locationError: state.locationError,
+  activeTripId: state.activeTripId,
 });
 
 export const selectTripLocationState = (tripId: string) => (state: LocationState) => ({

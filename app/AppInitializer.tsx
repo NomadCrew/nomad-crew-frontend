@@ -5,6 +5,8 @@ import { useAuthStore } from '../src/features/auth/store';
 import { Text, View, ActivityIndicator } from 'react-native';
 import { logger } from '../src/utils/logger';
 import { useOnboarding } from '../src/providers/OnboardingProvider';
+import { configureNotifications } from '../src/features/notifications/utils/notifications';
+import { setupPushNotifications } from '../src/features/notifications/services/pushNotificationService';
 
 // NOTE: SplashScreen.preventAutoHideAsync() is called in _layout.tsx at global scope
 // This is the correct pattern per Expo documentation
@@ -22,16 +24,50 @@ const customFonts = {
 };
 
 export default function AppInitializer({ children }: { children: React.ReactNode }) {
-  const { initialize: initializeAuth, isInitialized: authInitialized } = useAuthStore();
+  const { initialize: initializeAuth, isInitialized: authInitialized, status } = useAuthStore();
+  const isAuthenticated = status === 'authenticated';
   const { isInitialized: onboardingInitialized } = useOnboarding();
   const [fontsLoaded, fontError] = useFonts(customFonts);
   const [splashHidden, setSplashHidden] = useState(false);
+  const [notificationsConfigured, setNotificationsConfigured] = useState(false);
 
   // Initialize auth when component mounts
   useEffect(() => {
     logger.debug('APP', 'AppInitializer mounted, triggering auth initialization');
     initializeAuth();
   }, [initializeAuth]);
+
+  // Configure notifications once on app start (sets up handlers and Android channel)
+  useEffect(() => {
+    if (!notificationsConfigured) {
+      logger.debug('APP', 'Configuring notifications...');
+      configureNotifications();
+      setNotificationsConfigured(true);
+      logger.debug('APP', 'Notifications configured');
+    }
+  }, [notificationsConfigured]);
+
+  // Setup push notifications after auth is initialized and user is authenticated
+  // This registers the push token with the backend for session restore cases
+  useEffect(() => {
+    async function initPushNotifications() {
+      if (authInitialized && isAuthenticated) {
+        logger.debug('APP', 'User authenticated, setting up push notifications...');
+        try {
+          const token = await setupPushNotifications();
+          if (token) {
+            logger.info('APP', 'Push notifications setup complete', { tokenId: token.id });
+          } else {
+            logger.debug('APP', 'Push notifications setup skipped (no token or permissions)');
+          }
+        } catch (error) {
+          logger.error('APP', 'Failed to setup push notifications:', error);
+        }
+      }
+    }
+
+    initPushNotifications();
+  }, [authInitialized, isAuthenticated]);
 
   // Hide splash screen when all resources are ready
   useEffect(() => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -7,12 +7,13 @@ import {
   Text,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  LayoutChangeEvent,
 } from 'react-native';
 import { Surface } from 'react-native-paper';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { useAuthStore } from '@/src/features/auth/store';
 import { Theme } from '@/src/theme/types';
-import { Trip } from '@/src/features/trips/types'; // Updated path
+import { Trip } from '@/src/features/trips/types';
 import {
   ArrowLeft,
   ArrowRight,
@@ -24,6 +25,7 @@ import {
 } from 'lucide-react-native';
 import { MemberManagementModal } from './MemberManagementModal';
 import { TripStatusUpdateModal } from './TripStatusUpdateModal';
+import { useIsOwner, useIsAdminOrOwner, usePermission } from '@/src/features/auth/permissions';
 
 // Define a type for the icon props
 type IconProps = {
@@ -50,10 +52,12 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   const [showMemberModal, setShowMemberModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
 
-  const isOwner = trip?.createdBy === userId;
-  const members = trip?.members || [];
-  const isAdmin = members.some((member) => member.userId === userId && member.role === 'admin');
-  const isOwnerOrAdmin = isOwner || isAdmin;
+  // Use the permission system from context (set up by TripDetailScreen)
+  const isOwner = useIsOwner();
+  const isOwnerOrAdmin = useIsAdminOrOwner();
+  // Permission checks using CASL ability
+  const canCreateInvitation = usePermission('create', 'Invitation');
+  const canUpdateTrip = usePermission('update', 'Trip');
 
   // Helper function to get the best available display name for a user
   const getUserDisplayName = (user: any): string => {
@@ -137,7 +141,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
           },
         ]
       : []),
-    ...(isOwnerOrAdmin && setShowInviteModal
+    ...(canCreateInvitation && setShowInviteModal
       ? [
           {
             icon: (props: IconProps) => <UserPlus {...props} />,
@@ -146,7 +150,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
           },
         ]
       : []),
-    ...(isOwner
+    ...(canUpdateTrip
       ? [
           {
             icon: (props: IconProps) => <Activity {...props} />,
@@ -158,29 +162,72 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   ];
 
   const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [needsScrolling, setNeedsScrolling] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [contentWidth, setContentWidth] = useState(0);
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  // Check if scrolling is needed when dimensions change
+  useEffect(() => {
+    if (contentWidth > 0 && containerWidth > 0) {
+      const scrollNeeded = contentWidth > containerWidth;
+      setNeedsScrolling(scrollNeeded);
+      // Only show right arrow if scrolling is needed and we're at the start
+      setCanScrollRight(scrollNeeded);
+    }
+  }, [contentWidth, containerWidth]);
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
-    setCanScrollLeft(contentOffset.x > 0);
-    setCanScrollRight(contentOffset.x < contentSize.width - layoutMeasurement.width);
+    const scrollNeeded = contentSize.width > layoutMeasurement.width;
+    setNeedsScrolling(scrollNeeded);
+    if (scrollNeeded) {
+      setCanScrollLeft(contentOffset.x > 5); // Small threshold to avoid floating point issues
+      setCanScrollRight(contentOffset.x < contentSize.width - layoutMeasurement.width - 5);
+    } else {
+      setCanScrollLeft(false);
+      setCanScrollRight(false);
+    }
+  };
+
+  const handleScrollViewLayout = (event: LayoutChangeEvent) => {
+    setContainerWidth(event.nativeEvent.layout.width);
+  };
+
+  const handleContentSizeChange = (width: number) => {
+    setContentWidth(width);
   };
 
   return (
     <>
       <Surface style={styles(theme).actionsCard} elevation={0}>
         <View style={styles(theme).fadeContainer}>
-          {canScrollLeft && (
-            <ArrowLeft size={20} color={theme.colors.content.primary} style={styles(theme).arrow} />
+          {needsScrolling && canScrollLeft && (
+            <ArrowLeft
+              size={16}
+              color={theme.colors.content.secondary}
+              style={styles(theme).arrow}
+            />
           )}
 
           <ScrollView
+            ref={scrollViewRef}
             horizontal
             showsHorizontalScrollIndicator={false}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+            alwaysBounceVertical={false}
+            alwaysBounceHorizontal={false}
+            overScrollMode="never"
+            nestedScrollEnabled={false}
+            scrollsToTop={false}
             style={styles(theme).actionButtons}
             onScroll={handleScroll}
             scrollEventThrottle={16}
             contentContainerStyle={styles(theme).scrollContent}
+            onContentSizeChange={handleContentSizeChange}
+            onLayout={handleScrollViewLayout}
           >
             {actions.map((action) => (
               <Pressable
@@ -189,17 +236,19 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
                 style={({ pressed }) => [styles(theme).actionItem, { opacity: pressed ? 0.6 : 1 }]}
               >
                 <View style={styles(theme).iconContainer}>
-                  {action.icon({ size: 19, color: theme.colors.primary.main })}
+                  {action.icon({ size: 18, color: theme.colors.primary.main })}
                 </View>
-                <Text style={styles(theme).actionLabel}>{action.label}</Text>
+                <Text style={styles(theme).actionLabel} numberOfLines={1}>
+                  {action.label}
+                </Text>
               </Pressable>
             ))}
           </ScrollView>
 
-          {canScrollRight && (
+          {needsScrolling && canScrollRight && (
             <ArrowRight
-              size={20}
-              color={theme.colors.content.primary}
+              size={16}
+              color={theme.colors.content.secondary}
               style={styles(theme).arrow}
             />
           )}
@@ -298,46 +347,50 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
 const styles = (theme: Theme) =>
   StyleSheet.create({
     actionsCard: {
+      flex: 1,
+      justifyContent: 'center',
       borderRadius: theme.shape?.borderRadius.medium ?? 8,
-      marginVertical: theme.spacing.layout.section.gap,
-      backgroundColor: theme.colors.surface.default,
+      backgroundColor: 'transparent',
       overflow: 'hidden',
     },
     fadeContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: theme.spacing.layout.card.padding.horizontal,
+      paddingHorizontal: theme.spacing.inset.xs,
     },
     arrow: {
-      paddingHorizontal: theme.spacing.inset.xs,
+      paddingHorizontal: 2,
+      opacity: 0.6,
     },
     actionButtons: {
       flexDirection: 'row',
-      paddingVertical: theme.spacing.layout.card.padding.vertical,
+      flex: 1,
     },
     scrollContent: {
       alignItems: 'center',
+      paddingVertical: theme.spacing.inset.sm,
+      paddingHorizontal: theme.spacing.inset.xs,
     },
     actionItem: {
       alignItems: 'center',
       justifyContent: 'center',
-      paddingHorizontal: theme.spacing.inset.md,
-      minWidth: 80,
-      height: 70,
+      paddingHorizontal: theme.spacing.inset.sm,
+      minWidth: 60,
+      height: 64,
     },
     iconContainer: {
-      width: 38,
-      height: 38,
-      borderRadius: theme.shape?.borderRadius.large ?? 16,
+      width: 34,
+      height: 34,
+      borderRadius: theme.shape?.borderRadius.medium ?? 12,
       backgroundColor: theme.colors.primary.surface,
       alignItems: 'center',
       justifyContent: 'center',
-      marginBottom: theme.spacing.inset.xs,
+      marginBottom: 4,
     },
     actionLabel: {
-      fontSize: 12,
+      fontSize: 11,
       color: theme.colors.content.primary,
       textAlign: 'center',
-      marginTop: 4,
+      maxWidth: 60,
     },
   });
