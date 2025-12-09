@@ -10,7 +10,7 @@ import { useAuthStore } from '../auth/store';
 import { API_CONFIG } from '../../api/env';
 import { jwtDecode } from 'jwt-decode';
 import { logger } from '../../utils/logger';
-import { shouldBypassAuth, MOCK_SIMULATOR_TOKEN } from '../../utils/simulator-auth';
+import { shouldBypassAuth } from '../../utils/simulator-auth';
 import { useLocationStore } from '../location/store/useLocationStore';
 import { useNotificationStore } from '../notifications/store/useNotificationStore';
 import { ZodNotificationSchema, Notification } from '../notifications/types/notification';
@@ -66,7 +66,7 @@ export class WebSocketManager {
       }
 
       // Check if using simulator bypass - skip JWT validation for mock tokens
-      const isSimulatorBypass = shouldBypassAuth() && token === MOCK_SIMULATOR_TOKEN;
+      const isSimulatorBypass = shouldBypassAuth();
 
       if (!isSimulatorBypass) {
         // Check token expiration (only for real JWTs)

@@ -11,6 +11,7 @@ import { Todo } from '../types';
 import { getColorForUUID } from '@/src/utils/uuidToColor';
 import LottieView from 'lottie-react-native';
 import { Plus } from 'lucide-react-native';
+import { useTripAbility } from '@/src/features/auth/permissions';
 
 interface TodoListProps {
   tripId: string;
@@ -31,6 +32,9 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
   const { theme } = useAppTheme();
   const [showCompletionAnimation, setShowCompletionAnimation] = useState(false);
   const [offset, setOffset] = useState(0);
+
+  // Permission checking
+  const { ability } = useTripAbility();
 
   // TanStack Query hooks
   const { data, isLoading, error, refetch } = useTodos(tripId, offset, ITEMS_PER_PAGE);
@@ -64,45 +68,61 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
 
   // Render items
   const renderItem: ListRenderItem<Todo> = React.useCallback(
-    ({ item }) => (
-      <TodoItem
-        todo={item}
-        onComplete={async () => {
-          const newStatus = item.status === 'COMPLETE' ? 'INCOMPLETE' : 'COMPLETE';
-          return new Promise<Todo>((resolve, reject) => {
-            updateTodo.mutate(
-              { tripId, id: item.id, input: { status: newStatus } },
-              {
-                onSuccess: (updatedTodo) => {
-                  if (updatedTodo.status === 'COMPLETE') {
-                    setShowCompletionAnimation(true);
-                    setTimeout(() => setShowCompletionAnimation(false), 2000);
-                  }
-                  resolve(updatedTodo);
-                },
-                onError: (error) => {
-                  reject(error);
-                },
-              }
-            );
-          });
-        }}
-        onDelete={async () => {
-          return new Promise<void>((resolve, reject) => {
-            deleteTodo.mutate(
-              { tripId, id: item.id },
-              {
-                onSuccess: () => resolve(),
-                onError: (error) => reject(error),
-              }
-            );
-          });
-        }}
-        disabled={isLoading}
-        textColor={getColorForUUID(item.createdBy)}
-      />
-    ),
-    [isLoading, updateTodo, deleteTodo, tripId]
+    ({ item }) => {
+      // Check if user can delete this specific todo
+      // CASL checks conditions like { createdBy: userId } for members
+      // Admins/owners can delete any todo
+      const canDeleteTodo = ability.can('delete', {
+        __typename: 'Todo' as const,
+        id: item.id,
+        tripId: item.tripId,
+        createdBy: item.createdBy,
+      });
+
+      return (
+        <TodoItem
+          todo={item}
+          onComplete={async () => {
+            const newStatus = item.status === 'COMPLETE' ? 'INCOMPLETE' : 'COMPLETE';
+            return new Promise<Todo>((resolve, reject) => {
+              updateTodo.mutate(
+                { tripId, id: item.id, input: { status: newStatus } },
+                {
+                  onSuccess: (updatedTodo) => {
+                    if (updatedTodo.status === 'COMPLETE') {
+                      setShowCompletionAnimation(true);
+                      setTimeout(() => setShowCompletionAnimation(false), 2000);
+                    }
+                    resolve(updatedTodo);
+                  },
+                  onError: (error) => {
+                    reject(error);
+                  },
+                }
+              );
+            });
+          }}
+          onDelete={
+            canDeleteTodo
+              ? async () => {
+                  return new Promise<void>((resolve, reject) => {
+                    deleteTodo.mutate(
+                      { tripId, id: item.id },
+                      {
+                        onSuccess: () => resolve(),
+                        onError: (error) => reject(error),
+                      }
+                    );
+                  });
+                }
+              : undefined
+          }
+          disabled={isLoading}
+          textColor={getColorForUUID(item.createdBy)}
+        />
+      );
+    },
+    [isLoading, updateTodo, deleteTodo, tripId, ability]
   );
 
   if (isLoading && todos.length === 0) {

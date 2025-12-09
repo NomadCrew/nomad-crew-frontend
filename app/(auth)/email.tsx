@@ -59,8 +59,17 @@ export default function EmailLoginScreen() {
 
         {/* Error Message */}
         {error && (
-          <ThemedView style={styles.errorContainer}>
-            <ThemedText style={styles.errorText}>{getFriendlyErrorMessage(error)}</ThemedText>
+          <ThemedView
+            style={[
+              styles.errorContainer,
+              { backgroundColor: theme.colors.error?.surface ?? '#FEF2F2' },
+            ]}
+          >
+            <ThemedText
+              style={[styles.errorText, { color: theme.colors.error?.main ?? '#DC2626' }]}
+            >
+              {getFriendlyErrorMessage(error)}
+            </ThemedText>
           </ThemedView>
         )}
 
@@ -170,13 +179,11 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   errorContainer: {
-    backgroundColor: '#FEF2F2',
     padding: 16,
     borderRadius: 8,
     marginBottom: 16,
   },
   errorText: {
-    color: '#DC2626',
     fontSize: 14,
     textAlign: 'center',
   },

@@ -319,3 +319,50 @@ export async function getSupabaseJWT(): Promise<string> {
   if (!token) throw new Error('No Supabase JWT available');
   return token;
 }
+
+// User search result type
+export interface UserSearchResult {
+  id: string;
+  email: string;
+  username: string;
+  firstName?: string;
+  lastName?: string;
+  avatarUrl?: string;
+  contactEmail?: string;
+  isMember?: boolean;
+}
+
+export interface UserSearchResponse {
+  users: UserSearchResult[];
+}
+
+/**
+ * Search users by query (username, email, contact_email, first/last name)
+ * @param query Search term (min 2 chars)
+ * @param tripId Optional trip ID to check membership
+ * @param limit Max results (default 10, max 20)
+ */
+export async function searchUsers(
+  query: string,
+  tripId?: string,
+  limit: number = 10
+): Promise<UserSearchResult[]> {
+  const api = ApiClient.getInstance();
+  const params = new URLSearchParams({ q: query, limit: String(limit) });
+  if (tripId) params.append('tripId', tripId);
+  const response = await api
+    .getAxiosInstance()
+    .get<UserSearchResponse>(`${API_PATHS.users.search}?${params}`);
+  return response.data.users;
+}
+
+/**
+ * Update the current user's contact email (for Apple Sign-In users)
+ */
+export async function updateContactEmail(email: string): Promise<{ contactEmail: string }> {
+  const api = ApiClient.getInstance();
+  const response = await api
+    .getAxiosInstance()
+    .put<{ contactEmail: string }>(API_PATHS.users.updateContactEmail, { email });
+  return response.data;
+}

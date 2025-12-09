@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,16 +8,16 @@ import {
   Pressable,
   ActivityIndicator,
 } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
+import MapView, { Marker, Callout, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
-import { useLocationStore } from '../store/useLocationStore'; // Updated
+import { useLocationStore } from '../store/useLocationStore';
 import { useAuthStore } from '@/src/features/auth/store';
 import { Trip } from '@/src/features/trips/types';
-import { AlertCircle, Info } from 'lucide-react-native';
-import { LocationSharingToggle } from './LocationSharingToggle'; // Correct after move
+import { AlertCircle } from 'lucide-react-native';
+import { getMemberColor, TripMember } from '../utils/memberColors';
+import { LocationSharingToggle } from './LocationSharingToggle';
 import { Surface } from 'react-native-paper';
 import { Theme } from '@/src/theme/types';
-// import { LiveLocation, UserLocation } from '@/src/types/location'; // Removed, not used and path is old
 
 const DEFAULT_COORDINATES = {
   latitude: 37.7749,
@@ -39,6 +39,8 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
 }) => {
   const { theme } = useAppTheme();
   const mapRef = useRef<MapView>(null);
+  const isMountedRef = useRef(true); // Track if component is mounted
+  const hasCalledFitToMarkersRef = useRef(false); // Prevent duplicate fitToMarkers calls
   const { user } = useAuthStore();
   const {
     isLocationSharingEnabled,
@@ -50,13 +52,23 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
     locationError,
   } = useLocationStore();
 
-  const [region, setRegion] = useState<Region>({
-    latitude: trip.destination?.coordinates?.lat ?? DEFAULT_COORDINATES.latitude,
-    longitude: trip.destination?.coordinates?.lng ?? DEFAULT_COORDINATES.longitude,
-    latitudeDelta: 0.05,
-    longitudeDelta: 0.05,
-  });
+  // Calculate initial region from trip destination
+  const getInitialRegion = useCallback((): Region => {
+    const lat = trip.destination?.coordinates?.lat;
+    const lng = trip.destination?.coordinates?.lng;
 
+    if (lat !== undefined && lng !== undefined) {
+      return {
+        latitude: lat,
+        longitude: lng,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      };
+    }
+    return DEFAULT_COORDINATES;
+  }, [trip.destination?.coordinates]);
+
+  const [region] = useState<Region>(getInitialRegion());
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [mapError, setMapError] = useState<string | null>(null);
   const [mapLoaded, setMapLoaded] = useState<boolean>(false);
@@ -65,60 +77,85 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
   const tripMemberLocations = memberLocations[trip.id] || {};
   const memberLocationArray = Object.values(tripMemberLocations);
 
+  // Convert trip members to the format needed for color assignment
+  const tripMembers: TripMember[] = (trip.members || []).map((m) => ({
+    userId: m.userId,
+    name: m.name,
+    role: m.role,
+    joinedAt: m.joinedAt,
+  }));
+
+  // Set isMountedRef to false when component unmounts
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  // iOS fallback: onMapReady is unreliable on iOS, so use a timeout to hide loading
+  useEffect(() => {
+    if (Platform.OS === 'ios' && !mapLoaded) {
+      const fallbackTimeout = setTimeout(() => {
+        if (isMountedRef.current) {
+          console.log('[MapDebug] iOS fallback: hiding loading overlay after timeout');
+          setMapLoaded(true);
+          setIsLoading(false);
+        }
+      }, 2000);
+
+      return () => clearTimeout(fallbackTimeout);
+    }
+    return undefined;
+  }, [mapLoaded]);
+
+  // Start location tracking and fetch member locations
   useEffect(() => {
     if (isLocationSharingEnabled) {
       startLocationTracking(trip.id);
     }
 
     const fetchLocations = async () => {
+      if (!isMountedRef.current) return;
+
       try {
         setIsLoading(true);
         await getMemberLocations(trip.id);
       } catch (error) {
-        setMapError('Unable to fetch member locations.');
+        if (isMountedRef.current) {
+          setMapError('Unable to fetch member locations.');
+        }
       } finally {
-        setIsLoading(false);
+        if (isMountedRef.current) {
+          setIsLoading(false);
+        }
       }
     };
 
-    // Initial fetch only - WebSocket handles real-time updates
     fetchLocations();
 
-    // Cleanup: No polling interval to clear, WebSocket handles updates
-  }, [trip.id, isLocationSharingEnabled, getMemberLocations, startLocationTracking]); // Added dependencies
+    // IMPORTANT: Cleanup on unmount - stop location tracking to prevent memory leaks
+    return () => {
+      stopLocationTracking();
+    };
+  }, [
+    trip.id,
+    isLocationSharingEnabled,
+    getMemberLocations,
+    startLocationTracking,
+    stopLocationTracking,
+  ]);
 
-  useEffect(() => {
-    if (currentLocation && isLocationSharingEnabled) {
-      setRegion({
-        latitude: currentLocation.coords.latitude,
-        longitude: currentLocation.coords.longitude,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
-      });
+  // Memoized fitToMarkers function
+  const fitToMarkers = useCallback(() => {
+    // Guard: Don't call if unmounted or no map ref
+    if (!isMountedRef.current || !mapRef.current) {
+      return;
     }
-  }, [currentLocation, isLocationSharingEnabled]);
 
-  // Ensure we have valid coordinates initially
-  useEffect(() => {
-    if (
-      trip.destination.coordinates?.lat !== undefined &&
-      trip.destination.coordinates?.lng !== undefined
-    ) {
-      setRegion((prevRegion) => ({
-        ...prevRegion, // Keep delta values if already set
-        latitude: trip.destination.coordinates!.lat,
-        longitude: trip.destination.coordinates!.lng,
-      }));
-      console.log(
-        '[MapDebug] Initial region set from trip destination:',
-        JSON.stringify(trip.destination.coordinates)
-      );
-    }
-  }, [trip.id, trip.destination.coordinates]); // Added dependencies
-
-  const fitToMarkers = () => {
     const markers: { latitude: number; longitude: number }[] = [];
 
+    // Add member locations
     if (memberLocationArray.length > 0) {
       markers.push(
         ...memberLocationArray.map((m) => ({
@@ -128,6 +165,7 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
       );
     }
 
+    // Add current user location if sharing
     if (currentLocation && isLocationSharingEnabled) {
       markers.push({
         latitude: currentLocation.coords.latitude,
@@ -135,139 +173,152 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
       });
     }
 
-    if (
-      trip.destination.coordinates?.lat !== undefined &&
-      trip.destination.coordinates?.lng !== undefined
-    ) {
-      const coordinates = trip.destination.coordinates;
+    // Add trip destination
+    const destLat = trip.destination?.coordinates?.lat;
+    const destLng = trip.destination?.coordinates?.lng;
+    if (destLat !== undefined && destLng !== undefined) {
       markers.push({
-        latitude: coordinates.lat,
-        longitude: coordinates.lng,
+        latitude: destLat,
+        longitude: destLng,
       });
     }
 
-    if (mapRef.current && markers.length > 0) {
-      mapRef.current.fitToCoordinates(markers, {
-        edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
-        animated: true,
-      });
+    // Guard: Don't call fitToCoordinates with empty markers
+    if (markers.length === 0) {
+      console.log('[MapDebug] fitToMarkers: No markers to fit');
+      return;
     }
-  };
 
-  // Fit to markers when map is loaded and member locations are available
+    console.log('[MapDebug] fitToMarkers: Fitting to', markers.length, 'markers');
+    mapRef.current.fitToCoordinates(markers, {
+      edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+      animated: true,
+    });
+  }, [
+    memberLocationArray,
+    currentLocation,
+    isLocationSharingEnabled,
+    trip.destination?.coordinates,
+  ]);
+
+  // Fit to markers when map is loaded (ONLY ONCE - do not call in onMapReady)
   useEffect(() => {
-    if (mapLoaded && (memberLocationArray.length > 0 || currentLocation)) {
-      InteractionManager.runAfterInteractions(() => {
-        fitToMarkers();
-      });
+    if (mapLoaded && !hasCalledFitToMarkersRef.current) {
+      // Only fit if we have member locations or current location
+      const hasLocations = memberLocationArray.length > 0 || currentLocation;
+      if (hasLocations) {
+        hasCalledFitToMarkersRef.current = true;
+        InteractionManager.runAfterInteractions(() => {
+          if (isMountedRef.current) {
+            fitToMarkers();
+          }
+        });
+      }
     }
-  }, [mapLoaded, memberLocationArray, currentLocation, fitToMarkers]); // Added fitToMarkers to dependencies
+  }, [mapLoaded, memberLocationArray.length, currentLocation, fitToMarkers]);
 
-  const handleMapReady = () => {
-    console.log('[MapDebug] Map ready called, initial region:', JSON.stringify(region));
+  const handleMapReady = useCallback(() => {
+    if (!isMountedRef.current) return;
+
+    console.log('[MapDebug] Map ready called');
+    console.log('[MapDebug] Initial region:', JSON.stringify(region));
+    console.log('[MapDebug] Trip destination:', JSON.stringify(trip.destination?.coordinates));
+
     setMapLoaded(true);
     setIsLoading(false);
 
-    // Animate to initial region based on trip destination after interactions
-    if (
-      mapRef.current &&
-      trip.destination?.coordinates?.lat &&
-      trip.destination?.coordinates?.lng
-    ) {
-      InteractionManager.runAfterInteractions(() => {
-        console.log('[MapDebug] Animating to initial trip destination region');
-        mapRef.current?.animateToRegion(
-          {
-            latitude: trip.destination.coordinates!.lat,
-            longitude: trip.destination.coordinates!.lng,
-            latitudeDelta: region.latitudeDelta, // Keep existing delta
-            longitudeDelta: region.longitudeDelta, // Keep existing delta
-          },
-          1000
-        );
-        // Then fit to markers if needed
-        fitToMarkers();
-      });
-    } else if (currentLocation && isLocationSharingEnabled) {
-      InteractionManager.runAfterInteractions(() => {
-        console.log('[MapDebug] Animating to current user location');
-        mapRef.current?.animateToRegion(
-          {
-            latitude: currentLocation.coords.latitude,
-            longitude: currentLocation.coords.longitude,
-            latitudeDelta: region.latitudeDelta,
-            longitudeDelta: region.longitudeDelta,
-          },
-          1000
-        );
-        fitToMarkers();
-      });
-    }
-  };
+    // NOTE: We do NOT call fitToMarkers here - it's handled by the useEffect above
+    // Calling it here AND in useEffect causes double execution and crashes
+  }, [region, trip.destination?.coordinates]);
 
-  const handleMapError = (error: any) => {
-    // Added error param
+  const handleMapError = useCallback((error: { nativeEvent?: { error?: string } }) => {
     console.error('[MapDebug] Map error occurred:', error?.nativeEvent?.error || error);
-    setMapError(
-      'Error loading the map. Please ensure Google Maps services are available and configured.'
-    );
-    setMapLoadAttempts((prev) => prev + 1);
-    setIsLoading(false); // Ensure loading is stopped on error
-  };
+    if (isMountedRef.current) {
+      setMapError(
+        'Error loading the map. Please ensure Google Maps services are available and configured.'
+      );
+      setMapLoadAttempts((prev) => prev + 1);
+      setIsLoading(false);
+    }
+  }, []);
 
-  const retryLoadMap = () => {
+  const retryLoadMap = useCallback(() => {
     console.log('[MapDebug] Retrying map load.');
     setMapError(null);
     setMapLoadAttempts(0);
     setMapLoaded(false);
     setIsLoading(true);
-    // Potentially re-trigger map setup if needed, e.g., by changing a key or re-fetching data
-    // For now, relying on MapView's own retry/reload or user interaction
-  };
+    hasCalledFitToMarkersRef.current = false; // Reset so fitToMarkers can be called again
+  }, []);
 
-  const renderMap = () => (
-    <MapView
-      key={`map-${trip.id}-${Platform.OS}-${mapLoadAttempts}`} // Add mapLoadAttempts to key to force re-render on retry
-      ref={mapRef}
-      style={styles(theme).map}
-      provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-      initialRegion={region} // Use state `region` which is updated
-      onMapReady={handleMapReady}
-      loadingEnabled={isLoading} // Controlled by isLoading state
-      showsUserLocation={isLocationSharingEnabled} // Show blue dot for user
-      showsMyLocationButton // Default button to center on user
-      showsCompass
-      // showsScale // Can be too noisy
-      minZoomLevel={5} // Allow zooming out more
-      maxZoomLevel={20}
-      scrollEnabled
-      zoomEnabled
-      rotateEnabled
-      // pitchEnabled // Can be disorienting for users
-    >
-      {memberLocationArray.map(
-        (m) =>
-          m.userId !== user?.id && (
+  const renderMap = () => {
+    console.log('[MapDebug] renderMap called with region:', JSON.stringify(region));
+
+    return (
+      <MapView
+        key={`map-${trip.id}-${Platform.OS}-${mapLoadAttempts}`}
+        ref={mapRef}
+        style={styles(theme).map}
+        provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+        initialRegion={region}
+        onMapReady={handleMapReady}
+        onMapLoaded={() => console.log('[MapDebug] onMapLoaded fired')}
+        loadingEnabled={isLoading}
+        showsUserLocation={isLocationSharingEnabled}
+        showsMyLocationButton
+        showsCompass
+        // REMOVED: minZoomLevel - causes crashes on iOS with initialRegion
+        // minZoomLevel={5}
+        maxZoomLevel={20}
+        scrollEnabled
+        zoomEnabled
+        rotateEnabled
+      >
+        {memberLocationArray.map((m) => {
+          if (m.userId === user?.id) return null;
+
+          const memberColor = getMemberColor(tripMembers, m.userId, trip.id);
+          const displayName = m.name || `Member ${m.userId.slice(0, 4)}`;
+
+          return (
             <Marker
               key={m.userId}
               coordinate={{ latitude: m.location.latitude, longitude: m.location.longitude }}
-              title={m.name || `Member ${m.userId.slice(0, 4)}`}
-              // pinColor={theme.colors.primary.main} // Example: Themed marker
+              pinColor={memberColor}
+            >
+              <Callout tooltip style={styles(theme).calloutContainer}>
+                <View style={[styles(theme).calloutBubble, { borderColor: memberColor }]}>
+                  <View style={[styles(theme).calloutColorDot, { backgroundColor: memberColor }]} />
+                  <Text style={styles(theme).calloutText}>{displayName}</Text>
+                </View>
+                <View style={[styles(theme).calloutArrow, { borderTopColor: memberColor }]} />
+              </Callout>
+            </Marker>
+          );
+        })}
+        {trip.destination?.coordinates?.lat !== undefined &&
+          trip.destination?.coordinates?.lng !== undefined && (
+            <Marker
+              coordinate={{
+                latitude: trip.destination.coordinates.lat,
+                longitude: trip.destination.coordinates.lng,
+              }}
+              title={trip.destination.address || 'Destination'}
+              pinColor={theme.colors.primary?.main || 'blue'}
             />
-          )
-      )}
-      {/* Current user marker is handled by showsUserLocation, no need for explicit marker if true */}
-      {trip.destination.coordinates?.lat && trip.destination.coordinates?.lng && (
-        <Marker
-          coordinate={{
-            latitude: trip.destination.coordinates.lat,
-            longitude: trip.destination.coordinates.lng,
-          }}
-          title={trip.destination.address || 'Destination'}
-          pinColor={theme.colors.primary?.main || 'blue'} // Example: Different color for destination
-        />
-      )}
-    </MapView>
+          )}
+      </MapView>
+    );
+  };
+
+  console.log('[GroupLiveMap] Component rendering, tripId:', trip.id);
+  console.log(
+    '[GroupLiveMap] mapLoaded:',
+    mapLoaded,
+    'isLoading:',
+    isLoading,
+    'mapError:',
+    mapError
   );
 
   return (
@@ -298,6 +349,7 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
       )}
 
       <View style={styles(theme).mapContainer}>
+        {renderMap()}
         {isLoading && !mapLoaded && (
           <View style={styles(theme).activityIndicatorContainer}>
             <ActivityIndicator size="large" color={theme.colors.primary?.main || '#FF8F5E'} />
@@ -318,9 +370,6 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
             </Text>
           </View>
         )}
-        <View style={{ flex: 1, display: isLoading || mapError ? 'none' : 'flex' }}>
-          {renderMap()}
-        </View>
       </View>
     </View>
   );
@@ -379,9 +428,8 @@ const styles = (theme: Theme) =>
     },
     mapContainer: {
       flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: theme.colors.surface.variant, // Placeholder background for map area
+      position: 'relative',
+      backgroundColor: theme.colors.surface.variant,
     },
     map: {
       ...StyleSheet.absoluteFillObject,
@@ -390,7 +438,7 @@ const styles = (theme: Theme) =>
       ...StyleSheet.absoluteFillObject,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: 'rgba(255, 255, 255, 0.8)', // Semi-transparent overlay
+      backgroundColor: 'rgba(255, 255, 255, 0.8)',
     },
     loadingText: {
       marginTop: theme.spacing.inset.xs,
@@ -427,5 +475,44 @@ const styles = (theme: Theme) =>
       color: theme.colors.primary?.text || '#FFFFFF',
       fontWeight: 'bold',
       fontSize: theme.typography.size.sm,
+    },
+    // Callout styles for member markers
+    calloutContainer: {
+      alignItems: 'center',
+    },
+    calloutBubble: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.colors.surface.default,
+      paddingHorizontal: theme.spacing.inset.sm,
+      paddingVertical: theme.spacing.inset.xs,
+      borderRadius: theme.borderRadius.md,
+      borderWidth: 2,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      elevation: 5,
+    },
+    calloutColorDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      marginRight: theme.spacing.inset.xs,
+    },
+    calloutText: {
+      fontSize: theme.typography.size.sm,
+      fontWeight: '600',
+      color: theme.colors.content.primary,
+    },
+    calloutArrow: {
+      width: 0,
+      height: 0,
+      borderLeftWidth: 8,
+      borderRightWidth: 8,
+      borderTopWidth: 8,
+      borderLeftColor: 'transparent',
+      borderRightColor: 'transparent',
+      marginTop: -1,
     },
   });

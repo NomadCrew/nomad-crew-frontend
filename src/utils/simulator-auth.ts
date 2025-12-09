@@ -7,26 +7,42 @@
  *
  * SECURITY: This is only enabled when:
  * - __DEV__ is true (development mode)
- * - Running in iOS Simulator or Android Emulator
+ * - Running on iOS Simulator or Android Emulator (detected via expo-device)
+ *
+ * On physical devices (including EAS development builds), this bypass is disabled.
  */
 
-import Constants from 'expo-constants';
+import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { logger } from './logger';
 import type { User } from '@/src/features/auth/types';
 
-// Check if running in a simulator/emulator
+// Check if running in a simulator/emulator using expo-device (reliable method)
 const isSimulator = (): boolean => {
-  if (Platform.OS === 'ios') {
-    // In iOS simulator, isDevice is false
-    return !Constants.isDevice;
+  // Device.isDevice is the Expo-recommended way to detect simulators:
+  // - true = physical device
+  // - false = simulator/emulator
+  const isPhysicalDevice = Device.isDevice;
+
+  // Log for debugging
+  logger.debug('SIMULATOR-AUTH', 'Device detection', {
+    isDevice: isPhysicalDevice,
+    osName: Device.osName,
+    modelName: Device.modelName,
+    platform: Platform.OS,
+  });
+
+  // Device.isDevice is reliable:
+  // - Returns true for physical devices
+  // - Returns false for simulators/emulators
+  if (isPhysicalDevice) {
+    logger.debug('SIMULATOR-AUTH', 'Device.isDevice=true, treating as physical device');
+    return false;
   }
-  if (Platform.OS === 'android') {
-    // For Android, check if we're in an emulator
-    // fingerprint containing 'generic' or 'emulator' indicates emulator
-    return !Constants.isDevice;
-  }
-  return false;
+
+  // isDevice is false = simulator/emulator
+  logger.debug('SIMULATOR-AUTH', 'Device.isDevice=false, treating as simulator');
+  return true;
 };
 
 // Determine if simulator auth bypass should be enabled
@@ -55,9 +71,14 @@ export const MOCK_SIMULATOR_USER: User = {
   appleUser: false,
 };
 
-// Mock JWT token for simulator (this is not a real JWT, just a placeholder)
-// The backend will need to recognize this or have its own bypass for development
-export const MOCK_SIMULATOR_TOKEN = 'simulator-dev-token-bypass';
+// Mock JWT token for simulator
+// This is a properly formatted (but unsigned) JWT that the backend's simulator bypass recognizes
+// Format: header.payload.signature (base64url encoded)
+// The backend checks for MOCK_SIMULATOR_USER_ID in development mode
+// Header: {"alg":"none","typ":"JWT"}
+// Payload: {"sub":"00000000-0000-0000-0000-000000000001","exp":9999999999}
+export const MOCK_SIMULATOR_TOKEN =
+  'eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiIwMDAwMDAwMC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDEiLCJleHAiOjk5OTk5OTk5OTl9.';
 
 // Mock refresh token
 export const MOCK_SIMULATOR_REFRESH_TOKEN = 'simulator-dev-refresh-token';

@@ -20,6 +20,8 @@ export const API_PATHS = {
     me: createApiPath('users/me'),
     byId: (id: string) => createApiPath(`users/${id}`),
     onboard: createApiPath('users/onboard'),
+    search: createApiPath('users/search'),
+    updateContactEmail: createApiPath('users/me/contact-email'),
   },
   trips: {
     list: createApiPath('trips'),
@@ -50,5 +52,11 @@ export const API_PATHS = {
   // Add chat endpoints
   CHAT: {
     UPDATE_LAST_READ: (tripId: string) => createApiPath(`trips/${tripId}/chat/messages/read`),
+  },
+  // Push notification endpoints
+  pushTokens: {
+    register: createApiPath('users/push-token'),
+    deregister: createApiPath('users/push-token'),
+    deregisterAll: createApiPath('users/push-tokens'),
   },
 } as const;

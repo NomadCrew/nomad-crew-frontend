@@ -70,6 +70,8 @@ export default function UsernameStep() {
   const setUser = useAuthStore((state) => state.setUser);
   // @ts-ignore - Temporarily ignore for logging, AuthState type might be missing action signatures
   const setNeedsUsername = useAuthStore((state) => state.setNeedsUsername);
+  // @ts-ignore - Type might not be fully updated
+  const needsContactEmail = useAuthStore((state) => state.needsContactEmail);
   // Prefer current username, then email prefix, then random
   const initialUsername = user?.username || user?.email?.split('@')[0] || getRandomUsername();
   const [username, setUsername] = useState(initialUsername);
@@ -96,7 +98,13 @@ export default function UsernameStep() {
       console.log('Fetched backend user after setting username:', updatedUser);
       setUser(updatedUser);
       setNeedsUsername(false);
-      router.replace('/(auth)/login');
+      // Navigate to contact-email screen if needed, otherwise go to main app
+      if (needsContactEmail) {
+        console.log('Username set, routing to contact-email screen');
+        router.replace('/(onboarding)/contact-email');
+      } else {
+        router.replace('/(tabs)/trips');
+      }
     } catch (e: any) {
       // If backend returns uniqueness error, show it
       if (e?.response?.data?.message?.toLowerCase().includes('username')) {

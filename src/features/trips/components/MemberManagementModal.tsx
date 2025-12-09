@@ -15,10 +15,12 @@ import {
 import { Crown, Shield, User, MoreVertical, UserPlus } from 'lucide-react-native';
 import { Menu } from 'react-native-paper';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
-import { Trip } from '@/src/features/trips/types'; // Updated path
+import { Theme } from '@/src/theme/types';
+import { Trip } from '@/src/features/trips/types';
 import { useAuthStore } from '@/src/features/auth/store';
-import { useTripStore } from '@/src/features/trips/store'; // Updated path
-import { InviteModal } from './InviteModal'; // Path should be correct after InviteModal is moved
+import { useTripStore } from '@/src/features/trips/store';
+import { InviteModal } from './InviteModal';
+import { useIsOwner, useIsAdminOrOwner, usePermission } from '@/src/features/auth/permissions';
 
 interface MemberManagementModalProps {
   visible: boolean;
@@ -143,11 +145,12 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
     return membersList;
   }, [trip.members, trip.createdBy, trip.createdAt, user]);
 
-  // Check if current user is owner or admin
-  const currentUserRole = members.find((member) => member.userId === user?.id)?.role || 'member';
-  const isOwner = currentUserRole === 'owner';
-  const isAdmin = currentUserRole === 'admin';
-  const canManageMembers = isOwner || isAdmin;
+  // Use the permission system from context (set up by TripDetailScreen)
+  const isOwner = useIsOwner();
+  const canManageMembers = useIsAdminOrOwner();
+  const canChangeRole = usePermission('change_role', 'Member');
+  const canRemoveMember = usePermission('remove', 'Member');
+  const canCreateInvitation = usePermission('create', 'Invitation');
 
   // Function to handle role change
   const handleRoleChange = async (memberId: string, newRole: 'owner' | 'admin' | 'member') => {
@@ -244,7 +247,11 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
 
     // Owner can manage everyone except themselves
     // Admin can manage members but not other admins or owners
-    const canManageThisMember = (isOwner && !isCurrentUser) || (isAdmin && memberRole === 'member');
+    // Use permission hooks: isOwner for owner check, canManageMembers for admin+owner
+    const canManageThisMember =
+      !isCurrentUser &&
+      ((isOwner && memberRole !== 'owner') ||
+        (canManageMembers && !isOwner && memberRole === 'member'));
 
     // Determine display name
     let displayName = item.name;
@@ -273,7 +280,7 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
     }
 
     return (
-      <Surface style={styles.memberItemSurface} elevation={1}>
+      <Surface style={styles(theme).memberItemSurface} elevation={1}>
         <List.Item
           title={displayName}
           description={isCurrentUser ? 'You' : getRoleLabel(memberRole)}
@@ -286,7 +293,7 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
             />
           )}
           right={() => (
-            <View style={styles.memberActionsContainer}>
+            <View style={styles(theme).memberActionsContainer}>
               <RoleIcon
                 color={theme.colors.content.secondary}
                 size={20}
@@ -300,7 +307,8 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
                     <IconButton icon={MoreVertical} onPress={() => setMenuVisible(item.userId)} />
                   }
                 >
-                  {isOwner && memberRole !== 'owner' && (
+                  {/* Owner can transfer ownership to admins or members */}
+                  {isOwner && (
                     <Menu.Item
                       onPress={() => handleRoleChange(item.userId, 'owner')}
                       title="Make Owner"
@@ -328,7 +336,7 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
               )}
             </View>
           )}
-          style={styles.listItem}
+          style={styles(theme).listItem}
         />
       </Surface>
     );
@@ -348,14 +356,14 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
       <Modal
         visible={visible}
         onDismiss={onClose}
-        contentContainerStyle={[styles.modalContainer, { overflow: 'hidden' }]}
+        contentContainerStyle={[styles(theme).modalContainer, { overflow: 'hidden' }]}
       >
-        <View style={[styles.content, { backgroundColor: theme.colors.background.default }]}>
-          <View style={styles.header}>
+        <View style={[styles(theme).content, { backgroundColor: theme.colors.background.default }]}>
+          <View style={styles(theme).header}>
             <Text variant="headlineSmall">Manage Members</Text>
             <IconButton icon={UserPlus} size={24} onPress={() => setShowInviteModal(true)} />
           </View>
-          <ScrollView style={styles.scrollView}>
+          <ScrollView style={styles(theme).scrollView}>
             {/* Render members */}
             <List.Section title="Members">
               {members.map((member) => (
@@ -372,7 +380,7 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
               </List.Section>
             )}
           </ScrollView>
-          <Button onPress={onClose} mode="outlined" style={styles.closeButton}>
+          <Button onPress={onClose} mode="outlined" style={styles(theme).closeButton}>
             Close
           </Button>
           {/* Invite Modal (nested) */}
@@ -387,40 +395,40 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
   );
 };
 
-const styles = StyleSheet.create({
-  modalContainer: {
-    margin: 20,
-    borderRadius: 12,
-    padding: 20,
-    maxHeight: '85%',
-    overflow: 'hidden',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  scrollView: {
-    // Styles for the scroll view if needed
-  },
-  memberItemSurface: {
-    borderRadius: 8,
-    marginBottom: 8,
-    // backgroundColor will be set by Surface based on theme
-  },
-  listItem: {
-    // Removed fixed height to allow dynamic content
-    // paddingVertical: 12, // Adjusted padding
-  },
-  memberActionsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  closeButton: {
-    marginTop: 20,
-  },
-  content: {
-    // Styles for the content container
-  },
-});
+const styles = (theme: Theme) =>
+  StyleSheet.create({
+    modalContainer: {
+      margin: theme.spacing.inset.lg,
+      borderRadius: theme.borderRadius.md,
+      padding: theme.spacing.inset.lg,
+      maxHeight: '85%',
+      overflow: 'hidden',
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: theme.spacing.stack.md,
+    },
+    scrollView: {
+      // Styles for the scroll view if needed
+    },
+    memberItemSurface: {
+      borderRadius: theme.borderRadius.sm,
+      marginBottom: theme.spacing.stack.xs,
+      // backgroundColor will be set by Surface based on theme
+    },
+    listItem: {
+      // Removed fixed height to allow dynamic content
+    },
+    memberActionsContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    closeButton: {
+      marginTop: theme.spacing.stack.lg,
+    },
+    content: {
+      // Styles for the content container
+    },
+  });

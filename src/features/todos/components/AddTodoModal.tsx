@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Portal, Modal, TextInput, Button } from 'react-native-paper';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
+import { Theme } from '@/src/theme/types';
 import { useCreateTodo } from '../hooks';
 
 interface AddTodoModalProps {
@@ -34,16 +35,20 @@ export const AddTodoModal = ({ visible, onClose, tripId }: AddTodoModalProps) =>
 
   return (
     <Portal>
-      <Modal visible={visible} onDismiss={onClose} contentContainerStyle={styles.modalContainer}>
-        <View style={[styles.content, { backgroundColor: theme.colors.surface.default }]}>
+      <Modal
+        visible={visible}
+        onDismiss={onClose}
+        contentContainerStyle={styles(theme).modalContainer}
+      >
+        <View style={[styles(theme).content, { backgroundColor: theme.colors.surface.default }]}>
           <TextInput
             label="To Do"
             value={text}
             onChangeText={setText}
             mode="outlined"
-            style={styles.input}
+            style={styles(theme).input}
           />
-          <Button mode="contained" onPress={handleSubmit} style={styles.button}>
+          <Button mode="contained" onPress={handleSubmit} style={styles(theme).button}>
             Add
           </Button>
         </View>
@@ -52,19 +57,20 @@ export const AddTodoModal = ({ visible, onClose, tripId }: AddTodoModalProps) =>
   );
 };
 
-const styles = StyleSheet.create({
-  modalContainer: {
-    margin: 20,
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  content: {
-    padding: 20,
-  },
-  input: {
-    marginBottom: 16,
-  },
-  button: {
-    marginTop: 8,
-  },
-});
+const styles = (theme: Theme) =>
+  StyleSheet.create({
+    modalContainer: {
+      margin: theme.spacing.inset.lg,
+      borderRadius: theme.borderRadius.md,
+      overflow: 'hidden',
+    },
+    content: {
+      padding: theme.spacing.inset.lg,
+    },
+    input: {
+      marginBottom: theme.spacing.stack.md,
+    },
+    button: {
+      marginTop: theme.spacing.stack.sm,
+    },
+  });
