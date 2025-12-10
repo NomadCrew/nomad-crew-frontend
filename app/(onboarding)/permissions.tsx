@@ -64,15 +64,19 @@ export default function PermissionsScreen() {
   // Check existing permissions on mount
   useEffect(() => {
     async function checkPermissions() {
-      const [locationStatus, notificationStatus] = await Promise.all([
-        Location.getForegroundPermissionsAsync(),
-        Notifications.getPermissionsAsync(),
-      ]);
+      try {
+        const [locationStatus, notificationStatus] = await Promise.all([
+          Location.getForegroundPermissionsAsync(),
+          Notifications.getPermissionsAsync(),
+        ]);
 
-      setPermissions({
-        location: locationStatus.status === 'granted',
-        notifications: notificationStatus.status === 'granted',
-      });
+        setPermissions({
+          location: locationStatus.status === 'granted',
+          notifications: notificationStatus.status === 'granted',
+        });
+      } catch {
+        // Leave permissions as null to show enable buttons
+      }
     }
 
     checkPermissions();
@@ -80,7 +84,7 @@ export default function PermissionsScreen() {
 
   const handleContinue = async () => {
     await setFirstTimeDone();
-    router.replace('/(tabs)' as never);
+    router.replace('/(tabs)/trips');
   };
 
   const openSettings = useCallback(() => {
