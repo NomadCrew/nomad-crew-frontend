@@ -126,81 +126,82 @@ export default function InvitationScreen() {
   const [isAccepting, setIsAccepting] = useState(false);
   const [isDeclining, setIsDeclining] = useState(false);
 
-  // Fetch invitation details on mount
-  useEffect(() => {
-    const fetchInvitationDetails = async () => {
-      logger.debug(
-        'INVITATION',
-        `Screen mounted with token: ${typeof token === 'string' ? token.substring(0, 15) + '...' : 'none'}`
-      );
-      logger.debug(
-        'INVITATION',
-        `Auth state: ${user ? 'Logged in as ' + user.email : 'Not logged in'}`
-      );
+  // Extract fetch logic as a reusable callback for both initial load and retry
+  const fetchInvitationDetails = useCallback(async () => {
+    logger.debug(
+      'INVITATION',
+      `Fetching with token: ${typeof token === 'string' ? token.substring(0, 15) + '...' : 'none'}`
+    );
+    logger.debug(
+      'INVITATION',
+      `Auth state: ${user ? 'Logged in as ' + user.email : 'Not logged in'}`
+    );
 
-      if (!token || typeof token !== 'string') {
+    if (!token || typeof token !== 'string') {
+      setError({
+        title: 'Invalid Link',
+        message: 'No invitation token was provided. Please check the link and try again.',
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    // If user is not logged in, store token and redirect to login
+    if (!user) {
+      logger.debug('INVITATION', 'No user logged in, storing invitation for later');
+      try {
+        await AsyncStorage.setItem('pendingInvitation', token);
+      } catch (storageError) {
+        logger.error('INVITATION', 'Failed to store pending invitation:', storageError);
+      }
+      router.replace('/(auth)/login');
+      return;
+    }
+
+    try {
+      logger.debug('INVITATION', 'Fetching invitation details...');
+      const details = await tripApi.getInvitationDetails(token);
+      logger.debug('INVITATION', 'Invitation details received:', details);
+
+      // Check if invitation is still pending
+      if (details.status !== 'PENDING') {
         setError({
-          title: 'Invalid Link',
-          message: 'No invitation token was provided. Please check the link and try again.',
+          title: details.status === 'ACCEPTED' ? 'Already Accepted' : 'Already Declined',
+          message:
+            details.status === 'ACCEPTED'
+              ? 'You have already accepted this invitation.'
+              : 'This invitation has already been declined.',
+          action: details.status === 'ACCEPTED' ? 'go_to_trips' : undefined,
+          tripId: details.tripId,
         });
         setIsLoading(false);
         return;
       }
 
-      // If user is not logged in, store token and redirect to login
-      if (!user) {
-        logger.debug('INVITATION', 'No user logged in, storing invitation for later');
-        await AsyncStorage.setItem('pendingInvitation', token);
-        router.replace('/(auth)/login');
+      // Check email match (additional client-side validation)
+      if (details.email && user.email && details.email.toLowerCase() !== user.email.toLowerCase()) {
+        setError({
+          title: 'Wrong Account',
+          message: `This invitation was sent to ${details.email}, but you're logged in as ${user.email}.`,
+          action: 'switch_account',
+        });
+        setIsLoading(false);
         return;
       }
 
-      try {
-        logger.debug('INVITATION', 'Fetching invitation details...');
-        const details = await tripApi.getInvitationDetails(token);
-        logger.debug('INVITATION', 'Invitation details received:', details);
-
-        // Check if invitation is still pending
-        if (details.status !== 'PENDING') {
-          setError({
-            title: details.status === 'ACCEPTED' ? 'Already Accepted' : 'Already Declined',
-            message:
-              details.status === 'ACCEPTED'
-                ? 'You have already accepted this invitation.'
-                : 'This invitation has already been declined.',
-            action: details.status === 'ACCEPTED' ? 'go_to_trips' : undefined,
-            tripId: details.tripId,
-          });
-          setIsLoading(false);
-          return;
-        }
-
-        // Check email match (additional client-side validation)
-        if (
-          details.email &&
-          user.email &&
-          details.email.toLowerCase() !== user.email.toLowerCase()
-        ) {
-          setError({
-            title: 'Wrong Account',
-            message: `This invitation was sent to ${details.email}, but you're logged in as ${user.email}.`,
-            action: 'switch_account',
-          });
-          setIsLoading(false);
-          return;
-        }
-
-        setInvitation(details);
-      } catch (err) {
-        logger.error('INVITATION', 'Error fetching invitation details:', err);
-        setError(getErrorFromResponse(err));
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchInvitationDetails();
+      setInvitation(details);
+    } catch (err) {
+      logger.error('INVITATION', 'Error fetching invitation details:', err);
+      setError(getErrorFromResponse(err));
+    } finally {
+      setIsLoading(false);
+    }
   }, [token, user]);
+
+  // Fetch invitation details on mount and when dependencies change
+  useEffect(() => {
+    fetchInvitationDetails();
+  }, [fetchInvitationDetails]);
 
   // Handle accept invitation
   const handleAccept = useCallback(async () => {
@@ -262,17 +263,13 @@ export default function InvitationScreen() {
         }
         break;
       case 'retry':
-        // Reset error and reload
+        // Reset error and directly re-fetch
         setError(null);
         setIsLoading(true);
-        // Re-trigger the effect by navigating to same route
-        router.replace({
-          pathname: '/(auth)/invitation',
-          params: { token: token as string },
-        });
+        fetchInvitationDetails();
         break;
     }
-  }, [error, token, signOut]);
+  }, [error, token, signOut, fetchInvitationDetails]);
 
   // Show loading while checking auth or fetching
   if (isLoading && !invitation && !error) {
