@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { Button, Icon } from 'react-native-paper';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
+import { ThemedText } from '@/src/components/ThemedText';
 
 interface ErrorFallbackProps {
   error?: Error | null;
@@ -45,25 +46,29 @@ export function ErrorFallback({
         </View>
 
         {/* Title */}
-        <Text style={[styles.title, { color: theme.colors.content.primary }]}>{title}</Text>
+        <ThemedText variant="heading.h2" style={styles.title}>
+          {title}
+        </ThemedText>
 
         {/* Message */}
-        <Text style={[styles.message, { color: theme.colors.content.secondary }]}>
+        <ThemedText variant="body.medium" color="content.secondary" style={styles.message}>
           {displayMessage}
-        </Text>
+        </ThemedText>
 
         {/* Error details in development mode */}
         {__DEV__ && error?.stack && (
           <View style={[styles.debugContainer, { backgroundColor: theme.colors.surface.variant }]}>
-            <Text style={[styles.debugTitle, { color: theme.colors.content.tertiary }]}>
+            <ThemedText variant="body.small" color="content.tertiary" style={styles.debugTitle}>
               Debug Info:
-            </Text>
-            <Text
-              style={[styles.debugText, { color: theme.colors.content.tertiary }]}
+            </ThemedText>
+            <ThemedText
+              variant="body.small"
+              color="content.tertiary"
+              style={styles.debugText}
               numberOfLines={5}
             >
               {error.stack}
-            </Text>
+            </ThemedText>
           </View>
         )}
 
@@ -99,16 +104,12 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
     marginBottom: 12,
     textAlign: 'center',
   },
   message: {
-    fontSize: 16,
     marginBottom: 24,
     textAlign: 'center',
-    lineHeight: 24,
   },
   debugContainer: {
     width: '100%',
@@ -117,14 +118,11 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   debugTitle: {
-    fontSize: 12,
     fontWeight: 'bold',
     marginBottom: 8,
   },
   debugText: {
-    fontSize: 11,
     fontFamily: 'monospace',
-    lineHeight: 16,
   },
   button: {
     minWidth: 150,

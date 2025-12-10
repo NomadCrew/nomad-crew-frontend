@@ -10,8 +10,6 @@ import { AuthOptionButton } from '@/components/ui/auth/AuthOptionButton';
 import { Theme } from '@/src/theme/types';
 import { Divider } from 'react-native-paper';
 
-console.log('[LoginScreen] Rendering');
-
 /**
  * Render the app's login screen with social and email sign-in options.
  *

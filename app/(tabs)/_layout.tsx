@@ -5,8 +5,7 @@ import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { Home, MapPin, Bell, User } from 'lucide-react-native';
 import { useAuthStore } from '@/src/features/auth/store';
 import { useOnboarding } from '@/src/providers/OnboardingProvider';
-
-console.log('[TabsLayout] File loaded');
+import { logger } from '@/src/utils/logger';
 
 /**
  * Render the app's tab-based layout and route users to onboarding or authentication flows as required.
@@ -23,18 +22,23 @@ export default function TabsLayout() {
   const { status, token, isInitialized: authInitialized, needsUsername } = useAuthStore();
   const { isFirstTime, isInitialized: onboardingInitialized } = useOnboarding();
 
-  console.log(
-    '[TabsLayout] Rendering - auth:',
-    status,
-    'isFirstTime:',
-    isFirstTime,
-    'needsUsername:',
-    needsUsername
-  );
+  if (__DEV__) {
+    logger.debug(
+      'AUTH',
+      'Tabs - auth:',
+      status,
+      'isFirstTime:',
+      isFirstTime,
+      'needsUsername:',
+      needsUsername
+    );
+  }
 
   // Show loading while checking auth state
   if (!authInitialized || !onboardingInitialized) {
-    console.log('[TabsLayout] Still initializing, showing loading');
+    if (__DEV__) {
+      logger.debug('AUTH', 'Tabs still initializing, showing loading');
+    }
     return (
       <View
         style={{
@@ -51,24 +55,32 @@ export default function TabsLayout() {
 
   // If first time user, redirect to onboarding
   if (isFirstTime) {
-    console.log('[TabsLayout] First time user, redirecting to onboarding');
+    if (__DEV__) {
+      logger.debug('AUTH', 'First time user, redirecting to onboarding');
+    }
     return <Redirect href="/(onboarding)/welcome" />;
   }
 
   // If not authenticated, redirect to login
   if (status !== 'authenticated' || !token) {
-    console.log('[TabsLayout] Not authenticated, redirecting to login');
+    if (__DEV__) {
+      logger.debug('AUTH', 'Not authenticated, redirecting to login');
+    }
     return <Redirect href="/(auth)/login" />;
   }
 
   // If user needs to set username, redirect to username screen
   if (needsUsername) {
-    console.log('[TabsLayout] User needs username, redirecting to username screen');
+    if (__DEV__) {
+      logger.debug('AUTH', 'User needs username, redirecting to username screen');
+    }
     return <Redirect href="/(onboarding)/username" />;
   }
 
   // User is authenticated and onboarded - render tabs
-  console.log('[TabsLayout] User authenticated, rendering tabs');
+  if (__DEV__) {
+    logger.debug('AUTH', 'User authenticated, rendering tabs');
+  }
   return (
     <Tabs
       screenOptions={{

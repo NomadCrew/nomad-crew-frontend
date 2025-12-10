@@ -40,8 +40,6 @@ function isValidEmail(email: string): boolean {
   return emailRegex.test(email);
 }
 
-console.log('[ContactEmailStep] File loaded');
-
 /**
  * Renders the onboarding step that prompts the user to add a contact email.
  *
@@ -52,7 +50,6 @@ console.log('[ContactEmailStep] File loaded');
  * @returns A React element representing the contact email onboarding screen.
  */
 export default function ContactEmailStep() {
-  console.log('[ContactEmailStep] Rendering');
   const user = useAuthStore((state) => state.user);
   const updateContactEmail = useAuthStore((state) => state.updateContactEmail);
   const setNeedsContactEmail = useAuthStore((state) => state.setNeedsContactEmail);
@@ -77,7 +74,6 @@ export default function ContactEmailStep() {
     setLoading(true);
     setError('');
     try {
-      console.log('Submitting contact email to backend:', email.trim());
       await updateContactEmail(email.trim());
       setNeedsContactEmail(false);
       // Navigate to main app
