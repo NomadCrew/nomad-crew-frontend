@@ -1,8 +1,8 @@
-// Development API URL - update this to your machine's IP address
-// Run: ipconfig getifaddr en0 to get your current IP
-const DEV_API_URL = 'http://192.168.70.104:8080';
+// Development API URL - reads from env var or uses localhost fallback
+// Set EXPO_PUBLIC_DEV_API_URL in .env for development (e.g., http://192.168.1.100:8080)
+const DEV_API_URL = process.env.EXPO_PUBLIC_DEV_API_URL || 'http://localhost:8080';
 
-// Determine base URL: use local in dev mode, env var or production fallback otherwise
+// Determine base URL: use DEV_API_URL in dev mode, EXPO_PUBLIC_API_URL or production fallback otherwise
 const getBaseUrl = (): string => {
   if (__DEV__) {
     console.log('🔧 DEV MODE: Using local API URL:', DEV_API_URL);

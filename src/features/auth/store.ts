@@ -502,8 +502,17 @@ export const useAuthStore = create<AuthState>()(
             if (status !== 'granted') {
               return;
             }
+            // Validate project ID before attempting to get push token
+            const projectId = process.env.EXPO_PUBLIC_PROJECT_ID;
+            if (!projectId) {
+              logger.warn(
+                'AUTH',
+                'EXPO_PUBLIC_PROJECT_ID not set, skipping push token registration'
+              );
+              return;
+            }
             const token = await Notifications.getExpoPushTokenAsync({
-              projectId: process.env.EXPO_PUBLIC_PROJECT_ID,
+              projectId,
             });
             set({ pushToken: token.data });
             const { user } = get();
@@ -631,36 +640,36 @@ export const useAuthStore = create<AuthState>()(
                 needsUsername: true,
               });
             }
+
+            // Construct user from session metadata as fallback
+            const fallbackUser: User = {
+              id: session.user.id,
+              email: session.user.email ?? '',
+              username:
+                session.user.user_metadata?.username ?? session.user.email?.split('@')[0] ?? 'User',
+              firstName:
+                user?.firstName ??
+                session.user.user_metadata?.firstName ??
+                session.user.user_metadata?.full_name?.split(' ')[0] ??
+                '',
+              lastName:
+                user?.lastName ??
+                session.user.user_metadata?.lastName ??
+                session.user.user_metadata?.full_name?.split(' ').slice(1).join(' ') ??
+                '',
+              profilePicture:
+                user?.profilePicture ??
+                session.user.user_metadata?.avatar_url ??
+                session.user.user_metadata?.picture ??
+                '',
+              createdAt: user?.createdAt,
+              updatedAt: user?.updatedAt,
+              appleUser: user?.appleUser,
+            };
+
             set({
-              user: needsUsername
-                ? {
-                    // If needs username, construct user from session, merging parts of local user if available
-                    id: session.user.id,
-                    email: session.user.email ?? '',
-                    username:
-                      session.user.user_metadata?.username ??
-                      session.user.email?.split('@')[0] ??
-                      'User',
-                    firstName:
-                      user?.firstName ??
-                      session.user.user_metadata?.firstName ??
-                      session.user.user_metadata?.full_name?.split(' ')[0] ??
-                      '',
-                    lastName:
-                      user?.lastName ??
-                      session.user.user_metadata?.lastName ??
-                      session.user.user_metadata?.full_name?.split(' ').slice(1).join(' ') ??
-                      '',
-                    profilePicture:
-                      user?.profilePicture ??
-                      session.user.user_metadata?.avatar_url ??
-                      session.user.user_metadata?.picture ??
-                      '',
-                    createdAt: user?.createdAt, // from local user (backend attempt) if exists
-                    updatedAt: user?.updatedAt, // from local user (backend attempt) if exists
-                    appleUser: user?.appleUser, // from local user (backend attempt) if exists
-                  }
-                : user!, // If not needsUsername, then local 'user' (backend) must be valid and complete
+              // Use backend user if available and valid, otherwise use fallback from session
+              user: !needsUsername && user ? user : fallbackUser,
               token: session.access_token,
               refreshToken: session.refresh_token,
               loading: false,
@@ -755,36 +764,35 @@ export const useAuthStore = create<AuthState>()(
               );
             }
 
+            // Construct user from session metadata as fallback
+            const fallbackUser: User = {
+              id: session.user.id,
+              email: session.user.email ?? '',
+              username:
+                session.user.user_metadata?.username ?? session.user.email?.split('@')[0] ?? 'User',
+              firstName:
+                user?.firstName ??
+                session.user.user_metadata?.firstName ??
+                session.user.user_metadata?.full_name?.split(' ')[0] ??
+                '',
+              lastName:
+                user?.lastName ??
+                session.user.user_metadata?.lastName ??
+                session.user.user_metadata?.full_name?.split(' ').slice(1).join(' ') ??
+                '',
+              profilePicture:
+                user?.profilePicture ??
+                session.user.user_metadata?.avatar_url ??
+                session.user.user_metadata?.picture ??
+                '',
+              createdAt: user?.createdAt,
+              updatedAt: user?.updatedAt,
+              appleUser: user?.appleUser ?? true, // Mark as Apple user
+            };
+
             set({
-              user: needsUsername
-                ? {
-                    // If needs username, construct user from session, merging parts of local user if available
-                    id: session.user.id,
-                    email: session.user.email ?? '',
-                    username:
-                      session.user.user_metadata?.username ??
-                      session.user.email?.split('@')[0] ??
-                      'User',
-                    firstName:
-                      user?.firstName ??
-                      session.user.user_metadata?.firstName ??
-                      session.user.user_metadata?.full_name?.split(' ')[0] ??
-                      '',
-                    lastName:
-                      user?.lastName ??
-                      session.user.user_metadata?.lastName ??
-                      session.user.user_metadata?.full_name?.split(' ').slice(1).join(' ') ??
-                      '',
-                    profilePicture:
-                      user?.profilePicture ??
-                      session.user.user_metadata?.avatar_url ??
-                      session.user.user_metadata?.picture ??
-                      '',
-                    createdAt: user?.createdAt, // from local user (backend attempt) if exists
-                    updatedAt: user?.updatedAt, // from local user (backend attempt) if exists
-                    appleUser: user?.appleUser, // from local user (backend attempt) if exists
-                  }
-                : user!, // If not needsUsername, then local 'user' (backend) must be valid and complete
+              // Use backend user if available and valid, otherwise use fallback from session
+              user: !needsUsername && user ? user : fallbackUser,
               token: session.access_token,
               refreshToken: session.refresh_token,
               loading: false,
