@@ -7,6 +7,18 @@ import { useAppTheme } from '@/src/theme/ThemeProvider';
 
 console.log('[Index] File loaded');
 
+/**
+ * Selects and renders the initial screen or redirect based on onboarding and authentication state.
+ *
+ * Shows a themed full-screen loading indicator while auth or onboarding initialization is pending.
+ * After initialization, redirects to:
+ * - onboarding welcome when the user is first-time,
+ * - authentication login when the user is not authenticated or missing a token,
+ * - onboarding username when the authenticated user still needs to set a username,
+ * - main app tabs when the user is fully authenticated and has no blockers.
+ *
+ * @returns A React element that renders either the themed loading indicator or a Redirect to the appropriate route.
+ */
 export default function Index() {
   const { theme } = useAppTheme();
   const { status, token, isInitialized: authInitialized, needsUsername } = useAuthStore();

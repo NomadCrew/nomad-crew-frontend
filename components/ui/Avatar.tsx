@@ -73,7 +73,13 @@ export interface AvatarProps extends ViewProps {
 }
 
 /**
- * Avatar component for displaying user profile images or initials
+ * Render a user avatar that prefers an explicit image source and falls back to a user's profile picture, a generated avatar image, or initials.
+ *
+ * @param source - Explicit image URL to display; takes precedence over user data.
+ * @param initials - Text to display when no image is available; used before deriving initials from `user`.
+ * @param backgroundColor - Background color used when rendering initials.
+ * @param user - Optional user data used to derive a profile image or initials. If `user.profilePicture` exists and `user.appleUser` is not true, that picture is used; otherwise a generated avatar URL is produced from the user's name, username, or email.
+ * @returns The rendered avatar React element.
  */
 export function Avatar({
   size = 'md',

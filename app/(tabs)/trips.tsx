@@ -113,6 +113,15 @@ function getStyles(theme: any) {
   });
 }
 
+/**
+ * Renders the main "Trips" screen: a searchable, tabbed list of trips with pull-to-refresh,
+ * a modal to create new trips, and a floating action button to open the modal.
+ *
+ * The screen displays tabs for Active, History, and Cancelled trips, supports client-side
+ * filtering by name or destination, and navigates to a trip's details when a trip is pressed.
+ *
+ * @returns The React element tree for the Trips screen.
+ */
 export default function TripsScreen() {
   const insets = useSafeAreaInsets();
   const { data: trips = [], isLoading: tripsLoading, refetch } = useTrips();

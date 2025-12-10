@@ -307,12 +307,23 @@ export async function onboardUser(username: string): Promise<User> {
   return response.data;
 }
 
+/**
+ * Fetches the current authenticated user's profile.
+ *
+ * @returns The current user's profile as a `User` object.
+ */
 export async function getCurrentUserProfile(): Promise<User> {
   const api = ApiClient.getInstance();
   const response = await api.getAxiosInstance().get<User>(API_PATHS.users.me);
   return response.data;
 }
 
+/**
+ * Retrieve the current Supabase JWT from the registered auth handlers.
+ *
+ * @returns The current Supabase JWT.
+ * @throws Error if no Supabase JWT is available
+ */
 export async function getSupabaseJWT(): Promise<string> {
   // Use the registered auth state handlers to get the token
   const token = authState.getToken();
@@ -337,10 +348,14 @@ export interface UserSearchResponse {
 }
 
 /**
- * Search users by query (username, email, contact_email, first/last name)
- * @param query Search term (min 2 chars)
- * @param tripId Optional trip ID to check membership
- * @param limit Max results (default 10, max 20)
+ * Search for users matching the provided text across username, email, contact email, and first/last name.
+ *
+ * Performs a backend search and returns matching users; can optionally scope results by trip membership.
+ *
+ * @param query - Search term (minimum 2 characters)
+ * @param tripId - Optional trip ID to filter results to users associated with that trip
+ * @param limit - Maximum number of results to return (default 10, maximum 20)
+ * @returns An array of matching `UserSearchResult` objects
  */
 export async function searchUsers(
   query: string,
@@ -357,7 +372,10 @@ export async function searchUsers(
 }
 
 /**
- * Update the current user's contact email (for Apple Sign-In users)
+ * Updates the current user's contact email used for Apple Sign-In.
+ *
+ * @param email - The new contact email address to set for the current user
+ * @returns The updated contact email object containing `contactEmail`
  */
 export async function updateContactEmail(email: string): Promise<{ contactEmail: string }> {
   const api = ApiClient.getInstance();

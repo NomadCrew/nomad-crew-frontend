@@ -11,6 +11,14 @@ import {
 } from '@/src/features/notifications/components/NotificationTabs';
 import { NotificationTestButton } from '@/src/features/notifications/components/NotificationTestButton';
 
+/**
+ * Renders the Notifications screen with a header, tabbed filters, and a filtered notification list.
+ *
+ * Displays a header (including a Clear All action), a tab switcher that selects the active notification
+ * filter, and a NotificationList filtered by the selected tab. In development builds, renders test controls.
+ *
+ * @returns The notifications screen element.
+ */
 export default function NotificationsScreen() {
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<NotificationTabValue>('invitations');

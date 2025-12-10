@@ -7,6 +7,11 @@ import { useAppTheme } from '@/src/theme/ThemeProvider';
 
 console.log('[AuthLayout] File loaded');
 
+/**
+ * Selects and renders the correct authentication or onboarding UI based on current auth and onboarding state.
+ *
+ * @returns A React element that displays a centered loading indicator while initialization is pending, issues redirects to onboarding or app routes for first-time or authenticated users, or renders the authentication Stack screens (login, register, verify-email, invitation) for unauthenticated users.
+ */
 export default function AuthLayout() {
   const { theme } = useAppTheme();
   const { status, token, isInitialized: authInitialized, needsUsername } = useAuthStore();
