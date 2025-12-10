@@ -7,32 +7,34 @@ const NotificationIdSchema = z.string().uuid(); // Assuming backend uses UUIDs
 const IsoTimestampSchema = z.string().datetime({ offset: true }); // Expect ISO 8601 format
 
 // Define schemas for specific metadata structures
+// Backend sends camelCase with ID suffix (invitationID, tripID, inviterID)
 const TripInvitationMetadataSchema = z.object({
-  inviteId: z.string(),
-  tripId: z.string(),
+  invitationID: z.string(),
+  tripID: z.string(),
   tripName: z.string(),
   inviterName: z.string(),
+  inviterID: z.string(),
 });
 
 const ChatMessageMetadataSchema = z.object({
-  chatId: z.string(),
-  messageId: z.string(),
+  chatID: z.string(),
+  messageID: z.string(),
   senderName: z.string(),
   messagePreview: z.string(),
 });
 
 const MemberAddedMetadataSchema = z.object({
-  tripId: z.string(),
+  tripID: z.string(),
   tripName: z.string(),
-  addedUserId: z.string(),
+  addedUserID: z.string(),
   addedUserName: z.string(),
-  adderUserId: z.string(),
+  adderUserID: z.string(),
   adderUserName: z.string(),
 });
 
-// Example for TripUpdateMetadata (adjust as needed)
+// TripUpdateMetadata - backend sends ID suffix for IDs
 const TripUpdateMetadataSchema = z.object({
-  tripId: z.string(),
+  tripID: z.string(),
   tripName: z.string(),
   updaterName: z.string(),
   changedFields: z.array(z.string()),
@@ -47,12 +49,14 @@ const NotificationBaseSchema = z.object({
 });
 
 // Define known notification types as a Zod enum
+// Note: Backend may send TRIP_INVITATION_RECEIVED for new invitations
 const NotificationTypeEnum = z.enum([
   'TRIP_INVITATION',
+  'TRIP_INVITATION_RECEIVED', // Backend sends this type
   'CHAT_MESSAGE',
   'MEMBER_ADDED',
   'TRIP_UPDATE',
-  'UNKNOWN' // Added for fallback case
+  'UNKNOWN', // Added for fallback case
 ]);
 
 // --- Zod Schema for Discriminated Union (for WebSocket Validation) ---
@@ -61,6 +65,11 @@ const NotificationTypeEnum = z.enum([
 export const ZodNotificationSchema = z.discriminatedUnion('type', [
   NotificationBaseSchema.extend({
     type: z.literal('TRIP_INVITATION'),
+    metadata: TripInvitationMetadataSchema,
+  }),
+  // Backend sends TRIP_INVITATION_RECEIVED for new trip invitations
+  NotificationBaseSchema.extend({
+    type: z.literal('TRIP_INVITATION_RECEIVED'),
     metadata: TripInvitationMetadataSchema,
   }),
   NotificationBaseSchema.extend({
@@ -72,12 +81,12 @@ export const ZodNotificationSchema = z.discriminatedUnion('type', [
     metadata: MemberAddedMetadataSchema,
   }),
   NotificationBaseSchema.extend({
-    type: z.literal('TRIP_UPDATE'), // Example
+    type: z.literal('TRIP_UPDATE'),
     metadata: TripUpdateMetadataSchema,
   }),
   // Fallback for generic/unknown types
   NotificationBaseSchema.extend({
-    type: z.literal('UNKNOWN'), // Changed from z.string() to z.literal('UNKNOWN')
+    type: z.literal('UNKNOWN'),
     metadata: z.record(z.unknown()), // Allows any metadata shape
   }),
 ]);
@@ -89,20 +98,25 @@ export type Notification = z.infer<typeof ZodNotificationSchema>;
 // --- Specific TypeScript Types (Derived from Zod Schema) ---
 // We can still export specific types if needed for clarity or type guards
 
-export type TripInvitationNotification = Extract<Notification, { type: 'TRIP_INVITATION' }>;
+// Trip invitation can come as either TRIP_INVITATION or TRIP_INVITATION_RECEIVED from backend
+export type TripInvitationNotification = Extract<
+  Notification,
+  { type: 'TRIP_INVITATION' | 'TRIP_INVITATION_RECEIVED' }
+>;
 export type ChatMessageNotification = Extract<Notification, { type: 'CHAT_MESSAGE' }>;
 export type MemberAddedNotification = Extract<Notification, { type: 'MEMBER_ADDED' }>;
 export type TripUpdateNotification = Extract<Notification, { type: 'TRIP_UPDATE' }>;
-export type GenericNotification = Extract<Notification, { type: 'UNKNOWN' }>; // Updated to match the literal
+export type GenericNotification = Extract<Notification, { type: 'UNKNOWN' }>;
 
 // --- Type Guards (Using Zod refine or simple checks) ---
 
 export const isTripInvitationNotification = (
   notification: Notification
 ): notification is TripInvitationNotification => {
-  // Zod schema validation is preferred at the entry point (WebSocketManager)
-  // but simple type guards can still be useful internally.
-  return notification.type === 'TRIP_INVITATION';
+  // Backend may send either TRIP_INVITATION or TRIP_INVITATION_RECEIVED
+  return (
+    notification.type === 'TRIP_INVITATION' || notification.type === 'TRIP_INVITATION_RECEIVED'
+  );
 };
 
 export const isChatMessageNotification = (
@@ -118,15 +132,15 @@ export const isMemberAddedNotification = (
 };
 
 export const isTripUpdateNotification = (
- notification: Notification
+  notification: Notification
 ): notification is TripUpdateNotification => {
- return notification.type === 'TRIP_UPDATE';
+  return notification.type === 'TRIP_UPDATE';
 };
 
 export const isGenericNotification = (
- notification: Notification
+  notification: Notification
 ): notification is GenericNotification => {
- return notification.type === 'UNKNOWN';
+  return notification.type === 'UNKNOWN';
 };
 
 // --- API Payloads --- (Keep as is)
@@ -134,7 +148,7 @@ export interface MarkNotificationsReadPayload {
   status: 'read';
 }
 
-// --- Cleanup / Remove Duplicates --- 
-// Remove the old NotificationType enum, NotificationStatus enum, 
-// old individual interfaces, old union type, old type guards, 
-// and the TripInviteEventSchema/guard as they are now superseded by ZodNotificationSchema. 
+// --- Cleanup / Remove Duplicates ---
+// Remove the old NotificationType enum, NotificationStatus enum,
+// old individual interfaces, old union type, old type guards,
+// and the TripInviteEventSchema/guard as they are now superseded by ZodNotificationSchema.

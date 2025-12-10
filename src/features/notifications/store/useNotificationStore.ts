@@ -46,6 +46,7 @@ interface NotificationState {
   clearChatToast: () => void;
   setHasHydrated: (state: boolean) => void;
   clearNotifications: () => void;
+  deleteNotification: (notificationId: string) => Promise<void>;
 }
 
 export const useNotificationStore = create<NotificationState>()(
@@ -90,11 +91,14 @@ export const useNotificationStore = create<NotificationState>()(
         fetchNotifications: async (options = { loadMore: false }) => {
           const { isFetching, offset, hasMore } = get();
           const limit = API_PAGE_LIMIT;
-          if (isFetching || (!options.loadMore && offset > 0) || (options.loadMore && !hasMore)) {
+
+          // Only block if already fetching, or if trying to load more when there's no more
+          if (isFetching || (options.loadMore && !hasMore)) {
             return;
           }
 
           set({ isFetching: true, error: null });
+          // On fresh fetch (not loadMore), reset offset to 0
           const currentOffset = options.loadMore ? offset : 0;
 
           try {
@@ -228,17 +232,17 @@ export const useNotificationStore = create<NotificationState>()(
           }
 
           set({ isHandlingAction: true, error: null });
-          const inviteId = notification.metadata.inviteId;
+          const invitationId = notification.metadata.invitationID;
 
           try {
             // POST to the backend's business logic endpoint for accepting
-            await api.post(`/v1/invitations/${inviteId}/accept`);
+            await api.post(`/v1/invitations/${invitationId}/accept`);
 
             // Success! We rely on the backend to potentially send a follow-up
             // WebSocket message (e.g., MEMBER_ADDED or TRIP_UPDATE) to reflect the change.
             // Alternatively, we could optimistically remove/update the notification here.
             // For now, just log success and potentially mark as read locally if desired.
-            logger.info(`Accepted trip invitation: ${inviteId}`);
+            logger.info(`Accepted trip invitation: ${invitationId}`);
 
             // Optional: Mark as read locally after accepting
             set((state) => ({
@@ -268,11 +272,11 @@ export const useNotificationStore = create<NotificationState>()(
           }
 
           set({ isHandlingAction: true, error: null });
-          const inviteId = notification.metadata.inviteId;
+          const invitationId = notification.metadata.invitationID;
 
           try {
-            await api.post(`/v1/invitations/${inviteId}/decline`);
-            logger.info(`Declined trip invitation: ${inviteId}`);
+            await api.post(`/v1/invitations/${invitationId}/decline`);
+            logger.info(`Declined trip invitation: ${invitationId}`);
 
             set((state) => ({
               notifications: state.notifications.filter((n) => n.id !== notification.id),
@@ -294,28 +298,62 @@ export const useNotificationStore = create<NotificationState>()(
           set({ latestChatMessageToast: null });
         },
 
-        // Ensure all notifications are cleared from Zustand and AsyncStorage
+        // Delete all notifications from server and clear local state
         clearNotifications: async () => {
+          if (get().isHandlingAction) return;
+          set({ isHandlingAction: true, error: null });
           try {
+            // Call backend to delete all notifications
+            const response = await api.delete<{ deleted_count: number }>('/v1/notifications');
+            logger.info(`Deleted ${response.data.deleted_count} notifications from server`);
+
             // Clear from Zustand state
             set({
               notifications: [],
               unreadCount: 0,
               latestChatMessageToast: null,
-              isFetching: false,
-              isFetchingUnreadCount: false,
-              isMarkingRead: false,
-              isHandlingAction: false,
-              error: null,
               offset: 0,
               hasMore: true, // Reset pagination
             });
+
             // Clear from AsyncStorage
             await AsyncStorage.removeItem(STORAGE_KEY);
             logger.info('All notifications cleared from state and storage.');
-          } catch (error) {
-            logger.error('Error clearing notifications:', error);
-            set({ error: 'Failed to clear notifications from storage.' });
+          } catch (err: any) {
+            const errorMessage =
+              err.response?.data?.message || err.message || 'Failed to clear notifications';
+            set({ error: errorMessage });
+            logger.error('clearNotifications failed:', err);
+          } finally {
+            set({ isHandlingAction: false });
+          }
+        },
+
+        // Delete a single notification via API
+        deleteNotification: async (notificationId: string) => {
+          const notification = get().notifications.find((n) => n.id === notificationId);
+          if (!notification) return;
+
+          set({ isHandlingAction: true, error: null });
+          try {
+            await api.delete(`/v1/notifications/${notificationId}`);
+
+            set((state) => ({
+              notifications: state.notifications.filter((n) => n.id !== notificationId),
+              // Decrement unread count if the deleted notification was unread
+              unreadCount: !notification.read
+                ? Math.max(0, state.unreadCount - 1)
+                : state.unreadCount,
+            }));
+
+            logger.info('Notification deleted:', notificationId);
+          } catch (err: any) {
+            const errorMessage =
+              err.response?.data?.message || err.message || 'Failed to delete notification';
+            set({ error: errorMessage });
+            logger.error('deleteNotification failed:', err);
+          } finally {
+            set({ isHandlingAction: false });
           }
         },
       }),
@@ -429,6 +467,7 @@ export const selectNotificationActions = (state: NotificationState) => ({
   declineTripInvitation: state.declineTripInvitation,
   clearChatToast: state.clearChatToast,
   clearNotifications: state.clearNotifications,
+  deleteNotification: state.deleteNotification,
 });
 
 // Composite selectors (for common combinations)

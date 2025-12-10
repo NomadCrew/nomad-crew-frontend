@@ -44,17 +44,15 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
     handleMarkAsRead();
 
     // Handle navigation based on notification type
-    if (
-      isTripInvitationNotification(notification) ||
-      isTripUpdateNotification(notification) ||
-      isMemberAddedNotification(notification)
-    ) {
-      // Navigate to the trip screen
-      router.push(`/(authenticated)/(tabs)/trips/${notification.metadata.tripId}` as any);
+    // Note: Trip invitations should NOT navigate to trip - user must accept first via buttons
+    if (isTripUpdateNotification(notification) || isMemberAddedNotification(notification)) {
+      // Navigate to the trip screen (user is already a member)
+      router.push(`/trip/${notification.metadata.tripID}`);
     } else if (isChatMessageNotification(notification)) {
       // Navigate to the chat screen
-      router.push(`/(authenticated)/(tabs)/trips/${notification.metadata.chatId}/chat` as any);
+      router.push(`/trip/${notification.metadata.chatID}/chat`);
     }
+    // Trip invitations: Don't navigate on tap - user should use Accept/Decline buttons
 
     // Call the onPress handler if provided
     if (onPress) {
@@ -64,8 +62,8 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
 
   const handleAccept = async (notification: TripInvitationNotification) => {
     await notificationStore.acceptTripInvitation(notification);
-    // Navigate to the trip screen after accepting
-    router.push(`/(authenticated)/(tabs)/trips/${notification.metadata.tripId}` as any);
+    // Navigate to the trip screen after accepting (now user is a member)
+    router.push(`/trip/${notification.metadata.tripID}`);
   };
 
   const handleDecline = async (notification: TripInvitationNotification) => {
