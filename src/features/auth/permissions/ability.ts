@@ -170,7 +170,15 @@ export function createEmptyAbility(): AppAbility {
  */
 export function hasMinimumRole(currentRole: MemberRole, minimumRole: MemberRole): boolean {
   const roleOrder: MemberRole[] = ['member', 'admin', 'owner'];
-  return roleOrder.indexOf(currentRole) >= roleOrder.indexOf(minimumRole);
+  const currentIndex = roleOrder.indexOf(currentRole);
+  const minimumIndex = roleOrder.indexOf(minimumRole);
+
+  // Handle invalid roles
+  if (currentIndex === -1 || minimumIndex === -1) {
+    return false;
+  }
+
+  return currentIndex >= minimumIndex;
 }
 
 /**

@@ -62,7 +62,13 @@ export function useTripPermissions({ trip }: UseTripPermissionsOptions): UseTrip
     // Check members array for role
     const member = trip.members?.find((m) => m.userId === userId);
     if (member) {
-      return member.role as MemberRole;
+      // Validate that the role is a valid MemberRole
+      const validRoles: MemberRole[] = ['owner', 'admin', 'member'];
+      if (validRoles.includes(member.role as MemberRole)) {
+        return member.role as MemberRole;
+      }
+      // Invalid role found, treat as non-member
+      return null;
     }
 
     // User is not a member
@@ -94,10 +100,14 @@ export function useTripPermissions({ trip }: UseTripPermissionsOptions): UseTrip
   const isMember = userRole !== null;
 
   // Generic can function that uses the ability
-  const can = (action: string, subject: string): boolean => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return ability.can(action as any, subject as any);
-  };
+  const can = useMemo(
+    () =>
+      (action: string, subject: string): boolean => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return ability.can(action as any, subject as any);
+      },
+    [ability]
+  );
 
   return {
     userRole,

@@ -9,12 +9,11 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
-import {
-  GooglePlacesAutocomplete,
-  GooglePlacesAutocompleteRef,
-} from 'react-native-google-places-autocomplete';
 import type { PlaceDetailsWithFullText } from '@/src/types/places';
-import { AutocompleteRow } from '@/components/shared/AutocompleteRow';
+
+// Note: GooglePlacesAutocomplete and AutocompleteRow are not used in this implementation.
+// This component uses a custom implementation that directly calls the Google Places API
+// for better control over the autocomplete behavior and styling.
 
 interface PlacesAutocompleteProps {
   onPlaceSelected: (details: PlaceDetailsWithFullText) => void;
@@ -61,32 +60,45 @@ export default function CustomPlacesAutocomplete({
     try {
       setIsLoading(true);
 
+      // Handle country parameter: support both string and string[] types
+      const componentsParam = !country
+        ? ''
+        : Array.isArray(country)
+          ? `&components=${country.map((c) => `country:${c}`).join('|')}`
+          : `&components=country:${country}`;
+
       // Create the direct API URL for autocomplete
-      const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${apiKey}&language=en&types=geocode|establishment${country ? `&components=country:${country}` : ''}`;
+      const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${apiKey}&language=en&types=geocode|establishment${componentsParam}`;
 
       const response = await fetch(url);
       const data = await response.json();
 
       if (data.status === 'OK') {
-        console.log(`[Places API Debug] Found ${data.predictions.length} predictions`);
-        data.predictions.forEach((prediction: any, idx: number) => {
-          console.log(`[Places API Debug] Prediction #${idx + 1}:`, {
-            description: prediction.description,
-            place_id: prediction.place_id,
-            main_text: prediction.structured_formatting?.main_text,
-            secondary_text: prediction.structured_formatting?.secondary_text,
+        if (__DEV__) {
+          console.log(`[Places API Debug] Found ${data.predictions.length} predictions`);
+          data.predictions.forEach((prediction: any, idx: number) => {
+            console.log(`[Places API Debug] Prediction #${idx + 1}:`, {
+              description: prediction.description,
+              place_id: prediction.place_id,
+              main_text: prediction.structured_formatting?.main_text,
+              secondary_text: prediction.structured_formatting?.secondary_text,
+            });
           });
-        });
+        }
         setPredictions(data.predictions);
       } else {
-        console.warn(`[Places API Debug] API status: ${data.status}`);
-        if (data.error_message) {
-          console.error(`[Places API Debug] Error: ${data.error_message}`);
+        if (__DEV__) {
+          console.warn(`[Places API Debug] API status: ${data.status}`);
+          if (data.error_message) {
+            console.error(`[Places API Debug] Error: ${data.error_message}`);
+          }
         }
         setPredictions([]);
       }
     } catch (error) {
-      console.error('[Places API Debug] Search failed:', error);
+      if (__DEV__) {
+        console.error('[Places API Debug] Search failed:', error);
+      }
       setPredictions([]);
     } finally {
       setIsLoading(false);
@@ -99,7 +111,9 @@ export default function CustomPlacesAutocomplete({
 
     try {
       setIsLoading(true);
-      console.log(`[Places API Debug] Getting details for place ID: ${placeId}`);
+      if (__DEV__) {
+        console.log(`[Places API Debug] Getting details for place ID: ${placeId}`);
+      }
 
       const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&key=${apiKey}&fields=name,place_id,geometry,formatted_address,address_components`;
 
@@ -108,7 +122,9 @@ export default function CustomPlacesAutocomplete({
 
       if (data.status === 'OK') {
         const details = data.result;
-        console.log('[Places API Debug] Got place details', details);
+        if (__DEV__) {
+          console.log('[Places API Debug] Got place details', details);
+        }
 
         const placeDetails: PlaceDetailsWithFullText = {
           addressComponents:
@@ -127,10 +143,14 @@ export default function CustomPlacesAutocomplete({
         setQuery(details.formatted_address || description);
         setPredictions([]);
       } else {
-        console.warn(`[Places API Debug] API status: ${data.status}`);
+        if (__DEV__) {
+          console.warn(`[Places API Debug] API status: ${data.status}`);
+        }
       }
     } catch (error) {
-      console.error('[Places API Debug] Get details failed:', error);
+      if (__DEV__) {
+        console.error('[Places API Debug] Get details failed:', error);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -140,7 +160,9 @@ export default function CustomPlacesAutocomplete({
     console.error('Google Places API key is missing');
     return (
       <View style={styles.container}>
-        <Text style={{ color: 'red' }}>Google Places API key is missing</Text>
+        <Text style={{ color: theme.colors.status.error.main }}>
+          Google Places API key is missing
+        </Text>
       </View>
     );
   }
@@ -181,7 +203,13 @@ export default function CustomPlacesAutocomplete({
             keyboardShouldPersistTaps="always"
             renderItem={({ item }) => (
               <TouchableOpacity
-                style={[styles.predictionItem, { backgroundColor: theme.colors.surface.default }]}
+                style={[
+                  styles.predictionItem,
+                  {
+                    backgroundColor: theme.colors.surface.default,
+                    borderBottomColor: theme.colors.border.default,
+                  },
+                ]}
                 onPress={() => handlePlaceSelect(item.place_id, item.description)}
               >
                 <Text style={{ color: theme.colors.content.onSurface }}>{item.description}</Text>
@@ -231,7 +259,7 @@ const styles = StyleSheet.create({
   predictionItem: {
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    // borderBottomColor is applied dynamically in renderItem to use theme colors
   },
   loadingContainer: {
     position: 'absolute',

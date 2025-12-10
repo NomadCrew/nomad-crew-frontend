@@ -170,44 +170,6 @@ export function Button({
       return primaryColor;
     };
 
-    // Variant styles
-    const getVariantStyles = () => {
-      if (disabled) {
-        return {
-          backgroundColor: 'transparent',
-          borderColor: getBorderColor(),
-          borderWidth: variant === 'outlined' ? 1 : 0,
-          color: getTextColor(),
-        };
-      }
-
-      switch (variant) {
-        case 'filled':
-          return {
-            backgroundColor: primaryColor,
-            borderWidth: 0,
-            color: '#FFFFFF',
-          };
-        case 'outlined':
-          return {
-            backgroundColor: 'transparent',
-            borderColor: primaryColor,
-            borderWidth: 1,
-            color: primaryColor,
-          };
-        case 'ghost':
-          return {
-            backgroundColor: 'transparent',
-            borderWidth: 0,
-            color: primaryColor,
-          };
-        default:
-          return {};
-      }
-    };
-
-    const variantStyles = getVariantStyles();
-
     return {
       button: {
         flexDirection: 'row' as const,

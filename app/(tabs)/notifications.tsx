@@ -10,6 +10,24 @@ import {
   NotificationTabValue,
 } from '@/src/features/notifications/components/NotificationTabs';
 import { NotificationTestButton } from '@/src/features/notifications/components/NotificationTestButton';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
+
+function getStyles(theme: any) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    testSection: {
+      padding: 16,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border.default,
+    },
+    testSectionTitle: {
+      marginBottom: 8,
+      opacity: 0.7,
+    },
+  });
+}
 
 /**
  * Renders the Notifications screen with a header, tabbed filters, and a filtered notification list.
@@ -21,6 +39,8 @@ import { NotificationTestButton } from '@/src/features/notifications/components/
  */
 export default function NotificationsScreen() {
   const insets = useSafeAreaInsets();
+  const { theme } = useAppTheme();
+  const styles = getStyles(theme);
   const [activeTab, setActiveTab] = useState<NotificationTabValue>('invitations');
 
   return (
@@ -46,18 +66,3 @@ export default function NotificationsScreen() {
     </ThemedView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  testSection: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-  },
-  testSectionTitle: {
-    marginBottom: 8,
-    opacity: 0.7,
-  },
-});

@@ -7,6 +7,7 @@ import { ThemedText } from '@/src/components/ThemedText';
 import { StyleSheet } from 'react-native';
 import { Button } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 
 /**
  * Render the trip details view for the route identified by the `id` local search parameter.
@@ -20,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 export default function TripDetailsRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { theme } = useAppTheme();
   const { data: trip, isLoading, error, refetch } = useTrip(id ?? '');
 
   if (isLoading) {
@@ -29,11 +31,16 @@ export default function TripDetailsRoute() {
   if (error || !trip) {
     return (
       <ThemedView style={styles.errorContainer}>
-        <Ionicons name="alert-circle-outline" size={64} color="#666" style={styles.errorIcon} />
+        <Ionicons
+          name="alert-circle-outline"
+          size={64}
+          color={theme.colors.content.secondary}
+          style={styles.errorIcon}
+        />
         <ThemedText variant="body.large" style={styles.errorText}>
           {error ? 'Failed to load trip' : 'Trip not found'}
         </ThemedText>
-        <ThemedText variant="body.medium" style={styles.errorSubtext}>
+        <ThemedText variant="body.medium" color="content.secondary" style={styles.errorSubtext}>
           {error ? 'Please check your connection and try again' : 'This trip may have been deleted'}
         </ThemedText>
         <Button mode="contained" onPress={() => refetch()} style={styles.retryButton}>
@@ -65,7 +72,6 @@ const styles = StyleSheet.create({
   },
   errorSubtext: {
     textAlign: 'center',
-    color: '#666',
     marginBottom: 24,
   },
   retryButton: {

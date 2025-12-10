@@ -4,8 +4,7 @@ import { useOnboarding } from '@/src/providers/OnboardingProvider';
 import { useAuthStore } from '@/src/features/auth/store';
 import { View, ActivityIndicator } from 'react-native';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
-
-console.log('[Index] File loaded');
+import { logger } from '@/src/utils/logger';
 
 /**
  * Selects and renders the initial screen or redirect based on onboarding and authentication state.
@@ -24,18 +23,23 @@ export default function Index() {
   const { status, token, isInitialized: authInitialized, needsUsername } = useAuthStore();
   const { isFirstTime, isInitialized: onboardingInitialized } = useOnboarding();
 
-  console.log(
-    '[Index] Rendering - auth:',
-    status,
-    'isFirstTime:',
-    isFirstTime,
-    'needsUsername:',
-    needsUsername
-  );
+  if (__DEV__) {
+    logger.debug(
+      'AUTH',
+      'Index - auth:',
+      status,
+      'isFirstTime:',
+      isFirstTime,
+      'needsUsername:',
+      needsUsername
+    );
+  }
 
   // Show loading while checking state
   if (!authInitialized || !onboardingInitialized) {
-    console.log('[Index] Still initializing, showing loading');
+    if (__DEV__) {
+      logger.debug('AUTH', 'Index still initializing, showing loading');
+    }
     return (
       <View
         style={{
@@ -52,23 +56,31 @@ export default function Index() {
 
   // If first time user, redirect to onboarding
   if (isFirstTime) {
-    console.log('[Index] First time user, redirecting to onboarding');
+    if (__DEV__) {
+      logger.debug('AUTH', 'First time user, redirecting to onboarding');
+    }
     return <Redirect href="/(onboarding)/welcome" />;
   }
 
   // If not authenticated, redirect to login
   if (status !== 'authenticated' || !token) {
-    console.log('[Index] Not authenticated, redirecting to login');
+    if (__DEV__) {
+      logger.debug('AUTH', 'Not authenticated, redirecting to login');
+    }
     return <Redirect href="/(auth)/login" />;
   }
 
   // If user needs to set username, redirect to username screen
   if (needsUsername) {
-    console.log('[Index] User needs username, redirecting to username screen');
+    if (__DEV__) {
+      logger.debug('AUTH', 'User needs username, redirecting to username screen');
+    }
     return <Redirect href="/(onboarding)/username" />;
   }
 
   // User is fully authenticated - redirect to main app
-  console.log('[Index] Authenticated, redirecting to tabs');
+  if (__DEV__) {
+    logger.debug('AUTH', 'Authenticated, redirecting to tabs');
+  }
   return <Redirect href="/(tabs)/trips" />;
 }

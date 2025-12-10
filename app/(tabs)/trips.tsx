@@ -150,12 +150,13 @@ export default function TripsScreen() {
   };
 
   const filteredTrips = React.useMemo(() => {
-    logger.info(
-      'UI',
-      'TripsScreen: Recalculating filteredTrips. Trips from TanStack Query:',
-      trips
-    );
-    logger.info('UI', 'TripsScreen: tripsLoading state:', tripsLoading);
+    if (__DEV__) {
+      logger.info(
+        'UI',
+        'TripsScreen: Recalculating filteredTrips. Trips from TanStack Query:',
+        trips
+      );
+    }
     let filtered = [...trips];
 
     if (searchQuery) {
@@ -183,7 +184,7 @@ export default function TripsScreen() {
       default:
         return filtered;
     }
-  }, [trips, activeTab, searchQuery, tripsLoading]);
+  }, [trips, activeTab, searchQuery]);
 
   const handleTripPress = (trip: Trip) => {
     router.push(`/trip/${trip.id}`);

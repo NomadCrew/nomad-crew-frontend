@@ -4,8 +4,7 @@ import { View, ActivityIndicator } from 'react-native';
 import { useAuthStore } from '@/src/features/auth/store';
 import { useOnboarding } from '@/src/providers/OnboardingProvider';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
-
-console.log('[OnboardingLayout] File loaded');
+import { logger } from '@/src/utils/logger';
 
 /**
  * Coordinates onboarding flow rendering and route-guarding for onboarding screens.
@@ -31,22 +30,27 @@ export default function OnboardingLayout() {
   // Get current onboarding screen from segments
   const currentScreen = segments[segments.length - 1];
 
-  console.log(
-    '[OnboardingLayout] Rendering - auth:',
-    status,
-    'isFirstTime:',
-    isFirstTime,
-    'needsUsername:',
-    needsUsername,
-    'needsContactEmail:',
-    needsContactEmail,
-    'screen:',
-    currentScreen
-  );
+  if (__DEV__) {
+    logger.debug(
+      'AUTH',
+      'Onboarding - auth:',
+      status,
+      'isFirstTime:',
+      isFirstTime,
+      'needsUsername:',
+      needsUsername,
+      'needsContactEmail:',
+      needsContactEmail,
+      'screen:',
+      currentScreen
+    );
+  }
 
   // Show loading while checking state
   if (!authInitialized || !onboardingInitialized) {
-    console.log('[OnboardingLayout] Still initializing, showing loading');
+    if (__DEV__) {
+      logger.debug('AUTH', 'Onboarding still initializing, showing loading');
+    }
     return (
       <View
         style={{
@@ -65,18 +69,22 @@ export default function OnboardingLayout() {
   if (currentScreen === 'username') {
     // Must be authenticated to set username
     if (status !== 'authenticated' || !token) {
-      console.log('[OnboardingLayout] Username screen but not authenticated, redirecting to login');
+      if (__DEV__) {
+        logger.debug('AUTH', 'Username screen but not authenticated, redirecting to login');
+      }
       return <Redirect href="/(auth)/login" />;
     }
     // If already has username, redirect to contact-email or main app
     if (!needsUsername) {
       if (needsContactEmail) {
-        console.log(
-          '[OnboardingLayout] Has username but needs contact email, redirecting to contact-email'
-        );
+        if (__DEV__) {
+          logger.debug('AUTH', 'Has username but needs contact email, redirecting');
+        }
         return <Redirect href="/(onboarding)/contact-email" />;
       }
-      console.log('[OnboardingLayout] Already has username, redirecting to tabs');
+      if (__DEV__) {
+        logger.debug('AUTH', 'Already has username, redirecting to tabs');
+      }
       return <Redirect href="/(tabs)/trips" />;
     }
     // User needs to set username - allow access
@@ -86,19 +94,23 @@ export default function OnboardingLayout() {
   if (currentScreen === 'contact-email') {
     // Must be authenticated
     if (status !== 'authenticated' || !token) {
-      console.log(
-        '[OnboardingLayout] Contact-email screen but not authenticated, redirecting to login'
-      );
+      if (__DEV__) {
+        logger.debug('AUTH', 'Contact-email screen but not authenticated, redirecting to login');
+      }
       return <Redirect href="/(auth)/login" />;
     }
     // If user still needs username, redirect there first
     if (needsUsername) {
-      console.log('[OnboardingLayout] Contact-email screen but needs username first, redirecting');
+      if (__DEV__) {
+        logger.debug('AUTH', 'Contact-email screen but needs username first, redirecting');
+      }
       return <Redirect href="/(onboarding)/username" />;
     }
     // If doesn't need contact email, go to main app
     if (!needsContactEmail) {
-      console.log('[OnboardingLayout] Already has contact email, redirecting to tabs');
+      if (__DEV__) {
+        logger.debug('AUTH', 'Already has contact email, redirecting to tabs');
+      }
       return <Redirect href="/(tabs)/trips" />;
     }
     // User needs to set contact email - allow access
@@ -108,13 +120,17 @@ export default function OnboardingLayout() {
   if (!isFirstTime && status === 'authenticated' && token && !needsUsername && !needsContactEmail) {
     // Only redirect if not on username or contact-email screens (which have their own logic above)
     if (currentScreen !== 'username' && currentScreen !== 'contact-email') {
-      console.log('[OnboardingLayout] Onboarding complete and authenticated, redirecting to tabs');
+      if (__DEV__) {
+        logger.debug('AUTH', 'Onboarding complete and authenticated, redirecting to tabs');
+      }
       return <Redirect href="/(tabs)/trips" />;
     }
   }
 
   // Render onboarding screens
-  console.log('[OnboardingLayout] Rendering onboarding screens');
+  if (__DEV__) {
+    logger.debug('AUTH', 'Rendering onboarding screens');
+  }
   return (
     <Stack
       screenOptions={{
