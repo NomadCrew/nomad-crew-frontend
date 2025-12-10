@@ -29,7 +29,11 @@ const getSafeColor = (themeColor: string | undefined, fallback: string): string 
   return themeColor || fallback;
 };
 
-export const LocationSharingToggle: React.FC = () => {
+interface LocationSharingToggleProps {
+  tripId?: string;
+}
+
+export const LocationSharingToggle: React.FC<LocationSharingToggleProps> = ({ tripId }) => {
   const { theme } = useAppTheme();
   const { isLocationSharingEnabled, setLocationSharingEnabled } = useLocationStore();
   const [isToggling, setIsToggling] = useState(false);
@@ -122,7 +126,7 @@ export const LocationSharingToggle: React.FC = () => {
 
       // Update location sharing preference
       logger.debug('LOCATION', 'Updating location sharing preference to:', value);
-      await setLocationSharingEnabled(value);
+      await setLocationSharingEnabled(value, tripId);
       logger.debug('LOCATION', 'Location sharing preference updated successfully');
     } catch (error) {
       logger.error('LOCATION', 'Error toggling location sharing:', error);

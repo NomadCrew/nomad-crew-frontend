@@ -190,6 +190,12 @@ export class ApiClient extends BaseApiClient {
 
         // Check if the error is a 401 Unauthorized and we haven't tried to refresh yet
         if (error.response.status === 401 && !originalRequest._retry) {
+          // Don't try to refresh tokens for onboard endpoint - 401 is expected for new users
+          if (originalRequest.url?.includes('/users/onboard')) {
+            logger.debug('API Client', '401 on onboard endpoint is expected for new users, not refreshing token');
+            return Promise.reject(error);
+          }
+          
           // Check if it's a token expiration error
           const errorData = error.response.data as any;
           const isTokenExpired =

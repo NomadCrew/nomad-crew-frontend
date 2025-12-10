@@ -10,7 +10,7 @@ import {
   LayoutChangeEvent,
 } from 'react-native';
 import { Surface } from 'react-native-paper';
-import { useAppTheme } from '@/src/theme/ThemeProvider';
+import { useThemedStyles } from '@/src/theme/utils';
 import { useAuthStore } from '@/src/features/auth/store';
 import { Theme } from '@/src/theme/types';
 import { Trip } from '@/src/features/trips/types';
@@ -46,7 +46,6 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   onLocationPress,
   onChatPress,
 }) => {
-  const theme = useAppTheme().theme;
   const authStore = useAuthStore();
   const userId = authStore.user?.id;
   const [showMemberModal, setShowMemberModal] = useState(false);
@@ -198,6 +197,55 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   const handleContentSizeChange = (width: number) => {
     setContentWidth(width);
   };
+
+  const styles = useThemedStyles((theme, safeAccess) => ({
+    actionsCard: {
+      borderRadius: safeAccess.borderRadius.get(theme, 'md', 8),
+      marginVertical: safeAccess.spacing.get(theme, 'layout.section.gap', 16),
+      backgroundColor: safeAccess.colors.get(theme, 'surface.main', '#FFFFFF'),
+      overflow: 'hidden' as const,
+    },
+    fadeContainer: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      paddingHorizontal: safeAccess.spacing.get(theme, 'layout.card.padding.horizontal', 16),
+    },
+    arrow: {
+      paddingHorizontal: safeAccess.spacing.get(theme, 'xs', 4),
+    },
+    actionButtons: {
+      flexDirection: 'row' as const,
+      paddingVertical: safeAccess.spacing.get(theme, 'layout.card.padding.vertical', 8),
+    },
+    scrollContent: {
+      alignItems: 'center' as const,
+    },
+    actionItem: {
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      paddingHorizontal: safeAccess.spacing.get(theme, 'md', 16),
+      minWidth: 80,
+      height: 70,
+    },
+    iconContainer: {
+      width: 38,
+      height: 38,
+      borderRadius: safeAccess.borderRadius.get(theme, 'lg', 12),
+      backgroundColor: safeAccess.colors.get(theme, 'primary.container', '#FFF7ED'),
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      marginBottom: safeAccess.spacing.get(theme, 'xs', 4),
+    },
+    actionLabel: {
+      fontSize: 12,
+      color: safeAccess.colors.get(theme, 'content.primary', '#1A1A1A'),
+      textAlign: 'center' as const,
+      marginTop: 4,
+    },
+    // Helper properties for accessing colors
+    primaryColor: safeAccess.colors.get(theme, 'primary.main', '#F46315'),
+    contentPrimaryColor: safeAccess.colors.get(theme, 'content.primary', '#1A1A1A'),
+  }));
 
   return (
     <>

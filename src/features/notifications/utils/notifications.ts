@@ -1,10 +1,25 @@
-import * as Notifications from 'expo-notifications';
+/**
+ * Notifications utility module with simulator-safe handling
+ *
+ * IMPORTANT: Push notifications don't work on iOS simulators due to APNs limitations.
+ * This module uses dynamic imports to prevent expo-notifications from loading on simulators,
+ * which would cause Keychain access errors.
+ *
+ * References:
+ * - https://docs.expo.dev/push-notifications/faq/
+ * - https://stackoverflow.com/questions/77033620/how-to-send-expo-push-notifications-for-ios-simulator-in-react-native-app
+ */
+
 import { Platform, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { useAuthStore } from '@/src/features/auth/store';
 import { useTripStore } from '@/src/features/trips/store';
 import { logger } from '@/src/utils/logger';
 import { jwtDecode } from 'jwt-decode';
+import Constants from 'expo-constants';
+
+// Lazy-loaded Notifications module - only imported on physical devices
+let Notifications: typeof import('expo-notifications') | null = null;
 
 // Define token interface
 interface InvitationToken {
@@ -32,14 +47,13 @@ export interface NotificationData {
   [key: string]: unknown;
 }
 
-// Configure notification behavior
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+// Helper to check if we're on a physical device
+// Push notifications don't work on simulators/emulators
+const isPhysicalDevice = (): boolean => {
+  // Constants.isDevice is true for physical devices, false for simulators/emulators
+  // This check happens before any notification module import
+  return Constants.isDevice === true;
+};
 
 /**
  * Handle a notification response (from tap).
@@ -226,6 +240,7 @@ export function configureNotifications() {
     );
     // You can handle foreground notifications here if needed
     // For example, play a sound or show an in-app banner
+    logger.debug('NOTIFICATION', 'Foreground notification received:', notification.request.content.title);
   });
 
   // Return cleanup function (for use with useEffect if needed)
@@ -235,8 +250,17 @@ export function configureNotifications() {
   };
 }
 
-// Helper function to show a local notification (useful for testing)
+/**
+ * Show a local notification (useful for testing)
+ * No-op on simulators/emulators
+ */
 export async function showLocalNotification(title: string, body: string, data?: NotificationData) {
+  // Skip if notifications module not loaded (simulator/emulator)
+  if (!Notifications) {
+    logger.debug('NOTIFICATION', `Local notification skipped (no module): ${title}`);
+    return;
+  }
+
   await Notifications.scheduleNotificationAsync({
     content: {
       title,

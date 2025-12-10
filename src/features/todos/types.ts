@@ -33,8 +33,8 @@ export interface TodosResponse {
     total: number;
   };
 }
-export interface CreateTodoResponse extends Todo {}
-export interface UpdateTodoResponse extends Todo {}
+export type CreateTodoResponse = Todo
+export type UpdateTodoResponse = Todo
 export interface DeleteTodoResponse {
   id: string;
   success: boolean;

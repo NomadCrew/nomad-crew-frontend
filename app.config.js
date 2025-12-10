@@ -134,8 +134,9 @@ export default {
     },
     plugins: [
       'expo-router',
+      'expo-web-browser',
       ['expo-location', {
-        locationAlwaysAndWhenInUsePermission: 'Allow $(PRODUCT_NAME) to use your location.'
+        locationAlwaysAndWhenInUsePermission: 'Allow $(PRODUCT_NAME) to access your location to find nearby crews, share your location with trip members, and display your position on the map.'
       }],
       'expo-secure-store', 
       [

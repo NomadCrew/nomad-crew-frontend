@@ -13,6 +13,9 @@ import { API_PATHS } from '@/src/utils/api-paths';
 import { Trip } from '@/src/features/trips/types';
 import { Theme } from '@/src/theme/types';
 
+// Supabase Realtime imports
+import { useLocations } from '@/src/features/trips/hooks/useLocations';
+
 export default function LocationScreen() {
   const { id } = useLocalSearchParams();
   const { trips, fetchTrips } = useTripStore();
@@ -21,6 +24,12 @@ export default function LocationScreen() {
   const [loading, setLoading] = useState(true);
   const [tripData, setTripData] = useState<Trip | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  // Supabase Realtime hooks
+  const locations = useLocations({ 
+    tripId: id as string, 
+    autoConnect: !!tripData 
+  });
   
   useEffect(() => {
     const loadTripData = async () => {
@@ -71,6 +80,7 @@ export default function LocationScreen() {
     loadTripData();
   }, [id, trips, fetchTrips]);
   
+  // Show loading screen
   if (loading) {
     return <LoadingScreen />;
   }
@@ -99,6 +109,7 @@ export default function LocationScreen() {
         trip={tripData} 
         onClose={() => router.back()} 
         isStandalone={true}
+        supabaseLocations={locations}
       />
     </View>
   );

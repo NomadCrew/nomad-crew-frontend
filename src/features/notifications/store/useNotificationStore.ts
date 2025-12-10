@@ -403,7 +403,7 @@ export const selectLatestChatMessageToast = (state: NotificationState) =>
 
 /**
  * Helper function to handle incoming server events that might contain notifications.
- * This can be called from a WebSocket manager or similar event source.
+ * This can be called from a real-time event manager or similar event source.
  */
 export const handleIncomingServerEventForNotifications = (event: ServerEvent) => {
   // For now, we're not handling generic server events as notifications

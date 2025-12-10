@@ -26,7 +26,12 @@ export interface LoginCredentials {
   password: string;
 }
 
-export type AuthStatus = 'unauthenticated' | 'authenticated' | 'verifying';
+// Three-state authentication pattern (recommended by Obytes Starter & community best practices)
+// - 'idle': Initial state - we don't know yet if user is authenticated (checking storage)
+// - 'authenticated': User has valid token
+// - 'unauthenticated': User has no token or token is invalid
+// - 'verifying': User is in email verification flow
+export type AuthStatus = 'idle' | 'unauthenticated' | 'authenticated' | 'verifying';
 
 // Custom Session interface removed as it's redundant with SupabaseSession
 // and SupabaseSession is already used where a Session object is handled (e.g. AuthState.handleAppleSignInSuccess)

@@ -14,6 +14,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Theme } from '@/src/theme/types';
 import { useLocalSearchParams, router } from 'expo-router';
 
+// Supabase Realtime imports
+import { useChatMessages } from '@/src/features/trips/hooks/useChatMessages';
+import { usePresence } from '@/src/features/trips/hooks/usePresence';
+import { useReactions } from '@/src/features/trips/hooks/useReactions';
+import { useReadReceipts } from '@/src/features/trips/hooks/useReadReceipts';
+
 interface ChatScreenProps {
   tripId: string;
   onBack?: () => void;
@@ -32,12 +38,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId, onBack }) => {
 
   // Chat store state and actions
   const {
-    messagesByTripId,
-    isLoadingMessages,
-    hasMoreMessages,
-    typingUsers,
     fetchMessages,
-    fetchMoreMessages,
     connectToChat,
     disconnectFromChat,
     error,
@@ -90,24 +91,24 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId, onBack }) => {
   const handleRefresh = async () => {
     logger.info('Chat Screen', `Manually refreshing messages for trip ${tripId}`);
     setIsRefreshing(true);
-    await fetchMessages(tripId, true);
+    await supabaseChatMessages.refetch();
     setIsRefreshing(false);
     logger.info('Chat Screen', `Completed manual refresh for trip ${tripId}`);
   };
 
   const handleLoadMore = () => {
     logger.info('Chat Screen', `Loading more messages for trip ${tripId}`);
-    fetchMoreMessages(tripId);
+    supabaseChatMessages.loadMore();
   };
 
   // Handle retry after auth error
-  const handleAuthRetry = async () => {
+    const handleAuthRetry = async () => {
     logger.info('Chat Screen', 'Attempting to refresh authentication session');
     try {
       await useAuthStore.getState().refreshSession();
       setAuthError(false);
       logger.info('Chat Screen', 'Authentication refreshed successfully, fetching messages');
-      fetchMessages(tripId);
+      supabaseChatMessages.refetch();
     } catch (error) {
       logger.error('Chat Screen', 'Failed to refresh authentication:', error);
     }
@@ -132,7 +133,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId, onBack }) => {
   }
 
   // Show loading state
-  if (isLoadingMessages && messages.length === 0) {
+  if (isLoading && messages.length === 0) {
     return (
       <View style={containerStyle}>
         <StatusBar style={theme.dark ? 'light' : 'dark'} />
@@ -165,7 +166,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId, onBack }) => {
   }
 
   // Show error state
-  if (error && messages.length === 0) {
+  if (currentError && messages.length === 0) {
     return (
       <View style={containerStyle}>
         <StatusBar style={theme.dark ? 'light' : 'dark'} />
@@ -239,12 +240,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId, onBack }) => {
         <View style={styles(theme).chatArea}>
           <ChatList
             messages={messages}
-            isLoading={isLoadingMessages}
+            isLoading={isLoading}
             hasMore={hasMore}
             onLoadMore={handleLoadMore}
             onRefresh={handleRefresh}
             isRefreshing={isRefreshing}
-            typingUsers={typingUsers[tripId] || []}
+            typingUsers={currentTypingUsers}
             tripId={tripId}
           />
           <ChatInput tripId={tripId} />

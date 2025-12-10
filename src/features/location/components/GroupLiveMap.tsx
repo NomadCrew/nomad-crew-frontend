@@ -30,6 +30,12 @@ interface GroupLiveMapProps {
   trip: Trip;
   onClose: () => void;
   isStandalone?: boolean;
+  supabaseLocations: {
+    locations: any[];
+    isLoading: boolean;
+    error: string | null;
+    connectionStatus: string;
+  };
 }
 
 export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
@@ -74,8 +80,25 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
   const [mapLoaded, setMapLoaded] = useState<boolean>(false);
   const [mapLoadAttempts, setMapLoadAttempts] = useState<number>(0);
 
-  const tripMemberLocations = memberLocations[trip.id] || {};
-  const memberLocationArray = Object.values(tripMemberLocations);
+  // Add timeout for loading state
+  useEffect(() => {
+    if (isLoading && !mapLoaded) {
+      const timeout = setTimeout(() => {
+        if (!mapLoaded && isLoading) {
+          console.log('[MapDebug] Loading timeout reached, forcing map ready state');
+          setIsLoading(false);
+          setMapLoaded(true);
+        }
+      }, 8000); // Reduced from 10s to 8s for better UX
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [isLoading, mapLoaded]);
+
+  // Use Supabase Realtime location data with defensive check - memoized
+  const memberLocationArray = useMemo(() => {
+    return supabaseLocations.locations || [];
+  }, [supabaseLocations.locations]);
 
   // Convert trip members to the format needed for color assignment
   const tripMembers: TripMember[] = (trip.members || []).map((m) => ({
@@ -111,8 +134,22 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
 
   // Start location tracking and fetch member locations
   useEffect(() => {
+    logger.info('GroupLiveMap', `Using Supabase Realtime for location data for trip ${trip.id}`);
+    console.log('[MapDebug] Component mounted - initial state:', {
+      isLoading,
+      mapLoaded,
+      mapError,
+      tripDestination: trip.destination.coordinates,
+      isLocationSharingEnabled,
+      Platform: Platform.OS
+    });
+    
+    // Start location tracking for current user
     if (isLocationSharingEnabled) {
+      console.log('[MapDebug] Location sharing enabled, starting tracking');
       startLocationTracking(trip.id);
+    } else {
+      console.log('[MapDebug] Location sharing disabled');
     }
 
     const fetchLocations = async () => {
@@ -330,7 +367,7 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
         </Pressable>
       </View>
 
-      <LocationSharingToggle />
+      <LocationSharingToggle tripId={trip.id} />
 
       {!isLocationSharingEnabled && (
         <Surface style={styles(theme).warningContainer} elevation={0}>
@@ -356,6 +393,27 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
             <Text style={styles(theme).loadingText}>Loading Map...</Text>
           </View>
         )}
+        
+        {/* Debug overlay to show current state */}
+        {__DEV__ && (
+          <View style={{
+            position: 'absolute',
+            top: 10,
+            right: 10,
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            padding: 8,
+            borderRadius: 4,
+            zIndex: 2000,
+          }}>
+            <Text style={{ color: 'white', fontSize: 10 }}>
+              Loading: {isLoading.toString()}{'\n'}
+              MapLoaded: {mapLoaded.toString()}{'\n'}
+              ShowOverlay: {(isLoading && !mapLoaded).toString()}
+            </Text>
+          </View>
+        )}
+        
+        {/* Error overlay */}
         {mapError && (
           <View style={styles(theme).errorOverlay}>
             <AlertCircle size={24} color={theme.colors.status.error.content} />

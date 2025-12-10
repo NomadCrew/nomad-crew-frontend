@@ -7,6 +7,7 @@ import { extendTheme } from './mocks/theme-compatibility';
 
 // Mock ThemeProvider to avoid loading delay
 jest.mock('../src/theme/ThemeProvider', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const React = require('react');
   const { createTheme } = require('../src/theme/create-theme');
   const { extendTheme } = require('./mocks/theme-compatibility');

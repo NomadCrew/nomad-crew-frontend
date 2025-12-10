@@ -48,7 +48,7 @@ interface TripState {
   removeMember: (tripId: string, userId: string) => Promise<void>;
   // Status operations
   updateTripStatus: (id: string, status: TripStatus) => Promise<void>;
-  // WebSocket operations
+  // Event handling
   handleTripEvent: (event: ServerEvent) => void;
   acceptInvitation: (token: string) => Promise<void>;
   checkPendingInvitations: () => Promise<void>;

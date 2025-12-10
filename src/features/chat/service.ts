@@ -34,14 +34,26 @@ export const chatService = {
       `${API_PATHS.trips.messages(tripId)}?${params.toString()}`
     );
     
-    // Ensure we always have a valid pagination object
-    if (!response.data.pagination) {
-      response.data.pagination = {
-        has_more: false
-      };
-    }
+    // Ensure we always have a valid response structure
+    const data = response.data || {};
+    const messages = data.messages || [];
+    const pagination = data.pagination || { has_more: false };
     
-    return response.data;
+    // Log for debugging backend response structure  
+    console.log('Chat Service Response:', {
+      messagesCount: messages.length,
+      hasPagination: !!data.pagination,
+      paginationStructure: data.pagination,
+      rawResponse: response.data
+    });
+    
+    return {
+      messages,
+      pagination: {
+        has_more: pagination.has_more || false,
+        next_cursor: pagination.next_cursor
+      }
+    };
   },
 
   /**
