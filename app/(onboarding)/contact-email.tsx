@@ -50,7 +50,6 @@ function isValidEmail(email: string): boolean {
  * @returns A React element representing the contact email onboarding screen.
  */
 export default function ContactEmailStep() {
-  const user = useAuthStore((state) => state.user);
   const updateContactEmail = useAuthStore((state) => state.updateContactEmail);
   const setNeedsContactEmail = useAuthStore((state) => state.setNeedsContactEmail);
 
