@@ -10,7 +10,7 @@ export type ThemeMode = 'light' | 'dark' | 'system';
 // Define breakpoints
 export const BREAKPOINTS = {
   mobile: 320,
-  tablet: 720, 
+  tablet: 720,
   desktop: 1024,
 } as const;
 
@@ -272,10 +272,8 @@ export interface FontSizes {
   xl: number;
 }
 
-// Extended Typography interface
-export interface ExtendedTypography extends Typography {
-  size?: FontSizes;
-}
+// Extended Typography interface - Typography already includes size and fontSizes
+export type ExtendedTypography = Typography;
 
 export interface ThemeColors {
   // ... other color definitions
@@ -302,16 +300,16 @@ export interface Theme {
     xl: number;
     full: number;
   };
-  // NEW: Animation tokens
-  animations: AnimationTokens;
+  shape?: {
+    borderRadius: {
+      small: number;
+      medium: number;
+      large: number;
+    };
+  };
   dark?: boolean;
 }
 
 // Helper types
 export type ThemeNestedValue<T> = T | Record<string, T>;
 export type ThemeColorValue = ColorValue | keyof SemanticColors;
-
-// NEW: Helper types for the new semantic colors
-export type TripStatus = keyof TripStatusColors;
-export type MemberRole = keyof MemberRoleColors;
-export type PresenceStatus = keyof PresenceColors;

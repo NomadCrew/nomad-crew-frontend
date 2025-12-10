@@ -1,0 +1,10 @@
+appId: com.nomadcrew.app
+---
+# Trips Flow Test (requires authenticated state)
+- launchApp
+
+- waitForAnimationToEnd
+
+# Note: This test assumes user is logged in
+# Look for trips-related UI elements
+- takeScreenshot: trips-screen

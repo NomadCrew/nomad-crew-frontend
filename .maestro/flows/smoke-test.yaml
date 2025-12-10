@@ -1,0 +1,14 @@
+appId: com.nomadcrew.app
+---
+# Smoke Test - Verify app launches
+- launchApp
+
+# Wait for app to load
+- waitForAnimationToEnd
+
+# Take screenshot of initial screen
+- takeScreenshot: smoke-test-initial
+
+# Verify we see something (login screen or main app)
+- assertVisible:
+    text: ".*"  # Any text visible means app loaded

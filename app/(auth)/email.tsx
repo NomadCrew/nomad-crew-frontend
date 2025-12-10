@@ -1,11 +1,5 @@
-import { useState } from 'react';
-import {
-  StyleSheet,
-  TextInput,
-  Pressable,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, TextInput, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { Loader2, ArrowLeft } from 'lucide-react-native';
 import { useAuthStore } from '@/src/features/auth/store';
@@ -25,6 +19,15 @@ const getFriendlyErrorMessage = (error: string) => {
   return errorMap[error] || 'Something went wrong. Please try again';
 };
 
+/**
+ * Email/password sign-in screen that integrates with the global auth store and app theme.
+ *
+ * Validates that email and password are not empty before invoking the store's `login`, shows
+ * a loading state while authentication is in progress, and displays a user-friendly error
+ * message provided by the auth store when present.
+ *
+ * @returns A React element rendering the email sign-in screen.
+ */
 export default function EmailLoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -53,25 +56,27 @@ export default function EmailLoginScreen() {
     >
       <ThemedView style={styles.content}>
         {/* Back Button */}
-        <Pressable 
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
+        <Pressable onPress={() => router.back()} style={styles.backButton}>
           <ArrowLeft size={24} color={theme.colors.content.primary} />
         </Pressable>
 
         {/* Header Section */}
         <ThemedView style={styles.header}>
           <ThemedText style={styles.title}>Sign in with email</ThemedText>
-          <ThemedText style={styles.subtitle}>
-            Enter your email and password to continue
-          </ThemedText>
+          <ThemedText style={styles.subtitle}>Enter your email and password to continue</ThemedText>
         </ThemedView>
 
         {/* Error Message */}
         {error && (
-          <ThemedView style={styles.errorContainer}>
-            <ThemedText style={styles.errorText}>
+          <ThemedView
+            style={[
+              styles.errorContainer,
+              { backgroundColor: theme.colors.error?.surface ?? '#FEF2F2' },
+            ]}
+          >
+            <ThemedText
+              style={[styles.errorText, { color: theme.colors.error?.main ?? '#DC2626' }]}
+            >
               {getFriendlyErrorMessage(error)}
             </ThemedText>
           </ThemedView>
@@ -79,12 +84,14 @@ export default function EmailLoginScreen() {
 
         {/* Form Section */}
         <ThemedView style={styles.form}>
-          <ThemedView style={styles.inputWrapper}>
+          <ThemedView
+            style={[
+              styles.inputWrapper,
+              inputStyles.states[focusedInput === 'email' ? 'focus' : 'idle'].container,
+            ]}
+          >
             <TextInput
-              style={[
-                inputStyles.states[focusedInput === 'email' ? 'focus' : 'idle'],
-                inputStyles.text,
-              ]}
+              style={inputStyles.states[focusedInput === 'email' ? 'focus' : 'idle'].text}
               placeholder="Enter your email"
               placeholderTextColor={theme.colors.content.tertiary}
               value={email}
@@ -97,12 +104,14 @@ export default function EmailLoginScreen() {
             />
           </ThemedView>
 
-          <ThemedView style={styles.inputWrapper}>
+          <ThemedView
+            style={[
+              styles.inputWrapper,
+              inputStyles.states[focusedInput === 'password' ? 'focus' : 'idle'].container,
+            ]}
+          >
             <TextInput
-              style={[
-                inputStyles.states[focusedInput === 'password' ? 'focus' : 'idle'],
-                inputStyles.text,
-              ]}
+              style={inputStyles.states[focusedInput === 'password' ? 'focus' : 'idle'].text}
               placeholder="Enter your password"
               placeholderTextColor={theme.colors.content.tertiary}
               value={password}
@@ -179,13 +188,11 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   errorContainer: {
-    backgroundColor: '#FEF2F2',
     padding: 16,
     borderRadius: 8,
     marginBottom: 16,
   },
   errorText: {
-    color: '#DC2626',
     fontSize: 14,
     textAlign: 'center',
   },

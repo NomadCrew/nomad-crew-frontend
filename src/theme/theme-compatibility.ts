@@ -38,23 +38,47 @@ export const BORDER_RADIUS = {
 };
 
 /**
+ * Extended theme type with guaranteed non-optional properties
+ */
+export type ExtendedTheme = Omit<Theme, 'typography' | 'dark'> & {
+  typography: Omit<Theme['typography'], 'size' | 'fontSizes'> & {
+    size: typeof typographySizes;
+    fontSizes: typeof typographySizes;
+  };
+  borderRadius: typeof borderRadius;
+  shape: {
+    borderRadius: {
+      small: number;
+      medium: number;
+      large: number;
+    };
+  };
+  dark: boolean;
+};
+
+/**
  * Extends the theme with additional properties for backward compatibility
  * and consistent access across components.
  */
-export function extendTheme(theme: Theme): Theme & {
-  typography: Theme['typography'] & { size: typeof typographySizes };
-  borderRadius: typeof borderRadius;
-  dark: boolean;
-} {
+export function extendTheme(theme: Theme): ExtendedTheme {
   return {
     ...theme,
     // Add size property to typography for backward compatibility
     typography: {
       ...theme.typography,
       size: typographySizes,
+      fontSizes: typographySizes, // Alias for size
     },
     // Add borderRadius property for consistent access
     borderRadius,
+    // Add shape property for Material Design compatibility
+    shape: {
+      borderRadius: {
+        small: borderRadius.sm,
+        medium: borderRadius.md,
+        large: borderRadius.lg,
+      },
+    },
     // Add dark property
     dark: theme.dark ?? false,
   };
@@ -78,4 +102,4 @@ export function getTypographySize(theme: Theme, size: keyof typeof typographySiz
  */
 export function getBorderRadius(theme: Theme, size: keyof typeof borderRadius): number {
   return borderRadius[size];
-} 
+}

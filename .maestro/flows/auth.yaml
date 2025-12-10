@@ -1,0 +1,13 @@
+appId: com.nomadcrew.app
+---
+# Auth Flow Test
+- launchApp:
+    clearState: true
+
+- waitForAnimationToEnd
+
+# Verify login screen elements are visible
+- assertVisible: "Sign in"
+
+# Take screenshot
+- takeScreenshot: auth-login-screen

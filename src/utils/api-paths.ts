@@ -9,6 +9,9 @@ export const createApiPath = (path: string) => {
 // Define all API endpoints
 export const API_PATHS = {
   auth: {
+    login: createApiPath('auth/login'),
+    register: createApiPath('auth/register'),
+    refresh: createApiPath('auth/refresh'),
     logout: createApiPath('auth/logout'),
     validate: createApiPath('auth/validate'),
   },
@@ -17,6 +20,8 @@ export const API_PATHS = {
     me: createApiPath('users/me'),
     byId: (id: string) => createApiPath(`users/${id}`),
     onboard: createApiPath('users/onboard'),
+    search: createApiPath('users/search'),
+    updateContactEmail: createApiPath('users/me/contact-email'),
   },
   trips: {
     list: createApiPath('trips'),
@@ -27,6 +32,8 @@ export const API_PATHS = {
     invite: (tripId: string) => createApiPath(`trips/${tripId}/invitations`),
     invitations: (tripId: string) => createApiPath(`trips/${tripId}/invitations`),
     acceptInvitation: createApiPath('trips/invitations/accept'),
+    declineInvitation: createApiPath('invitations/decline'),
+    invitationDetails: createApiPath('invitations/details'),
     messages: (tripId: string) => createApiPath(`trips/${tripId}/chat/messages`),
     messagesRead: (tripId: string) => createApiPath(`trips/${tripId}/chat/messages/read`),
   },
@@ -46,5 +53,11 @@ export const API_PATHS = {
   // Add chat endpoints
   CHAT: {
     UPDATE_LAST_READ: (tripId: string) => createApiPath(`trips/${tripId}/chat/messages/read`),
-  }
+  },
+  // Push notification endpoints
+  pushTokens: {
+    register: createApiPath('users/push-token'),
+    deregister: createApiPath('users/push-token'),
+    deregisterAll: createApiPath('users/push-tokens'),
+  },
 } as const;

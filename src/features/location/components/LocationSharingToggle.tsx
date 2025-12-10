@@ -21,7 +21,7 @@ const DEFAULT_COLORS: Record<string, string> = {
   border: '#E5E7EB',
   textPrimary: '#1A1A1A',
   textSecondary: '#404040',
-  surfaceVariant: '#E5E7EB'
+  surfaceVariant: '#E5E7EB',
 };
 
 // Helper functions for safely getting theme colors with fallbacks
@@ -65,23 +65,23 @@ export const LocationSharingToggle: React.FC<LocationSharingToggleProps> = ({ tr
   const handleToggleLocationSharing = async (value: boolean) => {
     setIsToggling(true);
     setErrorMessage(null);
-    
+
     try {
       logger.debug('LOCATION', 'Toggling location sharing to:', value);
-      
+
       if (value) {
         // Check if location permission is granted
         const { status } = await Location.getForegroundPermissionsAsync();
         logger.debug('LOCATION', 'Current permission status:', status);
         setPermissionStatus(status);
-        
+
         if (status !== 'granted') {
           // Request permission
           logger.debug('LOCATION', 'Requesting location permission');
           const { status: newStatus } = await Location.requestForegroundPermissionsAsync();
           logger.debug('LOCATION', 'New permission status:', newStatus);
           setPermissionStatus(newStatus);
-          
+
           if (newStatus !== 'granted') {
             // Permission denied, show alert
             logger.debug('LOCATION', 'Permission denied, showing alert');
@@ -90,10 +90,10 @@ export const LocationSharingToggle: React.FC<LocationSharingToggleProps> = ({ tr
               'To share your location with trip members, please enable location permissions in your device settings.',
               [
                 { text: 'Cancel', style: 'cancel' },
-                { 
-                  text: 'Open Settings', 
-                  onPress: () => Linking.openSettings() 
-                }
+                {
+                  text: 'Open Settings',
+                  onPress: () => Linking.openSettings(),
+                },
               ]
             );
             setIsToggling(false);
@@ -105,7 +105,7 @@ export const LocationSharingToggle: React.FC<LocationSharingToggleProps> = ({ tr
         logger.debug('LOCATION', 'Checking if location services are enabled');
         const isLocationServicesEnabled = await Location.hasServicesEnabledAsync();
         logger.debug('LOCATION', 'Location services enabled:', isLocationServicesEnabled);
-        
+
         if (!isLocationServicesEnabled) {
           logger.debug('LOCATION', 'Location services disabled, showing alert');
           Alert.alert(
@@ -113,17 +113,17 @@ export const LocationSharingToggle: React.FC<LocationSharingToggleProps> = ({ tr
             'Please enable location services in your device settings to share your location.',
             [
               { text: 'Cancel', style: 'cancel' },
-              { 
-                text: 'Open Settings', 
-                onPress: () => Linking.openSettings() 
-              }
+              {
+                text: 'Open Settings',
+                onPress: () => Linking.openSettings(),
+              },
             ]
           );
           setIsToggling(false);
           return;
         }
       }
-      
+
       // Update location sharing preference
       logger.debug('LOCATION', 'Updating location sharing preference to:', value);
       await setLocationSharingEnabled(value, tripId);
@@ -131,10 +131,7 @@ export const LocationSharingToggle: React.FC<LocationSharingToggleProps> = ({ tr
     } catch (error) {
       logger.error('LOCATION', 'Error toggling location sharing:', error);
       setErrorMessage('Failed to update location sharing preference. Please try again.');
-      Alert.alert(
-        'Error',
-        'Failed to update location sharing preference. Please try again.'
-      );
+      Alert.alert('Error', 'Failed to update location sharing preference. Please try again.');
     } finally {
       setIsToggling(false);
     }
@@ -150,76 +147,76 @@ export const LocationSharingToggle: React.FC<LocationSharingToggleProps> = ({ tr
 
   // Safely get color values with fallbacks
   const getPrimaryColor = (): string => {
-    return getSafeColor(theme?.colors?.primary?.main, DEFAULT_COLORS.primary);
+    return theme.colors.primary.main ?? DEFAULT_COLORS.primary;
   };
 
   const getSecondaryColor = (): string => {
-    return getSafeColor(theme?.colors?.content?.secondary, DEFAULT_COLORS.secondary);
+    return theme.colors.content.secondary ?? DEFAULT_COLORS.secondary;
   };
 
   const getDisabledColor = (): string => {
-    return getSafeColor(theme?.colors?.content?.disabled, DEFAULT_COLORS.disabled);
+    return theme.colors.content.disabled ?? DEFAULT_COLORS.disabled;
   };
 
   const getPrimaryLightColor = (): string => {
-    return getSafeColor(theme?.colors?.primary?.border, DEFAULT_COLORS.primaryLight);
+    return theme.colors.primary.border ?? DEFAULT_COLORS.primaryLight;
   };
 
   // Create a styles object with current theme and warning/error colors
   const currentStyles = StyleSheet.create({
     container: {
-      backgroundColor: getSafeColor(theme?.colors?.surface?.default, DEFAULT_COLORS.surface),
-      margin: theme?.spacing?.inset?.sm || 8,
-      borderRadius: theme?.borderRadius?.md || 8,
+      backgroundColor: theme.colors.surface.default ?? DEFAULT_COLORS.surface,
+      margin: theme.spacing.inset.sm,
+      borderRadius: theme.borderRadius.md,
       borderWidth: 1,
-      borderColor: getSafeColor(theme?.colors?.border?.default, DEFAULT_COLORS.border),
+      borderColor: theme.colors.border.default ?? DEFAULT_COLORS.border,
     },
     content: {
       flexDirection: 'row',
       alignItems: 'center',
-      padding: theme?.spacing?.inset?.md || 16,
+      padding: theme.spacing.inset.md,
     },
     iconContainer: {
-      marginRight: theme?.spacing?.inset?.sm || 8,
+      marginRight: theme.spacing.inset.sm,
     },
     textContainer: {
       flex: 1,
     },
     title: {
-      fontSize: theme?.typography?.size?.md || 16,
+      fontSize: theme.typography.size.md,
       fontWeight: 'bold',
-      color: getSafeColor(theme?.colors?.content?.primary, DEFAULT_COLORS.textPrimary),
+      color: theme.colors.content.primary ?? DEFAULT_COLORS.textPrimary,
     },
     description: {
-      fontSize: theme?.typography?.size?.sm || 14,
-      color: getSafeColor(theme?.colors?.content?.secondary, DEFAULT_COLORS.textSecondary),
+      fontSize: theme.typography.size.sm,
+      color: theme.colors.content.secondary ?? DEFAULT_COLORS.textSecondary,
       marginTop: 2,
     },
     warningText: {
-      fontSize: theme?.typography?.size?.xs || 12,
-      color: getSafeColor(theme?.colors?.status?.warning?.content, DEFAULT_COLORS.warning),
+      fontSize: theme.typography.size.xs,
+      color: theme.colors.status.warning?.content ?? DEFAULT_COLORS.warning,
       marginTop: 4,
     },
     errorText: {
-      fontSize: theme?.typography?.size?.xs || 12,
-      color: getSafeColor(theme?.colors?.status?.error?.content, DEFAULT_COLORS.error),
+      fontSize: theme.typography.size.xs,
+      color: theme.colors.status.error?.content ?? DEFAULT_COLORS.error,
       marginTop: 4,
     },
     infoButton: {
-      padding: theme?.spacing?.inset?.xs || 4,
-      marginRight: theme?.spacing?.inset?.sm || 8,
+      padding: theme.spacing.inset.xs,
+      marginRight: theme.spacing.inset.sm,
     },
     settingsButton: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: theme?.spacing?.inset?.sm || 8,
+      padding: theme.spacing.inset.sm,
       borderTopWidth: 1,
-      borderTopColor: getSafeColor(theme?.colors?.border?.default, DEFAULT_COLORS.border),
+      borderTopColor: theme.colors.border.default ?? DEFAULT_COLORS.border,
     },
     settingsButtonText: {
-      fontSize: theme?.typography?.size?.sm || 14,
-      color: getSafeColor(theme?.colors?.primary?.main, DEFAULT_COLORS.primary),
+      fontSize: theme.typography.size.sm,
+      color: theme.colors.primary.main ?? DEFAULT_COLORS.primary,
       marginLeft: 8,
       fontWeight: '500',
     },
@@ -231,26 +228,22 @@ export const LocationSharingToggle: React.FC<LocationSharingToggleProps> = ({ tr
         <View style={currentStyles.iconContainer}>
           <MapPin size={20} color={getPrimaryColor()} />
         </View>
-        
+
         <View style={currentStyles.textContainer}>
           <Text style={currentStyles.title}>Location Sharing</Text>
           <Text style={currentStyles.description}>
-            {isLocationSharingEnabled 
-              ? 'Your location is being shared with trip members' 
+            {isLocationSharingEnabled
+              ? 'Your location is being shared with trip members'
               : 'Enable to share your location with trip members'}
           </Text>
-          
+
           {permissionStatus === 'denied' && (
             <Text style={currentStyles.warningText}>
               Location permission denied. Please enable in settings.
             </Text>
           )}
-          
-          {errorMessage && (
-            <Text style={currentStyles.errorText}>
-              {errorMessage}
-            </Text>
-          )}
+
+          {errorMessage && <Text style={currentStyles.errorText}>{errorMessage}</Text>}
         </View>
 
         <Pressable onPress={showLocationInfo} style={currentStyles.infoButton}>
@@ -258,11 +251,15 @@ export const LocationSharingToggle: React.FC<LocationSharingToggleProps> = ({ tr
         </Pressable>
 
         <Switch
-          trackColor={{ 
-            false: getDisabledColor(), 
-            true: getPrimaryLightColor()
+          trackColor={{
+            false: getDisabledColor(),
+            true: getPrimaryLightColor(),
           }}
-          thumbColor={isLocationSharingEnabled ? getPrimaryColor() : getSafeColor(theme?.colors?.surface?.default, DEFAULT_COLORS.surface)}
+          thumbColor={
+            isLocationSharingEnabled
+              ? getPrimaryColor()
+              : (theme.colors.surface.default ?? DEFAULT_COLORS.surface)
+          }
           ios_backgroundColor={getDisabledColor()}
           onValueChange={handleToggleLocationSharing}
           value={isLocationSharingEnabled}
@@ -272,10 +269,13 @@ export const LocationSharingToggle: React.FC<LocationSharingToggleProps> = ({ tr
 
       {permissionStatus === 'denied' && (
         <Pressable style={currentStyles.settingsButton} onPress={() => Linking.openSettings()}>
-           <AlertCircle size={16} color={getSafeColor(theme?.colors?.status?.warning?.content, DEFAULT_COLORS.warning)} />
+          <AlertCircle
+            size={16}
+            color={theme.colors.status.warning?.content ?? DEFAULT_COLORS.warning}
+          />
           <Text style={currentStyles.settingsButtonText}>Open Settings to Enable Location</Text>
         </Pressable>
       )}
     </Surface>
   );
-}; 
+};

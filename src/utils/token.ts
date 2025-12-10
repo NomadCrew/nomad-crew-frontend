@@ -24,19 +24,23 @@ export interface JwtPayload {
  */
 export function parseJwt(token: string | null): JwtPayload | null {
   if (!token) return null;
-  
+
   try {
     const base64Url = token.split('.')[1];
+    if (!base64Url) {
+      logger.error('AUTH', 'Invalid JWT token format');
+      return null;
+    }
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
     const jsonPayload = decodeURIComponent(
       atob(base64)
         .split('')
-        .map(function(c) {
+        .map(function (c) {
           return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
         })
         .join('')
     );
-    
+
     return JSON.parse(jsonPayload);
   } catch (error) {
     logger.error('AUTH', 'Failed to parse JWT token:', error);
@@ -51,10 +55,10 @@ export function parseJwt(token: string | null): JwtPayload | null {
  */
 export function isTokenExpiringSoon(token: string | null): boolean {
   if (!token) return true;
-  
+
   const tokenData = parseJwt(token);
   if (!tokenData || !tokenData.exp) return true;
-  
+
   // Check if token expires in less than 5 minutes (300 seconds)
   const expiresIn = tokenData.exp * 1000 - Date.now();
   return expiresIn < 5 * 60 * 1000;
@@ -67,9 +71,9 @@ export function isTokenExpiringSoon(token: string | null): boolean {
  */
 export function getTokenExpirationTime(token: string | null): number | null {
   if (!token) return null;
-  
+
   const tokenData = parseJwt(token);
   if (!tokenData || !tokenData.exp) return null;
-  
+
   return tokenData.exp * 1000;
-} 
+}

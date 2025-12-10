@@ -24,7 +24,7 @@ import type { TripStatus, MemberRole, PresenceStatus } from '../../types/app.typ
 
 /**
  * LayoutSystemShowcase Component
- * 
+ *
  * Interactive showcase demonstrating Phase 4 layout system components:
  * - Layout components (Stack, Inline, Container)
  * - Navigation patterns (StatusAwareHeader)
@@ -34,24 +34,24 @@ import type { TripStatus, MemberRole, PresenceStatus } from '../../types/app.typ
 export const LayoutSystemShowcase: React.FC = () => {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
-  
+
   // State for interactive demos
   const [headerElevated, setHeaderElevated] = useState(false);
   const [headerBadgeCount, setHeaderBadgeCount] = useState(3);
   const [containerScrollable, setContainerScrollable] = useState(false);
   const [stackSpace, setStackSpace] = useState<'sm' | 'md' | 'lg'>('md');
   const [inlineJustify, setInlineJustify] = useState<'start' | 'center' | 'space-between'>('start');
-  
+
   // Mock data for examples
   const mockTripContext = {
     status: 'active' as TripStatus,
     memberCount: 8,
     activeMembers: 5,
   };
-  
+
   const currentUserRole: MemberRole = 'admin';
   const currentPresenceStatus: PresenceStatus = 'online';
-  
+
   const headerActions = [
     {
       icon: 'search' as const,
@@ -74,7 +74,7 @@ export const LayoutSystemShowcase: React.FC = () => {
   const renderSection = (title: string, children: React.ReactNode) => (
     <Container variant="section" margin="md">
       <Stack space="lg">
-        <Text variant="headlineSmall" style={{ color: theme.colors.on-surface }}>
+        <Text variant="headlineSmall" style={{ color: theme.colors.content.onSurface }}>
           {title}
         </Text>
         {children}
@@ -86,11 +86,11 @@ export const LayoutSystemShowcase: React.FC = () => {
     <Stack space="lg">
       <Stack space="sm">
         <Text variant="titleMedium">Stack Component</Text>
-        <Text variant="bodyMedium" style={{ color: theme.colors.on-surface-variant }}>
+        <Text variant="bodyMedium" style={{ color: theme.colors.content.onSurfaceVariant }}>
           Vertical layout with consistent spacing and alignment options.
         </Text>
       </Stack>
-      
+
       {/* Stack Configuration */}
       <Container variant="card">
         <Stack space="md">
@@ -120,12 +120,16 @@ export const LayoutSystemShowcase: React.FC = () => {
           </Inline>
         </Stack>
       </Container>
-      
+
       {/* Stack Examples */}
       <Container variant="card">
         <Stack space="md">
           <Text variant="titleSmall">Stack Example (space={stackSpace})</Text>
-          <Stack space={stackSpace} padding="md" style={{ backgroundColor: theme.colors.surface-variant, borderRadius: 8 }}>
+          <Stack
+            space={stackSpace}
+            padding="md"
+            style={{ backgroundColor: theme.colors.surface.variant, borderRadius: 8 }}
+          >
             <RoleBadge role="owner" />
             <RoleBadge role="admin" />
             <RoleBadge role="member" />
@@ -133,7 +137,7 @@ export const LayoutSystemShowcase: React.FC = () => {
           </Stack>
         </Stack>
       </Container>
-      
+
       {/* Stack Alignment Demo */}
       <Container variant="card">
         <Stack space="md">
@@ -148,10 +152,14 @@ export const LayoutSystemShowcase: React.FC = () => {
                   space="xs"
                   align={align}
                   padding="sm"
-                  style={{ backgroundColor: theme.colors.surface-variant, borderRadius: 6 }}
+                  style={{ backgroundColor: theme.colors.surface.variant, borderRadius: 6 }}
                 >
-                  <Button mode="contained" compact>Button 1</Button>
-                  <Button mode="outlined" compact>Button 2</Button>
+                  <Button mode="contained" compact>
+                    Button 1
+                  </Button>
+                  <Button mode="outlined" compact>
+                    Button 2
+                  </Button>
                 </Stack>
               </View>
             ))}
@@ -165,11 +173,11 @@ export const LayoutSystemShowcase: React.FC = () => {
     <Stack space="lg">
       <Stack space="sm">
         <Text variant="titleMedium">Inline Component</Text>
-        <Text variant="bodyMedium" style={{ color: theme.colors.on-surface-variant }}>
+        <Text variant="bodyMedium" style={{ color: theme.colors.content.onSurfaceVariant }}>
           Horizontal layout with flexible spacing and alignment.
         </Text>
       </Stack>
-      
+
       {/* Inline Configuration */}
       <Container variant="card">
         <Stack space="md">
@@ -199,7 +207,7 @@ export const LayoutSystemShowcase: React.FC = () => {
           </Inline>
         </Stack>
       </Container>
-      
+
       {/* Inline Examples */}
       <Container variant="card">
         <Stack space="md">
@@ -208,7 +216,7 @@ export const LayoutSystemShowcase: React.FC = () => {
             space="sm"
             justify={inlineJustify}
             padding="md"
-            style={{ backgroundColor: theme.colors.surface-variant, borderRadius: 8 }}
+            style={{ backgroundColor: theme.colors.surface.variant, borderRadius: 8 }}
           >
             <PresenceIndicator status="online" size="md" />
             <PresenceIndicator status="away" size="md" />
@@ -217,12 +225,17 @@ export const LayoutSystemShowcase: React.FC = () => {
           </Inline>
         </Stack>
       </Container>
-      
+
       {/* Inline Wrapping Demo */}
       <Container variant="card">
         <Stack space="md">
           <Text variant="titleSmall">Inline with Wrapping</Text>
-          <Inline space="xs" wrap padding="md" style={{ backgroundColor: theme.colors.surface-variant, borderRadius: 8 }}>
+          <Inline
+            space="xs"
+            wrap
+            padding="md"
+            style={{ backgroundColor: theme.colors.surface.variant, borderRadius: 8 }}
+          >
             <RoleBadge role="owner" size="sm" />
             <RoleBadge role="admin" size="sm" />
             <RoleBadge role="moderator" size="sm" />
@@ -241,38 +254,39 @@ export const LayoutSystemShowcase: React.FC = () => {
     <Stack space="lg">
       <Stack space="sm">
         <Text variant="titleMedium">Container Component</Text>
-        <Text variant="bodyMedium" style={{ color: theme.colors.on-surface-variant }}>
+        <Text variant="bodyMedium" style={{ color: theme.colors.content.onSurfaceVariant }}>
           Semantic containers for different content types with built-in styling.
         </Text>
       </Stack>
-      
+
       {/* Container Configuration */}
       <Container variant="card">
         <Stack space="md">
           <Text variant="titleSmall">Configuration</Text>
           <Inline space="md" align="center">
             <Text>Scrollable:</Text>
-            <Switch
-              value={containerScrollable}
-              onValueChange={setContainerScrollable}
-            />
+            <Switch value={containerScrollable} onValueChange={setContainerScrollable} />
           </Inline>
         </Stack>
       </Container>
-      
+
       {/* Container Variants */}
       <Stack space="md">
         {(['card', 'section', 'content'] as const).map((variant) => (
           <Container key={variant} variant={variant}>
             <Stack space="sm">
               <Text variant="titleSmall">variant="{variant}"</Text>
-              <Text variant="bodySmall" style={{ color: theme.colors.on-surface-variant }}>
+              <Text variant="bodySmall" style={{ color: theme.colors.content.onSurfaceVariant }}>
                 This is a {variant} container with automatic styling and spacing.
               </Text>
               {variant === 'card' && (
                 <Inline space="sm">
-                  <Button mode="contained" compact>Action</Button>
-                  <Button mode="outlined" compact>Cancel</Button>
+                  <Button mode="contained" compact>
+                    Action
+                  </Button>
+                  <Button mode="outlined" compact>
+                    Cancel
+                  </Button>
                 </Inline>
               )}
             </Stack>
@@ -286,11 +300,11 @@ export const LayoutSystemShowcase: React.FC = () => {
     <Stack space="lg">
       <Stack space="sm">
         <Text variant="titleMedium">StatusAware Navigation</Text>
-        <Text variant="bodyMedium" style={{ color: theme.colors.on-surface-variant }}>
+        <Text variant="bodyMedium" style={{ color: theme.colors.content.onSurfaceVariant }}>
           Context-aware header that adapts to trip status and user role.
         </Text>
       </Stack>
-      
+
       {/* Header Configuration */}
       <Container variant="card">
         <Stack space="md">
@@ -298,10 +312,7 @@ export const LayoutSystemShowcase: React.FC = () => {
           <Stack space="sm">
             <Inline space="md" align="center">
               <Text>Elevated:</Text>
-              <Switch
-                value={headerElevated}
-                onValueChange={setHeaderElevated}
-              />
+              <Switch value={headerElevated} onValueChange={setHeaderElevated} />
             </Inline>
             <Inline space="md" align="center">
               <Text>Badge Count:</Text>
@@ -326,7 +337,7 @@ export const LayoutSystemShowcase: React.FC = () => {
           </Stack>
         </Stack>
       </Container>
-      
+
       {/* Header Demo */}
       <Container variant="card" padding="none">
         <StatusAwareHeader
@@ -335,7 +346,7 @@ export const LayoutSystemShowcase: React.FC = () => {
           tripContext={mockTripContext}
           userRole={currentUserRole}
           presenceStatus={currentPresenceStatus}
-          actions={headerActions.map(action => ({
+          actions={headerActions.map((action) => ({
             ...action,
             badge: action.icon === 'notifications' ? headerBadgeCount : undefined,
           }))}
@@ -350,28 +361,31 @@ export const LayoutSystemShowcase: React.FC = () => {
     <Stack space="lg">
       <Stack space="sm">
         <Text variant="titleMedium">Component Composition</Text>
-        <Text variant="bodyMedium" style={{ color: theme.colors.on-surface-variant }}>
+        <Text variant="bodyMedium" style={{ color: theme.colors.content.onSurfaceVariant }}>
           Complex layouts using composition of layout components.
         </Text>
       </Stack>
-      
+
       {/* Trip Dashboard Composition */}
       <Container variant="card">
         <Stack space="lg">
           <Stack space="sm">
             <Text variant="titleSmall">Trip Dashboard Layout</Text>
-            <Text variant="bodySmall" style={{ color: theme.colors.on-surface-variant }}>
+            <Text variant="bodySmall" style={{ color: theme.colors.content.onSurfaceVariant }}>
               Complex composition using Stack, Inline, and semantic components.
             </Text>
           </Stack>
-          
+
           <Stack space="md">
             {/* Trip Header */}
             <Inline justify="space-between" align="center">
               <Stack space="xs">
                 <Text variant="titleMedium">Tokyo Adventure 2024</Text>
                 <Inline space="sm" align="center">
-                  <Text variant="bodySmall" style={{ color: theme.colors.on-surface-variant }}>
+                  <Text
+                    variant="bodySmall"
+                    style={{ color: theme.colors.content.onSurfaceVariant }}
+                  >
                     Dec 15-22, 2024
                   </Text>
                   <RoleBadge role={currentUserRole} size="sm" />
@@ -379,9 +393,9 @@ export const LayoutSystemShowcase: React.FC = () => {
               </Stack>
               <PresenceIndicator status={currentPresenceStatus} size="lg" showPulse />
             </Inline>
-            
+
             <Divider />
-            
+
             {/* Trip Stats */}
             <Inline justify="space-between" wrap>
               <Container variant="section" style={{ flex: 1, margin: spacing.xs }}>
@@ -392,7 +406,7 @@ export const LayoutSystemShowcase: React.FC = () => {
                   <Text variant="bodySmall">Members</Text>
                 </Stack>
               </Container>
-              
+
               <Container variant="section" style={{ flex: 1, margin: spacing.xs }}>
                 <Stack space="xs" align="center">
                   <Text variant="headlineSmall" style={{ color: theme.colors.secondary }}>
@@ -401,7 +415,7 @@ export const LayoutSystemShowcase: React.FC = () => {
                   <Text variant="bodySmall">Active</Text>
                 </Stack>
               </Container>
-              
+
               <Container variant="section" style={{ flex: 1, margin: spacing.xs }}>
                 <Stack space="xs" align="center">
                   <Text variant="headlineSmall" style={{ color: theme.colors.tertiary }}>
@@ -411,9 +425,9 @@ export const LayoutSystemShowcase: React.FC = () => {
                 </Stack>
               </Container>
             </Inline>
-            
+
             <Divider />
-            
+
             {/* Quick Actions */}
             <Stack space="sm">
               <Text variant="titleSmall">Quick Actions</Text>
@@ -458,10 +472,16 @@ export const LayoutSystemShowcase: React.FC = () => {
           <Text variant="displaySmall" style={{ color: theme.colors.primary }}>
             Layout System
           </Text>
-          <Text variant="titleMedium" style={{ color: theme.colors.on-surface-variant, textAlign: 'center' }}>
+          <Text
+            variant="titleMedium"
+            style={{ color: theme.colors.content.onSurfaceVariant, textAlign: 'center' }}
+          >
             Phase 4: Advanced UI/UX Patterns
           </Text>
-          <Text variant="bodyMedium" style={{ color: theme.colors.on-surface-variant, textAlign: 'center' }}>
+          <Text
+            variant="bodyMedium"
+            style={{ color: theme.colors.content.onSurfaceVariant, textAlign: 'center' }}
+          >
             Interactive showcase of layout components and navigation patterns
           </Text>
         </Stack>
@@ -476,10 +496,10 @@ export const LayoutSystemShowcase: React.FC = () => {
         {/* Footer */}
         <Container variant="section" center>
           <Stack space="sm" align="center">
-            <Text variant="bodyMedium" style={{ color: theme.colors.on-surface-variant }}>
+            <Text variant="bodyMedium" style={{ color: theme.colors.content.onSurfaceVariant }}>
               Phase 4 Layout System Complete
             </Text>
-            <Text variant="bodySmall" style={{ color: theme.colors.on-surface-variant }}>
+            <Text variant="bodySmall" style={{ color: theme.colors.content.onSurfaceVariant }}>
               All components are production-ready and fully integrated
             </Text>
           </Stack>
@@ -490,4 +510,4 @@ export const LayoutSystemShowcase: React.FC = () => {
 };
 
 // Export the showcase component
-export default LayoutSystemShowcase; 
+export default LayoutSystemShowcase;

@@ -2,11 +2,11 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useColorScheme, View, ActivityIndicator } from 'react-native';
 import { createTheme } from './create-theme';
 import type { Theme, ThemeMode } from './types';
-import { extendTheme } from './theme-compatibility';
+import { extendTheme, ExtendedTheme } from './theme-compatibility';
 
 // Theme context type with extended theme
 interface ThemeContextType {
-  theme: ReturnType<typeof extendTheme>;
+  theme: ExtendedTheme;
   mode: 'light' | 'dark' | 'system';
   setMode: (mode: 'light' | 'dark' | 'system') => void;
   toggleColorScheme: () => void;
@@ -20,14 +20,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemColorScheme = useColorScheme();
   const [mode, setMode] = React.useState<ThemeMode>('system');
   const [isThemeLoaded, setIsThemeLoaded] = useState(true);
-  
+
   const isDark = React.useMemo(() => {
     if (mode === 'system') {
       return systemColorScheme === 'dark';
     }
     return mode === 'dark';
   }, [mode, systemColorScheme]);
-  
+
   // Create the base theme and then extend it with our compatibility layer
   const baseTheme = React.useMemo(() => createTheme({ isDark }), [isDark]);
   const theme = React.useMemo(() => {
@@ -35,41 +35,42 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     // Add dark property directly to the theme
     return {
       ...extendedTheme,
-      dark: isDark
+      dark: isDark,
     };
   }, [baseTheme, isDark]);
-  
+
   const toggleColorScheme = React.useCallback(() => {
-    setMode(prev => prev === 'dark' ? 'light' : 'dark');
+    setMode((prev) => (prev === 'dark' ? 'light' : 'dark'));
   }, []);
-  
-  const value = React.useMemo(() => ({
-    theme,
-    mode,
-    setMode,
-    toggleColorScheme,
-    isThemeLoaded,
-  }), [theme, mode, toggleColorScheme, isThemeLoaded]);
-  
+
+  const value = React.useMemo(
+    () => ({
+      theme,
+      mode,
+      setMode,
+      toggleColorScheme,
+      isThemeLoaded,
+    }),
+    [theme, mode, toggleColorScheme, isThemeLoaded]
+  );
+
   // Show simple loading view while theme is initializing
   if (!isThemeLoaded) {
     return (
-      <View style={{ 
-        flex: 1, 
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#FFFFFF' 
-      }}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: '#FFFFFF',
+        }}
+      >
         <ActivityIndicator size="large" color="#F46315" />
       </View>
     );
   }
-  
-  return (
-    <ThemeContext.Provider value={value}>
-      {children}
-    </ThemeContext.Provider>
-  );
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 export function useAppTheme() {
@@ -87,3 +88,12 @@ export function useCurrentAppTheme() {
   }
   return context.theme;
 }
+
+// Export useTheme as an alias for useAppTheme
+export const useTheme = useAppTheme;
+
+// Re-export ExtendedTheme as Theme for components
+export type { ExtendedTheme as Theme } from './theme-compatibility';
+
+// Also export the base Theme type for internal use if needed
+export type { Theme as BaseTheme } from './types';

@@ -14,8 +14,11 @@ export const TripStats: React.FC = () => {
     const spacingInsetLg = theme?.spacing?.inset?.lg || 24;
     const spacingStackMd = theme?.spacing?.stack?.md || 16;
     const spacingStackSm = theme?.spacing?.stack?.sm || 12;
-    const typographyHeadingH3 = theme?.typography?.heading?.h3 || { fontSize: 18, fontWeight: '600' };
-    
+    const typographyHeadingH3 = theme?.typography?.heading?.h3 || {
+      fontSize: 18,
+      fontWeight: '600',
+    };
+
     return {
       statsCard: {
         height: '100%',
@@ -29,7 +32,7 @@ export const TripStats: React.FC = () => {
         ...(typographyHeadingH3 || {}),
         color: textPrimary,
         marginBottom: spacingStackMd,
-        fontWeight: '600',
+        fontWeight: '600' as '600',
       },
       statsContent: {
         flex: 1,
@@ -52,26 +55,20 @@ export const TripStats: React.FC = () => {
       },
     };
   });
-  
+
   return (
-    <Surface style={StyleSheet.flatten(styles.statsCard)} elevation={0}>
-      <Text 
-        variant="headlineSmall" 
-        style={styles.statsTitle}
-      >
+    <Surface style={styles.statsCard as any} elevation={0}>
+      <Text variant="headlineSmall" style={styles.statsTitle as any}>
         Trip Stats
       </Text>
-      <View style={styles.statsContent}>
+      <View style={styles.statsContent as any}>
         <View style={styles.comingSoonContainer}>
           <CalendarClock size={32} color={styles.comingSoon.color} style={styles.icon} />
-          <Text 
-            variant="titleLarge" 
-            style={styles.comingSoon}
-          >
+          <Text variant="titleLarge" style={styles.comingSoon}>
             Coming soon
           </Text>
         </View>
       </View>
     </Surface>
   );
-}; 
+};

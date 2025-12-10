@@ -1,4 +1,4 @@
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://eihszqnmmgbrcxtymskn.supabase.co';
+const SUPABASE_URL = 'https://eihszqnmmgbrcxtymskn.supabase.co';
 
 const getEnvironment = () => {
   switch (process.env.APP_VARIANT) {
@@ -27,9 +27,9 @@ export default {
     userInterfaceStyle: 'automatic',
     newArchEnabled: true,
     splash: {
-      image: './assets/images/splash.png',
-      resizeMode: 'cover',
-      backgroundColor: '#ffffff'
+      image: './assets/images/icon.png',
+      resizeMode: 'contain',
+      backgroundColor: '#F46315'
     },
     assetBundlePatterns: ['**/*'],
     ios: {
@@ -165,9 +165,10 @@ export default {
         teamId: '27DC66D35A'
       }],
       ['expo-splash-screen', {
-        image: './assets/images/splash.png',
-        resizeMode: 'cover',
-        backgroundColor: '#ffffff'
+        image: './assets/images/icon.png',
+        imageWidth: 200,
+        resizeMode: 'contain',
+        backgroundColor: '#F46315'
       }],
       ['expo-font', {
         fonts: [

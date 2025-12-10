@@ -1,0 +1,9 @@
+appId: com.nomadcrew.app
+---
+# Chat Flow Test
+- launchApp
+
+- waitForAnimationToEnd
+
+# Take screenshot
+- takeScreenshot: chat-screen

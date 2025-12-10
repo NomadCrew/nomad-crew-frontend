@@ -1,12 +1,15 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuthStore } from '../src/features/auth/store';
 import { Text, View, ActivityIndicator } from 'react-native';
 import { logger } from '../src/utils/logger';
+import { useOnboarding } from '../src/providers/OnboardingProvider';
+import { configureNotifications } from '../src/features/notifications/utils/notifications';
+import { setupPushNotifications } from '../src/features/notifications/services/pushNotificationService';
 
-// Keep splash screen visible while resources are loading
-SplashScreen.preventAutoHideAsync().catch(console.warn);
+// NOTE: SplashScreen.preventAutoHideAsync() is called in _layout.tsx at global scope
+// This is the correct pattern per Expo documentation
 
 // Define the font map
 const customFonts = {
@@ -17,90 +20,134 @@ const customFonts = {
   'Manrope-Medium': require('../assets/fonts/Manrope/static/Manrope-Medium.ttf'),
   'Manrope-Regular': require('../assets/fonts/Manrope/static/Manrope-Regular.ttf'),
   'Manrope-SemiBold': require('../assets/fonts/Manrope/static/Manrope-SemiBold.ttf'),
-  'SpaceMono-Regular': require('../assets/fonts/SpaceMono-Regular.ttf'), // Assuming this is directly in assets/fonts/
+  'SpaceMono-Regular': require('../assets/fonts/SpaceMono-Regular.ttf'),
 };
 
+/**
+ * Coordinates app startup and renders children when initialization completes.
+ *
+ * Performs font loading, authentication and onboarding initialization, notification configuration,
+ * push notification registration, and splash screen control. While resources are pending it
+ * displays a branded loading UI; on font load failure it shows an error view.
+ *
+ * @param children - App content to render after startup is complete (typically the app's routes)
+ * @returns The rendered application content once all initialization steps have finished
+ */
 export default function AppInitializer({ children }: { children: React.ReactNode }) {
-  const { initialize: initializeAuth, isInitialized } = useAuthStore();
-  const [appReady, setAppReady] = useState(false);
+  const { initialize: initializeAuth, isInitialized: authInitialized, status } = useAuthStore();
+  const isAuthenticated = status === 'authenticated';
+  const { isInitialized: onboardingInitialized } = useOnboarding();
   const [fontsLoaded, fontError] = useFonts(customFonts);
+  const [splashHidden, setSplashHidden] = useState(false);
+  const [notificationsConfigured, setNotificationsConfigured] = useState(false);
 
+  // Initialize auth when component mounts
   useEffect(() => {
-    async function prepare() {
-      try {
-        logger.debug('APP', 'Starting app preparation phase.');
-        // Wait for fonts to load AND auth store to be initialized
-        if (!fontsLoaded || !isInitialized) { 
-          logger.debug('APP', `Waiting for resources: fontsLoaded=${String(fontsLoaded)}, authInitialized=${String(isInitialized)}`);
-          return;
+    logger.debug('APP', 'AppInitializer mounted, triggering auth initialization');
+    initializeAuth();
+  }, [initializeAuth]);
+
+  // Configure notifications once on app start (sets up handlers and Android channel)
+  useEffect(() => {
+    if (!notificationsConfigured) {
+      logger.debug('APP', 'Configuring notifications...');
+      configureNotifications();
+      setNotificationsConfigured(true);
+      logger.debug('APP', 'Notifications configured');
+    }
+  }, [notificationsConfigured]);
+
+  // Setup push notifications after auth is initialized and user is authenticated
+  // This registers the push token with the backend for session restore cases
+  useEffect(() => {
+    async function initPushNotifications() {
+      if (authInitialized && isAuthenticated) {
+        logger.debug('APP', 'User authenticated, setting up push notifications...');
+        try {
+          const token = await setupPushNotifications();
+          if (token) {
+            logger.info('APP', 'Push notifications setup complete', { tokenId: token.id });
+          } else {
+            logger.debug('APP', 'Push notifications setup skipped (no token or permissions)');
+          }
+        } catch (error) {
+          logger.error('APP', 'Failed to setup push notifications:', error);
         }
-        logger.debug('APP', 'Fonts loaded and auth store initialized.');
-
-        // If auth is initialized but there was no explicit call to initializeAuth yet, 
-        // (e.g. if isInitialized becomes true due to supabase.onAuthStateChange), 
-        // we might not need to call it again. However, the current initializeAuth 
-        // also sets isInitialized to true at the end.
-        // For simplicity, we assume initializeAuth is idempotent or its first run handles everything needed
-        // before app is truly "ready". The `isInitialized` flag from the store signals that
-        // the store has attempted to load initial auth state.
-
-        // Call initializeAuth if it hasn't been effectively run to completion.
-        // The store's initialize sets `isInitialized` to true at the end.
-        // If we are here and isInitialized is true, it implies the store did its initial loading.
-        // No need to call initializeAuth() again if isInitialized is already true from the store itself.
-        // The purpose of AppInitializer's own initializeAuth call is typically to kick off that process.
-
-        // The crucial part is that `isInitialized` from the store must be true.
-        // The store's `initialize` function is what sets `isInitialized` to true.
-        // So, we call it here to ensure it runs. If it has run, `isInitialized` will be true.
-        await initializeAuth(); // Ensure auth initialization logic within the store is triggered.
-        logger.debug('APP', 'Auth initialization triggered/completed.');
-        
-        // Mark app as ready
-        setAppReady(true);
-        logger.debug('APP', 'App marked as ready.');
-        
-        // Hide splash screen AFTER app is ready and auth is initialized
-        await SplashScreen.hideAsync();
-        logger.debug('APP', 'Splash screen hidden');
-        
-      } catch (error) {
-        logger.error('APP', 'Error during initialization:', error);
-        // Even on error, we should hide the splash screen and render something
-        await SplashScreen.hideAsync();
-        setAppReady(true);
       }
     }
 
-    prepare();
-  }, [fontsLoaded, initializeAuth, isInitialized]);
+    initPushNotifications();
+  }, [authInitialized, isAuthenticated]);
+
+  // Hide splash screen when all resources are ready
+  useEffect(() => {
+    async function hideSplash() {
+      // Wait for all initialization to complete
+      if (!fontsLoaded) {
+        logger.debug('APP', 'Waiting for fonts to load...');
+        return;
+      }
+      if (!authInitialized) {
+        logger.debug('APP', 'Waiting for auth to initialize...');
+        return;
+      }
+      if (!onboardingInitialized) {
+        logger.debug('APP', 'Waiting for onboarding to initialize...');
+        return;
+      }
+
+      // All resources ready - hide splash screen
+      logger.debug('APP', 'All resources ready, hiding splash screen');
+      try {
+        await SplashScreen.hideAsync();
+        setSplashHidden(true);
+        logger.debug('APP', 'Splash screen hidden successfully');
+      } catch (error) {
+        logger.error('APP', 'Error hiding splash screen:', error);
+        setSplashHidden(true); // Still mark as hidden to proceed
+      }
+    }
+
+    hideSplash();
+  }, [fontsLoaded, authInitialized, onboardingInitialized]);
 
   // Handle font loading error
   if (fontError) {
     logger.error('APP', 'Error loading fonts:', fontError);
+    // Hide splash and show error
+    SplashScreen.hideAsync().catch(console.warn);
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>Error loading resources. Please restart the app.</Text>
+      <View
+        style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}
+      >
+        <Text style={{ color: '#333' }}>Error loading resources. Please restart the app.</Text>
       </View>
     );
   }
-  
-  // While app is not ready (fonts or auth), show loading or return null
-  // It's crucial that SplashScreen.hideAsync() is called before returning anything here
-  // or ensure this loading state is very brief.
-  if (!appReady) {
-    // Optionally, you can show a minimal loading indicator here if preferred
-    // For now, returning null as before, but after splash screen logic in prepare()
-    // logger.debug('APP', 'App not ready, returning null from AppInitializer render.');
+
+  // Show loading state while initializing
+  // IMPORTANT: We render the loading state with a background color to avoid blank screen
+  if (!fontsLoaded || !authInitialized || !onboardingInitialized) {
     return (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <ActivityIndicator size="large" />
-            <Text>Loading...</Text>
-        </View>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: '#FFE8DC',
+        }}
+      >
+        <ActivityIndicator size="large" color="#F46315" />
+        <Text style={{ marginTop: 16, color: '#333', fontWeight: '500' }}>
+          Loading NomadCrew...
+        </Text>
+      </View>
     );
   }
-  
-  logger.debug('APP', 'App is ready, rendering children.');
-  // Render children when app is ready
-  return children;
+
+  // All resources loaded - render children
+  // The children include <Slot /> which renders the appropriate route
+  // Auth redirects happen in nested layouts, not here
+  logger.debug('APP', 'App is ready, rendering children');
+  return <>{children}</>;
 }

@@ -1,13 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Alert, ScrollView } from 'react-native';
-import { Modal, Portal, Text, Button, List, Avatar, Chip, Surface, IconButton, Divider } from 'react-native-paper';
+import {
+  Modal,
+  Portal,
+  Text,
+  Button,
+  List,
+  Avatar,
+  Chip,
+  Surface,
+  IconButton,
+  Divider,
+} from 'react-native-paper';
 import { Crown, Shield, User, MoreVertical, UserPlus } from 'lucide-react-native';
 import { Menu } from 'react-native-paper';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
-import { Trip } from '@/src/features/trips/types'; // Updated path
+import { Theme } from '@/src/theme/types';
+import { Trip } from '@/src/features/trips/types';
 import { useAuthStore } from '@/src/features/auth/store';
-import { useTripStore } from '@/src/features/trips/store'; // Updated path
-import { InviteModal } from './InviteModal'; // Path should be correct after InviteModal is moved
+import { useTripStore } from '@/src/features/trips/store';
+import { InviteModal } from './InviteModal';
+import { useIsOwner, useIsAdminOrOwner, usePermission } from '@/src/features/auth/permissions';
 
 interface MemberManagementModalProps {
   visible: boolean;
@@ -40,7 +53,11 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
 
   // Debug: Log if trip.members is not an array
   if (!Array.isArray(trip.members)) {
-    console.error('[DEBUG] MemberManagementModal: trip.members is not an array:', trip.members, trip);
+    console.error(
+      '[DEBUG] MemberManagementModal: trip.members is not an array:',
+      trip.members,
+      trip
+    );
   }
 
   // Debug trip data when modal becomes visible
@@ -52,14 +69,13 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
 
   // Ensure members array exists and includes the creator as owner if empty
   const members = React.useMemo(() => {
-    const membersList = Array.isArray(trip.members) && trip.members.length > 0 
-      ? [...trip.members] 
-      : [];
-    
+    const membersList =
+      Array.isArray(trip.members) && trip.members.length > 0 ? [...trip.members] : [];
+
     // Helper function to get the best available display name for a user
     const getUserDisplayName = (user: any): string => {
       if (!user) return 'Trip Member';
-      
+
       if (user.firstName && user.lastName) {
         return `${user.firstName} ${user.lastName}`;
       } else if (user.firstName) {
@@ -72,11 +88,13 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
         // Extract name from email (e.g., john.doe@example.com -> John Doe)
         const emailName = user.email.split('@')[0];
         if (emailName.includes('.')) {
-          return emailName.split('.')
+          return emailName
+            .split('.')
             .map((part: string) => part.charAt(0).toUpperCase() + part.slice(1))
             .join(' ');
         } else if (emailName.includes('_')) {
-          return emailName.split('_')
+          return emailName
+            .split('_')
             .map((part: string) => part.charAt(0).toUpperCase() + part.slice(1))
             .join(' ');
         }
@@ -86,37 +104,35 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
       // Fallback to a generic name
       return 'Trip Member';
     };
-    
+
     // Ensure creator is in the list with owner role
-    const creatorExists = membersList.some(member => member.userId === trip.createdBy);
+    const creatorExists = membersList.some((member) => member.userId === trip.createdBy);
     if (!creatorExists && trip.createdBy) {
       // Get creator name if it's the current user
-      const creatorName = user && user.id === trip.createdBy
-        ? getUserDisplayName(user)
-        : undefined;
-        
+      const creatorName = user && user.id === trip.createdBy ? getUserDisplayName(user) : undefined;
+
       membersList.push({
         userId: trip.createdBy,
         name: creatorName,
         role: 'owner',
-        joinedAt: trip.createdAt
+        joinedAt: trip.createdAt,
       });
     }
-    
+
     // Ensure current user is in the list if they're not already
-    if (user && !membersList.some(member => member.userId === user.id)) {
+    if (user && !membersList.some((member) => member.userId === user.id)) {
       // Determine the role based on whether they're the creator
       const role = user.id === trip.createdBy ? 'owner' : 'member';
       membersList.push({
         userId: user.id,
         name: getUserDisplayName(user),
         role: role,
-        joinedAt: new Date().toISOString()
+        joinedAt: new Date().toISOString(),
       });
     }
-    
+
     // Make sure all members have a name
-    membersList.forEach(member => {
+    membersList.forEach((member) => {
       if (!member.name && member.userId === user?.id) {
         member.name = getUserDisplayName(user);
       } else if (!member.name) {
@@ -125,15 +141,16 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
         member.name = `Member ${member.userId.substring(0, 4)}`;
       }
     });
-    
+
     return membersList;
   }, [trip.members, trip.createdBy, trip.createdAt, user]);
 
-  // Check if current user is owner or admin
-  const currentUserRole = members.find(member => member.userId === user?.id)?.role || 'member';
-  const isOwner = currentUserRole === 'owner';
-  const isAdmin = currentUserRole === 'admin';
-  const canManageMembers = isOwner || isAdmin;
+  // Use the permission system from context (set up by TripDetailScreen)
+  const isOwner = useIsOwner();
+  const canManageMembers = useIsAdminOrOwner();
+  const canChangeRole = usePermission('change_role', 'Member');
+  const canRemoveMember = usePermission('remove', 'Member');
+  const canCreateInvitation = usePermission('create', 'Invitation');
 
   // Function to handle role change
   const handleRoleChange = async (memberId: string, newRole: 'owner' | 'admin' | 'member') => {
@@ -150,55 +167,59 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
 
   // Function to handle member removal
   const handleRemoveMember = async (memberId: string) => {
-    Alert.alert(
-      'Remove Member',
-      'Are you sure you want to remove this member from the trip?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setLoading(true);
-              await removeMember(trip.id, memberId);
-              setMenuVisible(null);
-            } catch (error) {
-              Alert.alert('Error', 'Failed to remove member');
-            } finally {
-              setLoading(false);
-            }
-          },
+    Alert.alert('Remove Member', 'Are you sure you want to remove this member from the trip?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            setLoading(true);
+            await removeMember(trip.id, memberId);
+            setMenuVisible(null);
+          } catch (error) {
+            Alert.alert('Error', 'Failed to remove member');
+          } finally {
+            setLoading(false);
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   // Function to get initials from user ID or name
   const getInitials = (userId: string, name?: string) => {
     // If name is provided, use it to generate initials
     if (name) {
-      const nameParts = name.split(' ');
-      if (nameParts.length >= 2) {
+      const nameParts = name.split(' ').filter((part) => part.length > 0);
+      if (
+        nameParts.length >= 2 &&
+        nameParts[0] &&
+        nameParts[1] &&
+        nameParts[0][0] &&
+        nameParts[1][0]
+      ) {
         return (nameParts[0][0] + nameParts[1][0]).toUpperCase();
-      } else if (nameParts.length === 1 && nameParts[0].length >= 2) {
+      } else if (nameParts.length === 1 && nameParts[0] && nameParts[0].length >= 2) {
         return nameParts[0].substring(0, 2).toUpperCase();
       }
     }
-    
+
     // If user is current user, try to get initials from user object
     if (user && userId === user.id) {
-      if (user.firstName && user.lastName) {
+      if (user.firstName && user.firstName[0] && user.lastName && user.lastName[0]) {
         return (user.firstName[0] + user.lastName[0]).toUpperCase();
       } else if (user.email) {
         const emailName = user.email.split('@')[0];
-        if (emailName.includes('.')) {
-          const parts = emailName.split('.');
-          return (parts[0][0] + parts[1][0]).toUpperCase();
+        if (emailName && emailName.includes('.')) {
+          const parts = emailName.split('.').filter((part) => part.length > 0);
+          if (parts[0] && parts[1] && parts[0][0] && parts[1][0]) {
+            return (parts[0][0] + parts[1][0]).toUpperCase();
+          }
         }
       }
     }
-    
+
     // Fallback to using userId
     return userId.substring(0, 2).toUpperCase();
   };
@@ -220,19 +241,17 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
     const isCurrentUser = item.userId === user?.id;
     const isCreator = item.userId === trip.createdBy;
     const memberRole = item.role || 'member';
-    
+
     // Get role icon
-    const RoleIcon = memberRole === 'owner' 
-      ? Crown 
-      : memberRole === 'admin' 
-        ? Shield 
-        : User;
+    const RoleIcon = memberRole === 'owner' ? Crown : memberRole === 'admin' ? Shield : User;
 
     // Owner can manage everyone except themselves
     // Admin can manage members but not other admins or owners
-    const canManageThisMember = 
-      (isOwner && !isCurrentUser) || 
-      (isAdmin && memberRole === 'member');
+    // Use permission hooks: isOwner for owner check, canManageMembers for admin+owner
+    const canManageThisMember =
+      !isCurrentUser &&
+      ((isOwner && memberRole !== 'owner') ||
+        (canManageMembers && !isOwner && memberRole === 'member'));
 
     // Determine display name
     let displayName = item.name;
@@ -241,12 +260,15 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
         // For current user, try to get name from user object
         if (user.email) {
           const emailName = user.email.split('@')[0];
-          if (emailName.includes('.')) {
-            displayName = emailName.split('.')
-              .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+          if (emailName && emailName.includes('.')) {
+            displayName = emailName
+              .split('.')
+              .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
               .join(' ');
-          } else {
+          } else if (emailName) {
             displayName = emailName.charAt(0).toUpperCase() + emailName.slice(1);
+          } else {
+            displayName = 'You';
           }
         } else {
           displayName = 'You';
@@ -258,47 +280,63 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
     }
 
     return (
-      <Surface style={styles.memberItemSurface} elevation={1}>
+      <Surface style={styles(theme).memberItemSurface} elevation={1}>
         <List.Item
           title={displayName}
           description={isCurrentUser ? 'You' : getRoleLabel(memberRole)}
           left={() => (
-            <Avatar.Text 
-              size={40} 
-              label={getInitials(item.userId, item.name)} 
-              style={{ backgroundColor: theme.colors.primaryContainer }} 
-              color={theme.colors.onPrimaryContainer} 
+            <Avatar.Text
+              size={40}
+              label={getInitials(item.userId, item.name)}
+              style={{ backgroundColor: theme.colors.primary.surface }}
+              color={theme.colors.content.onSurface}
             />
           )}
           right={() => (
-            <View style={styles.memberActionsContainer}>
-              <RoleIcon 
-                color={theme.colors.onSurfaceVariant} 
-                size={20} 
-                style={{ marginRight: canManageThisMember ? 8 : 0 }} 
+            <View style={styles(theme).memberActionsContainer}>
+              <RoleIcon
+                color={theme.colors.content.secondary}
+                size={20}
+                style={{ marginRight: canManageThisMember ? 8 : 0 }}
               />
               {canManageThisMember && (
                 <Menu
                   visible={menuVisible === item.userId}
                   onDismiss={() => setMenuVisible(null)}
-                  anchor={<IconButton icon={MoreVertical} onPress={() => setMenuVisible(item.userId)} />}
+                  anchor={
+                    <IconButton icon={MoreVertical} onPress={() => setMenuVisible(item.userId)} />
+                  }
                 >
-                  {isOwner && memberRole !== 'owner' && (
-                    <Menu.Item onPress={() => handleRoleChange(item.userId, 'owner')} title="Make Owner" />
+                  {/* Owner can transfer ownership to admins or members */}
+                  {isOwner && (
+                    <Menu.Item
+                      onPress={() => handleRoleChange(item.userId, 'owner')}
+                      title="Make Owner"
+                    />
                   )}
                   {canManageMembers && memberRole !== 'admin' && (
-                     <Menu.Item onPress={() => handleRoleChange(item.userId, 'admin')} title="Make Admin" />
+                    <Menu.Item
+                      onPress={() => handleRoleChange(item.userId, 'admin')}
+                      title="Make Admin"
+                    />
                   )}
                   {canManageMembers && memberRole !== 'member' && (
-                     <Menu.Item onPress={() => handleRoleChange(item.userId, 'member')} title="Make Member" />
+                    <Menu.Item
+                      onPress={() => handleRoleChange(item.userId, 'member')}
+                      title="Make Member"
+                    />
                   )}
                   <Divider />
-                  <Menu.Item onPress={() => handleRemoveMember(item.userId)} title="Remove from Trip" titleStyle={{ color: theme.colors.error }} />
+                  <Menu.Item
+                    onPress={() => handleRemoveMember(item.userId)}
+                    title="Remove from Trip"
+                    titleStyle={{ color: theme.colors.error.main }}
+                  />
                 </Menu>
               )}
             </View>
           )}
-          style={styles.listItem}
+          style={styles(theme).listItem}
         />
       </Surface>
     );
@@ -318,20 +356,18 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
       <Modal
         visible={visible}
         onDismiss={onClose}
-        contentContainerStyle={[styles.modalContainer, { overflow: 'hidden' }]}
+        contentContainerStyle={[styles(theme).modalContainer, { overflow: 'hidden' }]}
       >
-        <View style={[styles.content, { backgroundColor: theme.colors.background }]}> 
-          <View style={styles.header}>
+        <View style={[styles(theme).content, { backgroundColor: theme.colors.background.default }]}>
+          <View style={styles(theme).header}>
             <Text variant="headlineSmall">Manage Members</Text>
             <IconButton icon={UserPlus} size={24} onPress={() => setShowInviteModal(true)} />
           </View>
-          <ScrollView style={styles.scrollView}>
+          <ScrollView style={styles(theme).scrollView}>
             {/* Render members */}
             <List.Section title="Members">
               {members.map((member) => (
-                <View key={member.userId}>
-                  {renderMemberItem({ item: member })}
-                </View>
+                <View key={member.userId}>{renderMemberItem({ item: member })}</View>
               ))}
             </List.Section>
 
@@ -339,21 +375,19 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
             {trip.invitations && trip.invitations.length > 0 && (
               <List.Section title="Pending Invitations">
                 {trip.invitations.map((invitation) => (
-                  <View key={invitation.token}> 
-                    {renderInvitationItem({ item: invitation })}
-                  </View>
+                  <View key={invitation.token}>{renderInvitationItem({ item: invitation })}</View>
                 ))}
               </List.Section>
             )}
           </ScrollView>
-          <Button onPress={onClose} mode="outlined" style={styles.closeButton}>
+          <Button onPress={onClose} mode="outlined" style={styles(theme).closeButton}>
             Close
           </Button>
           {/* Invite Modal (nested) */}
-          <InviteModal 
-            visible={showInviteModal} 
-            onClose={() => setShowInviteModal(false)} 
-            tripId={trip.id} 
+          <InviteModal
+            visible={showInviteModal}
+            onClose={() => setShowInviteModal(false)}
+            tripId={trip.id}
           />
         </View>
       </Modal>
@@ -361,40 +395,40 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
   );
 };
 
-const styles = StyleSheet.create({
-  modalContainer: {
-    margin: 20,
-    borderRadius: 12,
-    padding: 20,
-    maxHeight: '85%',
-    overflow: 'hidden',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  scrollView: {
-    // Styles for the scroll view if needed
-  },
-  memberItemSurface: {
-    borderRadius: 8,
-    marginBottom: 8,
-    // backgroundColor will be set by Surface based on theme
-  },
-  listItem: {
-    // Removed fixed height to allow dynamic content
-    // paddingVertical: 12, // Adjusted padding
-  },
-  memberActionsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  closeButton: {
-    marginTop: 20,
-  },
-  content: {
-    // Styles for the content container
-  },
-}); 
+const styles = (theme: Theme) =>
+  StyleSheet.create({
+    modalContainer: {
+      margin: theme.spacing.inset.lg,
+      borderRadius: theme.borderRadius.md,
+      padding: theme.spacing.inset.lg,
+      maxHeight: '85%',
+      overflow: 'hidden',
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: theme.spacing.stack.md,
+    },
+    scrollView: {
+      // Styles for the scroll view if needed
+    },
+    memberItemSurface: {
+      borderRadius: theme.borderRadius.sm,
+      marginBottom: theme.spacing.stack.xs,
+      // backgroundColor will be set by Surface based on theme
+    },
+    listItem: {
+      // Removed fixed height to allow dynamic content
+    },
+    memberActionsContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    closeButton: {
+      marginTop: theme.spacing.stack.lg,
+    },
+    content: {
+      // Styles for the content container
+    },
+  });

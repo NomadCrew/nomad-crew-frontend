@@ -73,14 +73,14 @@ if (!isExpoGo) {
   // Configure Google Sign-In immediately after import
   const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
   const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
-  
+
   if (webClientId) {
     const config: GoogleSigninConfig = {
       iosClientId,
       webClientId,
-      scopes: ['openid', 'email', 'profile']
+      scopes: ['openid', 'email', 'profile'],
     };
-    
+
     GoogleSignin.configure(config);
   } else {
     console.error('Google Web Client ID is not defined in environment variables');
@@ -105,7 +105,7 @@ export const configureGoogleSignIn = () => {
   GoogleSignin.configure({
     webClientId: webClientId,
     iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID, // Optional, for iOS specific client ID
-    scopes: ['openid', 'email', 'profile']
+    scopes: ['openid', 'email', 'profile'],
   });
 };
 
@@ -146,7 +146,6 @@ export function useGoogleSignIn() {
       }
 
       await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, data.session.access_token);
-      // @ts-expect-error: handleGoogleSignInSuccess expects a Session, not GoogleSignInResponse
       await handleGoogleSignInSuccess(data.session);
       setIsLoading(false);
       return data.session;
@@ -162,6 +161,7 @@ export function useGoogleSignIn() {
         error: err.message,
       });
       setIsLoading(false);
+      return undefined;
     }
   }, [handleGoogleSignInSuccess]);
 

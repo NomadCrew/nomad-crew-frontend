@@ -15,21 +15,15 @@ export const NotificationBadge: React.FC<NotificationBadgeProps> = ({
 }) => {
   const theme = useAppTheme().theme;
   const { unreadCount } = useNotificationStore();
-  
+
   if (unreadCount === 0) {
     return null;
   }
-  
+
   const displayCount = unreadCount > maxCount ? `${maxCount}+` : unreadCount.toString();
-  
+
   return (
-    <Badge
-      size={size}
-      style={[
-        styles.badge,
-        { backgroundColor: theme.colors.error }
-      ]}
-    >
+    <Badge size={size} style={[styles.badge, { backgroundColor: theme.colors.error.main }]}>
       {displayCount}
     </Badge>
   );
@@ -41,4 +35,4 @@ const styles = StyleSheet.create({
     top: -4,
     right: -4,
   },
-}); 
+});

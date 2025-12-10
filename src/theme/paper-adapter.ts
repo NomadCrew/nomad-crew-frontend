@@ -6,7 +6,12 @@
  */
 
 import { Theme as SemanticTheme } from './types';
-import { DefaultTheme as PaperDefaultTheme, MD3LightTheme, MD3DarkTheme, configureFonts } from 'react-native-paper';
+import {
+  DefaultTheme as PaperDefaultTheme,
+  MD3LightTheme,
+  MD3DarkTheme,
+  configureFonts,
+} from 'react-native-paper';
 
 /**
  * Maps the NomadCrew semantic theme to a Paper-compatible theme.
@@ -46,12 +51,12 @@ export function createPaperTheme(semanticTheme: SemanticTheme) {
   const roundness = semanticTheme.borderRadius.md || base.roundness;
 
   // Map fonts (Paper expects a fonts object)
-  const fonts = configureFonts({ config: {
-    regular: fontConfig,
-    medium: fontConfig,
-    light: fontConfig,
-    thin: fontConfig,
-  }});
+  const fontFamily = semanticTheme.typography?.body?.medium?.fontFamily || 'System';
+  const fonts = configureFonts({
+    config: {
+      fontFamily,
+    },
+  });
 
   return {
     ...base,
@@ -60,4 +65,4 @@ export function createPaperTheme(semanticTheme: SemanticTheme) {
     colors,
     fonts,
   };
-} 
+}

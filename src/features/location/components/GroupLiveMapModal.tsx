@@ -14,11 +14,7 @@ interface GroupLiveMapModalProps {
   trip: Trip;
 }
 
-export const GroupLiveMapModal: React.FC<GroupLiveMapModalProps> = ({
-  visible,
-  onClose,
-  trip,
-}) => {
+export const GroupLiveMapModal: React.FC<GroupLiveMapModalProps> = ({ visible, onClose, trip }) => {
   const { theme } = useAppTheme();
   
   // Get location data using the same hook as LocationScreen
@@ -43,9 +39,10 @@ export const GroupLiveMapModal: React.FC<GroupLiveMapModalProps> = ({
   );
 };
 
-const styles = (theme: Theme) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background.default,
-  },
-}); 
+const styles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background.default,
+    },
+  });

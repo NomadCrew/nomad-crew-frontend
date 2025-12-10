@@ -17,11 +17,7 @@ interface CreateTripModalProps {
   onSubmit: (tripData: Trip) => Promise<Trip>;
 }
 
-export default function CreateTripModal({
-  visible,
-  onClose,
-  onSubmit,
-}: CreateTripModalProps) {
+export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTripModalProps) {
   const theme = useAppTheme().theme;
   const { user: currentUser } = useAuthStore();
   const [trip, setTrip] = useState<Partial<Trip>>({
@@ -33,14 +29,16 @@ export default function CreateTripModal({
     endDate: new Date().toISOString(),
     status: 'PLANNING',
     createdBy: currentUser?.id || '',
-    members: currentUser?.id ? [
-      {
-        userId: currentUser.id,
-        role: 'owner',
-        name: currentUser.username || currentUser.email?.split('@')[0] || 'Owner',
-        joinedAt: new Date().toISOString(),
-      }
-    ] : [],
+    members: currentUser?.id
+      ? [
+          {
+            userId: currentUser.id,
+            role: 'owner',
+            name: currentUser.username || currentUser.email?.split('@')[0] || 'Owner',
+            joinedAt: new Date().toISOString(),
+          },
+        ]
+      : [],
     invitations: [],
   });
   const [showDatePicker, setShowDatePicker] = useState<'start' | 'end' | null>(null);
@@ -72,19 +70,21 @@ export default function CreateTripModal({
   async function handleSubmit() {
     if (!validateForm()) return;
     setLoading(true);
-    
+
     const tripPayload: Partial<Trip> = {
       ...trip,
       createdBy: currentUser?.id || '',
     };
 
     if (currentUser && (!tripPayload.members || tripPayload.members.length === 0)) {
-      tripPayload.members = [{
-        userId: currentUser.id,
-        role: 'owner',
-        name: currentUser.username || currentUser.email?.split('@')[0] || 'Owner',
-        joinedAt: new Date().toISOString(),
-      }];
+      tripPayload.members = [
+        {
+          userId: currentUser.id,
+          role: 'owner',
+          name: currentUser.username || currentUser.email?.split('@')[0] || 'Owner',
+          joinedAt: new Date().toISOString(),
+        },
+      ];
     }
     if (!tripPayload.invitations) {
       tripPayload.invitations = [];
@@ -92,27 +92,36 @@ export default function CreateTripModal({
 
     try {
       const quotes = [
-        "The journey of a thousand miles begins with a single step. - Lao Tzu",
-        "Travel far, travel wide, travel deep. - Unknown",
-        "Adventure is worthwhile. - Aesop",
-        "Wherever you go, go with all your heart. - Confucius",
-        "Not all who wander are lost. - J.R.R. Tolkien",
+        'The journey of a thousand miles begins with a single step. - Lao Tzu',
+        'Travel far, travel wide, travel deep. - Unknown',
+        'Adventure is worthwhile. - Aesop',
+        'Wherever you go, go with all your heart. - Confucius',
+        'Not all who wander are lost. - J.R.R. Tolkien',
       ];
       const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
       console.log('[CreateTripModal] handleSubmit trip before onSubmit:', tripPayload);
       if (tripPayload && tripPayload.members) {
         console.log('[CreateTripModal] tripPayload.members before onSubmit:', tripPayload.members);
       } else {
-        console.log('[CreateTripModal] tripPayload.members is', tripPayload ? tripPayload.members : 'tripPayload is undefined');
+        console.log(
+          '[CreateTripModal] tripPayload.members is',
+          tripPayload ? tripPayload.members : 'tripPayload is undefined'
+        );
       }
       const createdTrip = await onSubmit(tripPayload as Trip);
       console.log('[CreateTripModal] createdTrip from backend:', createdTrip);
       if (createdTrip && createdTrip.members) {
         console.log('[CreateTripModal] createdTrip.members:', createdTrip.members);
       } else {
-        console.log('[CreateTripModal] createdTrip.members is', createdTrip ? createdTrip.members : 'createdTrip is undefined');
+        console.log(
+          '[CreateTripModal] createdTrip.members is',
+          createdTrip ? createdTrip.members : 'createdTrip is undefined'
+        );
       }
-      Alert.alert('Trip Created!', `Your trip to ${createdTrip.destination?.address} is ready!\n\n${randomQuote}`);
+      Alert.alert(
+        'Trip Created!',
+        `Your trip to ${createdTrip.destination?.address} is ready!\n\n${randomQuote}`
+      );
       onClose();
     } catch (error) {
       let errorMessage = 'Failed to create trip. Please try again.';
@@ -135,16 +144,18 @@ export default function CreateTripModal({
       Alert.alert('Error', 'Please select a valid destination');
       return;
     }
-    setTrip(prev => ({
+    setTrip((prev) => ({
       ...prev,
       destination: {
         address: details.formattedAddress || details.name,
         placeId: details.placeId,
-        coordinates: details.coordinate ? {
-          lat: details.coordinate.latitude,
-          lng: details.coordinate.longitude
-        } : undefined
-      }
+        coordinates: details.coordinate
+          ? {
+              lat: details.coordinate.latitude,
+              lng: details.coordinate.longitude,
+            }
+          : undefined,
+      },
     }));
   }
 
@@ -159,23 +170,44 @@ export default function CreateTripModal({
         onDismiss={onClose}
         contentContainerStyle={styles.modalOuterContainer}
       >
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close modal background" />
-        <View style={[styles.modalContent, { backgroundColor: theme.colors.background, height: windowHeight * 0.7 }]}> 
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          accessibilityLabel="Close modal background"
+        />
+        <View
+          style={[
+            styles.modalContent,
+            { backgroundColor: theme.colors.background.default, height: windowHeight * 0.7 },
+          ]}
+        >
           {/* Drag handle */}
           <View style={styles.dragHandleWrapper}>
-            <View style={[styles.dragHandle, { backgroundColor: theme.colors.outline }]} />
+            <View style={[styles.dragHandle, { backgroundColor: theme.colors.border.default }]} />
           </View>
           {/* Header */}
           <View style={styles.headerRow}>
-            <ThemedText variant="title.large" color="content.primary" style={{ flex: 1 }}>New Trip</ThemedText>
-            <Pressable onPress={onClose} style={styles.closeButton} accessibilityLabel="Close modal">
-              <MaterialCommunityIcons name="close" size={24} color={theme.colors.content.secondary} />
+            <ThemedText variant="heading.h2" color="content.primary" style={{ flex: 1 }}>
+              New Trip
+            </ThemedText>
+            <Pressable
+              onPress={onClose}
+              style={styles.closeButton}
+              accessibilityLabel="Close modal"
+            >
+              <MaterialCommunityIcons
+                name="close"
+                size={24}
+                color={theme.colors.content.secondary}
+              />
             </Pressable>
           </View>
           {/* Form Container */}
           <View style={styles.formContainer}>
             {/* Trip name field */}
-            <ThemedText variant="label.medium" color="content.secondary" style={styles.label}>Trip Name</ThemedText>
+            <ThemedText variant="body.small" color="content.secondary" style={styles.label}>
+              Trip Name
+            </ThemedText>
             <TextInput
               mode="outlined"
               placeholder="Trip Name"
@@ -187,7 +219,9 @@ export default function CreateTripModal({
               returnKeyType="next"
             />
             {/* Destination search */}
-            <ThemedText variant="label.medium" color="content.secondary" style={styles.label}>Destination</ThemedText>
+            <ThemedText variant="body.small" color="content.secondary" style={styles.label}>
+              Destination
+            </ThemedText>
             <View style={styles.autocompleteWrapperOuter}>
               <View style={styles.autocompleteWrapper}>
                 <CustomPlacesAutocomplete
@@ -198,7 +232,9 @@ export default function CreateTripModal({
               </View>
             </View>
             {/* Description field */}
-            <ThemedText variant="label.medium" color="content.secondary" style={styles.label}>Description</ThemedText>
+            <ThemedText variant="body.small" color="content.secondary" style={styles.label}>
+              Description
+            </ThemedText>
             <TextInput
               mode="outlined"
               placeholder="Description"
@@ -211,28 +247,54 @@ export default function CreateTripModal({
             />
             {/* Date picker row */}
             <View style={styles.dateRow}>
-              <View style={[styles.dateField, { marginRight: 8 }]}> 
-                <ThemedText variant="label.medium" color="content.secondary" style={styles.label}>Start Date</ThemedText>
+              <View style={[styles.dateField, { marginRight: 8 }]}>
+                <ThemedText variant="body.small" color="content.secondary" style={styles.label}>
+                  Start Date
+                </ThemedText>
                 <Pressable
                   onPress={() => setShowDatePicker('start')}
-                  style={[styles.dateDisplay, { borderColor: theme.colors.outline, backgroundColor: theme.colors.surface.default }]}
+                  style={[
+                    styles.dateDisplay,
+                    {
+                      borderColor: theme.colors.outlined.border ?? theme.colors.border.default,
+                      backgroundColor: theme.colors.surface.default,
+                    },
+                  ]}
                   accessibilityLabel="Select start date"
                 >
                   <View style={styles.dateDisplayContent}>
-                    <MaterialCommunityIcons name="calendar" size={20} color={theme.colors.primary.main} style={{ marginRight: 6 }} />
+                    <MaterialCommunityIcons
+                      name="calendar"
+                      size={20}
+                      color={theme.colors.primary.main}
+                      style={{ marginRight: 6 }}
+                    />
                     <ThemedText color="content.primary">{formattedStartDate}</ThemedText>
                   </View>
                 </Pressable>
               </View>
               <View style={styles.dateField}>
-                <ThemedText variant="label.medium" color="content.secondary" style={styles.label}>End Date</ThemedText>
+                <ThemedText variant="body.small" color="content.secondary" style={styles.label}>
+                  End Date
+                </ThemedText>
                 <Pressable
                   onPress={() => setShowDatePicker('end')}
-                  style={[styles.dateDisplay, { borderColor: theme.colors.outline, backgroundColor: theme.colors.surface.default }]}
+                  style={[
+                    styles.dateDisplay,
+                    {
+                      borderColor: theme.colors.outlined.border ?? theme.colors.border.default,
+                      backgroundColor: theme.colors.surface.default,
+                    },
+                  ]}
                   accessibilityLabel="Select end date"
                 >
                   <View style={styles.dateDisplayContent}>
-                    <MaterialCommunityIcons name="calendar" size={20} color={theme.colors.primary.main} style={{ marginRight: 6 }} />
+                    <MaterialCommunityIcons
+                      name="calendar"
+                      size={20}
+                      color={theme.colors.primary.main}
+                      style={{ marginRight: 6 }}
+                    />
                     <ThemedText color="content.primary">{formattedEndDate}</ThemedText>
                   </View>
                 </Pressable>
@@ -241,7 +303,9 @@ export default function CreateTripModal({
             {/* Date picker */}
             {showDatePicker && trip.startDate && trip.endDate ? (
               <DateTimePicker
-                value={showDatePicker === 'start' ? new Date(trip.startDate) : new Date(trip.endDate)}
+                value={
+                  showDatePicker === 'start' ? new Date(trip.startDate) : new Date(trip.endDate)
+                }
                 mode="date"
                 display="default"
                 onChange={handleDateChange}
@@ -355,4 +419,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-}); 
+});
