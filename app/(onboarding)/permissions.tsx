@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Platform, Linking } from 'react-native';
+import { Button } from 'react-native-paper';
 import { router } from 'expo-router';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
@@ -131,12 +132,16 @@ export default function PermissionsScreen() {
 
         {isPending ? (
           <Animated.View entering={FadeIn} style={styles.buttonContainer}>
-            <ThemedView
-              style={[styles.button, { backgroundColor: theme.colors.primary.main }]}
+            <Button
+              mode="contained"
               onPress={requestPermission}
+              buttonColor={theme.colors.primary.main}
+              textColor={theme.colors.primary.text}
+              style={styles.button}
+              labelStyle={styles.buttonLabel}
             >
-              <ThemedText style={styles.buttonText}>Enable {type}</ThemedText>
-            </ThemedView>
+              Enable {type}
+            </Button>
           </Animated.View>
         ) : (
           <Animated.View entering={BounceIn} style={styles.statusContainer}>
@@ -201,12 +206,16 @@ export default function PermissionsScreen() {
             </ThemedText>
           )}
 
-          <ThemedView
-            style={[styles.continueButton, { backgroundColor: theme.colors.primary.main }]}
+          <Button
+            mode="contained"
             onPress={handleContinue}
+            buttonColor={theme.colors.primary.main}
+            textColor={theme.colors.primary.text}
+            style={styles.continueButton}
+            labelStyle={styles.continueButtonLabel}
           >
-            <ThemedText style={styles.continueButtonText}>Continue to NomadCrew</ThemedText>
-          </ThemedView>
+            Continue to NomadCrew
+          </Button>
         </Animated.View>
       )}
     </ThemedView>
@@ -269,12 +278,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   button: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
     borderRadius: 8,
   },
-  buttonText: {
-    color: 'white',
+  buttonLabel: {
     fontWeight: '600',
   },
   statusContainer: {
@@ -299,13 +305,11 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   continueButton: {
-    padding: 16,
     borderRadius: 12,
-    alignItems: 'center',
   },
-  continueButtonText: {
-    color: 'white',
+  continueButtonLabel: {
     fontSize: 16,
     fontWeight: '600',
+    paddingVertical: 4,
   },
 });
