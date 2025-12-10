@@ -46,8 +46,8 @@ export const ChatList: React.FC<ChatListProps> = ({
   // Sort messages by creation time (oldest first)
   const sortedMessages = useMemo(() => {
     return [...messages].sort((a, b) => {
-      const dateA = new Date(a.message.created_at || 0);
-      const dateB = new Date(b.message.created_at || 0);
+      const dateA = new Date(a.message?.created_at || 0);
+      const dateB = new Date(b.message?.created_at || 0);
       return dateA.getTime() - dateB.getTime();
     });
   }, [messages]);
@@ -253,7 +253,7 @@ export const ChatList: React.FC<ChatListProps> = ({
         ref={flashListRef}
         data={sortedMessages}
         renderItem={renderItem}
-        keyExtractor={(item) => item.message.id}
+        keyExtractor={(item) => item.message?.id ?? `fallback-${Math.random()}`}
         contentContainerStyle={styles.messageList}
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmptyComponent}
