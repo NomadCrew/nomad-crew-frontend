@@ -109,6 +109,8 @@ function TextInputComponent({
   return (
     <View style={containerStyles}>
       <RNTextInput
+        // Spread textInputProps first so our explicit handlers take precedence
+        {...textInputProps}
         style={inputStyles}
         value={value}
         placeholder={placeholder}
@@ -121,7 +123,6 @@ function TextInputComponent({
         // Improves input performance
         autoComplete="off"
         importantForAutofill="no"
-        {...textInputProps}
       />
     </View>
   );

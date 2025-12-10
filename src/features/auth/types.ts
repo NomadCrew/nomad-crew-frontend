@@ -59,6 +59,7 @@ export interface AuthState {
   signOut: () => Promise<void>;
   initialize: () => Promise<void>;
   setFirstTimeDone: () => Promise<void>;
+  setUser: (user: User) => void;
   handleGoogleSignInSuccess: (session: SupabaseSession) => Promise<void>;
   handleAppleSignInSuccess: (session: SupabaseSession) => Promise<void>;
   refreshToken: string | null;

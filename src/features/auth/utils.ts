@@ -5,9 +5,8 @@
 import { User } from '@supabase/supabase-js';
 
 /**
- * Get a display name for a user based on available information
- * Attempts to extract from: user_metadata.full_name, user_metadata.name,
- * raw_user_meta_data.full_name, raw_user_meta_data.name, or email
+ * Get a display name for a user based on available information.
+ * Attempts to extract from: user_metadata.full_name, user_metadata.name, or email.
  */
 export function getUserDisplayName(user: User | null | undefined): string {
   if (!user) return 'Unknown User';

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -35,9 +35,11 @@ export default function CustomPlacesAutocomplete({
   const [predictions, setPredictions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Get platform-specific API key
-  // const apiKey = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
-  const apiKey = 'AIzaSyDDYvGkXG81s9357ZRXdJkH34DuDz9QIMQ';
+  // Get platform-specific API key from environment variables
+  const apiKey =
+    Platform.OS === 'ios'
+      ? process.env.EXPO_PUBLIC_GOOGLE_API_KEY_IOS
+      : process.env.EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID;
 
   // Function to search places
   const searchPlaces = async (text: string) => {

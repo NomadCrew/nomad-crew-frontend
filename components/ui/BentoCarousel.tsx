@@ -86,10 +86,8 @@ export const BentoCarousel = ({ items, width, height, onProgressChange }: BentoC
             },
           }}
           enabled={items.length > 1}
-          // @ts-expect-error - panGestureHandlerProps is valid but types are outdated
-          panGestureHandlerProps={{
-            activeOffsetX: [-10, 10],
-            failOffsetY: [-5, 5],
+          onConfigurePanGesture={(gesture) => {
+            gesture.activeOffsetX([-10, 10]).failOffsetY([-5, 5]);
           }}
           onProgressChange={handleProgressChange}
           defaultIndex={0}
