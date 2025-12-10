@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, ViewProps, ColorValue, Pressable } from 'react-native';
-import { useAppTheme } from '@/src/theme/ThemeProvider';
-import { createStyles, useThemeAndStyles } from '@/src/theme/utils';
+import { useThemeAndStyles } from '@/src/theme/utils';
 
 export interface ThemedViewProps extends ViewProps {
   lightColor?: ColorValue;

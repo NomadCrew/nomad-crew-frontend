@@ -16,7 +16,6 @@ import { Trip } from '@/src/features/trips/types';
 import { ChatList } from '../components/ChatList';
 import { ChatInput } from '../components/ChatInput';
 import { ChatAuthError } from '../components/ChatAuthError';
-import { WebSocketManager } from '@/src/features/websocket/WebSocketManager';
 import { Theme } from '@/src/theme/types';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -261,10 +260,15 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({ tripId, onBa
         <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">
           {tripName}
         </Text>
+        {isRealtimeConnected ? (
+          <MaterialIcons name="signal-cellular-alt" size={20} color={theme.colors.success.main} />
+        ) : (
+          <MaterialIcons name="signal-cellular-off" size={20} color={theme.colors.error.main} />
+        )}
       </View>
 
       <View style={styles.chatContainer}>
-        {isLoadingMessages && messages.length === 0 ? (
+        {isLoadingChatMessages && messages.length === 0 ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={theme?.colors?.content?.primary || '#1A1A1A'} />
             <Text style={styles.loadingText}>Loading messages...</Text>

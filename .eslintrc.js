@@ -37,7 +37,6 @@ module.exports = {
     'jest': 'readonly',
     'React': 'readonly',
     'NodeJS': 'readonly',
-    'WebSocket': 'readonly',
     'Session': 'readonly',
     'ServerEvent': 'readonly'
   }

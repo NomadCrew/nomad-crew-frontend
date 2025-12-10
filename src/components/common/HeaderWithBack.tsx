@@ -1,3 +1,1 @@
-import { useAppTheme } from '@/src/theme/ThemeProvider';
-
-const { theme } = useAppTheme(); 
+// Theme will be accessed inside component 

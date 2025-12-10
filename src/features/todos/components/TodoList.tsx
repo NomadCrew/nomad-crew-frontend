@@ -146,7 +146,7 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
     );
   }
 
-  if (todos.length === 0) {
+  if ((todos || []).length === 0) {
     return (
       <View style={styles(theme).container}>
         <Surface style={styles(theme).centerContainer} pointerEvents="box-none">

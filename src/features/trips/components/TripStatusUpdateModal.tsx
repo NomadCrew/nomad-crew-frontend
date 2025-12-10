@@ -22,6 +22,117 @@ export const TripStatusUpdateModal: React.FC<TripStatusUpdateModalProps> = ({
   const updateTripStatusMutation = useUpdateTripStatus();
   const [error, setError] = useState<string | null>(null);
 
+  const styles = useThemedStyles((theme, safeAccess) => ({
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center' as const,
+      alignItems: 'center' as const,
+      padding: safeAccess.spacing.get(theme, 'inset.lg', 24),
+    },
+    modalContent: {
+      backgroundColor: safeAccess.colors.get(theme, 'background.default', '#FFFFFF'),
+      borderRadius: safeAccess.spacing.get(theme, 'inset.md', 16),
+      padding: safeAccess.spacing.get(theme, 'inset.lg', 24),
+      width: '100%' as const,
+      maxWidth: 500,
+      overflow: 'hidden' as const,
+    },
+    modalHeader: {
+      flexDirection: 'row' as const,
+      justifyContent: 'space-between' as const,
+      alignItems: 'center' as const,
+      marginBottom: safeAccess.spacing.get(theme, 'stack.md', 16),
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: 'bold' as const,
+      color: safeAccess.colors.get(theme, 'content.primary', '#1A1A1A'),
+    },
+    modalSubtitle: {
+      fontSize: 16,
+      color: safeAccess.colors.get(theme, 'content.secondary', '#6B7280'),
+      marginBottom: safeAccess.spacing.get(theme, 'stack.md', 16),
+    },
+    closeButton: {
+      padding: safeAccess.spacing.get(theme, 'inset.xs', 4),
+    },
+    rulesContainer: {
+      flexDirection: 'row' as const,
+      alignItems: 'flex-start' as const,
+      backgroundColor: safeAccess.colors.get(theme, 'surface.containerHighest', '#F9FAFB'),
+      borderRadius: safeAccess.borderRadius.get(theme, 'md', 8),
+      padding: safeAccess.spacing.get(theme, 'inset.md', 16),
+      marginBottom: safeAccess.spacing.get(theme, 'stack.lg', 24),
+    },
+    rulesText: {
+      fontSize: 14,
+      color: safeAccess.colors.get(theme, 'content.secondary', '#6B7280'),
+      marginLeft: safeAccess.spacing.get(theme, 'stack.xs', 4),
+      flexShrink: 1,
+    },
+    statusOptionsContainer: {
+      // No specific styles needed
+    },
+    statusOption: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      paddingVertical: safeAccess.spacing.get(theme, 'inset.md', 16),
+      paddingHorizontal: safeAccess.spacing.get(theme, 'inset.sm', 8),
+      marginBottom: safeAccess.spacing.get(theme, 'stack.sm', 8),
+      borderWidth: 1,
+      borderColor: safeAccess.colors.get(theme, 'outline.default', '#E5E7EB'),
+      borderRadius: safeAccess.borderRadius.get(theme, 'md', 8),
+      backgroundColor: safeAccess.colors.get(theme, 'surface.default', '#FFFFFF'),
+    },
+    selectedStatusOption: {
+      borderColor: safeAccess.colors.get(theme, 'primary.main', '#F46315'),
+      backgroundColor: safeAccess.colors.get(theme, 'primary.containerSoft', '#FFF7ED'),
+    },
+    disabledStatusOption: {
+      opacity: 0.5,
+      backgroundColor: safeAccess.colors.get(theme, 'surface.disabled', '#F3F4F6'),
+    },
+    statusTextContainer: {
+      marginLeft: safeAccess.spacing.get(theme, 'stack.sm', 8),
+      flex: 1,
+    },
+    statusDescription: {
+      fontSize: 16,
+      fontWeight: 'bold' as const,
+      color: safeAccess.colors.get(theme, 'content.primary', '#1A1A1A'),
+    },
+    disabledText: {
+      color: safeAccess.colors.get(theme, 'content.disabled', '#9CA3AF'),
+    },
+    invalidReasonText: {
+      fontSize: 12,
+      color: safeAccess.colors.get(theme, 'feedback.error.main', '#EF4444'),
+      marginTop: safeAccess.spacing.get(theme, 'stack.xxs', 2),
+    },
+    loadingContainer: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      marginTop: safeAccess.spacing.get(theme, 'stack.md', 16),
+    },
+    loadingText: {
+      fontSize: 16,
+      color: safeAccess.colors.get(theme, 'content.secondary', '#6B7280'),
+      marginLeft: safeAccess.spacing.get(theme, 'stack.xs', 4),
+    },
+    errorText: {
+      fontSize: 16,
+      color: safeAccess.colors.get(theme, 'feedback.error.main', '#EF4444'),
+      textAlign: 'center' as const,
+      marginTop: safeAccess.spacing.get(theme, 'stack.md', 16),
+    },
+    // Helper colors for direct access
+    contentPrimaryColor: safeAccess.colors.get(theme, 'content.primary', '#1A1A1A'),
+    contentSecondaryColor: safeAccess.colors.get(theme, 'content.secondary', '#6B7280'),
+    primaryColor: safeAccess.colors.get(theme, 'primary.main', '#F46315'),
+  }));
+
   const statusOptions: TripStatus[] = ['PLANNING', 'ACTIVE', 'COMPLETED', 'CANCELLED'];
 
   // Check if a status transition is valid based on backend rules
@@ -126,7 +237,7 @@ export const TripStatusUpdateModal: React.FC<TripStatusUpdateModalProps> = ({
             </Pressable>
           </View>
 
-          <Text style={styles(theme).modalSubtitle}>
+          <Text style={styles.modalSubtitle}>
             Current status: <TripStatusBadge status={trip.status} />
           </Text>
 
@@ -140,7 +251,7 @@ export const TripStatusUpdateModal: React.FC<TripStatusUpdateModalProps> = ({
             </Text>
           </View>
 
-          <View style={styles(theme).statusOptionsContainer}>
+          <View style={styles.statusOptionsContainer}>
             {statusOptions.map((status) => {
               const isValid = status === trip.status || isValidTransition(trip.status, status);
               const message = !isValid ? getTransitionMessage(trip.status, status) : '';
@@ -167,7 +278,7 @@ export const TripStatusUpdateModal: React.FC<TripStatusUpdateModalProps> = ({
                       {getStatusDescription(status)}
                     </Text>
                     {!isValid && message ? (
-                      <Text style={styles(theme).invalidReasonText}>{message}</Text>
+                      <Text style={styles.invalidReasonText}>{message}</Text>
                     ) : null}
                   </View>
                 </Pressable>

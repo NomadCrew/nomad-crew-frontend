@@ -15,7 +15,6 @@ import { BentoCarousel } from '@/components/ui/BentoCarousel';
 import { Trip } from '@/src/features/trips/types';
 import { AddTodoModal } from '@/src/features/todos/components/AddTodoModal';
 import { InviteModal } from '@/src/features/trips/components/InviteModal';
-import { WebSocketManager } from '@/src/features/websocket/WebSocketManager';
 import { useTripStore } from '@/src/features/trips/store';
 import { useTodoStore } from '@/src/features/todos/store';
 import { useLocationStore } from '@/src/features/location/store/useLocationStore';
@@ -44,6 +43,14 @@ import {
 import { useNotificationStore } from '@/src/features/notifications/store/useNotificationStore';
 import { logger } from '@/src/utils/logger';
 import { useTripPermissions } from '@/src/features/auth/permissions';
+
+// Supabase Realtime imports
+import { useChatMessages } from '@/src/features/trips/hooks/useChatMessages';
+import { useLocations } from '@/src/features/trips/hooks/useLocations';
+import { usePresence } from '@/src/features/trips/hooks/usePresence';
+import { useReactions } from '@/src/features/trips/hooks/useReactions';
+import { useReadReceipts } from '@/src/features/trips/hooks/useReadReceipts';
+// Removed SupabaseRealtimeErrorScreen import - no longer needed
 
 interface TripDetailScreenProps {
   trip: Trip;
@@ -141,6 +148,7 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
     ];
   }, [carouselItems, trip, tripId, CARD_WIDTH, TALL_CARD_HEIGHT, setShowInviteModal]);
 
+  // Initialize chat store for compatibility with existing components
   useEffect(() => {
     logger.info('Trip Detail Screen', `Setting up WebSocket connection for trip ${tripId}`);
     const manager = WebSocketManager.getInstance();
@@ -223,13 +231,9 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
     if (isLocationSharingEnabled) {
       startLocationTracking(tripId);
     }
+  }, [tripId, isChatConnected, connectToChat, fetchMessages]);
 
-    return () => {
-      logger.info('Trip Detail Screen', `Cleaning up WebSocket connection for trip ${tripId}`);
-      manager.disconnect();
-    };
-  }, [tripId, connectToChat, fetchMessages, isLocationSharingEnabled, startLocationTracking]);
-
+  // Location tracking (independent of realtime system)
   useEffect(() => {
     if (isLocationSharingEnabled) {
       logger.info(
@@ -245,6 +249,30 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
       stopLocationTracking();
     }
   }, [isLocationSharingEnabled, tripId, startLocationTracking, stopLocationTracking]);
+
+  // Handle individual hook errors
+  const hasErrors = messagesError || locationsError || presenceError || reactionsError || readReceiptsError;
+  if (hasErrors) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>
+          Connection Error
+        </Text>
+        <Text style={{ textAlign: 'center', marginBottom: 20 }}>
+          Unable to connect to real-time features. Please check your connection and try again.
+        </Text>
+        <Button 
+          mode="contained" 
+          onPress={() => {
+            // Trigger reconnection by navigating away and back
+            // or implement retry logic in hooks
+          }}
+        >
+          Retry
+        </Button>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>

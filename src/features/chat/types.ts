@@ -71,7 +71,7 @@ export type ChatWebSocketEvent =
     };
 
 // Client-side Types
-export type MessageStatus = 'sending' | 'sent' | 'error';
+export type MessageStatus = 'sending' | 'sent' | 'error' | 'pending' | 'failed';
 
 export interface ChatMessageWithStatus {
   message: ChatMessage;
@@ -146,7 +146,8 @@ export interface ChatState {
   disconnectFromChat: (tripId: string) => void;
   fetchMessages: (tripId: string, refresh?: boolean) => Promise<void>;
   fetchMoreMessages: (tripId: string) => Promise<void>;
-  sendMessage: (params: { tripId: string; content: string }) => Promise<void>;
+  sendMessage: (params: { tripId: string; content: string }) => Promise<ChatMessage | null>;
+  sendChatMessage: (tripId: string, content: string, optimisticId?: string) => Promise<ChatMessage | null>;
   markAsRead: (tripId: string, messageId: string) => Promise<void>;
   handleChatEvent: (event: ServerEvent) => void;
   setTypingStatus: (tripId: string, isTyping: boolean) => Promise<void>;

@@ -58,11 +58,21 @@ All new and refactored code must strive to adhere to SOLID principles:
     *   **Actions:** Store actions handle state transitions. Side effects within actions delegate to services.
     *   **Middleware:** Use `persist` for AsyncStorage persistence, `devtools` for debugging.
     *   **Derived State:** Computed values are derived within selectors or stored if computationally expensive.
-*   **Direct Imports (No Barrel Files for Application Code):**
-    *   To optimize bundle size, improve tree-shaking, and enhance build/test performance, **barrel files (e.g., `index.ts` files that re-export multiple modules from a directory) MUST NOT be used for importing modules within the application code.**
-    *   Always prefer direct imports from the specific file where a module is defined (e.g., `import { MyComponent } from '@/src/features/chat/components/MyComponent';` instead of `import { MyComponent } from '@/src/features/chat';`).
-    *   This rule is based on observed negative impacts on final bundle sizes and test execution times.
-    *   Note: This rule applies to internal application imports. External library entry points (which often act as barrel files) are consumed as designed by the library authors.
+*   **Direct Imports (No Barrel Files):**
+    *   **STRICT RULE:** Barrel files (e.g., `index.ts` files that re-export multiple modules from a directory) **MUST NOT be used** anywhere in the application code.
+    *   **Rationale:** 
+        *   Increases bundle size significantly due to importing unused modules
+        *   Prevents effective tree-shaking by bundlers
+        *   Degrades build and test performance
+        *   Creates unnecessary dependency chains
+        *   Makes it harder to track actual module usage
+    *   **Implementation:**
+        *   Always use direct imports from the specific file where a module is defined
+        *   ✅ **Correct:** `import { useChatMessages } from '@/src/features/trips/hooks/useChatMessages';`
+        *   ❌ **Incorrect:** `import { useChatMessages } from '@/src/features/trips/hooks';` (via index.ts)
+        *   ✅ **Correct:** `import { Button } from '@/src/components/ui/Button';`
+        *   ❌ **Incorrect:** `import { Button } from '@/src/components/ui';` (via index.ts)
+    *   **Exception:** External library entry points (which often act as barrel files) are consumed as designed by the library authors (e.g., `import { View } from 'react-native';`).
 
 ## 4. Navigation Pattern (Expo Router)
 *   File-based routing via `app/` directory.
