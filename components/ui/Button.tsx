@@ -8,7 +8,6 @@ import {
   ViewStyle,
   TextStyle,
   TouchableOpacityProps,
-  StyleSheet,
 } from 'react-native';
 import { useThemedStyles } from '@/src/theme/utils';
 import { useTheme as useThemeProvider } from '@/src/theme/ThemeProvider';
@@ -111,10 +110,7 @@ export function Button({
   const styles = useThemedStyles((theme) => {
     // Safely access theme properties with fallbacks
     const primaryColor = theme?.colors?.primary?.main || '#F46315';
-    const primaryHover = theme?.colors?.primary?.hover || '#E05A0C';
     const primarySurface = theme?.colors?.primary?.surface || '#FFF7ED';
-    const contentPrimary = theme?.colors?.content?.primary || '#1A1A1A';
-    const contentSecondary = theme?.colors?.content?.secondary || '#6B7280';
     const contentDisabled = theme?.colors?.content?.disabled || '#9CA3AF';
     const surfaceDefault = theme?.colors?.surface?.default || '#FFFFFF';
     const borderDefault = theme?.colors?.border?.default || '#E5E7EB';

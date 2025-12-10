@@ -69,7 +69,7 @@ declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace ReactNavigation {
     // eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/consistent-type-definitions
-    interface RootParamList extends RootStackParamList {}
+    type RootParamList = RootStackParamList;
   }
 }
 

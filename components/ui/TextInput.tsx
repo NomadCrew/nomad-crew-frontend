@@ -71,7 +71,7 @@ function TextInputComponent({
         rest.onFocus(e);
       }
     },
-    [rest.onFocus]
+    [rest]
   );
 
   const handleBlur = useCallback(
@@ -81,7 +81,7 @@ function TextInputComponent({
         rest.onBlur(e);
       }
     },
-    [rest.onBlur]
+    [rest]
   );
 
   const handleChangeText = useCallback(
