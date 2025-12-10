@@ -12,21 +12,15 @@ interface ErrorFallbackProps {
 }
 
 /**
- * Error Fallback UI Component
+ * Renders a themed fallback UI for displaying an error with an optional retry action.
  *
- * A reusable, themed error display component that can be used
- * as a fallback in error boundaries or for displaying errors inline.
+ * Displays an icon, title, and message; in development it shows a truncated stack trace when available.
  *
- * @example
- * ```tsx
- * // As error boundary fallback
- * <ErrorBoundary fallback={<ErrorFallback error={error} onRetry={reset} />}>
- *   <YourComponent />
- * </ErrorBoundary>
- *
- * // As inline error display
- * {isError && <ErrorFallback error={error} onRetry={refetch} />}
- * ```
+ * @param error - The Error object to display details from; may be `null` or `undefined`.
+ * @param title - Optional heading shown above the message. Defaults to "Something went wrong".
+ * @param message - Optional message to display; if omitted the error's message or a generic message is used.
+ * @param onRetry - Optional callback invoked when the user presses the retry button.
+ * @param showRetryButton - When `true`, renders the retry button if `onRetry` is provided. Defaults to `true`.
  */
 export function ErrorFallback({
   error,

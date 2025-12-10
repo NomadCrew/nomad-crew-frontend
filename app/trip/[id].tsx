@@ -8,6 +8,15 @@ import { StyleSheet } from 'react-native';
 import { Button } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 
+/**
+ * Render the trip details view for the route identified by the `id` local search parameter.
+ *
+ * Displays a loading screen while the trip is being fetched. If fetching fails or the trip is not found,
+ * displays an error UI with an alert icon, a primary and secondary message, and actions to retry or go back.
+ * When the trip is successfully loaded, renders the TripDetailScreen populated with the fetched trip.
+ *
+ * @returns A React element showing either the loading state, an error UI with retry/back actions, or the trip details screen.
+ */
 export default function TripDetailsRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();

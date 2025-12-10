@@ -5,6 +5,11 @@ import { StyleSheet } from 'react-native';
 import { ThemedText } from '@/src/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 
+/**
+ * Render a "not found" screen with a message and a link to the home screen.
+ *
+ * @returns The React element for a "not found" screen containing a heading and a link to the home route (`/`).
+ */
 export default function NotFoundScreen() {
   return (
     <>

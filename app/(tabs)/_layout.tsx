@@ -8,6 +8,16 @@ import { useOnboarding } from '@/src/providers/OnboardingProvider';
 
 console.log('[TabsLayout] File loaded');
 
+/**
+ * Render the app's tab-based layout and route users to onboarding or authentication flows as required.
+ *
+ * Shows a centered loading indicator while authentication or onboarding state is initializing.
+ * Redirects first-time users to the onboarding welcome flow, unauthenticated users to the login flow,
+ * and users who still need a username to the onboarding username screen. When the user is authenticated
+ * and onboarded, renders the main tab navigator.
+ *
+ * @returns A React element that either displays a loading indicator, performs a redirect to an onboarding/login route, or renders the main Tabs navigator for authenticated users.
+ */
 export default function TabsLayout() {
   const { theme } = useAppTheme();
   const { status, token, isInitialized: authInitialized, needsUsername } = useAuthStore();

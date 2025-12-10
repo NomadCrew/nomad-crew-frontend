@@ -21,6 +21,12 @@ SplashScreen.preventAutoHideAsync().catch(console.warn);
 
 console.log('[RootLayout] File loaded');
 
+/**
+ * Wraps its children with react-native-paper's PaperProvider configured for the current app theme.
+ *
+ * @param children - Elements to render inside the themed PaperProvider
+ * @returns The PaperProvider element that applies the computed paper theme to `children`
+ */
 function Providers({ children }: { children: React.ReactNode }) {
   // Get the current semantic theme
   const theme = useCurrentAppTheme();
@@ -29,7 +35,11 @@ function Providers({ children }: { children: React.ReactNode }) {
   return <PaperProvider theme={paperTheme}>{children}</PaperProvider>;
 }
 
-// Move theme-dependent logic here
+/**
+ * Render the app's themed safe-area root containing the status bar and routing Slot.
+ *
+ * @returns A React element that provides a SafeAreaView with a theme-derived background color, a StatusBar configured for the current theme, and the expo-router Slot for nested routes.
+ */
 function ThemedRoot() {
   const theme = useCurrentAppTheme();
   const statusBarStyle = theme.dark ? 'light' : 'dark';
@@ -47,6 +57,15 @@ function ThemedRoot() {
   );
 }
 
+/**
+ * Compose and return the application's top-level provider and initialization layout.
+ *
+ * Renders the persisted-query client, gesture handler root, theming, onboarding, permission
+ * (ability) provider, authentication error boundary, and the application initializer that
+ * ultimately hosts the themed root content (including the router Slot).
+ *
+ * @returns The root React element that composes global providers, app initialization, and the themed root content
+ */
 export default function RootLayout() {
   console.log('[RootLayout] Rendering');
 

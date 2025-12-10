@@ -53,6 +53,11 @@ const usernames = [
   'secretnachos',
 ];
 
+/**
+ * Selects a random pun from the PUNS array.
+ *
+ * @returns A single pun string randomly chosen from `PUNS`.
+ */
 function getRandomPun() {
   return PUNS[Math.floor(Math.random() * PUNS.length)];
 }
@@ -63,6 +68,15 @@ function getRandomUsername() {
 
 console.log('[UsernameStep] File loaded, starting UsernameStep component render');
 
+/**
+ * Onboarding step that prompts the user to choose a username, submits it to the backend, and routes to the next screen.
+ *
+ * Displays a random pun, pre-fills the input from the current user or email prefix, shows validation errors, and updates
+ * the local user profile after successful submission. Navigation goes to the contact-email onboarding screen if a
+ * contact email is required; otherwise it proceeds to the main trips tab.
+ *
+ * @returns A React element that renders the username selection UI used during onboarding.
+ */
 export default function UsernameStep() {
   console.log('[UsernameStep] Inside UsernameStep function - rendering');
   const user = useAuthStore((state) => state.user);

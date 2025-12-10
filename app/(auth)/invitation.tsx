@@ -106,6 +106,15 @@ const getErrorFromResponse = (error: unknown): InvitationError => {
   };
 };
 
+/**
+ * Display and manage an invitation identified by the route token.
+ *
+ * Fetches invitation details, validates the current user's access, and presents accept/decline flows.
+ * If no user is signed in the token is stored for later and the user is redirected to login.
+ * Errors are translated to user-facing messages with optional actions (navigate, retry, switch account).
+ *
+ * @returns A React element rendering the invitation screen
+ */
 export default function InvitationScreen() {
   const { token } = useLocalSearchParams();
   const { user, signOut } = useAuthStore();

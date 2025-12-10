@@ -12,6 +12,13 @@ import { Divider } from 'react-native-paper';
 
 console.log('[LoginScreen] Rendering');
 
+/**
+ * Render the app's login screen with social and email sign-in options.
+ *
+ * Renders a themed layout containing a welcome header, hero image, provider buttons for Google and (on iOS) Apple sign-in, an email sign-in option that opens a modal, and layout that adjusts for the keyboard.
+ *
+ * @returns A React element representing the login screen UI, including an email login modal and platform-specific Apple sign-in when running on iOS.
+ */
 export default function LoginScreen() {
   const [isEmailModalVisible, setEmailModalVisible] = useState(false);
   const { theme } = useAppTheme();

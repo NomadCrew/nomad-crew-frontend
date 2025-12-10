@@ -54,8 +54,13 @@ interface AbilityProviderProps {
 }
 
 /**
- * Provider component that manages the CASL ability for the app.
- * This should wrap any routes where permission checking is needed.
+ * Provides CASL ability and trip-scoped helpers to its descendant components.
+ *
+ * Supplies both RawAbilityContext (for declarative `Can` checks) and TripAbilityContext
+ * (which exposes `ability`, `tripContext`, `setTripContext`, `updateRole`, and `clearContext`)
+ * and manages the ability lifecycle as `tripContext` changes.
+ *
+ * @returns A React element that provides the ability contexts to its children
  */
 export function AbilityProvider({ children }: AbilityProviderProps) {
   const [tripContext, setTripContextState] = useState<TripContext | null>(null);
@@ -118,12 +123,11 @@ export function useTripAbility(): TripAbilityContextValue {
 }
 
 /**
- * Hook to check a specific permission.
- * Convenience wrapper around useTripAbility().ability.can()
+ * Check whether the current ability permits an action on a subject.
  *
- * @param action - The action to check
- * @param subject - The subject to check against
- * @returns boolean indicating if the action is allowed
+ * @param action - The action to test (for example, `'read'`, `'update'`, etc.)
+ * @param subject - The subject or subject type to test the action against
+ * @returns `true` if the ability permits `action` on `subject`, `false` otherwise
  */
 export function usePermission(
   action: Parameters<AppAbility['can']>[0],
@@ -144,7 +148,9 @@ export function useCurrentRole(): MemberRole | null {
 }
 
 /**
- * Hook that checks if the current user is the owner of the trip.
+ * Determine whether the current user's role within the active trip is `owner`.
+ *
+ * @returns `true` if the current user's role is `'owner'`, `false` otherwise.
  */
 export function useIsOwner(): boolean {
   const role = useCurrentRole();
@@ -152,7 +158,9 @@ export function useIsOwner(): boolean {
 }
 
 /**
- * Hook that checks if the current user is at least an admin.
+ * Determines whether the current user's role is 'owner' or 'admin'.
+ *
+ * @returns `true` if the current role is 'owner' or 'admin', `false` otherwise.
  */
 export function useIsAdminOrOwner(): boolean {
   const role = useCurrentRole();

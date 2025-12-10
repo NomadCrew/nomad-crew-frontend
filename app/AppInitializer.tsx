@@ -23,6 +23,16 @@ const customFonts = {
   'SpaceMono-Regular': require('../assets/fonts/SpaceMono-Regular.ttf'),
 };
 
+/**
+ * Coordinates app startup and renders children when initialization completes.
+ *
+ * Performs font loading, authentication and onboarding initialization, notification configuration,
+ * push notification registration, and splash screen control. While resources are pending it
+ * displays a branded loading UI; on font load failure it shows an error view.
+ *
+ * @param children - App content to render after startup is complete (typically the app's routes)
+ * @returns The rendered application content once all initialization steps have finished
+ */
 export default function AppInitializer({ children }: { children: React.ReactNode }) {
   const { initialize: initializeAuth, isInitialized: authInitialized, status } = useAuthStore();
   const isAuthenticated = status === 'authenticated';
