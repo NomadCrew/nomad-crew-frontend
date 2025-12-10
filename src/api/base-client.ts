@@ -110,7 +110,7 @@ export class BaseApiClient {
 
         // Handle other status codes - transform to ApiError
         switch (status) {
-          case 400:
+          case 400: {
             // Extract error message from response if available
             const badRequestMessage =
               (responseData as { message?: string; error?: string })?.message ||
@@ -120,6 +120,7 @@ export class BaseApiClient {
             return Promise.reject(
               new ApiError(status, badRequestCode, badRequestMessage, responseData)
             );
+          }
 
           case 403:
             return Promise.reject(
@@ -141,12 +142,13 @@ export class BaseApiClient {
               new ApiError(status, 'SERVER_ERROR', ERROR_MESSAGES.SERVER_ERROR, responseData)
             );
 
-          default:
+          default: {
             // For any other status, try to use response data or fallback
             const message =
               (responseData as { message?: string })?.message || ERROR_MESSAGES.UNEXPECTED;
             const code = (responseData as { code?: string })?.code || 'UNKNOWN_ERROR';
             return Promise.reject(new ApiError(status, code, message, responseData));
+          }
         }
       }
     );
