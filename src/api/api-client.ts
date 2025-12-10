@@ -158,6 +158,11 @@ export class ApiClient extends BaseApiClient {
               config.headers = headers;
               return config;
             }
+
+            // Refresh succeeded but no token is available: treat as auth failure
+            logger.warn('API Client', 'Token refresh succeeded but no token available');
+            authState.logout();
+            throw new Error('Authentication required');
           } catch (refreshError) {
             logger.error('API Client', 'Token refresh failed:', refreshError);
             // If refresh fails, redirect to login
@@ -192,10 +197,13 @@ export class ApiClient extends BaseApiClient {
         if (error.response.status === 401 && !originalRequest._retry) {
           // Don't try to refresh tokens for onboard endpoint - 401 is expected for new users
           if (originalRequest.url?.includes('/users/onboard')) {
-            logger.debug('API Client', '401 on onboard endpoint is expected for new users, not refreshing token');
+            logger.debug(
+              'API Client',
+              '401 on onboard endpoint is expected for new users, not refreshing token'
+            );
             return Promise.reject(error);
           }
-          
+
           // Check if it's a token expiration error
           const errorData = error.response.data as any;
           const isTokenExpired =
