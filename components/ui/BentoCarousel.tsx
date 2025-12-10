@@ -18,13 +18,13 @@ interface BentoCarouselProps {
 }
 
 export const BentoCarousel = ({ items, width, height, onProgressChange }: BentoCarouselProps) => {
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [_activeIndex, setActiveIndex] = useState(0);
   const _currentIndex = useSharedValue(0);
 
   const renderItem = React.useCallback(
     ({
       item,
-      animationValue,
+      animationValue: _animationValue,
     }: {
       item: CarouselItem;
       index: number;
@@ -60,7 +60,7 @@ export const BentoCarousel = ({ items, width, height, onProgressChange }: BentoC
     [onProgressChange]
   );
 
-  const renderDot = (_animationValue: number, index: number) => {
+  const _renderDot = (_animationValue: number, _index: number) => {
     // ... existing code ...
   };
 

@@ -21,17 +21,17 @@ interface StatusAwareHeaderProps {
    * Header title
    */
   title: string;
-  
+
   /**
    * Optional subtitle
    */
   subtitle?: string;
-  
+
   /**
    * Navigation back handler
    */
   onBack?: () => void;
-  
+
   /**
    * Trip context for status-aware styling
    */
@@ -40,50 +40,50 @@ interface StatusAwareHeaderProps {
     memberCount: number;
     activeMembers: number;
   };
-  
+
   /**
    * Current user role context
    */
   userRole?: MemberRole;
-  
+
   /**
    * Current user presence status
    */
   presenceStatus?: PresenceStatus;
-  
+
   /**
    * Action buttons for the header
    */
-  actions?: Array<{
+  actions?: {
     icon: keyof typeof Ionicons.glyphMap;
     onPress: () => void;
     label?: string;
     disabled?: boolean;
     badge?: number;
-  }>;
-  
+  }[];
+
   /**
    * Whether to show status indicators
    * @default true
    */
   showStatusIndicators?: boolean;
-  
+
   /**
    * Whether header should be sticky/elevated
    * @default false
    */
   elevated?: boolean;
-  
+
   /**
    * Custom background color override
    */
   backgroundColor?: string;
-  
+
   /**
    * Additional custom styles
    */
   style?: ViewStyle;
-  
+
   /**
    * Test ID for testing
    */
@@ -92,10 +92,10 @@ interface StatusAwareHeaderProps {
 
 /**
  * StatusAwareHeader Component
- * 
+ *
  * A navigation header that adapts its styling and indicators based on trip status,
  * user role, and presence status. Provides contextual information and actions.
- * 
+ *
  * @example
  * ```tsx
  * <StatusAwareHeader
@@ -133,12 +133,20 @@ export const StatusAwareHeader: React.FC<StatusAwareHeaderProps> = ({
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
   const pressScale = useSharedValue(1);
-  
-  // Animation values for action buttons
-  const actionAnimations = actions?.map(() => useSharedValue(1)) || [];
+
+  // Animation values for action buttons - create them conditionally based on actions length
+  const actionCount = actions?.length || 0;
+  const action0 = useSharedValue(1);
+  const action1 = useSharedValue(1);
+  const action2 = useSharedValue(1);
+  const action3 = useSharedValue(1);
+  const action4 = useSharedValue(1);
+  const actionAnimations = [action0, action1, action2, action3, action4].slice(0, actionCount);
 
   // Get status-aware colors
-  const statusColor = tripContext?.status ? getStatusColor(tripContext.status, theme.colors) : undefined;
+  const statusColor = tripContext?.status
+    ? getStatusColor(tripContext.status, theme.colors)
+    : undefined;
   const roleColor = userRole ? getRoleColor(userRole, theme.colors) : undefined;
 
   // Create header container style
@@ -171,11 +179,29 @@ export const StatusAwareHeader: React.FC<StatusAwareHeaderProps> = ({
     }, 100);
   };
 
-  // Action button animation
-  const createActionAnimatedStyle = (index: number) => 
-    useAnimatedStyle(() => ({
-      transform: [{ scale: actionAnimations[index]?.value || 1 }],
-    }));
+  // Action button animated styles
+  const action0AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: action0.value }],
+  }));
+  const action1AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: action1.value }],
+  }));
+  const action2AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: action2.value }],
+  }));
+  const action3AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: action3.value }],
+  }));
+  const action4AnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: action4.value }],
+  }));
+  const actionAnimatedStyles = [
+    action0AnimatedStyle,
+    action1AnimatedStyle,
+    action2AnimatedStyle,
+    action3AnimatedStyle,
+    action4AnimatedStyle,
+  ];
 
   const handleActionPress = (onPress: () => void, index: number) => {
     if (actionAnimations[index]) {
@@ -207,16 +233,11 @@ export const StatusAwareHeader: React.FC<StatusAwareHeaderProps> = ({
             ]}
           />
         )}
-        
+
         {userRole && (
-          <RoleBadge
-            role={userRole}
-            size="sm"
-            showIcon={false}
-            style={{ marginHorizontal: 0 }}
-          />
+          <RoleBadge role={userRole} size="sm" showIcon={false} style={{ marginHorizontal: 0 }} />
         )}
-        
+
         {presenceStatus && (
           <PresenceIndicator
             status={presenceStatus}
@@ -237,7 +258,7 @@ export const StatusAwareHeader: React.FC<StatusAwareHeaderProps> = ({
         {actions.map((action, index) => (
           <Animated.View
             key={`action-${index}`}
-            style={createActionAnimatedStyle(index)}
+            style={index < actionAnimatedStyles.length ? actionAnimatedStyles[index] : undefined}
           >
             <Pressable
               onPress={() => handleActionPress(action.onPress, index)}
@@ -246,8 +267,8 @@ export const StatusAwareHeader: React.FC<StatusAwareHeaderProps> = ({
                 {
                   padding: spacing.sm,
                   borderRadius: iconSizes.lg,
-                  backgroundColor: action.disabled 
-                    ? theme.colors.surface-variant 
+                  backgroundColor: action.disabled
+                    ? theme.colors['surface-variant']
                     : 'transparent',
                 },
               ]}
@@ -258,9 +279,9 @@ export const StatusAwareHeader: React.FC<StatusAwareHeaderProps> = ({
                 <Ionicons
                   name={action.icon}
                   size={iconSizes.lg}
-                  color={action.disabled ? theme.colors.outline : theme.colors.on-surface}
+                  color={action.disabled ? theme.colors.outline : theme.colors['on-surface']}
                 />
-                
+
                 {action.badge && action.badge > 0 && (
                   <View
                     style={[
@@ -281,7 +302,7 @@ export const StatusAwareHeader: React.FC<StatusAwareHeaderProps> = ({
                     <Text
                       variant="labelSmall"
                       style={{
-                        color: theme.colors.on-error,
+                        color: theme.colors['on-error'],
                         fontSize: 10,
                         fontWeight: 'bold',
                       }}
@@ -319,42 +340,42 @@ export const StatusAwareHeader: React.FC<StatusAwareHeaderProps> = ({
                 <Ionicons
                   name={Platform.OS === 'ios' ? 'chevron-back' : 'arrow-back'}
                   size={iconSizes.lg}
-                  color={theme.colors.on-surface}
+                  color={theme.colors['on-surface']}
                 />
               </Pressable>
             </Animated.View>
           )}
-          
+
           <Stack space="xxs" style={{ flex: 1 }}>
             <Text
               variant="titleMedium"
               style={{
-                color: theme.colors.on-surface,
+                color: theme.colors['on-surface'],
                 fontWeight: '600',
               }}
               numberOfLines={1}
             >
               {title}
             </Text>
-            
+
             {subtitle && (
               <Inline space="sm" align="center">
                 <Text
                   variant="bodySmall"
                   style={{
-                    color: theme.colors.on-surface-variant,
+                    color: theme.colors['on-surface-variant'],
                   }}
                   numberOfLines={1}
                 >
                   {subtitle}
                 </Text>
-                
+
                 {renderStatusIndicators()}
               </Inline>
             )}
           </Stack>
         </Inline>
-        
+
         {/* Right side - Actions */}
         {renderActions()}
       </Inline>
@@ -363,4 +384,4 @@ export const StatusAwareHeader: React.FC<StatusAwareHeaderProps> = ({
 };
 
 // Export the StatusAwareHeader component as default
-export default StatusAwareHeader; 
+export default StatusAwareHeader;

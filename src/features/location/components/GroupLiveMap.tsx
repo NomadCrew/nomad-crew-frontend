@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { Trip } from '@/src/features/trips/types';
 import { AlertCircle } from 'lucide-react-native';
 import { getMemberColor, TripMember } from '../utils/memberColors';
 import { LocationSharingToggle } from './LocationSharingToggle';
+import { logger } from '@/src/utils/logger';
 import { Surface } from 'react-native-paper';
 import { Theme } from '@/src/theme/types';
 
@@ -42,6 +43,7 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
   trip,
   onClose,
   isStandalone = false,
+  supabaseLocations,
 }) => {
   const { theme } = useAppTheme();
   const mapRef = useRef<MapView>(null);
@@ -90,7 +92,7 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
           setMapLoaded(true);
         }
       }, 8000); // Reduced from 10s to 8s for better UX
-      
+
       return () => clearTimeout(timeout);
     }
   }, [isLoading, mapLoaded]);
@@ -141,9 +143,9 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
       mapError,
       tripDestination: trip.destination.coordinates,
       isLocationSharingEnabled,
-      Platform: Platform.OS
+      Platform: Platform.OS,
     });
-    
+
     // Start location tracking for current user
     if (isLocationSharingEnabled) {
       console.log('[MapDebug] Location sharing enabled, starting tracking');
@@ -393,26 +395,30 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
             <Text style={styles(theme).loadingText}>Loading Map...</Text>
           </View>
         )}
-        
+
         {/* Debug overlay to show current state */}
         {__DEV__ && (
-          <View style={{
-            position: 'absolute',
-            top: 10,
-            right: 10,
-            backgroundColor: 'rgba(0,0,0,0.7)',
-            padding: 8,
-            borderRadius: 4,
-            zIndex: 2000,
-          }}>
+          <View
+            style={{
+              position: 'absolute',
+              top: 10,
+              right: 10,
+              backgroundColor: 'rgba(0,0,0,0.7)',
+              padding: 8,
+              borderRadius: 4,
+              zIndex: 2000,
+            }}
+          >
             <Text style={{ color: 'white', fontSize: 10 }}>
-              Loading: {isLoading.toString()}{'\n'}
-              MapLoaded: {mapLoaded.toString()}{'\n'}
+              Loading: {isLoading.toString()}
+              {'\n'}
+              MapLoaded: {mapLoaded.toString()}
+              {'\n'}
               ShowOverlay: {(isLoading && !mapLoaded).toString()}
             </Text>
           </View>
         )}
-        
+
         {/* Error overlay */}
         {mapError && (
           <View style={styles(theme).errorOverlay}>

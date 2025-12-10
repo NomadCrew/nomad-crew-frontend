@@ -1,12 +1,6 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import {
-  View,
-  ScrollView,
-  useWindowDimensions,
-  SafeAreaView,
-  StyleSheet,
-  ViewStyle,
-} from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, ScrollView, useWindowDimensions, SafeAreaView, Text, ViewStyle } from 'react-native';
+import { Button } from 'react-native-paper';
 import { router } from 'expo-router';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { BentoGrid } from '@/components/ui/BentoGrid';
@@ -16,7 +10,6 @@ import { Trip } from '@/src/features/trips/types';
 import { AddTodoModal } from '@/src/features/todos/components/AddTodoModal';
 import { InviteModal } from '@/src/features/trips/components/InviteModal';
 import { useTripStore } from '@/src/features/trips/store';
-import { useTodoStore } from '@/src/features/todos/store';
 import { useLocationStore } from '@/src/features/location/store/useLocationStore';
 import { TripDetailHeader } from '@/src/features/trips/components/TripDetailHeader';
 import { QuickActions } from '@/src/features/trips/components/QuickActions';
@@ -24,33 +17,12 @@ import { StatusBar } from 'expo-status-bar';
 import { useChatStore } from '@/src/features/chat/store';
 import { TripStats } from '@/src/features/trips/components/TripStats';
 import { useThemedStyles } from '@/src/theme/utils';
-import {
-  BaseEventSchema,
-  ServerEvent,
-  isChatEvent,
-  isServerEvent,
-  isTodoEvent,
-  isTripEvent,
-  isWeatherEvent,
-  isMemberEvent,
-  isMemberInviteEvent,
-} from '@/src/types/events';
-import {
-  ZodNotificationSchema,
-  Notification,
-  isTripInvitationNotification,
-} from '@/src/features/notifications/types/notification';
+import { WebSocketManager } from '@/src/features/websocket/WebSocketManager';
+import { BaseEventSchema, isChatEvent, isServerEvent } from '@/src/types/events';
+import { ZodNotificationSchema } from '@/src/features/notifications/types/notification';
 import { useNotificationStore } from '@/src/features/notifications/store/useNotificationStore';
 import { logger } from '@/src/utils/logger';
 import { useTripPermissions } from '@/src/features/auth/permissions';
-
-// Supabase Realtime imports
-import { useChatMessages } from '@/src/features/trips/hooks/useChatMessages';
-import { useLocations } from '@/src/features/trips/hooks/useLocations';
-import { usePresence } from '@/src/features/trips/hooks/usePresence';
-import { useReactions } from '@/src/features/trips/hooks/useReactions';
-import { useReadReceipts } from '@/src/features/trips/hooks/useReadReceipts';
-// Removed SupabaseRealtimeErrorScreen import - no longer needed
 
 interface TripDetailScreenProps {
   trip: Trip;
@@ -62,17 +34,21 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
   const { width: screenWidth } = useWindowDimensions();
   const [showAddTodo, setShowAddTodo] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const { isLocationSharingEnabled, startLocationTracking, stopLocationTracking } =
     useLocationStore();
   const { connectToChat, fetchMessages } = useChatStore();
 
-  // Set up permission context for this trip
-  const { can, isAdminOrOwner, isOwner } = useTripPermissions({ trip });
+  // Set up permission context for this trip (unused vars prefixed with _)
+  const {
+    can: _can,
+    isAdminOrOwner: _isAdminOrOwner,
+    isOwner: _isOwner,
+  } = useTripPermissions({ trip });
 
   const styles = useThemedStyles((theme) => {
     const backgroundDefault = theme?.colors?.background?.default || '#FFFFFF';
     const spacingStackXl = theme?.spacing?.stack?.xl || 40;
-    const breakpointDesktop = theme?.breakpoints?.desktop || 1024;
 
     return {
       container: {
@@ -231,7 +207,7 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
     if (isLocationSharingEnabled) {
       startLocationTracking(tripId);
     }
-  }, [tripId, isChatConnected, connectToChat, fetchMessages]);
+  }, [tripId, connectToChat, fetchMessages]);
 
   // Location tracking (independent of realtime system)
   useEffect(() => {
@@ -250,22 +226,25 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
     }
   }, [isLocationSharingEnabled, tripId, startLocationTracking, stopLocationTracking]);
 
-  // Handle individual hook errors
-  const hasErrors = messagesError || locationsError || presenceError || reactionsError || readReceiptsError;
-  if (hasErrors) {
+  // Handle connection errors
+  if (connectionError) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-        <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>
-          Connection Error
-        </Text>
-        <Text style={{ textAlign: 'center', marginBottom: 20 }}>
-          Unable to connect to real-time features. Please check your connection and try again.
-        </Text>
-        <Button 
-          mode="contained" 
+        <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>Connection Error</Text>
+        <Text style={{ textAlign: 'center', marginBottom: 20 }}>{connectionError}</Text>
+        <Button
+          mode="contained"
           onPress={() => {
-            // Trigger reconnection by navigating away and back
-            // or implement retry logic in hooks
+            setConnectionError(null);
+            // Trigger reconnection
+            const manager = WebSocketManager.getInstance();
+            manager
+              .connect(tripId, {
+                onMessage: () => {},
+              })
+              .catch((err) => {
+                setConnectionError(err.message || 'Failed to reconnect');
+              });
           }}
         >
           Retry

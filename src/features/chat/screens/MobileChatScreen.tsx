@@ -1,27 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  TouchableOpacity,
-  Text,
-  ActivityIndicator,
-  ViewStyle,
-  TextStyle,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, ActivityIndicator } from 'react-native';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { useChatStore } from '@/src/features/chat/store';
 import { useAuthStore } from '@/src/features/auth/store';
 import { useTripStore } from '@/src/features/trips/store';
-import { Trip } from '@/src/features/trips/types';
 import { ChatList } from '../components/ChatList';
 import { ChatInput } from '../components/ChatInput';
 import { ChatAuthError } from '../components/ChatAuthError';
-import { Theme } from '@/src/theme/types';
 import { StatusBar } from 'expo-status-bar';
-import { Ionicons } from '@expo/vector-icons';
-import { useThemedStyles } from '@/src/theme/utils';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { logger } from '@/src/utils/logger';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { WebSocketManager } from '@/src/features/websocket/WebSocketManager';
 type StatusBarStyle = 'auto' | 'inverted' | 'light' | 'dark';
 
 interface MobileChatScreenProps {
@@ -33,23 +23,14 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({ tripId, onBa
   const { theme } = useAppTheme();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [authError, setAuthError] = useState(false);
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
 
   // Auth store state
   const { token, isInitialized } = useAuthStore();
 
   // Chat store state and actions
-  const {
-    messagesByTripId,
-    isLoadingMessages,
-    hasMoreMessages,
-    typingUsers,
-    fetchMessages,
-    fetchMoreMessages,
-    sendMessage,
-    markAsRead,
-    initializeStore,
-    setTypingStatus,
-  } = useChatStore();
+  const { messagesByTripId, isLoadingMessages, typingUsers, fetchMessages, initializeStore } =
+    useChatStore();
 
   // Trip store to get trip name
   const { getTripById } = useTripStore();
@@ -58,7 +39,6 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({ tripId, onBa
 
   // Get messages for the trip
   const messages = messagesByTripId[tripId] || [];
-  const hasMore = hasMoreMessages[tripId] || false;
 
   // Get typing users for the trip
   const currentTypingUsers = typingUsers[tripId] || [];
@@ -111,54 +91,27 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({ tripId, onBa
     }
   }, [fetchMessages, authError, token, tripId]);
 
+  // Monitor WebSocket connection status
+  useEffect(() => {
+    const checkConnection = () => {
+      const wsManager = WebSocketManager.getInstance();
+      setIsRealtimeConnected(wsManager.isConnected());
+    };
+
+    // Check immediately
+    checkConnection();
+
+    // Check periodically
+    const interval = setInterval(checkConnection, 2000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   // Handle refreshing the messages
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await fetchMessages(tripId, true);
     setIsRefreshing(false);
-  };
-
-  // Handle sending a message
-  const handleSendMessage = (content: string) => {
-    logger.info(
-      'Mobile Chat Screen',
-      `handleSendMessage called with content: "${content.substring(0, 20)}${content.length > 20 ? '...' : ''}"`
-    );
-
-    if (!tripId) {
-      logger.error('Mobile Chat Screen', 'Cannot send message: tripId is undefined');
-      return;
-    }
-
-    // Check WebSocket connection
-    const wsManager = WebSocketManager.getInstance();
-    const isConnected = wsManager.isConnected();
-    logger.info(
-      'Mobile Chat Screen',
-      `WebSocket connection status before sending: ${isConnected ? 'connected' : 'disconnected'}`
-    );
-
-    if (!isConnected) {
-      logger.warn('Mobile Chat Screen', 'WebSocket not connected, message may not be delivered');
-      // Don't attempt to reconnect here as it's managed at the trip level
-      // Just inform the user that the message might not be delivered
-    }
-
-    try {
-      logger.info(
-        'Mobile Chat Screen',
-        `Sending message in trip ${tripId}: "${content.substring(0, 20)}${content.length > 20 ? '...' : ''}"`
-      );
-      sendMessage({ tripId, content });
-      logger.info('Mobile Chat Screen', 'sendMessage function called successfully');
-    } catch (error) {
-      logger.error('Mobile Chat Screen', 'Error calling sendMessage:', error);
-    }
-  };
-
-  // Handle typing status change
-  const handleTypingStatusChange = (isTyping: boolean) => {
-    setTypingStatus(tripId, isTyping);
   };
 
   // Handle retry after auth error
@@ -268,7 +221,7 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({ tripId, onBa
       </View>
 
       <View style={styles.chatContainer}>
-        {isLoadingChatMessages && messages.length === 0 ? (
+        {isLoadingMessages && messages.length === 0 ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={theme?.colors?.content?.primary || '#1A1A1A'} />
             <Text style={styles.loadingText}>Loading messages...</Text>
@@ -288,6 +241,7 @@ export const MobileChatScreen: React.FC<MobileChatScreenProps> = ({ tripId, onBa
                 tripId={tripId}
               />
             )}
+            <ChatInput tripId={tripId} />
           </>
         )}
       </View>

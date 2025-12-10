@@ -10,7 +10,7 @@ import {
   LayoutChangeEvent,
 } from 'react-native';
 import { Surface } from 'react-native-paper';
-import { useThemedStyles } from '@/src/theme/utils';
+import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { useAuthStore } from '@/src/features/auth/store';
 import { Theme } from '@/src/theme/types';
 import { Trip } from '@/src/features/trips/types';
@@ -46,14 +46,16 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   onLocationPress,
   onChatPress,
 }) => {
+  const { theme } = useAppTheme();
   const authStore = useAuthStore();
   const userId = authStore.user?.id;
   const [showMemberModal, setShowMemberModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
 
   // Use the permission system from context (set up by TripDetailScreen)
-  const isOwner = useIsOwner();
-  const isOwnerOrAdmin = useIsAdminOrOwner();
+  // Prefixed with _ since they are imported but not directly used (used in usePermission calls)
+  const _isOwner = useIsOwner();
+  const _isOwnerOrAdmin = useIsAdminOrOwner();
   // Permission checks using CASL ability
   const canCreateInvitation = usePermission('create', 'Invitation');
   const canUpdateTrip = usePermission('update', 'Trip');
@@ -112,29 +114,6 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
             icon: (props: IconProps) => <Users {...props} />,
             label: 'Members',
             onPress: () => {
-              // Get current user info
-              const currentUser = authStore.user;
-              const creatorName =
-                currentUser && currentUser.id === trip.createdBy
-                  ? getUserDisplayName(currentUser)
-                  : undefined;
-
-              // Ensure the trip has the creator as a member if members array is empty
-              const tripWithMembers = {
-                ...trip,
-                members:
-                  trip.members && trip.members.length > 0
-                    ? trip.members
-                    : [
-                        {
-                          userId: trip.createdBy,
-                          name: creatorName,
-                          role: 'owner',
-                          joinedAt: trip.createdAt,
-                        },
-                      ],
-              };
-
               setShowMemberModal(true);
             },
           },
@@ -198,54 +177,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
     setContentWidth(width);
   };
 
-  const styles = useThemedStyles((theme, safeAccess) => ({
-    actionsCard: {
-      borderRadius: safeAccess.borderRadius.get(theme, 'md', 8),
-      marginVertical: safeAccess.spacing.get(theme, 'layout.section.gap', 16),
-      backgroundColor: safeAccess.colors.get(theme, 'surface.main', '#FFFFFF'),
-      overflow: 'hidden' as const,
-    },
-    fadeContainer: {
-      flexDirection: 'row' as const,
-      alignItems: 'center' as const,
-      paddingHorizontal: safeAccess.spacing.get(theme, 'layout.card.padding.horizontal', 16),
-    },
-    arrow: {
-      paddingHorizontal: safeAccess.spacing.get(theme, 'xs', 4),
-    },
-    actionButtons: {
-      flexDirection: 'row' as const,
-      paddingVertical: safeAccess.spacing.get(theme, 'layout.card.padding.vertical', 8),
-    },
-    scrollContent: {
-      alignItems: 'center' as const,
-    },
-    actionItem: {
-      alignItems: 'center' as const,
-      justifyContent: 'center' as const,
-      paddingHorizontal: safeAccess.spacing.get(theme, 'md', 16),
-      minWidth: 80,
-      height: 70,
-    },
-    iconContainer: {
-      width: 38,
-      height: 38,
-      borderRadius: safeAccess.borderRadius.get(theme, 'lg', 12),
-      backgroundColor: safeAccess.colors.get(theme, 'primary.container', '#FFF7ED'),
-      alignItems: 'center' as const,
-      justifyContent: 'center' as const,
-      marginBottom: safeAccess.spacing.get(theme, 'xs', 4),
-    },
-    actionLabel: {
-      fontSize: 12,
-      color: safeAccess.colors.get(theme, 'content.primary', '#1A1A1A'),
-      textAlign: 'center' as const,
-      marginTop: 4,
-    },
-    // Helper properties for accessing colors
-    primaryColor: safeAccess.colors.get(theme, 'primary.main', '#F46315'),
-    contentPrimaryColor: safeAccess.colors.get(theme, 'content.primary', '#1A1A1A'),
-  }));
+  // Use the bottom styles function with theme
 
   return (
     <>

@@ -17,9 +17,10 @@ import { useTripStore } from '@/src/features/trips/store';
 import { logger } from '@/src/utils/logger';
 import { jwtDecode } from 'jwt-decode';
 import Constants from 'expo-constants';
+import * as ExpoNotifications from 'expo-notifications';
 
 // Lazy-loaded Notifications module - only imported on physical devices
-let Notifications: typeof import('expo-notifications') | null = null;
+let Notifications: typeof ExpoNotifications | null = null;
 
 // Define token interface
 interface InvitationToken {
@@ -61,7 +62,7 @@ const isPhysicalDevice = (): boolean => {
  * 1. Cold start - app was killed, user taps notification to open it
  * 2. Warm start - app is running (foreground/background), user taps notification
  */
-async function handleNotificationResponse(response: Notifications.NotificationResponse) {
+async function handleNotificationResponse(response: ExpoNotifications.NotificationResponse) {
   const data = response.notification.request.content.data as NotificationData;
 
   console.log('[NOTIFICATION] Extracted data:', JSON.stringify(data, null, 2));
@@ -240,7 +241,11 @@ export function configureNotifications() {
     );
     // You can handle foreground notifications here if needed
     // For example, play a sound or show an in-app banner
-    logger.debug('NOTIFICATION', 'Foreground notification received:', notification.request.content.title);
+    logger.debug(
+      'NOTIFICATION',
+      'Foreground notification received:',
+      notification.request.content.title
+    );
   });
 
   // Return cleanup function (for use with useEffect if needed)
