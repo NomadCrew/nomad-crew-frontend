@@ -7,15 +7,17 @@ export const useTestNotifications = () => {
   const { handleIncomingNotification } = useNotificationStore();
 
   const addTripInviteNotification = useCallback(() => {
-    const inviteId = uuidv4();
-    const tripId = uuidv4();
+    const invitationID = uuidv4();
+    const tripID = uuidv4();
+    const inviterID = uuidv4();
 
     const notification: Notification = {
       id: uuidv4(),
-      type: 'TRIP_INVITATION',
+      type: 'TRIP_INVITATION_RECEIVED',
       metadata: {
-        inviteId,
-        tripId,
+        invitationID,
+        tripID,
+        inviterID,
         inviterName: 'Test User',
         tripName: 'Test Trip to Barcelona',
       },
@@ -45,8 +47,8 @@ export const useTestNotifications = () => {
       id: uuidv4(),
       type: 'CHAT_MESSAGE',
       metadata: {
-        chatId: uuidv4(),
-        messageId: uuidv4(),
+        chatID: uuidv4(),
+        messageID: uuidv4(),
         senderName: 'Test User',
         messagePreview: 'You have a new message from Test User.',
       },
@@ -63,7 +65,7 @@ export const useTestNotifications = () => {
       id: uuidv4(),
       type: 'TRIP_UPDATE',
       metadata: {
-        tripId: uuidv4(),
+        tripID: uuidv4(),
         tripName: 'Barcelona Trip',
         updaterName: 'Trip Owner',
         changedFields: ['dates', 'location'],

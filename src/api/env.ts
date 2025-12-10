@@ -1,6 +1,6 @@
 // Development API URL - update this to your machine's IP address
 // Run: ipconfig getifaddr en0 to get your current IP
-const DEV_API_URL = 'http://192.168.0.103:8080';
+const DEV_API_URL = 'http://192.168.70.104:8080';
 
 // Determine base URL: use local in dev mode, env var or production fallback otherwise
 const getBaseUrl = (): string => {

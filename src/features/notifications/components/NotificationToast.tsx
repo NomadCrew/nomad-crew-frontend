@@ -97,10 +97,10 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
       router.push('/(authenticated)/(tabs)/notifications' as any);
     } else if (isTripUpdateNotification(notification) || isMemberAddedNotification(notification)) {
       // Navigate to the trip screen
-      router.push(`/(authenticated)/(tabs)/trips/${notification.metadata.tripId}` as any);
+      router.push(`/trip/${notification.metadata.tripID}`);
     } else if (isChatMessageNotification(notification)) {
       // Navigate to the chat screen
-      router.push(`/(authenticated)/(tabs)/trips/${notification.metadata.chatId}/chat` as any);
+      router.push(`/trip/${notification.metadata.chatID}/chat`);
     } else {
       // Generic notification - go to notifications screen
       router.push('/(authenticated)/(tabs)/notifications' as any);
