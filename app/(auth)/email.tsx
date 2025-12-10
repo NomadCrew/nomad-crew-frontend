@@ -19,6 +19,15 @@ const getFriendlyErrorMessage = (error: string) => {
   return errorMap[error] || 'Something went wrong. Please try again';
 };
 
+/**
+ * Email/password sign-in screen that integrates with the global auth store and app theme.
+ *
+ * Validates that email and password are not empty before invoking the store's `login`, shows
+ * a loading state while authentication is in progress, and displays a user-friendly error
+ * message provided by the auth store when present.
+ *
+ * @returns A React element rendering the email sign-in screen.
+ */
 export default function EmailLoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

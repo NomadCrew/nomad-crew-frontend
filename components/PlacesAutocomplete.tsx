@@ -23,7 +23,17 @@ interface PlacesAutocompleteProps {
   country?: string | string[];
 }
 
-// Define a simpler direct implementation for debugging
+/**
+ * An embeddable Google Places autocomplete input that fetches suggestions and place details directly from the Places API.
+ *
+ * Renders a text input that queries the Places Autocomplete API as the user types, displays selectable predictions, and invokes `onPlaceSelected` with detailed place information when an item is chosen.
+ *
+ * @param onPlaceSelected - Callback invoked with full place details (`PlaceDetailsWithFullText`) after a prediction is selected.
+ * @param placeholder - Placeholder text for the input (defaults to 'Search...').
+ * @param initialValue - Initial input value (defaults to an empty string).
+ * @param country - Optional country code or list of country codes to restrict autocomplete results.
+ * @returns The autocomplete React component UI for searching and selecting places.
+ */
 export default function CustomPlacesAutocomplete({
   onPlaceSelected,
   placeholder = 'Search...',

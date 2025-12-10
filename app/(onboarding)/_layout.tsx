@@ -7,6 +7,15 @@ import { useAppTheme } from '@/src/theme/ThemeProvider';
 
 console.log('[OnboardingLayout] File loaded');
 
+/**
+ * Coordinates onboarding flow rendering and route-guarding for onboarding screens.
+ *
+ * Renders a centered loading indicator while authentication or onboarding state is initializing.
+ * Returns Redirects to enforce authentication and step order for the username and contact-email screens (redirecting to login, username, contact-email, or the main app tabs as appropriate).
+ * When no redirect conditions apply, renders the onboarding navigation Stack containing welcome, permissions, username, and contact-email screens.
+ *
+ * @returns The React element for the onboarding layout: a loading view, a redirect, or the onboarding Stack depending on current app state.
+ */
 export default function OnboardingLayout() {
   const { theme } = useAppTheme();
   const {

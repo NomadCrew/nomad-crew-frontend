@@ -28,6 +28,13 @@ export interface TextInputProps extends RNTextInputProps {
   containerStyle?: ViewStyle;
 }
 
+/**
+ * Render a themed, performance-optimized TextInput wrapped in a container.
+ *
+ * The input adapts visual styles from the current theme and updates its border color when focused.
+ *
+ * @returns A View containing a styled React Native TextInput configured for reduced JS work, improved typing performance, and theme-aware colors.
+ */
 function TextInputComponent({
   style,
   containerStyle,

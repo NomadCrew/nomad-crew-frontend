@@ -28,7 +28,13 @@ export interface DividerProps extends ViewProps {
 }
 
 /**
- * Divider component for separating content
+ * Renders a horizontal or vertical divider line styled by variant and thickness.
+ *
+ * @param orientation - 'horizontal' to span width or 'vertical' to span height (defaults to 'horizontal')
+ * @param variant - Visual style of the divider: 'default', 'strong', or 'dashed' (defaults to 'default')
+ * @param thickness - Line thickness in density-independent pixels; defaults to 1 if omitted
+ * @param style - Additional View style overrides applied to the divider
+ * @returns A View element representing the divider line
  */
 export function Divider({
   orientation = 'horizontal',

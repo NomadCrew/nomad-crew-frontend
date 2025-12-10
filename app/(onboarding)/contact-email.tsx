@@ -20,11 +20,21 @@ const PUNS = [
   'One email to rule them all... or at least get trip invites.',
 ];
 
+/**
+ * Selects a random pun from the PUNS array.
+ *
+ * @returns A single pun string chosen uniformly at random from `PUNS`.
+ */
 function getRandomPun() {
   return PUNS[Math.floor(Math.random() * PUNS.length)];
 }
 
-// Simple email validation
+/**
+ * Checks whether a string is a syntactically valid email address.
+ *
+ * @param email - The email address to validate
+ * @returns `true` if `email` matches a basic email address pattern, `false` otherwise.
+ */
 function isValidEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
@@ -32,6 +42,15 @@ function isValidEmail(email: string): boolean {
 
 console.log('[ContactEmailStep] File loaded');
 
+/**
+ * Renders the onboarding step that prompts the user to add a contact email.
+ *
+ * Displays a themed UI with a randomized tip, an email input with validation, error and loading states,
+ * a submit action that saves the contact email to the backend and navigates to the main app on success,
+ * and an option to skip the step.
+ *
+ * @returns A React element representing the contact email onboarding screen.
+ */
 export default function ContactEmailStep() {
   console.log('[ContactEmailStep] Rendering');
   const user = useAuthStore((state) => state.user);
