@@ -196,7 +196,7 @@ export class ApiClient extends BaseApiClient {
         // Check if the error is a 401 Unauthorized and we haven't tried to refresh yet
         if (error.response.status === 401 && !originalRequest._retry) {
           // Don't try to refresh tokens for onboard endpoint - 401 is expected for new users
-          if (originalRequest.url?.includes('/users/onboard')) {
+          if (originalRequest.url?.includes(API_PATHS.users.onboard)) {
             logger.debug(
               'API Client',
               '401 on onboard endpoint is expected for new users, not refreshing token'
@@ -377,11 +377,22 @@ export async function searchUsers(
   limit: number = 10
 ): Promise<UserSearchResult[]> {
   const api = ApiClient.getInstance();
-  const params = new URLSearchParams({ q: query, limit: String(limit) });
+
+  // Validate and normalize inputs to match documented constraints
+  const trimmedQuery = query.trim();
+  if (trimmedQuery.length < 2) {
+    // Avoid hitting the backend for obviously too-short queries
+    return [];
+  }
+
+  // Enforce limit bounds: minimum 1, maximum 20
+  const safeLimit = Math.min(Math.max(limit, 1), 20);
+
+  const params = new URLSearchParams({ q: trimmedQuery, limit: String(safeLimit) });
   if (tripId) params.append('tripId', tripId);
   const response = await api
     .getAxiosInstance()
-    .get<UserSearchResponse>(`${API_PATHS.users.search}?${params}`);
+    .get<UserSearchResponse>(`${API_PATHS.users.search}?${params.toString()}`);
   return response.data.users;
 }
 

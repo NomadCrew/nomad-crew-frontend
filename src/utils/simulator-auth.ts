@@ -45,16 +45,29 @@ const isSimulator = (): boolean => {
   return true;
 };
 
+// Cache the bypass result to avoid repeated log noise
+let cachedBypassResult: boolean | null = null;
+let bypassWarningLogged = false;
+
 // Determine if simulator auth bypass should be enabled
 export const shouldBypassAuth = (): boolean => {
-  const bypass = __DEV__ && isSimulator();
-  if (bypass) {
+  // Return cached result if already computed
+  if (cachedBypassResult !== null) {
+    return cachedBypassResult;
+  }
+
+  cachedBypassResult = __DEV__ && isSimulator();
+
+  // Only log the warning once per app session
+  if (cachedBypassResult && !bypassWarningLogged) {
     logger.warn(
       'SIMULATOR-AUTH',
       '⚠️ Simulator auth bypass is ENABLED - do not use in production!'
     );
+    bypassWarningLogged = true;
   }
-  return bypass;
+
+  return cachedBypassResult;
 };
 
 // Mock user for simulator testing
