@@ -69,7 +69,25 @@ export interface ButtonProps extends Omit<TouchableOpacityProps, 'style'> {
 }
 
 /**
- * Button component for triggering actions
+ * Renders a themed, accessible button with variants, sizes, optional icons, and a loading state.
+ *
+ * Renders an ActivityIndicator in place of content when `loading` is true. `disabled` or `loading`
+ * prevents presses. `fullWidth` expands the button to the container width. `startIcon` and
+ * `endIcon` are rendered before and after the label, respectively. Visual styles are derived
+ * from the active theme with safe fallbacks.
+ *
+ * @param label - The button text
+ * @param variant - Visual style of the button; one of `'filled'`, `'outlined'`, or `'ghost'`
+ * @param size - Size variant; one of `'sm'`, `'md'`, or `'lg'`
+ * @param loading - Shows a spinner and disables interaction while `true`
+ * @param disabled - Disables interaction and applies disabled styling when `true`
+ * @param fullWidth - Expands the button to 100% width when `true`
+ * @param startIcon - Node rendered to the left of the label
+ * @param endIcon - Node rendered to the right of the label
+ * @param style - Container style overrides
+ * @param textStyle - Text style overrides for the label
+ * @param onPress - Press handler
+ * @returns The rendered button element
  */
 export function Button({
   label,

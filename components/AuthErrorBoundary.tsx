@@ -9,6 +9,14 @@ interface AuthErrorBoundaryProps {
   children: ReactNode;
 }
 
+/**
+ * Wraps app UI and ensures authentication initialization completes before rendering children, showing a loading indicator while initializing and an error screen with retry on failure or timeout.
+ *
+ * Renders the provided children after successful initialization; renders a loading state while initializing; renders an error view with retry if initialization fails or exceeds the timeout.
+ *
+ * @param children - React node(s) to render once authentication initialization has completed
+ * @returns The wrapped `children` when initialization succeeds, or a loading/error UI otherwise
+ */
 export default function AuthErrorBoundary({ children }: AuthErrorBoundaryProps) {
   const { isInitialized, initialize, loading } = useAuthStore();
   const [error, setError] = useState<Error | null>(null);

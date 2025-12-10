@@ -109,8 +109,10 @@ export function useTripPermissions({ trip }: UseTripPermissionsOptions): UseTrip
 }
 
 /**
- * Simplified hook for checking ownership of a specific resource.
- * Use this when you need to check if the current user owns a todo, message, etc.
+ * Determine whether the current authenticated user is the creator of a resource.
+ *
+ * @param resourceCreatorId - The resource creator's user id to compare against.
+ * @returns `true` if the current authenticated user's id equals `resourceCreatorId`, `false` otherwise.
  */
 export function useIsResourceOwner(resourceCreatorId: string | undefined): boolean {
   const userId = useAuthStore((state) => state.user?.id);

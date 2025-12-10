@@ -23,6 +23,13 @@ interface Props {
   onComplete?: () => void;
 }
 
+/**
+ * Render a multi-page onboarding carousel using the provided slide definitions and call a completion handler when finished.
+ *
+ * @param slides - Array of onboarding slide objects (title, subtitle, image, styles, and backgroundColor) used to build each page.
+ * @param onComplete - Optional callback invoked when the onboarding flow is completed.
+ * @returns The rendered onboarding carousel React element.
+ */
 export function OnboardingCarousel({ slides, onComplete }: Props) {
   const [_currentIndex, _setCurrentIndex] = useState(0);
   const { theme } = useAppTheme();

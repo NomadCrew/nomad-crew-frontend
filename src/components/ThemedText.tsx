@@ -33,6 +33,16 @@ export interface ThemedTextProps extends TextProps {
   minTouchSize?: number;
 }
 
+/**
+ * Render a themed Text element that applies typography, color, accessibility role, and optional minimum touch size from the app theme.
+ *
+ * @param variant - Dot-notated typography key in the form `category.size` (e.g., `body.medium`). Falls back to `body.medium` if invalid.
+ * @param color - Dot-notated color key in the form `category.shade` (e.g., `content.primary`). Falls back to `content.primary` if invalid.
+ * @param isHeading - When true and no explicit `accessibilityRole` is provided, the component uses the `header` accessibility role; otherwise `text`.
+ * @param accessibilityRole - Explicit accessibility role to apply to the rendered Text; if provided, it overrides the `isHeading` defaulting behavior.
+ * @param minTouchSize - If provided, enforces `minHeight` and `minWidth` equal to this value to increase touch target size.
+ * @returns A React Native Text element styled according to the resolved theme typography and color, merging any passed `style` and forwarding remaining props.
+ */
 export function ThemedText({
   style,
   children,

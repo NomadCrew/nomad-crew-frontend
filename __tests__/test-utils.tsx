@@ -38,6 +38,13 @@ jest.mock('../src/theme/ThemeProvider', () => {
   };
 });
 
+/**
+ * Renders a React element wrapped with the mocked ThemeProvider and PaperProvider for tests.
+ *
+ * @param ui - The React element to render inside the test providers.
+ * @param options - Optional render options forwarded to @testing-library/react-native's `render`.
+ * @returns The result object returned by `@testing-library/react-native`'s `render` (query utilities and helpers).
+ */
 function render(ui: React.ReactElement, { ...options } = {}) {
   function Wrapper({ children }: { children: React.ReactNode }) {
     return (

@@ -9,17 +9,11 @@ interface Props {
 }
 
 /**
- * Query Error Boundary Component
+ * Composes TanStack Query's QueryErrorResetBoundary with the local ErrorBoundary to reset queries when the boundary resets.
  *
- * Wraps ErrorBoundary with TanStack Query's error reset functionality.
- * This allows queries to be automatically reset when the error boundary resets.
+ * Renders a QueryErrorResetBoundary and forwards its `reset` callback to ErrorBoundary's `onReset`, passing through `fallback`, `onError`, and `children`.
  *
- * @example
- * ```tsx
- * <QueryErrorBoundary>
- *   <YourQueryComponent />
- * </QueryErrorBoundary>
- * ```
+ * @returns The rendered boundary component that resets related queries when the error boundary is reset.
  */
 export function QueryErrorBoundary({ children, fallback, onError }: Props) {
   return (

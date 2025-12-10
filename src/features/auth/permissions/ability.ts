@@ -48,7 +48,12 @@ import {
 } from '@casl/ability';
 import type { Action, AppSubjects, MemberRole, TripContext, Resource } from './types';
 
-// Helper function to detect subject type from objects with __typename
+/**
+ * Infer the CASL subject type from a subject identifier or object.
+ *
+ * @param subject - A subject value (either a resource name string or an object that may contain `__typename`)
+ * @returns The resource type extracted from `subject` (`__typename` when present, the string itself when given), or `'all'` if the type cannot be determined
+ */
 function detectSubjectType(subject: AppSubjects): ExtractSubjectType<AppSubjects> {
   if (typeof subject === 'string') {
     return subject as Resource;
@@ -64,11 +69,12 @@ function detectSubjectType(subject: AppSubjects): ExtractSubjectType<AppSubjects
 export type AppAbility = MongoAbility<[Action, AppSubjects]>;
 
 /**
- * Creates a CASL ability instance for a given trip context.
- * This should be called when the user enters a trip to set up their permissions.
+ * Builds an AppAbility representing the permissions for the given trip context.
  *
- * @param context - The trip context containing user ID and their role in the trip
- * @returns A CASL Ability instance with the appropriate permissions
+ * If `context` is `null`, returns an empty ability with no member-specific permissions.
+ *
+ * @param context - Trip context containing `userId` and `userRole`; pass `null` for unauthenticated or non-member contexts
+ * @returns An AppAbility granting permissions based on the user's role and ownership of trip resources
  */
 export function defineAbilityFor(context: TripContext | null): AppAbility {
   const { can, build } = new AbilityBuilder<AppAbility>(createMongoAbility);
@@ -156,11 +162,11 @@ export function createEmptyAbility(): AppAbility {
 }
 
 /**
- * Helper to check if a role has at least the specified minimum role level.
+ * Determine whether a member role meets or exceeds a minimum required role.
  *
- * @param currentRole - The user's current role
- * @param minimumRole - The minimum required role
- * @returns true if the current role meets or exceeds the minimum
+ * @param currentRole - The member's current role
+ * @param minimumRole - The minimum required role to compare against
+ * @returns `true` if `currentRole` is greater than or equal to `minimumRole`, `false` otherwise
  */
 export function hasMinimumRole(currentRole: MemberRole, minimumRole: MemberRole): boolean {
   const roleOrder: MemberRole[] = ['member', 'admin', 'owner'];
@@ -168,7 +174,10 @@ export function hasMinimumRole(currentRole: MemberRole, minimumRole: MemberRole)
 }
 
 /**
- * Get the display name for a role.
+ * Map a MemberRole to its human-friendly display name.
+ *
+ * @param role - The member role to convert to a display string
+ * @returns `Owner`, `Admin`, or `Member` for known roles; `Unknown` otherwise
  */
 export function getRoleDisplayName(role: MemberRole): string {
   const displayNames: Record<MemberRole, string> = {

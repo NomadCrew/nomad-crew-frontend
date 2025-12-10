@@ -15,6 +15,14 @@ interface PermissionState {
   notifications: boolean | null;
 }
 
+/**
+ * Render the onboarding permissions screen that requests and displays location and notification access.
+ *
+ * Shows enable buttons while each permission is pending, a granted/denied status once decided,
+ * and a Continue action that advances onboarding when both permissions have been decided.
+ *
+ * @returns A React element containing the permissions UI and controls for requesting permissions, opening device settings, and continuing onboarding.
+ */
 export default function PermissionsScreen() {
   const { theme } = useAppTheme();
   const { setFirstTimeDone } = useOnboarding();
