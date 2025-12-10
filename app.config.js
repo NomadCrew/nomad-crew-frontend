@@ -1,4 +1,4 @@
-const SUPABASE_URL = 'https://efmqiltdajvqenndmylz.supabase.co';
+const SUPABASE_URL = 'https://eihszqnmmgbrcxtymskn.supabase.co';
 
 const getEnvironment = () => {
   switch (process.env.APP_VARIANT) {
@@ -92,7 +92,7 @@ export default {
             },
             {
               scheme: 'https',
-              host: 'efmqiltdajvqenndmylz.supabase.co',
+              host: 'eihszqnmmgbrcxtymskn.supabase.co',
               pathPrefix: '/auth/v1/callback'
             },
             {
