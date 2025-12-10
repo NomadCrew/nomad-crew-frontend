@@ -149,7 +149,12 @@ export const useAuthStore = create<AuthState>()(
 
                 if (backendUser) {
                   set((state) => {
-                    const supUser = state.user!; // User from Supabase session part
+                    // Guard against null user (could happen in race conditions)
+                    if (!state.user) {
+                      logger.warn('AUTH', 'state.user is null during backend profile merge');
+                      return state;
+                    }
+                    const supUser = state.user;
 
                     // Construct the new user object, ensuring it conforms to the User type
                     // User type is assumed to be: { id: string, email: string, username: string, firstName?: string, lastName?: string, profilePicture?: string, createdAt?: string, updatedAt?: string, appleUser?: boolean }

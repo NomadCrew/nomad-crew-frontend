@@ -48,6 +48,13 @@ const NotificationBaseSchema = z.object({
   createdAt: IsoTimestampSchema,
 });
 
+// Generic/fallback schema for unknown notification types
+// This captures any notification with a string type and arbitrary metadata
+const GenericNotificationSchema = NotificationBaseSchema.extend({
+  type: z.string(),
+  metadata: z.record(z.unknown()).optional(),
+});
+
 // Define known notification types as a Zod enum
 // Note: Backend may send TRIP_INVITATION_RECEIVED for new invitations
 const NotificationTypeEnum = z.enum([
@@ -147,6 +154,40 @@ export const isGenericNotification = (
 export interface MarkNotificationsReadPayload {
   status: 'read';
 }
+
+// --- Safe Parse Helper ---
+// Parses notification data with fallback for unknown types
+// This solves the discriminatedUnion limitation where unknown types fail validation entirely
+
+/**
+ * Safely parse a notification from raw data.
+ * First attempts to parse as a known notification type using the discriminated union.
+ * If that fails, falls back to parsing as a generic notification with UNKNOWN type.
+ *
+ * @param data - Raw notification data from WebSocket or API
+ * @returns Parsed Notification object, or null if parsing fails entirely
+ */
+export const safeParseNotification = (data: unknown): Notification | null => {
+  // First, try to parse as a known notification type
+  const knownResult = ZodNotificationSchema.safeParse(data);
+  if (knownResult.success) {
+    return knownResult.data;
+  }
+
+  // If known types fail, try to parse as generic with fallback
+  const genericResult = GenericNotificationSchema.safeParse(data);
+  if (genericResult.success) {
+    // Convert to UNKNOWN type notification
+    return {
+      ...genericResult.data,
+      type: 'UNKNOWN' as const,
+      metadata: genericResult.data.metadata ?? {},
+    };
+  }
+
+  // If even generic parsing fails, return null
+  return null;
+};
 
 // --- Cleanup / Remove Duplicates ---
 // Remove the old NotificationType enum, NotificationStatus enum,

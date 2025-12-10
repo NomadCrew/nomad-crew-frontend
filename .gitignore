@@ -51,3 +51,6 @@ GOOGLE_API_KEYS.txt
 
 .cursorrules
 .cursor/*
+
+# Local backup directories
+.local-changes-backup/
