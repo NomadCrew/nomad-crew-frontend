@@ -54,9 +54,7 @@ console.log('[ContactEmailStep] File loaded');
 export default function ContactEmailStep() {
   console.log('[ContactEmailStep] Rendering');
   const user = useAuthStore((state) => state.user);
-  // @ts-ignore - Type might not be fully updated
   const updateContactEmail = useAuthStore((state) => state.updateContactEmail);
-  // @ts-ignore - Type might not be fully updated
   const setNeedsContactEmail = useAuthStore((state) => state.setNeedsContactEmail);
 
   const [email, setEmail] = useState('');
