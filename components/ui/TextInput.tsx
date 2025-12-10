@@ -93,31 +93,22 @@ function TextInputComponent({
     [onChangeText]
   );
 
-  // Performance optimizations for TextInput
-  const textInputProps = useMemo(
-    () => ({
-      // Better performance by reducing JS processing
-      autoCapitalize: 'none' as const,
-      autoCorrect: false,
-      spellCheck: false,
-      // Critical for Android performance
-      disableFullscreenUI: true,
-      // Reduce unnecessary re-renders
-      placeholderTextColor: theme.colors.border.default,
-      selectionColor: theme.colors.primary.main,
-      // Modern platforms support better keyboard handling
-      keyboardType: rest.keyboardType || 'default',
-      returnKeyType: rest.returnKeyType || 'done',
-      ...rest,
-    }),
-    [theme.colors.border.default, theme.colors.primary.main, rest]
-  );
-
   return (
     <View style={containerStyles}>
       <RNTextInput
-        // Spread textInputProps first so our explicit handlers take precedence
-        {...textInputProps}
+        // Spread rest first so our explicit props take precedence
+        {...rest}
+        // Performance optimizations
+        autoCapitalize={rest.autoCapitalize ?? 'none'}
+        autoCorrect={rest.autoCorrect ?? false}
+        spellCheck={rest.spellCheck ?? false}
+        disableFullscreenUI={true}
+        keyboardType={rest.keyboardType ?? 'default'}
+        returnKeyType={rest.returnKeyType ?? 'done'}
+        // Theme colors
+        placeholderTextColor={theme.colors.border.default}
+        selectionColor={theme.colors.primary.main}
+        // Core props
         style={inputStyles}
         value={value}
         placeholder={placeholder}
