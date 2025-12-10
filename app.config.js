@@ -92,7 +92,7 @@ export default {
             },
             {
               scheme: 'https',
-              host: 'efmqiltdajyqenndmykz.supabase.co',
+              host: 'efmqiltdajvqenndmylz.supabase.co',
               pathPrefix: '/auth/v1/callback'
             },
             {

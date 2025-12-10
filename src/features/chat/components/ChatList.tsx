@@ -79,18 +79,10 @@ export const ChatList: React.FC<ChatListProps> = ({
   // Scroll to bottom when new messages arrive or component mounts
   useEffect(() => {
     if (sortedMessages.length > 0 && flashListRef.current) {
+      // Use a short delay to ensure the list has rendered
       setTimeout(() => {
         flashListRef.current?.scrollToEnd({ animated: false });
       }, 100);
-    }
-  }, [sortedMessages.length]);
-
-  // Scroll to bottom when the component mounts
-  useEffect(() => {
-    if (sortedMessages.length > 0 && flashListRef.current) {
-      setTimeout(() => {
-        flashListRef.current?.scrollToEnd({ animated: false });
-      }, 300);
     }
   }, [sortedMessages.length]);
 

@@ -66,11 +66,8 @@ console.log('[UsernameStep] File loaded, starting UsernameStep component render'
 export default function UsernameStep() {
   console.log('[UsernameStep] Inside UsernameStep function - rendering');
   const user = useAuthStore((state) => state.user);
-  // @ts-ignore - Temporarily ignore for logging, AuthState type might be missing action signatures
   const setUser = useAuthStore((state) => state.setUser);
-  // @ts-ignore - Temporarily ignore for logging, AuthState type might be missing action signatures
   const setNeedsUsername = useAuthStore((state) => state.setNeedsUsername);
-  // @ts-ignore - Type might not be fully updated
   const needsContactEmail = useAuthStore((state) => state.needsContactEmail);
   // Prefer current username, then email prefix, then random
   const initialUsername = user?.username || user?.email?.split('@')[0] || getRandomUsername();
