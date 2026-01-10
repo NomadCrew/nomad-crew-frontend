@@ -118,7 +118,10 @@
     "readable-stream": "^4.7.0",
     "vm-browserify": "^1.1.2",
     "zod": "^3.24.2",
-    "zustand": "^5.0.1"
+    "zustand": "^5.0.1",
+    "expo-image-picker": "~16.0.6",
+    "expo-document-picker": "~13.0.3",
+    "expo-image-manipulator": "~13.0.6"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
