@@ -10,6 +10,17 @@ import {
   UpdateDocumentInput,
   DocumentFilters,
 } from './types';
+import {
+  uploadDocument as uploadToStorage,
+  getSignedUrl,
+  deleteDocument as deleteFromStorage,
+  generateStoragePath,
+  MAX_FILE_SIZE,
+  compressImage,
+  shouldCompress,
+} from './services';
+import { normalizeDocument, normalizeDocuments } from './adapters/normalizeDocument';
+import { supabase } from '@/src/api/supabase';
 import { logger } from '@/src/utils/logger';
 
 /**
@@ -41,7 +52,7 @@ interface WalletState {
   fetchGroupDocuments: (tripId: string, filters?: DocumentFilters) => Promise<void>;
   getGroupDocuments: (tripId: string) => WalletDocument[];
 
-  // Actions - CRUD (implemented in Phase 2)
+  // Actions - CRUD
   createDocument: (input: CreateDocumentInput) => Promise<WalletDocument>;
   updateDocument: (id: string, input: UpdateDocumentInput) => Promise<WalletDocument>;
   deleteDocument: (id: string) => Promise<void>;
@@ -49,7 +60,7 @@ interface WalletState {
   // Actions - Selection
   setSelectedDocument: (document: WalletDocument | null) => void;
 
-  // Actions - Upload (implemented in Phase 2)
+  // Actions - Upload
   uploadDocument: (input: CreateDocumentInput) => Promise<WalletDocument>;
   cancelUpload: () => void;
 
@@ -93,16 +104,42 @@ export const useWalletStore = create<WalletState>()(
         logger.info('WALLET', 'fetchPersonalDocuments started', { filters });
 
         try {
-          // TODO: Implement API call in Phase 2
-          // const response = await api.get(API_PATHS.wallet.personal, { params: filters });
-          // const documents = normalizeDocuments(response.data);
-          // set({ personalDocuments: documents, personalLoading: false });
+          const { data: userData, error: userError } = await supabase.auth.getUser();
+          if (userError || !userData.user) {
+            throw new Error('Not authenticated');
+          }
 
-          // Placeholder - remove in Phase 2
-          set({ personalDocuments: [], personalLoading: false });
-          logger.info('WALLET', 'fetchPersonalDocuments completed (placeholder)');
+          let query = supabase
+            .from('wallet_documents')
+            .select('*')
+            .eq('wallet_type', 'personal')
+            .eq('user_id', userData.user.id);
+
+          // Apply optional filters
+          if (filters?.documentType) {
+            if (Array.isArray(filters.documentType)) {
+              query = query.in('document_type', filters.documentType);
+            } else {
+              query = query.eq('document_type', filters.documentType);
+            }
+          }
+
+          if (filters?.search) {
+            query = query.ilike('name', `%${filters.search}%`);
+          }
+
+          const { data, error } = await query.order('created_at', { ascending: false });
+
+          if (error) {
+            throw new Error(error.message);
+          }
+
+          const documents = normalizeDocuments(data || []);
+          set({ personalDocuments: documents, personalLoading: false });
+          logger.info('WALLET', 'fetchPersonalDocuments completed', { count: documents.length });
         } catch (error) {
-          const message = error instanceof Error ? error.message : 'Failed to fetch personal documents';
+          const message =
+            error instanceof Error ? error.message : 'Failed to fetch personal documents';
           logger.error('WALLET', 'fetchPersonalDocuments error:', message);
           set({ personalError: message, personalLoading: false });
           throw error;
@@ -122,22 +159,43 @@ export const useWalletStore = create<WalletState>()(
         logger.info('WALLET', 'fetchGroupDocuments started', { tripId, filters });
 
         try {
-          // TODO: Implement API call in Phase 2
-          // const response = await api.get(API_PATHS.wallet.group(tripId), { params: filters });
-          // const documents = normalizeDocuments(response.data);
-          // set((state) => ({
-          //   groupDocuments: { ...state.groupDocuments, [tripId]: documents },
-          //   groupLoading: false,
-          // }));
+          let query = supabase
+            .from('wallet_documents')
+            .select('*')
+            .eq('wallet_type', 'group')
+            .eq('trip_id', tripId);
 
-          // Placeholder - remove in Phase 2
+          // Apply optional filters
+          if (filters?.documentType) {
+            if (Array.isArray(filters.documentType)) {
+              query = query.in('document_type', filters.documentType);
+            } else {
+              query = query.eq('document_type', filters.documentType);
+            }
+          }
+
+          if (filters?.search) {
+            query = query.ilike('name', `%${filters.search}%`);
+          }
+
+          const { data, error } = await query.order('created_at', { ascending: false });
+
+          if (error) {
+            throw new Error(error.message);
+          }
+
+          const documents = normalizeDocuments(data || []);
           set((state) => ({
-            groupDocuments: { ...state.groupDocuments, [tripId]: [] },
+            groupDocuments: { ...state.groupDocuments, [tripId]: documents },
             groupLoading: false,
           }));
-          logger.info('WALLET', 'fetchGroupDocuments completed (placeholder)', { tripId });
+          logger.info('WALLET', 'fetchGroupDocuments completed', {
+            tripId,
+            count: documents.length,
+          });
         } catch (error) {
-          const message = error instanceof Error ? error.message : 'Failed to fetch group documents';
+          const message =
+            error instanceof Error ? error.message : 'Failed to fetch group documents';
           logger.error('WALLET', 'fetchGroupDocuments error:', message);
           set({ groupError: message, groupLoading: false });
           throw error;
@@ -149,25 +207,202 @@ export const useWalletStore = create<WalletState>()(
       },
 
       // ==========================================
-      // CRUD Actions (Placeholder - Phase 2)
+      // CRUD Actions
       // ==========================================
 
-      createDocument: async (_input: CreateDocumentInput) => {
-        // TODO: Implement in Phase 2
-        logger.warn('WALLET', 'createDocument not yet implemented');
-        throw new Error('Not implemented');
+      createDocument: async (input: CreateDocumentInput) => {
+        logger.info('WALLET', 'createDocument started', {
+          name: input.name,
+          walletType: input.walletType,
+        });
+
+        try {
+          // Get current user
+          const { data: userData, error: userError } = await supabase.auth.getUser();
+          if (userError || !userData.user) {
+            throw new Error('Not authenticated');
+          }
+
+          // Validate group wallet has tripId
+          if (input.walletType === 'group' && !input.tripId) {
+            throw new Error('tripId is required for group wallet documents');
+          }
+
+          // Prepare file URI - compress if image
+          let fileUri = input.fileUri;
+          if (shouldCompress(input.mimeType)) {
+            logger.info('WALLET', 'Compressing image');
+            fileUri = await compressImage(input.fileUri);
+          }
+
+          // Check file size by fetching to get size
+          const response = await fetch(fileUri);
+          const arrayBuffer = await response.arrayBuffer();
+          const fileSize = arrayBuffer.byteLength;
+
+          if (fileSize > MAX_FILE_SIZE) {
+            throw new Error(
+              `File size ${(fileSize / 1024 / 1024).toFixed(2)}MB exceeds maximum ${MAX_FILE_SIZE / 1024 / 1024}MB`
+            );
+          }
+
+          // Generate storage path
+          const storagePath = generateStoragePath(
+            input.walletType,
+            userData.user.id,
+            input.tripId,
+            input.name
+          );
+
+          // Upload to storage
+          await uploadToStorage(fileUri, storagePath, input.mimeType);
+
+          // Insert record into database
+          const { data: insertedData, error: insertError } = await supabase
+            .from('wallet_documents')
+            .insert({
+              user_id: userData.user.id,
+              wallet_type: input.walletType,
+              trip_id: input.tripId || null,
+              document_type: input.documentType,
+              name: input.name,
+              description: input.description || null,
+              storage_path: storagePath,
+              mime_type: input.mimeType,
+              file_size: fileSize,
+              metadata: input.metadata || {},
+            })
+            .select()
+            .single();
+
+          if (insertError) {
+            // Clean up storage if DB insert fails
+            await deleteFromStorage(storagePath).catch(() => {});
+            throw new Error(insertError.message);
+          }
+
+          const document = normalizeDocument(insertedData);
+
+          // Add to appropriate state
+          if (input.walletType === 'personal') {
+            set((state) => ({
+              personalDocuments: [document, ...state.personalDocuments],
+            }));
+          } else if (input.tripId) {
+            set((state) => ({
+              groupDocuments: {
+                ...state.groupDocuments,
+                [input.tripId!]: [document, ...(state.groupDocuments[input.tripId!] || [])],
+              },
+            }));
+          }
+
+          logger.info('WALLET', 'createDocument completed', { id: document.id });
+          return document;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Failed to create document';
+          logger.error('WALLET', 'createDocument error:', message);
+          throw error;
+        }
       },
 
-      updateDocument: async (_id: string, _input: UpdateDocumentInput) => {
-        // TODO: Implement in Phase 2
-        logger.warn('WALLET', 'updateDocument not yet implemented');
-        throw new Error('Not implemented');
+      updateDocument: async (id: string, input: UpdateDocumentInput) => {
+        logger.info('WALLET', 'updateDocument started', { id });
+
+        try {
+          const { data: updatedData, error } = await supabase
+            .from('wallet_documents')
+            .update({
+              ...(input.name && { name: input.name }),
+              ...(input.description !== undefined && { description: input.description }),
+              ...(input.documentType && { document_type: input.documentType }),
+              ...(input.metadata && { metadata: input.metadata }),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', id)
+            .select()
+            .single();
+
+          if (error) {
+            throw new Error(error.message);
+          }
+
+          const document = normalizeDocument(updatedData);
+
+          // Update in state
+          const updateInArray = (docs: WalletDocument[]) =>
+            docs.map((doc) => (doc.id === id ? document : doc));
+
+          set((state) => ({
+            personalDocuments: updateInArray(state.personalDocuments),
+            groupDocuments: Object.fromEntries(
+              Object.entries(state.groupDocuments).map(([tripId, docs]) => [
+                tripId,
+                updateInArray(docs),
+              ])
+            ),
+            selectedDocument: state.selectedDocument?.id === id ? document : state.selectedDocument,
+          }));
+
+          logger.info('WALLET', 'updateDocument completed', { id });
+          return document;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Failed to update document';
+          logger.error('WALLET', 'updateDocument error:', message);
+          throw error;
+        }
       },
 
-      deleteDocument: async (_id: string) => {
-        // TODO: Implement in Phase 2
-        logger.warn('WALLET', 'deleteDocument not yet implemented');
-        throw new Error('Not implemented');
+      deleteDocument: async (id: string) => {
+        logger.info('WALLET', 'deleteDocument started', { id });
+
+        try {
+          // Find document in state to get storage path
+          const state = get();
+          let document: WalletDocument | undefined;
+
+          document = state.personalDocuments.find((doc) => doc.id === id);
+          if (!document) {
+            for (const docs of Object.values(state.groupDocuments)) {
+              document = docs.find((doc) => doc.id === id);
+              if (document) break;
+            }
+          }
+
+          if (!document) {
+            throw new Error('Document not found');
+          }
+
+          // Delete from storage
+          await deleteFromStorage(document.storagePath);
+
+          // Delete from database
+          const { error } = await supabase.from('wallet_documents').delete().eq('id', id);
+
+          if (error) {
+            throw new Error(error.message);
+          }
+
+          // Remove from state
+          const filterOut = (docs: WalletDocument[]) => docs.filter((doc) => doc.id !== id);
+
+          set((state) => ({
+            personalDocuments: filterOut(state.personalDocuments),
+            groupDocuments: Object.fromEntries(
+              Object.entries(state.groupDocuments).map(([tripId, docs]) => [
+                tripId,
+                filterOut(docs),
+              ])
+            ),
+            selectedDocument: state.selectedDocument?.id === id ? null : state.selectedDocument,
+          }));
+
+          logger.info('WALLET', 'deleteDocument completed', { id });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Failed to delete document';
+          logger.error('WALLET', 'deleteDocument error:', message);
+          throw error;
+        }
       },
 
       // ==========================================
@@ -179,17 +414,122 @@ export const useWalletStore = create<WalletState>()(
       },
 
       // ==========================================
-      // Upload Actions (Placeholder - Phase 2)
+      // Upload Actions (with progress tracking)
       // ==========================================
 
-      uploadDocument: async (_input: CreateDocumentInput) => {
-        // TODO: Implement in Phase 2
-        logger.warn('WALLET', 'uploadDocument not yet implemented');
-        throw new Error('Not implemented');
+      uploadDocument: async (input: CreateDocumentInput) => {
+        logger.info('WALLET', 'uploadDocument started', { name: input.name });
+        set({ uploadProgress: 0, uploadError: null });
+
+        try {
+          // Get current user
+          const { data: userData, error: userError } = await supabase.auth.getUser();
+          if (userError || !userData.user) {
+            throw new Error('Not authenticated');
+          }
+
+          // Validate group wallet has tripId
+          if (input.walletType === 'group' && !input.tripId) {
+            throw new Error('tripId is required for group wallet documents');
+          }
+
+          set({ uploadProgress: 10 });
+
+          // Prepare file URI - compress if image
+          let fileUri = input.fileUri;
+          let mimeType = input.mimeType;
+          if (shouldCompress(input.mimeType)) {
+            logger.info('WALLET', 'Compressing image');
+            fileUri = await compressImage(input.fileUri);
+            mimeType = 'image/jpeg'; // Compressed images are JPEG
+          }
+
+          set({ uploadProgress: 30 });
+
+          // Check file size
+          const response = await fetch(fileUri);
+          const arrayBuffer = await response.arrayBuffer();
+          const fileSize = arrayBuffer.byteLength;
+
+          if (fileSize > MAX_FILE_SIZE) {
+            throw new Error(
+              `File size ${(fileSize / 1024 / 1024).toFixed(2)}MB exceeds maximum ${MAX_FILE_SIZE / 1024 / 1024}MB`
+            );
+          }
+
+          // Generate storage path
+          const storagePath = generateStoragePath(
+            input.walletType,
+            userData.user.id,
+            input.tripId,
+            input.name
+          );
+
+          set({ uploadProgress: 40 });
+
+          // Upload to storage
+          await uploadToStorage(fileUri, storagePath, mimeType);
+
+          set({ uploadProgress: 70 });
+
+          // Insert record into database
+          const { data: insertedData, error: insertError } = await supabase
+            .from('wallet_documents')
+            .insert({
+              user_id: userData.user.id,
+              wallet_type: input.walletType,
+              trip_id: input.tripId || null,
+              document_type: input.documentType,
+              name: input.name,
+              description: input.description || null,
+              storage_path: storagePath,
+              mime_type: mimeType,
+              file_size: fileSize,
+              metadata: input.metadata || {},
+            })
+            .select()
+            .single();
+
+          if (insertError) {
+            // Clean up storage if DB insert fails
+            await deleteFromStorage(storagePath).catch(() => {});
+            throw new Error(insertError.message);
+          }
+
+          set({ uploadProgress: 100 });
+
+          const document = normalizeDocument(insertedData);
+
+          // Add to appropriate state
+          if (input.walletType === 'personal') {
+            set((state) => ({
+              personalDocuments: [document, ...state.personalDocuments],
+            }));
+          } else if (input.tripId) {
+            set((state) => ({
+              groupDocuments: {
+                ...state.groupDocuments,
+                [input.tripId!]: [document, ...(state.groupDocuments[input.tripId!] || [])],
+              },
+            }));
+          }
+
+          // Clear progress after short delay
+          setTimeout(() => {
+            set({ uploadProgress: null });
+          }, 500);
+
+          logger.info('WALLET', 'uploadDocument completed', { id: document.id });
+          return document;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Failed to upload document';
+          logger.error('WALLET', 'uploadDocument error:', message);
+          set({ uploadError: message, uploadProgress: null });
+          throw error;
+        }
       },
 
       cancelUpload: () => {
-        // TODO: Implement upload cancellation in Phase 2
         set({ uploadProgress: null, uploadError: null });
       },
 
@@ -230,3 +570,11 @@ export const useWalletError = () =>
   useWalletStore((state) => state.personalError || state.groupError);
 export const useSelectedDocument = () => useWalletStore((state) => state.selectedDocument);
 export const useUploadProgress = () => useWalletStore((state) => state.uploadProgress);
+export const useUploadError = () => useWalletStore((state) => state.uploadError);
+
+/**
+ * Helper to get a signed URL for a document
+ */
+export async function getDocumentUrl(document: WalletDocument): Promise<string> {
+  return getSignedUrl(document.storagePath);
+}
