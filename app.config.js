@@ -69,8 +69,9 @@ export default {
         foregroundImage: './assets/images/icon.png',
         backgroundColor: '#ffffff'
       },
-      package: IS_DEV 
-        ? 'com.nomadcrew.app.dev' 
+      googleServicesFile: './SECRET/google-services_dev.json',
+      package: IS_DEV
+        ? 'com.nomadcrew.app.dev'
         : 'com.nomadcrew.app',
       config: {
         googleMaps: {
@@ -134,7 +135,6 @@ export default {
     },
     plugins: [
       'expo-router',
-      'expo-web-browser',
       ['expo-location', {
         locationAlwaysAndWhenInUsePermission: 'Allow $(PRODUCT_NAME) to access your location to find nearby crews, share your location with trip members, and display your position on the map.'
       }],
