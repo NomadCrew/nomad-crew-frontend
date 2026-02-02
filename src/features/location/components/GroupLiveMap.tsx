@@ -229,10 +229,15 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
     }
 
     console.log('[MapDebug] fitToMarkers: Fitting to', markers.length, 'markers');
-    mapRef.current.fitToCoordinates(markers, {
-      edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
-      animated: true,
-    });
+    try {
+      mapRef.current.fitToCoordinates(markers, {
+        edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+        animated: true,
+      });
+    } catch (error) {
+      // Handle "Unable to find view for viewState" error gracefully
+      console.warn('[MapDebug] fitToCoordinates failed (map may not be ready):', error);
+    }
   }, [
     memberLocationArray,
     currentLocation,
@@ -247,10 +252,18 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
       const hasLocations = memberLocationArray.length > 0 || currentLocation;
       if (hasLocations) {
         hasCalledFitToMarkersRef.current = true;
+        // Add delay to ensure native map view is fully ready
+        // This prevents "Unable to find view for viewState" errors
         InteractionManager.runAfterInteractions(() => {
-          if (isMountedRef.current) {
-            fitToMarkers();
-          }
+          setTimeout(() => {
+            if (isMountedRef.current && mapRef.current) {
+              try {
+                fitToMarkers();
+              } catch (error) {
+                console.warn('[MapDebug] fitToMarkers error (non-fatal):', error);
+              }
+            }
+          }, 500); // 500ms delay for native view to be ready
         });
       }
     }
