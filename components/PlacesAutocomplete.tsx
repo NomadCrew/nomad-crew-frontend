@@ -45,10 +45,11 @@ export default function CustomPlacesAutocomplete({
   const [isLoading, setIsLoading] = useState(false);
 
   // Get platform-specific API key from environment variables
+  // Falls back to generic GOOGLE_PLACES_API_KEY if platform-specific key is not set
   const apiKey =
     Platform.OS === 'ios'
-      ? process.env.EXPO_PUBLIC_GOOGLE_API_KEY_IOS
-      : process.env.EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID;
+      ? process.env.EXPO_PUBLIC_GOOGLE_API_KEY_IOS || process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY
+      : process.env.EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID || process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
 
   // Function to search places
   const searchPlaces = async (text: string) => {
