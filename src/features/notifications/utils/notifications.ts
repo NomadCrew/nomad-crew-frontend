@@ -17,10 +17,24 @@ import { useTripStore } from '@/src/features/trips/store';
 import { logger } from '@/src/utils/logger';
 import { jwtDecode } from 'jwt-decode';
 import Constants from 'expo-constants';
+import * as Device from 'expo-device';
 import * as ExpoNotifications from 'expo-notifications';
 
 // Lazy-loaded Notifications module - only imported on physical devices
 let Notifications: typeof ExpoNotifications | null = null;
+
+// Initialize notifications module on physical devices
+function initializeNotificationsModule() {
+  if (Device.isDevice) {
+    Notifications = ExpoNotifications;
+    console.log('[NOTIFICATION] Module initialized for physical device');
+  } else {
+    console.log('[NOTIFICATION] Skipping module init - running on simulator/emulator');
+  }
+}
+
+// Initialize immediately
+initializeNotificationsModule();
 
 // Define token interface
 interface InvitationToken {
@@ -194,6 +208,12 @@ async function handleNotificationResponse(response: ExpoNotifications.Notificati
 // Configure how notifications are presented when the app is in the foreground
 export function configureNotifications() {
   console.log('[NOTIFICATION] configureNotifications called');
+
+  // Skip if notifications module not loaded (simulator/emulator)
+  if (!Notifications) {
+    console.log('[NOTIFICATION] Notifications module not available, skipping configuration');
+    return () => {}; // Return no-op cleanup function
+  }
 
   // Android-specific channel creation
   if (Platform.OS === 'android') {
