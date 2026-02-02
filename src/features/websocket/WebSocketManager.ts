@@ -92,13 +92,9 @@ export class WebSocketManager {
       const wrappedCallbacks: ConnectionCallbacks = {
         ...callbacks,
         onMessage: (messageData: any) => {
-          let parsedData: any;
-          try {
-            parsedData = JSON.parse(messageData);
-          } catch (error) {
-            logger.error('WS', 'Failed to parse incoming JSON message:', error);
-            return;
-          }
+          // Note: messageData is already parsed by WebSocketConnection.onmessage
+          // Do NOT call JSON.parse again - it would fail with "Unexpected character: o"
+          const parsedData = messageData;
 
           // Attempt 1: Validate as a standardized Notification object
           const notificationResult = ZodNotificationSchema.safeParse(parsedData);
