@@ -22,6 +22,7 @@ import { authApi } from '@/src/api/auth-api'; // This will likely be replaced by
 import { ERROR_CODES, ERROR_MESSAGES } from '@/src/api/constants'; // Path might need update
 import { registerAuthHandlers } from '@/src/api/api-client'; // This needs careful review for new service structure
 import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { api } from '@/src/api/api-client'; // This will likely be replaced by AuthService methods
 import {
   onboardUser,
@@ -502,12 +503,12 @@ export const useAuthStore = create<AuthState>()(
             if (status !== 'granted') {
               return;
             }
-            // Validate project ID before attempting to get push token
-            const projectId = process.env.EXPO_PUBLIC_PROJECT_ID;
+            // Get project ID from expo-constants (same as pushNotificationService.ts)
+            const projectId = Constants.expoConfig?.extra?.eas?.projectId;
             if (!projectId) {
               logger.warn(
                 'AUTH',
-                'EXPO_PUBLIC_PROJECT_ID not set, skipping push token registration'
+                'EAS project ID not found in app config, skipping push token registration'
               );
               return;
             }
