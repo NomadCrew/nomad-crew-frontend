@@ -1,92 +1,22 @@
-# Why Your Google Maps API Key Isn't Working in EAS Builds (And How We Fixed It After Hours of Debugging)
+# EAS Secrets Don't Need References: The Gotcha That Cost Us 6 Hours
 
-*The undocumented gotcha that will save you hours of frustration with Expo EAS secrets*
-
----
-
-## The Setup
-
-Picture this: You've built a beautiful React Native app with Expo. Google Maps works perfectly in development. You create your EAS secrets, configure your `eas.json`, and trigger a cloud build. You install the APK on your device and...
-
-**The map shows an infinite loading spinner.**
-
-No errors in the JavaScript console. The app runs fine. But the map just won't load.
-
-Welcome to the debugging journey that took us down a rabbit hole of SHA-1 fingerprints, Firebase authentication, expo-location conflicts, and ultimately revealed a critical misunderstanding about how EAS secrets actually work.
+*How a single misconception about Expo's EAS secrets broke our Google Maps integration—and the complete guide to doing it right.*
 
 ---
 
-## The Symptoms
+## Part 1: The Post-Mortem (TL;DR for Senior Devs)
 
-Our NomadCrew app—a trip planning platform with real-time location sharing—suddenly had a broken map after migrating to EAS Build. Here's what we observed:
+### The Problem
+Google Maps showed infinite loading spinner in EAS builds. Worked perfectly in local development.
 
-1. **Map showed infinite loading spinner** on Android physical devices
-2. **Native logcat revealed the truth**: `API Key: @EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID`
+### The Clue
+Native logs revealed: `API Key: @EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID`
 
-Wait, what? That's not an API key—that's a literal string!
+That's not an API key. That's a literal string.
 
----
-
-## The Investigation
-
-### Red Herring #1: SHA-1 Fingerprint Mismatch
-
-Our first instinct was correct but incomplete. EAS Build uses its own managed keystore, which has a different SHA-1 fingerprint than your local debug keystore.
-
-```bash
-# Get EAS keystore SHA-1
-eas credentials --platform android
-```
-
-We added this SHA-1 to our Google Cloud Console API key restrictions. Push notifications started working (FIS_AUTH_ERROR was resolved), but the map still wouldn't load.
-
-### Red Herring #2: expo-location Conflict
-
-We discovered [Expo Issue #21103](https://github.com/expo/expo/issues/21103)—a known conflict between `expo-location` and `react-native-maps` on Android development builds. We added a delayed initialization workaround:
-
-```typescript
-const [isMapComponentReady, setIsMapComponentReady] = useState(
-  Platform.OS !== 'android'
-);
-
-useEffect(() => {
-  if (Platform.OS === 'android') {
-    const timer = setTimeout(() => {
-      setIsMapComponentReady(true);
-    }, 500);
-    return () => clearTimeout(timer);
-  }
-}, []);
-```
-
-This helped with some edge cases, but the core issue remained.
-
-### The Real Culprit: EAS Secret Override
-
-After hours of debugging, we finally noticed something in the EAS build logs:
-
-```
-Environment variables loaded from the "development" environment on EAS:
-  EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID...
-
-Environment variables loaded from the "development" build profile "env" configuration:
-  EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID...
-
-The following environment variables are defined in both...
-The values from the build profile configuration will be used.
-```
-
-**"The values from the build profile configuration will be used."**
-
-This was the smoking gun.
-
----
-
-## The Root Cause
-
-Here's what our `eas.json` looked like:
-
+### What We Had (Wrong)
 ```json
+// eas.json
 {
   "build": {
     "development": {
@@ -98,154 +28,288 @@ Here's what our `eas.json` looked like:
 }
 ```
 
-We assumed `@SECRET_NAME` was interpolation syntax—that EAS would replace it with the actual secret value. **We were wrong.**
+### The Misconception
+We assumed `@SECRET_NAME` was interpolation syntax. It's not. Neither is `$(SECRET_NAME)`. Both become literal strings.
 
-### The Truth About EAS Secrets
+### The Reality
+EAS secrets are **auto-injected** into builds. When you create a secret via `eas secret:create`, it's automatically available as `process.env.SECRET_NAME`. No reference needed.
 
-**EAS secrets are automatically injected into your build environment. You don't need to reference them in `eas.json` at all.**
+### The Conflict
+When the same variable exists in both EAS secrets AND `eas.json` `env`, the `eas.json` value wins. Our literal `@SECRET_NAME` string overwrote the real secret.
 
-When you create a secret with:
-```bash
-eas secret:create --scope project --name EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID --value "AIzaSy..."
-```
-
-EAS automatically makes it available as `process.env.EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID` during the build. No configuration needed.
-
-But here's the gotcha: **If you define the same variable in `eas.json`'s `env` field, your value overrides the secret.**
-
-So our `@EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID` wasn't being interpolated—it was being used as the literal API key value!
-
----
-
-## The Fix
-
-The solution was embarrassingly simple. Remove the secret references from `eas.json`:
-
+### The Fix
 ```json
+// eas.json - just remove the secret references
 {
   "build": {
     "development": {
       "env": {
         "APP_VARIANT": "development"
-        // Secrets like EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID
-        // are auto-loaded from EAS - don't put them here!
+        // Don't put secrets here - they auto-load
       }
     }
   }
 }
 ```
 
-That's it. After this change, the build logs showed:
-
+### The Evidence
+EAS build logs show exactly what's happening:
 ```
-Environment variables from EAS: EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID...
-Environment variables from build profile: APP_VARIANT...
+Environment variables loaded from "development" environment on EAS: EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID
+Environment variables loaded from build profile "env": EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID
+The values from the build profile configuration will be used.  ← Problem!
 ```
 
-No more conflict. The real API key was used. **The map finally loaded.**
+**End of post-mortem.** If that's all you needed, you're done. Below is the complete walkthrough.
 
 ---
 
-## What The Documentation Doesn't Tell You
+## Part 2: Complete Setup Guide
 
-The [official Expo documentation](https://docs.expo.dev/eas/environment-variables/) explains how to create secrets and how they're available in your build. But it doesn't explicitly warn you about this override behavior.
+### What is EAS?
 
-The `eas.json` documentation even says the `env` field should only be used for "values you would commit to your git repository and not for passwords or secrets." But it doesn't explain *why*—that putting secrets there will actually break them.
+**EAS (Expo Application Services)** is Expo's cloud build service. Instead of building your React Native app locally, EAS compiles it on their servers and gives you an installable APK/IPA.
 
-### The Syntax Confusion
-
-We searched extensively for documentation about `@SECRET_NAME` and `$(SECRET_NAME)` syntax. **Neither is a valid interpolation syntax in `eas.json`.**
-
-- `@SECRET_NAME` → becomes literal string `@SECRET_NAME`
-- `$(SECRET_NAME)` → becomes literal string `$(SECRET_NAME)`
-
-These might work in shell scripts during the build, but not in the `eas.json` configuration itself.
+**Why use secrets?** API keys, Firebase credentials, and other sensitive values shouldn't be committed to git. EAS secrets let you inject them at build time without exposing them in your codebase.
 
 ---
 
-## The Complete Debugging Checklist
+### Step 1: Create Your EAS Secrets
 
-If your Google Maps (or any API key) isn't working in EAS builds:
-
-### 1. Check Your EAS Build Logs
-
-Look for this warning:
-```
-The following environment variables are defined in both...
-The values from the build profile configuration will be used.
-```
-
-If your API key variable is in this list, **remove it from `eas.json`**.
-
-### 2. Verify Secrets Are Created
-
+First, make sure you have EAS CLI installed:
 ```bash
+npm install -g eas-cli
+eas login
+```
+
+Create your secrets:
+```bash
+# Google Maps API Key
+eas secret:create \
+  --scope project \
+  --name EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID \
+  --value "AIzaSyYourActualKeyHere"
+
+# Verify it was created
 eas secret:list
 ```
 
-### 3. Don't Reference Secrets in eas.json
+**What this does:** Stores your API key on Expo's servers, encrypted. It will be injected into your build environment automatically.
+
+---
+
+### Step 2: Configure eas.json (The Right Way)
+
+Here's a correct `eas.json` configuration:
 
 ```json
-// ❌ WRONG
-"env": {
-  "EXPO_PUBLIC_API_KEY": "@EXPO_PUBLIC_API_KEY"
-}
-
-// ✅ CORRECT - just don't include it
-"env": {
-  "APP_VARIANT": "development"
+{
+  "cli": {
+    "version": ">= 14.2.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "APP_VARIANT": "development"
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "production": {
+      "distribution": "store",
+      "env": {
+        "APP_VARIANT": "production"
+      },
+      "android": {
+        "buildType": "app-bundle"
+      }
+    }
+  }
 }
 ```
 
-### 4. Check SHA-1 Restrictions
+**Notice what's NOT in the `env` field:** Your API keys. They load automatically from EAS secrets.
 
+---
+
+### Step 3: Use Secrets in Your Code
+
+In `app.config.js` or `app.config.ts`:
+
+```javascript
+export default {
+  expo: {
+    name: "MyApp",
+    // ... other config
+    android: {
+      config: {
+        googleMaps: {
+          apiKey: process.env.EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID,
+        },
+      },
+    },
+  },
+};
+```
+
+**How it works:** During EAS build, `process.env.EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID` contains your actual API key (from the secret you created). This gets baked into the native Android configuration.
+
+---
+
+### Step 4: Handle File-Based Secrets (google-services.json)
+
+Some secrets are files, not strings. For Firebase's `google-services.json`:
+
+**1. Encode the file:**
+```bash
+base64 -w 0 android/app/google-services.json
+# Copy the output
+```
+
+**2. Create the secret:**
+```bash
+eas secret:create \
+  --scope project \
+  --name GOOGLE_SERVICES_JSON_BASE64 \
+  --value "paste-your-base64-here"
+```
+
+**3. Create a build hook** (`scripts/setup-google-services.js`):
+```javascript
+const fs = require('fs');
+const path = require('path');
+
+const base64 = process.env.GOOGLE_SERVICES_JSON_BASE64;
+
+if (base64) {
+  const content = Buffer.from(base64, 'base64').toString('utf-8');
+  const outputPath = path.join(__dirname, '..', 'android', 'app', 'google-services.json');
+
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  fs.writeFileSync(outputPath, content);
+
+  console.log('✓ google-services.json created from secret');
+}
+```
+
+**4. Register the hook** in `package.json`:
+```json
+{
+  "scripts": {
+    "eas-build-post-install": "node scripts/setup-google-services.js"
+  }
+}
+```
+
+---
+
+### Step 5: Configure Google Cloud API Key Restrictions
+
+Your API key should be restricted to your app. Here's how:
+
+**1. Get your EAS build's SHA-1 fingerprint:**
 ```bash
 eas credentials --platform android
 ```
+Look for the "Keystore" section and copy the SHA-1.
 
-Add the EAS keystore SHA-1 to your Google Cloud Console API key restrictions.
+**2. In Google Cloud Console:**
+- Go to APIs & Services → Credentials
+- Click your API key
+- Under "Application restrictions", select "Android apps"
+- Add an item:
+  - Package name: `com.yourcompany.yourapp`
+  - SHA-1: (paste from step 1)
 
-### 5. Verify API is Enabled
+**3. Enable required APIs:**
+- Maps SDK for Android
+- Maps SDK for iOS (if applicable)
 
-In Google Cloud Console, ensure "Maps SDK for Android" is enabled for your project.
+---
+
+### Step 6: Build and Verify
+
+```bash
+eas build --platform android --profile development
+```
+
+**Check the build logs for this pattern:**
+
+✅ **Correct** (secret loads from EAS, not overridden):
+```
+Environment variables from "development" environment on EAS: EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID
+Environment variables from build profile "env": APP_VARIANT
+```
+
+❌ **Wrong** (secret is being overridden):
+```
+Environment variables from "development" environment on EAS: EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID
+Environment variables from build profile "env": EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID
+The values from the build profile configuration will be used.
+```
+
+If you see the second pattern, you have a reference in your `eas.json` that needs to be removed.
+
+---
+
+## Common Mistakes
+
+| Mistake | Why It's Wrong |
+|---------|---------------|
+| `"API_KEY": "@API_KEY"` | Literal string, not interpolation |
+| `"API_KEY": "$(API_KEY)"` | Literal string, not interpolation |
+| `"API_KEY": "$API_KEY"` | Literal string, not interpolation |
+| `"API_KEY": "${API_KEY}"` | Literal string, not interpolation |
+
+**The correct approach:** Don't include the variable in `eas.json` at all. It auto-loads.
+
+---
+
+## Troubleshooting Checklist
+
+- [ ] Secret exists: `eas secret:list` shows your variable
+- [ ] No override in eas.json: Your secret isn't in the `env` field
+- [ ] Build logs confirm: Secret loads from EAS, not build profile
+- [ ] API enabled: Google Cloud Console has Maps SDK enabled
+- [ ] Key restricted correctly: SHA-1 matches EAS keystore
+- [ ] Native logs clean: `adb logcat | grep -i maps` shows no API key errors
+
+---
+
+## Quick Reference
+
+```bash
+# Create a secret
+eas secret:create --scope project --name MY_SECRET --value "secret-value"
+
+# List secrets
+eas secret:list
+
+# Delete a secret
+eas secret:delete MY_SECRET
+
+# Get EAS keystore SHA-1
+eas credentials --platform android
+
+# Build with logs
+eas build --platform android --profile development
+```
 
 ---
 
 ## Key Takeaways
 
-1. **EAS secrets auto-load** — No special syntax needed in `eas.json`
-2. **eas.json `env` overrides secrets** — Only put non-sensitive values there
-3. **`@` and `$()` are NOT interpolation** — They become literal strings
-4. **Read the build logs** — They clearly show which values are being used
-5. **SHA-1 fingerprints matter** — EAS uses different keystore than local development
+1. **EAS secrets auto-inject** — no syntax needed to reference them
+2. **eas.json `env` overrides secrets** — only put non-sensitive config there
+3. **There is no interpolation syntax** — `@`, `$()`, `${}` all become literals
+4. **Read the build logs** — they tell you exactly what's being used
+5. **SHA-1 matters** — EAS keystore differs from local debug keystore
 
 ---
 
-## The Irony
+*Found this helpful? Share it with someone debugging the same issue. Questions? Drop a comment below.*
 
-After all this debugging, the fix was a three-line deletion. But those hours weren't wasted—they gave us deep understanding of:
-
-- How EAS Build processes environment variables
-- The relationship between EAS secrets and `eas.json` configuration
-- Android native debugging with `adb logcat`
-- Google API key restrictions and SHA-1 fingerprints
-- The expo-location/react-native-maps conflict
-
-Sometimes the most valuable lessons come from the most frustrating bugs.
-
----
-
-## Resources
-
-- [Expo EAS Environment Variables](https://docs.expo.dev/eas/environment-variables/)
-- [Configure EAS Build with eas.json](https://docs.expo.dev/build/eas-json/)
-- [expo-location conflict with react-native-maps (Issue #21103)](https://github.com/expo/expo/issues/21103)
-- [Our full debugging documentation](https://github.com/NomadCrew/nomad-crew-frontend/blob/main/docs/EAS_SECRETS_GUIDE.md)
-
----
-
-*Have you encountered similar issues with EAS secrets? Share your debugging stories in the comments!*
-
----
-
-**Tags**: #ReactNative #Expo #EAS #GoogleMaps #Debugging #MobileDevelopment #JavaScript #TypeScript
+**Tags:** `#ReactNative` `#Expo` `#EAS` `#GoogleMaps` `#MobileDevelopment`
