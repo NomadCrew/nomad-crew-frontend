@@ -1,6 +1,21 @@
-# EAS Secrets Don't Need References: The Gotcha That Cost Us 6 Hours
+# Expo EAS Build: Google Maps Not Working with react-native-maps? Fix Your API Key Configuration (2025/2026)
 
-*How a single misconception about Expo's EAS secrets broke our Google Maps integration—and the complete guide to doing it right.*
+*Why your Google Maps API key fails in Expo EAS builds for Android & iOS—and the complete react-native-maps configuration guide.*
+
+> **Keywords:** Expo EAS build, Google Maps not working, react-native-maps, Android, iOS, API key configuration, config plugin, provider google, 2025, 2026
+
+---
+
+## The Problem
+
+You've configured `react-native-maps` with `provider="google"` in your Expo app. It works perfectly in development. But after running `eas build`, Google Maps shows:
+- Infinite loading spinner (Android)
+- Blank map or "Google Maps cannot load" (iOS)
+- Gray tiles with no map data
+
+You've set up your Expo config plugin, added your Google Maps API key, and everything *looks* correct. But it's not working.
+
+**This guide explains why—and how to fix it.**
 
 ---
 
@@ -135,15 +150,26 @@ Here's a correct `eas.json` configuration:
 
 ---
 
-### Step 3: Use Secrets in Your Code
+### Step 3: Configure react-native-maps with Expo Config Plugin
 
-In `app.config.js` or `app.config.ts`:
+In `app.config.js` or `app.config.ts`, set up the Google Maps provider for both Android and iOS:
 
 ```javascript
 export default {
   expo: {
     name: "MyApp",
     // ... other config
+
+    plugins: [
+      [
+        "react-native-maps",
+        {
+          // Uses Google Maps provider instead of Apple Maps on iOS
+          "googleMapsApiKey": process.env.EXPO_PUBLIC_GOOGLE_API_KEY_IOS
+        }
+      ]
+    ],
+
     android: {
       config: {
         googleMaps: {
@@ -151,11 +177,28 @@ export default {
         },
       },
     },
+
+    ios: {
+      config: {
+        googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_API_KEY_IOS,
+      },
+    },
   },
 };
 ```
 
-**How it works:** During EAS build, `process.env.EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID` contains your actual API key (from the secret you created). This gets baked into the native Android configuration.
+**In your MapView component:**
+```jsx
+import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
+
+<MapView
+  provider={PROVIDER_GOOGLE}  // Force Google Maps on both platforms
+  style={{ flex: 1 }}
+  region={region}
+/>
+```
+
+**How it works:** During EAS build, `process.env.EXPO_PUBLIC_GOOGLE_API_KEY_*` contains your actual API key (from the secret you created). The Expo config plugin injects this into the native Android/iOS configuration.
 
 ---
 
@@ -310,6 +353,58 @@ eas build --platform android --profile development
 
 ---
 
+## FAQ: Common Google Maps + Expo EAS Issues
+
+### Q: Why does react-native-maps work locally but not in EAS build?
+**A:** Local development uses your machine's environment variables. EAS builds run on Expo's servers where only EAS secrets are available. If you reference secrets incorrectly in `eas.json`, they become literal strings.
+
+### Q: Do I need the react-native-maps config plugin?
+**A:** Yes, for Expo managed workflow. The config plugin (`expo-config-plugin`) automatically configures native Android and iOS projects with your Google Maps API key during prebuild.
+
+### Q: Google Maps works on Android but not iOS (or vice versa)?
+**A:** Check that you've:
+1. Created separate API keys for each platform (or one unrestricted key for development)
+2. Enabled both "Maps SDK for Android" AND "Maps SDK for iOS" in Google Cloud Console
+3. Set both `EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID` and `EXPO_PUBLIC_GOOGLE_API_KEY_IOS` secrets
+
+### Q: I see "Google Maps cannot be loaded" on iOS
+**A:** Ensure your `app.config.js` includes the iOS config:
+```javascript
+ios: {
+  config: {
+    googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_API_KEY_IOS,
+  },
+}
+```
+
+### Q: Maps show but tiles are gray/missing
+**A:** This usually means the API key is being sent but is invalid or restricted incorrectly. Check your Google Cloud Console API key restrictions match your app's bundle ID and SHA-1 fingerprint.
+
+### Q: How do I debug Google Maps API key issues?
+**A:** Use native logs:
+```bash
+# Android
+adb logcat | grep -i "maps\|api\|key"
+
+# iOS (in Xcode)
+# Filter console for "Google" or "Maps"
+```
+
+---
+
+## Related Searches This Article Answers
+
+- expo eas build google maps not loading
+- react-native-maps google provider not working eas
+- expo config plugin react-native-maps api key
+- eas.json environment variables not working
+- google maps api key not set expo build
+- react-native-maps blank map eas build
+- expo managed workflow google maps android ios
+- EXPO_PUBLIC environment variable not available eas build
+
+---
+
 *Found this helpful? Share it with someone debugging the same issue. Questions? Drop a comment below.*
 
-**Tags:** `#ReactNative` `#Expo` `#EAS` `#GoogleMaps` `#MobileDevelopment`
+**Tags:** `#ReactNative` `#Expo` `#EAS` `#GoogleMaps` `#react-native-maps` `#MobileDevelopment` `#Android` `#iOS` `#2025`
