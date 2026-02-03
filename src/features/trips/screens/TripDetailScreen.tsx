@@ -183,6 +183,15 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
             return;
           }
 
+          // Handle connection acknowledgment events from server (not an error)
+          if (typeof rawEvent === 'object' && rawEvent !== null && 'type' in rawEvent) {
+            const eventType = (rawEvent as { type: string }).type;
+            if (eventType === 'connected' || eventType === 'pong') {
+              logger.debug('WS', `TripDetailScreen: Received ${eventType} event`, rawEvent);
+              return;
+            }
+          }
+
           logger.error(
             'WS',
             'TripDetailScreen: Received completely unknown event from WebSocket',
