@@ -16,9 +16,9 @@ export interface SectionHeaderProps {
 export function SectionHeader({ title, style }: SectionHeaderProps) {
   const styles = useThemedStyles((theme) => ({
     container: {
-      marginTop: theme.spacing?.lg ?? 24,
-      marginBottom: theme.spacing?.sm ?? 8,
-      paddingHorizontal: theme.spacing?.md ?? 16,
+      marginTop: theme.spacing?.stack?.lg ?? 24,
+      marginBottom: theme.spacing?.stack?.sm ?? 8,
+      paddingHorizontal: theme.spacing?.inset?.md ?? 16,
     },
   }));
 
