@@ -98,9 +98,10 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
   }, [isLoading, mapLoaded]);
 
   // Use Supabase Realtime location data with defensive check - memoized
+  // Use optional chaining and nullish coalescing for safety
   const memberLocationArray = useMemo(() => {
-    return supabaseLocations.locations || [];
-  }, [supabaseLocations.locations]);
+    return supabaseLocations?.locations ?? [];
+  }, [supabaseLocations?.locations]);
 
   // Convert trip members to the format needed for color assignment
   const tripMembers: TripMember[] = (trip.members || []).map((m) => ({

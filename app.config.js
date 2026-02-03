@@ -25,7 +25,9 @@ export default {
     icon: './assets/images/icon.png',
     scheme: 'nomadcrew',
     userInterfaceStyle: 'automatic',
-    newArchEnabled: true,
+    // Disabled until react-native-maps has stable Fabric support
+    // See: https://github.com/react-native-maps/react-native-maps/discussions/5355
+    newArchEnabled: false,
     splash: {
       image: './assets/images/icon.png',
       resizeMode: 'contain',
