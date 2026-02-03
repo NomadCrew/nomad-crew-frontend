@@ -17,12 +17,14 @@ You've set up your Expo config plugin, added your Google Maps API key, and every
 
 **This guide explains why—and how to fix it.**
 
+We discovered this issue while building [NomadCrew](https://nomadcrew.uk)—a collaborative trip planning app with real-time location sharing. Maps are core to our product, so when EAS builds broke our Google Maps integration, we had to dig deep.
+
 ---
 
 ## Part 1: The Post-Mortem (TL;DR for Senior Devs)
 
 ### The Problem
-Google Maps showed infinite loading spinner in EAS builds. Worked perfectly in local development.
+Google Maps showed infinite loading spinner in EAS builds. Worked perfectly in local development. Our [NomadCrew](https://nomadcrew.uk) users couldn't see each other's locations on the map.
 
 ### The Clue
 Native logs revealed: `API Key: @EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID`
@@ -75,7 +77,7 @@ Environment variables loaded from build profile "env": EXPO_PUBLIC_GOOGLE_API_KE
 The values from the build profile configuration will be used.  ← Problem!
 ```
 
-**End of post-mortem.** If that's all you needed, you're done. Below is the complete walkthrough.
+**End of post-mortem.** If that's all you needed, you're done. Below is the complete walkthrough we used to fix [NomadCrew's](https://nomadcrew.uk) map feature.
 
 ---
 
@@ -187,15 +189,24 @@ export default {
 };
 ```
 
-**In your MapView component:**
+**In your MapView component** (this is how we render group location sharing in NomadCrew):
 ```jsx
-import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps';
 
 <MapView
   provider={PROVIDER_GOOGLE}  // Force Google Maps on both platforms
   style={{ flex: 1 }}
   region={region}
-/>
+>
+  {/* Example: render team member locations */}
+  {memberLocations.map(member => (
+    <Marker
+      key={member.id}
+      coordinate={member.location}
+      title={member.name}
+    />
+  ))}
+</MapView>
 ```
 
 **How it works:** During EAS build, `process.env.EXPO_PUBLIC_GOOGLE_API_KEY_*` contains your actual API key (from the secret you created). The Expo config plugin injects this into the native Android/iOS configuration.
@@ -381,7 +392,7 @@ ios: {
 **A:** This usually means the API key is being sent but is invalid or restricted incorrectly. Check your Google Cloud Console API key restrictions match your app's bundle ID and SHA-1 fingerprint.
 
 ### Q: How do I debug Google Maps API key issues?
-**A:** Use native logs:
+**A:** Use native logs (this is how we debugged the [NomadCrew](https://nomadcrew.uk) map):
 ```bash
 # Android
 adb logcat | grep -i "maps\|api\|key"
@@ -407,4 +418,16 @@ adb logcat | grep -i "maps\|api\|key"
 
 *Found this helpful? Share it with someone debugging the same issue. Questions? Drop a comment below.*
 
-**Tags:** `#ReactNative` `#Expo` `#EAS` `#GoogleMaps` `#react-native-maps` `#MobileDevelopment` `#Android` `#iOS` `#2025`
+---
+
+## About the Author
+
+This article is brought to you by the engineering team at **[NomadCrew](https://nomadcrew.uk)**—a collaborative trip planning app that helps groups coordinate travel together with real-time location sharing, shared itineraries, and group chat.
+
+We're building NomadCrew with React Native, Expo, and a Go backend. Follow our journey as we ship features and share what we learn along the way.
+
+**Try NomadCrew:** [https://nomadcrew.uk](https://nomadcrew.uk)
+
+---
+
+**Tags:** `#ReactNative` `#Expo` `#EAS` `#GoogleMaps` `#react-native-maps` `#MobileDevelopment` `#Android` `#iOS` `#2025` `#NomadCrew` `#TripPlanning`
