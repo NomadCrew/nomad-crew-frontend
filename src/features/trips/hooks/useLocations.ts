@@ -60,9 +60,12 @@ export function useLocations({ tripId, autoConnect = true }: UseLocationsParams)
       setIsLoading(true);
       setError(null);
       const response = await api.get(API_PATHS.location.byTrip(tripId));
-      
+
       if (isMountedRef.current) {
-        setLocations(response.data || []);
+        // API returns paginated response: { locations: [], pagination: {...} }
+        // Extract the locations array from the response
+        const locationsData = response.data?.locations || response.data || [];
+        setLocations(Array.isArray(locationsData) ? locationsData : []);
       }
     } catch (err) {
       logger.error('useLocations', 'Failed to fetch locations:', err);

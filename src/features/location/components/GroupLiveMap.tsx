@@ -48,6 +48,23 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
   const { theme } = useAppTheme();
   const mapRef = useRef<MapView>(null);
   const isMountedRef = useRef(true); // Track if component is mounted
+
+  // Workaround for expo-location conflict with react-native-maps on Android
+  // Delay MapView rendering to avoid initialization race condition
+  // See: https://github.com/expo/expo/issues/21103
+  const [isMapComponentReady, setIsMapComponentReady] = useState(Platform.OS !== 'android');
+
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      const timer = setTimeout(() => {
+        if (isMountedRef.current) {
+          console.log('[MapDebug] Delayed map initialization for Android');
+          setIsMapComponentReady(true);
+        }
+      }, 500); // 500ms delay to let expo-location initialize first
+      return () => clearTimeout(timer);
+    }
+  }, []);
   const hasCalledFitToMarkersRef = useRef(false); // Prevent duplicate fitToMarkers calls
   const { user } = useAuthStore();
   const {
@@ -98,9 +115,10 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
   }, [isLoading, mapLoaded]);
 
   // Use Supabase Realtime location data with defensive check - memoized
-  // Use optional chaining and nullish coalescing for safety
   const memberLocationArray = useMemo(() => {
-    return supabaseLocations?.locations ?? [];
+    // Handle both array and paginated response formats
+    const locations = supabaseLocations?.locations;
+    return Array.isArray(locations) ? locations : [];
   }, [supabaseLocations?.locations]);
 
   // Convert trip members to the format needed for color assignment
@@ -307,16 +325,30 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
   const renderMap = () => {
     console.log('[MapDebug] renderMap called with region:', JSON.stringify(region));
 
+    // Workaround: Don't render MapView until delayed initialization is complete
+    // This avoids the expo-location conflict on Android
+    if (!isMapComponentReady) {
+      console.log('[MapDebug] Waiting for delayed map initialization...');
+      return (
+        <View style={[styles(theme).map, { justifyContent: 'center', alignItems: 'center' }]}>
+          <ActivityIndicator size="large" color={theme.colors.primary?.main || '#FF8F5E'} />
+          <Text style={{ marginTop: 10, color: theme.colors.content.secondary }}>
+            Initializing map...
+          </Text>
+        </View>
+      );
+    }
+
     return (
       <MapView
         key={`map-${trip.id}-${Platform.OS}-${mapLoadAttempts}`}
         ref={mapRef}
         style={styles(theme).map}
         provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-        initialRegion={region}
+        region={region}
         onMapReady={handleMapReady}
         onMapLoaded={() => console.log('[MapDebug] onMapLoaded fired')}
-        loadingEnabled={isLoading}
+        loadingEnabled={!mapLoaded}
         showsUserLocation={isLocationSharingEnabled}
         showsMyLocationButton
         showsCompass
