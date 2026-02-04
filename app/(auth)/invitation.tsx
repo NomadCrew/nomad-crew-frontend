@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '@/src/features/auth/store';
 import { ThemedView } from '@/components/ThemedView';
 import { useTripStore } from '@/src/features/trips/store';
@@ -150,9 +149,10 @@ export default function InvitationScreen() {
     if (!user) {
       logger.debug('INVITATION', 'No user logged in, storing invitation for later');
       try {
-        await AsyncStorage.setItem('pendingInvitation', token);
+        // Use store's persistInvitation to match checkPendingInvitations key format
+        await useTripStore.getState().persistInvitation(token);
       } catch (storageError) {
-        logger.error('INVITATION', 'Failed to store pending invitation:', storageError);
+        logger.error('INVITATION', 'Failed to persist invitation via store:', storageError);
         Alert.alert(
           'Storage Error',
           'Unable to save invitation. Please try the link again after logging in.'
