@@ -2,16 +2,67 @@
  * @jest-environment jsdom
  */
 
+// Mock the auth service FIRST before any imports that might trigger it
+// This is necessary because the auth service checks env vars at module load time
+jest.mock('@/src/features/auth/service', () => ({
+  supabase: {
+    auth: {
+      signUp: jest.fn(),
+      signInWithPassword: jest.fn(),
+      signInWithIdToken: jest.fn(),
+      signOut: jest.fn(),
+      getSession: jest.fn().mockResolvedValue({ data: { session: null }, error: null }),
+      refreshSession: jest.fn().mockResolvedValue({ data: { session: null }, error: null }),
+      onAuthStateChange: jest.fn(() => ({
+        data: { subscription: { unsubscribe: jest.fn() } },
+      })),
+    },
+  },
+  refreshSupabaseSession: jest.fn().mockResolvedValue({ data: { session: null }, error: null }),
+  registerPushTokenService: jest.fn(),
+  deregisterPushTokenService: jest.fn(),
+}));
+
+// Mock expo-location to avoid native module import issues
+jest.mock('expo-location', () => ({
+  requestForegroundPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
+  requestBackgroundPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
+  getCurrentPositionAsync: jest.fn().mockResolvedValue({
+    coords: { latitude: 0, longitude: 0 },
+    timestamp: Date.now(),
+  }),
+  watchPositionAsync: jest.fn().mockReturnValue({ remove: jest.fn() }),
+  LocationAccuracy: { High: 6 },
+}));
+
+// Mock the location store to avoid expo-location dependency chain
+jest.mock('@/src/features/location/store/useLocationStore', () => ({
+  useLocationStore: {
+    getState: jest.fn().mockReturnValue({
+      updateMemberLocation: jest.fn(),
+    }),
+  },
+}));
+
+// Mock the notification store
+jest.mock('@/src/features/notifications/store/useNotificationStore', () => ({
+  useNotificationStore: {
+    getState: jest.fn().mockReturnValue({
+      handleIncomingNotification: jest.fn(),
+    }),
+  },
+}));
+
 import { act } from '@testing-library/react-native';
 import { useChatStore } from '@/src/store/useChatStore';
 import { resetAllStores, setupAuthenticatedUser } from '../helpers';
 import { createMockUser } from '../factories';
 import { ChatMessage, ChatMessageWithStatus, ReadReceipt } from '@/src/types/chat';
-import { WebSocketManager } from '@/src/websocket/WebSocketManager';
+import { WebSocketManager } from '@/src/features/websocket/WebSocketManager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { api } from '@/src/api/api-client';
-import { chatService } from '@/src/services/chatService';
+import { chatService } from '@/src/features/chat/service';
 
 // Mock dependencies
 jest.mock('@/src/api/api-client', () => ({
@@ -24,7 +75,8 @@ jest.mock('@/src/api/api-client', () => ({
   registerAuthHandlers: jest.fn(),
 }));
 
-jest.mock('@/src/services/chatService', () => ({
+// Mock the chatService at the new path (features/chat/service.ts)
+jest.mock('@/src/features/chat/service', () => ({
   chatService: {
     getChatMessages: jest.fn(),
   },
@@ -35,10 +87,12 @@ jest.mock('@/src/utils/logger', () => ({
     debug: jest.fn(),
     error: jest.fn(),
     warn: jest.fn(),
+    info: jest.fn(),
   },
 }));
 
-jest.mock('@/src/websocket/WebSocketManager', () => ({
+// Mock the WebSocketManager at the new path (features/websocket/WebSocketManager.ts)
+jest.mock('@/src/features/websocket/WebSocketManager', () => ({
   WebSocketManager: {
     getInstance: jest.fn(),
   },
@@ -52,12 +106,16 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 }));
 
 // Mock uuid module - create a manual mock since uuid might not be installed
-jest.mock('uuid', () => {
-  let counter = 0;
-  return {
-    v4: jest.fn(() => `mock-uuid-${++counter}-${Date.now()}`),
-  };
-}, { virtual: true });
+jest.mock(
+  'uuid',
+  () => {
+    let counter = 0;
+    return {
+      v4: jest.fn(() => `mock-uuid-${++counter}-${Date.now()}`),
+    };
+  },
+  { virtual: true }
+);
 
 describe('useChatStore', () => {
   const mockUser = createMockUser({ id: 'user-123', username: 'testuser' });
@@ -164,9 +222,7 @@ describe('useChatStore', () => {
     });
 
     it('should handle AsyncStorage errors gracefully', async () => {
-      (AsyncStorage.getItem as jest.Mock).mockRejectedValue(
-        new Error('Storage error')
-      );
+      (AsyncStorage.getItem as jest.Mock).mockRejectedValue(new Error('Storage error'));
 
       await useChatStore.getState().initializeStore();
 
@@ -352,7 +408,9 @@ describe('useChatStore', () => {
 
       const state = useChatStore.getState();
       expect(state.messagesByTripId[tripId]).toHaveLength(2);
-      expect(state.messagesByTripId[tripId].find(m => m.message.id === 'old-msg')).toBeUndefined();
+      expect(
+        state.messagesByTripId[tripId].find((m) => m.message.id === 'old-msg')
+      ).toBeUndefined();
     });
 
     it('should remove duplicate messages', async () => {
@@ -396,9 +454,7 @@ describe('useChatStore', () => {
     });
 
     it('should handle fetch errors', async () => {
-      (chatService.getChatMessages as jest.Mock).mockRejectedValue(
-        new Error('Network error')
-      );
+      (chatService.getChatMessages as jest.Mock).mockRejectedValue(new Error('Network error'));
 
       await useChatStore.getState().fetchMessages(tripId);
 
@@ -408,9 +464,7 @@ describe('useChatStore', () => {
     });
 
     it('should persist messages after fetching', async () => {
-      const mockMessages: ChatMessage[] = [
-        createMockMessage({ id: 'msg-1' }),
-      ];
+      const mockMessages: ChatMessage[] = [createMockMessage({ id: 'msg-1' })];
 
       (chatService.getChatMessages as jest.Mock).mockResolvedValue({
         messages: mockMessages,
@@ -592,10 +646,10 @@ describe('useChatStore', () => {
 
       await useChatStore.getState().markAsRead(tripId, messageId);
 
-      expect(api.post).toHaveBeenCalledWith(
-        `/v1/trips/${tripId}/messages/read`,
-        { message_id: messageId }
-      );
+      // Note: The API path changed from /messages/read to /chat/messages/read
+      expect(api.post).toHaveBeenCalledWith(`/v1/trips/${tripId}/chat/messages/read`, {
+        message_id: messageId,
+      });
 
       const state = useChatStore.getState();
       expect(state.lastReadMessageIds[tripId]).toBe(messageId);
@@ -661,10 +715,7 @@ describe('useChatStore', () => {
 
       await useChatStore.getState().markAsRead(tripId, messageId);
 
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
-        'nomad_crew_last_read',
-        expect.any(String)
-      );
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith('nomad_crew_last_read', expect.any(String));
     });
   });
 
@@ -869,9 +920,7 @@ describe('useChatStore', () => {
       // Set up initial typing state
       useChatStore.setState({
         typingUsers: {
-          [tripId]: [
-            { userId: 'user-2', name: 'User 2', timestamp: Date.now() },
-          ],
+          [tripId]: [{ userId: 'user-2', name: 'User 2', timestamp: Date.now() }],
         },
       });
 
@@ -895,9 +944,7 @@ describe('useChatStore', () => {
       const initialTimestamp = Date.now() - 1000;
       useChatStore.setState({
         typingUsers: {
-          [tripId]: [
-            { userId: 'user-2', name: 'User 2', timestamp: initialTimestamp },
-          ],
+          [tripId]: [{ userId: 'user-2', name: 'User 2', timestamp: initialTimestamp }],
         },
       });
 
@@ -1015,9 +1062,7 @@ describe('useChatStore', () => {
       const messages = ['Message 1', 'Message 2', 'Message 3'];
 
       await Promise.all(
-        messages.map(content =>
-          useChatStore.getState().sendMessage({ tripId, content })
-        )
+        messages.map((content) => useChatStore.getState().sendMessage({ tripId, content }))
       );
 
       const state = useChatStore.getState();
@@ -1049,17 +1094,19 @@ describe('useChatStore', () => {
     });
 
     it('should handle rapid typing status updates', async () => {
-      const events = Array(10).fill(null).map(() => ({
-        type: 'TYPING_STATUS' as const,
-        tripId,
-        payload: {
-          userId: 'user-2',
-          isTyping: true,
-          username: 'User 2',
-        },
-      }));
+      const events = Array(10)
+        .fill(null)
+        .map(() => ({
+          type: 'TYPING_STATUS' as const,
+          tripId,
+          payload: {
+            userId: 'user-2',
+            isTyping: true,
+            username: 'User 2',
+          },
+        }));
 
-      events.forEach(event => useChatStore.getState().handleChatEvent(event));
+      events.forEach((event) => useChatStore.getState().handleChatEvent(event));
 
       const state = useChatStore.getState();
       // Should only have one typing user (no duplicates)
@@ -1067,9 +1114,7 @@ describe('useChatStore', () => {
     });
 
     it('should handle message persistence errors gracefully', async () => {
-      (AsyncStorage.setItem as jest.Mock).mockRejectedValue(
-        new Error('Storage full')
-      );
+      (AsyncStorage.setItem as jest.Mock).mockRejectedValue(new Error('Storage full'));
 
       const message = createMockMessage({ id: 'msg-1' });
 

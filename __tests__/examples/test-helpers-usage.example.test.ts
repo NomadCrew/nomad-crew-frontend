@@ -5,6 +5,75 @@
  * Use these patterns in your own tests for consistent, maintainable test code.
  */
 
+// Mock Supabase auth service BEFORE importing anything that depends on it
+jest.mock('@/src/features/auth/service', () => ({
+  supabase: {
+    auth: {
+      signUp: jest.fn(),
+      signInWithPassword: jest.fn(),
+      signInWithIdToken: jest.fn(),
+      signOut: jest.fn(),
+      getSession: jest.fn(),
+      refreshSession: jest.fn(),
+      onAuthStateChange: jest.fn(() => ({
+        data: {
+          subscription: {
+            unsubscribe: jest.fn(),
+          },
+        },
+      })),
+    },
+  },
+}));
+
+// Mock the supabaseClient module
+jest.mock('@/src/auth/supabaseClient', () => ({
+  supabase: {
+    auth: {
+      signUp: jest.fn(),
+      signInWithPassword: jest.fn(),
+      signInWithIdToken: jest.fn(),
+      signOut: jest.fn(),
+      getSession: jest.fn(),
+      refreshSession: jest.fn(),
+      onAuthStateChange: jest.fn(() => ({
+        data: {
+          subscription: {
+            unsubscribe: jest.fn(),
+          },
+        },
+      })),
+    },
+  },
+}));
+
+// Mock API client
+jest.mock('@/src/api/api-client', () => ({
+  api: {
+    get: jest.fn(),
+    post: jest.fn(),
+    put: jest.fn(),
+    patch: jest.fn(),
+    delete: jest.fn(),
+  },
+  apiClient: {
+    get: jest.fn(),
+    post: jest.fn(),
+    put: jest.fn(),
+    patch: jest.fn(),
+    delete: jest.fn(),
+  },
+  registerAuthHandlers: jest.fn(),
+  getCurrentUserProfile: jest.fn(),
+  onboardUser: jest.fn(),
+  updateContactEmail: jest.fn(),
+}));
+
+// Mock AsyncStorage
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
+);
+
 import { api } from '@/src/api/api-client';
 import { supabase } from '@/src/auth/supabaseClient';
 import { useAuthStore } from '@/src/store/useAuthStore';
@@ -28,11 +97,7 @@ import {
   mockAuthError,
 } from '@/__tests__/mocks/supabase.mock';
 
-import {
-  VALIDATION_ERROR,
-  AUTH_ERROR,
-  COMMON_AUTH_ERRORS,
-} from '@/__tests__/mocks/api-responses';
+import { VALIDATION_ERROR, AUTH_ERROR, COMMON_AUTH_ERRORS } from '@/__tests__/mocks/api-responses';
 
 // Import helpers
 import {
@@ -43,15 +108,7 @@ import {
   getTripState,
 } from '@/__tests__/helpers/store-helpers';
 
-import {
-  mockApiSuccess,
-  mockApiError,
-  createMockAxios,
-} from '@/__tests__/helpers/api-helpers';
-
-// Mock the modules
-jest.mock('@/src/auth/supabaseClient');
-jest.mock('@/src/api/api-client');
+import { mockApiSuccess, mockApiError, createMockAxios } from '@/__tests__/helpers/api-helpers';
 
 describe('Test Helpers Usage Examples', () => {
   beforeEach(() => {
@@ -168,9 +225,7 @@ describe('Test Helpers Usage Examples', () => {
   describe('API Mock Usage Examples', () => {
     it('mocks successful API response', async () => {
       const mockTrips = [createMockTrip(), createMockTrip({ id: 'trip-456' })];
-      jest.spyOn(api, 'get').mockImplementation(() =>
-        mockApiSuccess({ trips: mockTrips })
-      );
+      jest.spyOn(api, 'get').mockImplementation(() => mockApiSuccess({ trips: mockTrips }));
 
       const response = await api.get('/trips');
 
@@ -183,9 +238,7 @@ describe('Test Helpers Usage Examples', () => {
         email: 'Invalid email format',
       });
 
-      jest.spyOn(api, 'post').mockImplementation(() =>
-        mockApiError(400, errorResponse)
-      );
+      jest.spyOn(api, 'post').mockImplementation(() => mockApiError(400, errorResponse));
 
       await expect(api.post('/auth/register', {})).rejects.toMatchObject({
         response: {
@@ -196,9 +249,9 @@ describe('Test Helpers Usage Examples', () => {
     });
 
     it('mocks common auth errors', async () => {
-      jest.spyOn(api, 'post').mockImplementation(() =>
-        mockApiError(401, COMMON_AUTH_ERRORS.INVALID_CREDENTIALS)
-      );
+      jest
+        .spyOn(api, 'post')
+        .mockImplementation(() => mockApiError(401, COMMON_AUTH_ERRORS.INVALID_CREDENTIALS));
 
       await expect(api.post('/auth/login', {})).rejects.toMatchObject({
         response: {
@@ -213,9 +266,7 @@ describe('Test Helpers Usage Examples', () => {
       const session = createMockSession();
       const mockSupabase = supabase as jest.Mocked<typeof supabase>;
 
-      mockSupabase.auth.signInWithPassword.mockResolvedValue(
-        mockSuccessfulSignIn(session)
-      );
+      mockSupabase.auth.signInWithPassword.mockResolvedValue(mockSuccessfulSignIn(session));
 
       const result = await supabase.auth.signInWithPassword({
         email: 'test@example.com',
@@ -229,9 +280,7 @@ describe('Test Helpers Usage Examples', () => {
     it('mocks auth error', async () => {
       const mockSupabase = supabase as jest.Mocked<typeof supabase>;
 
-      mockSupabase.auth.signInWithPassword.mockResolvedValue(
-        mockAuthError('Invalid credentials')
-      );
+      mockSupabase.auth.signInWithPassword.mockResolvedValue(mockAuthError('Invalid credentials'));
 
       const result = await supabase.auth.signInWithPassword({
         email: 'test@example.com',
@@ -271,9 +320,22 @@ describe('Test Helpers Usage Examples', () => {
       // Setup: User is not authenticated
       setupUnauthenticatedUser();
 
-      // Mock Supabase sign-in
+      // Mock Supabase sign-in - must use the service module's supabase
+      // since that's what the auth store actually imports
+      const { supabase: authSupabase } = require('@/src/features/auth/service');
+      const { getCurrentUserProfile } = require('@/src/api/api-client');
+
+      const mockUser = createMockUser({
+        id: 'user-123',
+        email: 'test@example.com',
+        username: 'testuser',
+        firstName: 'Test',
+        lastName: 'User',
+      });
+
       const session = createMockSession({
         user: {
+          id: 'user-123',
           email: 'test@example.com',
           user_metadata: {
             username: 'testuser',
@@ -283,10 +345,10 @@ describe('Test Helpers Usage Examples', () => {
         } as any,
       });
 
-      const mockSupabase = supabase as jest.Mocked<typeof supabase>;
-      mockSupabase.auth.signInWithPassword.mockResolvedValue(
-        mockSuccessfulSignIn(session)
-      );
+      authSupabase.auth.signInWithPassword.mockResolvedValue(mockSuccessfulSignIn(session));
+
+      // Mock the getCurrentUserProfile function to return the mock user
+      getCurrentUserProfile.mockResolvedValue(mockUser);
 
       // Execute: Login
       await useAuthStore.getState().login({
@@ -313,9 +375,7 @@ describe('Test Helpers Usage Examples', () => {
         createMockTrip({ id: 'trip-456', name: 'Another Trip' }),
       ];
 
-      jest.spyOn(api, 'get').mockImplementation(() =>
-        mockApiSuccess(mockTrips)
-      );
+      jest.spyOn(api, 'get').mockImplementation(() => mockApiSuccess(mockTrips));
 
       // Execute: Fetch trips
       await useTripStore.getState().fetchTrips();
