@@ -55,11 +55,7 @@ Factories create consistent mock data objects for testing.
 ### User Factories
 
 ```typescript
-import {
-  createMockUser,
-  createMockAppleUser,
-  createMockMinimalUser
-} from '@/__tests__/factories';
+import { createMockUser, createMockAppleUser, createMockMinimalUser } from '@/__tests__/factories';
 
 // Basic user
 const user = createMockUser();
@@ -68,7 +64,7 @@ const user = createMockUser();
 const customUser = createMockUser({
   email: 'custom@example.com',
   firstName: 'John',
-  lastName: 'Doe'
+  lastName: 'Doe',
 });
 
 // Apple user
@@ -87,7 +83,7 @@ import {
   createMockTripWithMembers,
   createMockActiveTrip,
   createMockCompletedTrip,
-  createMockTripWithWeather
+  createMockTripWithWeather,
 } from '@/__tests__/factories';
 
 // Basic trip
@@ -98,8 +94,8 @@ const parisTrip = createMockTrip({
   name: 'Paris Adventure',
   destination: {
     address: 'Paris, France',
-    coordinates: { lat: 48.8566, lng: 2.3522 }
-  }
+    coordinates: { lat: 48.8566, lng: 2.3522 },
+  },
 });
 
 // Trip with members
@@ -115,7 +111,7 @@ const tripWithWeather = createMockTripWithWeather();
 // Individual member
 const member = createMockMember({
   userId: 'user-456',
-  role: 'admin'
+  role: 'admin',
 });
 ```
 
@@ -125,11 +121,11 @@ const member = createMockMember({
 import {
   createMockInvitation,
   createMockAcceptedInvitation,
-  createMockExpiredInvitation
+  createMockExpiredInvitation,
 } from '@/__tests__/factories';
 
 const invitation = createMockInvitation({
-  email: 'invitee@example.com'
+  email: 'invitee@example.com',
 });
 
 const acceptedInvitation = createMockAcceptedInvitation();
@@ -150,7 +146,7 @@ import {
   setupAuthLoading,
   setupAuthError,
   getAuthState,
-  getTripState
+  getTripState,
 } from '@/__tests__/helpers';
 
 // Reset all stores (call in beforeEach)
@@ -202,9 +198,7 @@ import { api } from '@/src/api/api-client';
 
 const mockTrips = [createMockTrip()];
 
-jest.spyOn(api, 'get').mockImplementation(() =>
-  mockApiSuccess(mockTrips)
-);
+jest.spyOn(api, 'get').mockImplementation(() => mockApiSuccess(mockTrips));
 
 const response = await api.get('/trips');
 expect(response.data).toEqual(mockTrips);
@@ -216,12 +210,14 @@ expect(response.data).toEqual(mockTrips);
 import { mockApiError } from '@/__tests__/helpers';
 import { AUTH_ERROR } from '@/__tests__/mocks/api-responses';
 
-jest.spyOn(api, 'post').mockImplementation(() =>
-  mockApiError(401, AUTH_ERROR('INVALID_CREDENTIALS', 'Invalid email or password'))
-);
+jest
+  .spyOn(api, 'post')
+  .mockImplementation(() =>
+    mockApiError(401, AUTH_ERROR('INVALID_CREDENTIALS', 'Invalid email or password'))
+  );
 
 await expect(api.post('/auth/login', {})).rejects.toMatchObject({
-  response: { status: 401 }
+  response: { status: 401 },
 });
 ```
 
@@ -233,7 +229,7 @@ import { mockNetworkError } from '@/__tests__/helpers';
 jest.spyOn(api, 'get').mockImplementation(() => mockNetworkError());
 
 await expect(api.get('/trips')).rejects.toMatchObject({
-  code: 'ERR_NETWORK'
+  code: 'ERR_NETWORK',
 });
 ```
 
@@ -266,13 +262,13 @@ import {
   COMMON_AUTH_ERRORS,
   COMMON_RESOURCE_ERRORS,
   COMMON_SERVER_ERRORS,
-  NETWORK_ERROR
+  NETWORK_ERROR,
 } from '@/__tests__/mocks/api-responses';
 
 // Validation error
 const validationError = VALIDATION_ERROR({
   email: 'Invalid email format',
-  password: 'Password too short'
+  password: 'Password too short',
 });
 
 // Auth error
@@ -297,14 +293,14 @@ Mock Supabase authentication flows.
 ### Basic Setup
 
 ```typescript
-import { supabase } from '@/src/auth/supabaseClient';
+import { supabase } from '@/src/api/supabase';
 import {
   createMockSession,
   mockSuccessfulSignIn,
-  mockAuthError
+  mockAuthError,
 } from '@/__tests__/mocks/supabase.mock';
 
-jest.mock('@/src/auth/supabaseClient');
+jest.mock('@/src/api/supabase');
 
 const mockSupabase = supabase as jest.Mocked<typeof supabase>;
 ```
@@ -314,21 +310,17 @@ const mockSupabase = supabase as jest.Mocked<typeof supabase>;
 ```typescript
 // Successful sign in
 const session = createMockSession();
-mockSupabase.auth.signInWithPassword.mockResolvedValue(
-  mockSuccessfulSignIn(session)
-);
+mockSupabase.auth.signInWithPassword.mockResolvedValue(mockSuccessfulSignIn(session));
 
 // Failed sign in
-mockSupabase.auth.signInWithPassword.mockResolvedValue(
-  mockAuthError('Invalid credentials')
-);
+mockSupabase.auth.signInWithPassword.mockResolvedValue(mockAuthError('Invalid credentials'));
 
 // Custom session
 const customSession = createMockSession({
   user: {
     email: 'custom@example.com',
-    user_metadata: { username: 'customuser' }
-  } as any
+    user_metadata: { username: 'customuser' },
+  } as any,
 });
 ```
 
@@ -341,29 +333,23 @@ import {
   mockGoogleSignInSuccess,
   mockNoSession,
   mockRefreshSuccess,
-  mockRefreshError
+  mockRefreshError,
 } from '@/__tests__/mocks/supabase.mock';
 
 // Session expired
 mockSupabase.auth.getSession.mockResolvedValue(mockSessionExpired());
 
 // Sign up pending confirmation
-mockSupabase.auth.signUp.mockResolvedValue(
-  mockSignUpPendingConfirmation('test@example.com')
-);
+mockSupabase.auth.signUp.mockResolvedValue(mockSignUpPendingConfirmation('test@example.com'));
 
 // Google sign in
-mockSupabase.auth.signInWithIdToken.mockResolvedValue(
-  mockGoogleSignInSuccess(session)
-);
+mockSupabase.auth.signInWithIdToken.mockResolvedValue(mockGoogleSignInSuccess(session));
 
 // No session
 mockSupabase.auth.getSession.mockResolvedValue(mockNoSession());
 
 // Refresh success
-mockSupabase.auth.refreshSession.mockResolvedValue(
-  mockRefreshSuccess(newSession)
-);
+mockSupabase.auth.refreshSession.mockResolvedValue(mockRefreshSuccess(newSession));
 
 // Refresh error
 mockSupabase.auth.refreshSession.mockResolvedValue(mockRefreshError());
@@ -390,7 +376,7 @@ jest.spyOn(api, 'post').mockImplementation(mockFn);
 await expect(api.post('/endpoint')).rejects.toBeDefined();
 await expect(api.post('/endpoint')).rejects.toBeDefined();
 await expect(api.post('/endpoint')).resolves.toMatchObject({
-  data: { success: true }
+  data: { success: true },
 });
 ```
 
@@ -399,9 +385,7 @@ await expect(api.post('/endpoint')).resolves.toMatchObject({
 ```typescript
 import { delay } from '@/__tests__/helpers';
 
-jest.spyOn(api, 'get').mockImplementation(() =>
-  delay(1000, { data: trips })
-);
+jest.spyOn(api, 'get').mockImplementation(() => delay(1000, { data: trips }));
 
 // Response will be delayed by 1 second
 ```
@@ -426,7 +410,7 @@ import { createMockUser, createMockTrip } from '@/__tests__/factories';
 import { setupAuthenticatedUser, resetAllStores } from '@/__tests__/helpers';
 import { mockApiSuccess } from '@/__tests__/helpers';
 import { api } from '@/src/api/api-client';
-import { useTripStore } from '@/src/store/useTripStore';
+import { useTripStore } from '@/src/features/trips/store';
 
 describe('Trip List Integration', () => {
   beforeEach(() => {

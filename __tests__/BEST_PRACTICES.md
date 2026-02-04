@@ -271,7 +271,7 @@ Reference: [jest-websocket-mock GitHub](https://github.com/romgain/jest-websocke
 ```typescript
 // __tests__/websocket/connection.test.ts
 import WS from 'jest-websocket-mock';
-import { WebSocketManager } from '@/src/websocket/WebSocketManager';
+import { WebSocketManager } from '@/src/features/websocket/WebSocketManager';
 
 describe('WebSocketManager', () => {
   let server: WS;
@@ -738,14 +738,14 @@ export const mockAuthStateChange = (
 // __tests__/features/auth/login.test.ts
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useAuthStore } from '@/src/features/auth/store';
-import { supabase } from '@/src/auth/supabaseClient';
+import { supabase } from '@/src/api/supabase';
 import {
   createMockSession,
   mockSuccessfulSignIn,
   mockAuthError,
 } from '@/__tests__/mocks/supabase.mock';
 
-jest.mock('@/src/auth/supabaseClient');
+jest.mock('@/src/api/supabase');
 
 const mockSupabase = supabase as jest.Mocked<typeof supabase>;
 
@@ -1189,8 +1189,7 @@ afterEach(() => {
   "moduleNameMapper": {
     "^@/src/store/(.*)$": "<rootDir>/src/store/$1",
     "^@/src/features/(.*)$": "<rootDir>/src/features/$1",
-    // Redirect old paths to new locations
-    "^@/src/store/useAuthStore$": "<rootDir>/src/features/auth/store",
+    // Note: useAuthStore shim has been removed - import directly from @/src/features/auth/store
   }
 }
 ```
@@ -1220,7 +1219,7 @@ const useStore = create(process.env.NODE_ENV !== 'test' ? devtools(stateCreator)
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useAuthStore } from '../store';
 import { authService } from '../service';
-import { supabase } from '@/src/auth/supabaseClient';
+import { supabase } from '@/src/api/supabase';
 import {
   createMockSession,
   createMockUser,
@@ -1231,7 +1230,7 @@ import {
 
 // Mock dependencies
 jest.mock('../service');
-jest.mock('@/src/auth/supabaseClient');
+jest.mock('@/src/api/supabase');
 
 const mockSupabase = supabase as jest.Mocked<typeof supabase>;
 

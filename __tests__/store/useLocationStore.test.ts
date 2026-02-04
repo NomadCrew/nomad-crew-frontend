@@ -26,8 +26,8 @@ jest.mock('@/src/features/auth/service', () => {
   };
 });
 
-// Mock legacy supabaseClient path
-jest.mock('@/src/auth/supabaseClient', () => {
+// Mock Supabase client
+jest.mock('@/src/api/supabase', () => {
   const mockAuth = {
     signUp: jest.fn(),
     signInWithPassword: jest.fn(),
@@ -102,7 +102,7 @@ jest.mock('@/src/utils/simulator-auth', () => ({
 
 // Now we can import after mocks are set up
 import { act } from '@testing-library/react-native';
-import { useLocationStore, MemberLocation } from '@/src/store/useLocationStore';
+import { useLocationStore, MemberLocation } from '@/src/features/location/store/useLocationStore';
 import { resetAllStores, setupAuthenticatedUser } from '../helpers';
 import { createMockUser } from '../factories';
 import * as Location from 'expo-location';

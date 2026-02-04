@@ -54,10 +54,10 @@ jest.mock('@/src/features/notifications/store/useNotificationStore', () => ({
 }));
 
 import { act } from '@testing-library/react-native';
-import { useChatStore } from '@/src/store/useChatStore';
+import { useChatStore } from '@/src/features/chat/store';
 import { resetAllStores, setupAuthenticatedUser } from '../helpers';
 import { createMockUser } from '../factories';
-import { ChatMessage, ChatMessageWithStatus, ReadReceipt } from '@/src/types/chat';
+import { ChatMessage, ChatMessageWithStatus, ReadReceipt } from '@/src/features/chat/types';
 import { WebSocketManager } from '@/src/features/websocket/WebSocketManager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 

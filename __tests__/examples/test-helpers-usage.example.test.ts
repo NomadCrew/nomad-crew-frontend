@@ -26,8 +26,8 @@ jest.mock('@/src/features/auth/service', () => ({
   },
 }));
 
-// Mock the supabaseClient module
-jest.mock('@/src/auth/supabaseClient', () => ({
+// Mock the supabase module
+jest.mock('@/src/api/supabase', () => ({
   supabase: {
     auth: {
       signUp: jest.fn(),
@@ -75,9 +75,9 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 );
 
 import { api } from '@/src/api/api-client';
-import { supabase } from '@/src/auth/supabaseClient';
-import { useAuthStore } from '@/src/store/useAuthStore';
-import { useTripStore } from '@/src/store/useTripStore';
+import { supabase } from '@/src/api/supabase';
+import { useAuthStore } from '@/src/features/auth/store';
+import { useTripStore } from '@/src/features/trips/store';
 
 // Import factories
 import {
