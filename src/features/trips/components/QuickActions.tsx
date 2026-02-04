@@ -17,6 +17,7 @@ import { Trip } from '@/src/features/trips/types';
 import {
   ArrowLeft,
   ArrowRight,
+  Wallet,
   MapPin,
   Users,
   UserPlus,
@@ -36,6 +37,7 @@ type IconProps = {
 interface QuickActionsProps {
   trip?: Trip;
   setShowInviteModal?: (show: boolean) => void;
+  onWalletPress?: () => void;
   onLocationPress?: () => void;
   onChatPress?: () => void;
 }
@@ -43,6 +45,7 @@ interface QuickActionsProps {
 export const QuickActions: React.FC<QuickActionsProps> = ({
   trip,
   setShowInviteModal,
+  onWalletPress,
   onLocationPress,
   onChatPress,
 }) => {
@@ -94,6 +97,11 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   };
 
   const actions = [
+    {
+      icon: (props: IconProps) => <Wallet {...props} />,
+      label: 'Wallet',
+      onPress: () => onWalletPress && onWalletPress(),
+    },
     {
       icon: (props: IconProps) => <MapPin {...props} />,
       label: 'Location',
