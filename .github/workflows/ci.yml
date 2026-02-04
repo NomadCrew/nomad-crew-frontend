@@ -1,5 +1,5 @@
 # Continuous Integration workflow for NomadCrew Frontend
-# Runs tests and linting on push to main and pull requests
+# Runs type checking, linting, tests, and build preview on PRs
 
 name: CI
 
@@ -13,10 +13,9 @@ permissions:
   contents: read
 
 jobs:
-  test-and-lint:
-    name: Test & Lint
+  type-check:
+    name: type-check
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -28,12 +27,66 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        # Using --legacy-peer-deps due to peer dependency conflicts
+        run: npm ci --legacy-peer-deps
+
+      - name: Run TypeScript type check
+        run: npx tsc --noEmit
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
       - name: Run linting
         run: npm run lint
 
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
       - name: Run tests
         run: npm test
-        continue-on-error: true  # Allow PR merge while test suite is being stabilized
+        continue-on-error: true # Allow PR merge while test suite is being stabilized
+
+  build-preview:
+    name: build-preview
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Build preview (web export)
+        run: npx expo export --platform web
+        continue-on-error: true # Web export may have issues; primary target is mobile
