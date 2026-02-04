@@ -1,9 +1,19 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Platform, Text, TextInput, FlatList, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  Platform,
+  Text,
+  TextInput,
+  FlatList,
+  TouchableOpacity,
+} from 'react-native';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
-import { GooglePlacesAutocomplete, GooglePlacesAutocompleteRef } from 'react-native-google-places-autocomplete';
 import type { PlaceDetailsWithFullText } from '@/src/types/places';
-import { AutocompleteRow } from '@/components/shared/AutocompleteRow';
+
+// Note: GooglePlacesAutocomplete and AutocompleteRow are not used in this implementation.
+// This component uses a custom implementation that directly calls the Google Places API
+// for better control over the autocomplete behavior and styling.
 
 interface PlacesAutocompleteProps {
   onPlaceSelected: (details: PlaceDetailsWithFullText) => void;
@@ -12,7 +22,17 @@ interface PlacesAutocompleteProps {
   country?: string | string[];
 }
 
-// Define a simpler direct implementation for debugging
+/**
+ * An embeddable Google Places autocomplete input that fetches suggestions and place details directly from the Places API.
+ *
+ * Renders a text input that queries the Places Autocomplete API as the user types, displays selectable predictions, and invokes `onPlaceSelected` with detailed place information when an item is chosen.
+ *
+ * @param onPlaceSelected - Callback invoked with full place details (`PlaceDetailsWithFullText`) after a prediction is selected.
+ * @param placeholder - Placeholder text for the input (defaults to 'Search...').
+ * @param initialValue - Initial input value (defaults to an empty string).
+ * @param country - Optional country code or list of country codes to restrict autocomplete results.
+ * @returns The autocomplete React component UI for searching and selecting places.
+ */
 export default function CustomPlacesAutocomplete({
   onPlaceSelected,
   placeholder = 'Search...',
@@ -23,10 +43,13 @@ export default function CustomPlacesAutocomplete({
   const [query, setQuery] = useState(initialValue);
   const [predictions, setPredictions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Get platform-specific API key
-  // const apiKey = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
-  const apiKey = "AIzaSyDDYvGkXG81s9357ZRXdJkH34DuDz9QIMQ";
+
+  // Get platform-specific API key from environment variables
+  // Falls back to generic GOOGLE_PLACES_API_KEY if platform-specific key is not set
+  const apiKey =
+    Platform.OS === 'ios'
+      ? process.env.EXPO_PUBLIC_GOOGLE_API_KEY_IOS || process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY
+      : process.env.EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID || process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
 
   // Function to search places
   const searchPlaces = async (text: string) => {
@@ -37,33 +60,46 @@ export default function CustomPlacesAutocomplete({
 
     try {
       setIsLoading(true);
-      
+
+      // Handle country parameter: support both string and string[] types
+      const componentsParam = !country
+        ? ''
+        : Array.isArray(country)
+          ? `&components=${country.map((c) => `country:${c}`).join('|')}`
+          : `&components=country:${country}`;
+
       // Create the direct API URL for autocomplete
-      const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${apiKey}&language=en&types=geocode|establishment${country ? `&components=country:${country}` : ''}`;
-      
+      const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${apiKey}&language=en&types=geocode|establishment${componentsParam}`;
+
       const response = await fetch(url);
       const data = await response.json();
-      
+
       if (data.status === 'OK') {
-        console.log(`[Places API Debug] Found ${data.predictions.length} predictions`);
-        data.predictions.forEach((prediction, idx) => {
-          console.log(`[Places API Debug] Prediction #${idx + 1}:`, {
-            description: prediction.description,
-            place_id: prediction.place_id,
-            main_text: prediction.structured_formatting?.main_text,
-            secondary_text: prediction.structured_formatting?.secondary_text,
+        if (__DEV__) {
+          console.log(`[Places API Debug] Found ${data.predictions.length} predictions`);
+          data.predictions.forEach((prediction: any, idx: number) => {
+            console.log(`[Places API Debug] Prediction #${idx + 1}:`, {
+              description: prediction.description,
+              place_id: prediction.place_id,
+              main_text: prediction.structured_formatting?.main_text,
+              secondary_text: prediction.structured_formatting?.secondary_text,
+            });
           });
-        });
+        }
         setPredictions(data.predictions);
       } else {
-        console.warn(`[Places API Debug] API status: ${data.status}`);
-        if (data.error_message) {
-          console.error(`[Places API Debug] Error: ${data.error_message}`);
+        if (__DEV__) {
+          console.warn(`[Places API Debug] API status: ${data.status}`);
+          if (data.error_message) {
+            console.error(`[Places API Debug] Error: ${data.error_message}`);
+          }
         }
         setPredictions([]);
       }
     } catch (error) {
-      console.error('[Places API Debug] Search failed:', error);
+      if (__DEV__) {
+        console.error('[Places API Debug] Search failed:', error);
+      }
       setPredictions([]);
     } finally {
       setIsLoading(false);
@@ -73,40 +109,49 @@ export default function CustomPlacesAutocomplete({
   // Get place details when a place is selected
   const handlePlaceSelect = async (placeId: string, description: string) => {
     if (!apiKey) return;
-    
+
     try {
       setIsLoading(true);
-      console.log(`[Places API Debug] Getting details for place ID: ${placeId}`);
-      
+      if (__DEV__) {
+        console.log(`[Places API Debug] Getting details for place ID: ${placeId}`);
+      }
+
       const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&key=${apiKey}&fields=name,place_id,geometry,formatted_address,address_components`;
-      
+
       const response = await fetch(url);
       const data = await response.json();
-      
+
       if (data.status === 'OK') {
         const details = data.result;
-        console.log('[Places API Debug] Got place details', details);
-        
+        if (__DEV__) {
+          console.log('[Places API Debug] Got place details', details);
+        }
+
         const placeDetails: PlaceDetailsWithFullText = {
-          addressComponents: details.address_components?.map((component: any) => component.long_name) || [],
+          addressComponents:
+            details.address_components?.map((component: any) => component.long_name) || [],
           coordinate: {
             latitude: details.geometry.location.lat,
-            longitude: details.geometry.location.lng
+            longitude: details.geometry.location.lng,
           },
           formattedAddress: details.formatted_address,
           name: details.name,
           placeId: details.place_id,
-          fullText: description
+          fullText: description,
         };
-        
+
         onPlaceSelected(placeDetails);
         setQuery(details.formatted_address || description);
         setPredictions([]);
       } else {
-        console.warn(`[Places API Debug] API status: ${data.status}`);
+        if (__DEV__) {
+          console.warn(`[Places API Debug] API status: ${data.status}`);
+        }
       }
     } catch (error) {
-      console.error('[Places API Debug] Get details failed:', error);
+      if (__DEV__) {
+        console.error('[Places API Debug] Get details failed:', error);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -116,7 +161,9 @@ export default function CustomPlacesAutocomplete({
     console.error('Google Places API key is missing');
     return (
       <View style={styles.container}>
-        <Text style={{ color: 'red' }}>Google Places API key is missing</Text>
+        <Text style={{ color: theme.colors.status.error.main }}>
+          Google Places API key is missing
+        </Text>
       </View>
     );
   }
@@ -124,11 +171,14 @@ export default function CustomPlacesAutocomplete({
   return (
     <View style={styles.container}>
       <TextInput
-        style={[styles.textInput, { 
-          color: theme.colors.content.onSurface,
-          backgroundColor: theme.colors.surface.default,
-          borderColor: theme.colors.border.default
-        }]}
+        style={[
+          styles.textInput,
+          {
+            color: theme.colors.content.onSurface,
+            backgroundColor: theme.colors.surface.default,
+            borderColor: theme.colors.border.default,
+          },
+        ]}
         placeholder={placeholder}
         placeholderTextColor={theme.colors.border.default}
         value={query}
@@ -137,19 +187,30 @@ export default function CustomPlacesAutocomplete({
           searchPlaces(text);
         }}
       />
-      
+
       {predictions.length > 0 && (
-        <View style={[styles.listContainer, { 
-          backgroundColor: theme.colors.background.default,
-          borderColor: theme.colors.border.default 
-        }]}>
+        <View
+          style={[
+            styles.listContainer,
+            {
+              backgroundColor: theme.colors.background.default,
+              borderColor: theme.colors.border.default,
+            },
+          ]}
+        >
           <FlatList
             data={predictions}
             keyExtractor={(item) => item.place_id}
             keyboardShouldPersistTaps="always"
             renderItem={({ item }) => (
               <TouchableOpacity
-                style={[styles.predictionItem, { backgroundColor: theme.colors.surface.default }]}
+                style={[
+                  styles.predictionItem,
+                  {
+                    backgroundColor: theme.colors.surface.default,
+                    borderBottomColor: theme.colors.border.default,
+                  },
+                ]}
                 onPress={() => handlePlaceSelect(item.place_id, item.description)}
               >
                 <Text style={{ color: theme.colors.content.onSurface }}>{item.description}</Text>
@@ -158,9 +219,11 @@ export default function CustomPlacesAutocomplete({
           />
         </View>
       )}
-      
+
       {isLoading && (
-        <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background.default }]}>
+        <View
+          style={[styles.loadingContainer, { backgroundColor: theme.colors.background.default }]}
+        >
           <Text style={{ color: theme.colors.primary.main }}>Loading...</Text>
         </View>
       )}
@@ -197,7 +260,7 @@ const styles = StyleSheet.create({
   predictionItem: {
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    // borderBottomColor is applied dynamically in renderItem to use theme colors
   },
   loadingContainer: {
     position: 'absolute',
@@ -208,5 +271,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 10001,
     elevation: 1001,
-  }
+  },
 });

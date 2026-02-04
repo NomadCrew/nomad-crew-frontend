@@ -1,13 +1,5 @@
-console.log('[LoginScreen] Rendering');
-
-import { useState } from 'react';
-import {
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Modal,
-  Image
-} from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, KeyboardAvoidingView, Platform, Modal, Image } from 'react-native';
 import { ThemedText } from '@/src/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
@@ -18,11 +10,18 @@ import { AuthOptionButton } from '@/components/ui/auth/AuthOptionButton';
 import { Theme } from '@/src/theme/types';
 import { Divider } from 'react-native-paper';
 
+/**
+ * Render the app's login screen with social and email sign-in options.
+ *
+ * Renders a themed layout containing a welcome header, hero image, provider buttons for Google and (on iOS) Apple sign-in, an email sign-in option that opens a modal, and layout that adjusts for the keyboard.
+ *
+ * @returns A React element representing the login screen UI, including an email login modal and platform-specific Apple sign-in when running on iOS.
+ */
 export default function LoginScreen() {
   const [isEmailModalVisible, setEmailModalVisible] = useState(false);
   const { theme } = useAppTheme();
   const { signIn: handleGoogleSignIn } = useGoogleSignIn();
-  const handleAppleSignIn = useAppleSignIn();
+  const { signIn: handleAppleSignIn } = useAppleSignIn();
 
   return (
     <KeyboardAvoidingView
@@ -49,18 +48,18 @@ export default function LoginScreen() {
             label="Continue with Google"
             onPress={handleGoogleSignIn}
           />
-          
+
           {Platform.OS === 'ios' && (
-            <>
+            <React.Fragment>
               <Divider />
               <AuthOptionButton
                 provider="apple"
                 label="Continue with Apple"
                 onPress={handleAppleSignIn}
               />
-            </>
+            </React.Fragment>
           )}
-          
+
           <Divider />
           <AuthOptionButton
             provider="email"
@@ -93,7 +92,7 @@ const styles = (theme: Theme) =>
       maxWidth: 450,
       alignSelf: 'center',
       width: '100%',
-      justifyContent: 'space-between'
+      justifyContent: 'space-between',
     },
     topSection: {
       // flex: 1,

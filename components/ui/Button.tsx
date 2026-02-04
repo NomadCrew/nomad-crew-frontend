@@ -8,7 +8,6 @@ import {
   ViewStyle,
   TextStyle,
   TouchableOpacityProps,
-  StyleSheet,
 } from 'react-native';
 import { useThemedStyles } from '@/src/theme/utils';
 import { useTheme as useThemeProvider } from '@/src/theme/ThemeProvider';
@@ -21,47 +20,47 @@ export interface ButtonProps extends Omit<TouchableOpacityProps, 'style'> {
    * The label text of the button
    */
   label: string;
-  
+
   /**
    * The variant of the button
    */
   variant?: ButtonVariant;
-  
+
   /**
    * The size of the button
    */
   size?: ButtonSize;
-  
+
   /**
    * Whether the button is in a loading state
    */
   loading?: boolean;
-  
+
   /**
    * Whether the button is disabled
    */
   disabled?: boolean;
-  
+
   /**
    * Whether the button should take up the full width of its container
    */
   fullWidth?: boolean;
-  
+
   /**
    * Icon to display at the start of the button
    */
   startIcon?: React.ReactNode;
-  
+
   /**
    * Icon to display at the end of the button
    */
   endIcon?: React.ReactNode;
-  
+
   /**
    * Additional styles for the button container
    */
   style?: StyleProp<ViewStyle>;
-  
+
   /**
    * Additional styles for the button text
    */
@@ -69,7 +68,25 @@ export interface ButtonProps extends Omit<TouchableOpacityProps, 'style'> {
 }
 
 /**
- * Button component for triggering actions
+ * Renders a themed, accessible button with variants, sizes, optional icons, and a loading state.
+ *
+ * Renders an ActivityIndicator in place of content when `loading` is true. `disabled` or `loading`
+ * prevents presses. `fullWidth` expands the button to the container width. `startIcon` and
+ * `endIcon` are rendered before and after the label, respectively. Visual styles are derived
+ * from the active theme with safe fallbacks.
+ *
+ * @param label - The button text
+ * @param variant - Visual style of the button; one of `'filled'`, `'outlined'`, or `'ghost'`
+ * @param size - Size variant; one of `'sm'`, `'md'`, or `'lg'`
+ * @param loading - Shows a spinner and disables interaction while `true`
+ * @param disabled - Disables interaction and applies disabled styling when `true`
+ * @param fullWidth - Expands the button to 100% width when `true`
+ * @param startIcon - Node rendered to the left of the label
+ * @param endIcon - Node rendered to the right of the label
+ * @param style - Container style overrides
+ * @param textStyle - Text style overrides for the label
+ * @param onPress - Press handler
+ * @returns The rendered button element
  */
 export function Button({
   label,
@@ -93,15 +110,12 @@ export function Button({
   const styles = useThemedStyles((theme) => {
     // Safely access theme properties with fallbacks
     const primaryColor = theme?.colors?.primary?.main || '#F46315';
-    const primaryHover = theme?.colors?.primary?.hover || '#E05A0C';
     const primarySurface = theme?.colors?.primary?.surface || '#FFF7ED';
-    const contentPrimary = theme?.colors?.content?.primary || '#1A1A1A';
-    const contentSecondary = theme?.colors?.content?.secondary || '#6B7280';
     const contentDisabled = theme?.colors?.content?.disabled || '#9CA3AF';
     const surfaceDefault = theme?.colors?.surface?.default || '#FFFFFF';
     const borderDefault = theme?.colors?.border?.default || '#E5E7EB';
     const borderRadius = theme?.borderRadius?.md || 8;
-    
+
     // Size mappings
     const sizeMap = {
       sm: {
@@ -123,61 +137,45 @@ export function Button({
         iconSize: 20,
       },
     };
-    
+
     // Get colors based on variant and state
     const getBackgroundColor = () => {
       if (disabled) return theme?.colors?.disabled?.background || surfaceDefault;
-      return theme?.colors?.[variant]?.background || primarySurface;
+
+      // Handle variant colors safely
+      const variantColors = theme?.colors?.[variant as keyof typeof theme.colors];
+      if (variantColors && typeof variantColors === 'object' && 'background' in variantColors) {
+        return (variantColors as { background: string }).background;
+      }
+
+      // Variant-specific fallbacks when theme colors are missing
+      switch (variant) {
+        case 'filled':
+          return primarySurface;
+        case 'outlined':
+        case 'ghost':
+          return 'transparent';
+        default:
+          return primarySurface;
+      }
     };
-    
+
     const getBorderColor = () => {
       if (disabled) return theme?.colors?.disabled?.border || borderDefault;
       return variant === 'outlined' ? primaryColor : 'transparent';
     };
-    
+
     const getTextColor = () => {
       if (disabled) return theme?.colors?.disabled?.text || contentDisabled;
-      return theme?.colors?.[variant]?.text || primaryColor;
-    };
-    
-    // Variant styles
-    const getVariantStyles = () => {
-      if (disabled) {
-        return {
-          backgroundColor: 'transparent',
-          borderColor: getBorderColor(),
-          borderWidth: variant === 'outlined' ? 1 : 0,
-          color: getTextColor(),
-        };
+
+      // Handle variant text colors safely
+      const variantColors = theme?.colors?.[variant as keyof typeof theme.colors];
+      if (variantColors && typeof variantColors === 'object' && 'text' in variantColors) {
+        return (variantColors as { text: string }).text;
       }
-      
-      switch (variant) {
-        case 'filled':
-          return {
-            backgroundColor: primaryColor,
-            borderWidth: 0,
-            color: '#FFFFFF',
-          };
-        case 'outlined':
-          return {
-            backgroundColor: 'transparent',
-            borderColor: primaryColor,
-            borderWidth: 1,
-            color: primaryColor,
-          };
-        case 'ghost':
-          return {
-            backgroundColor: 'transparent',
-            borderWidth: 0,
-            color: primaryColor,
-          };
-        default:
-          return {};
-      }
+      return primaryColor;
     };
-    
-    const variantStyles = getVariantStyles();
-    
+
     return {
       button: {
         flexDirection: 'row' as const,
@@ -190,7 +188,7 @@ export function Button({
         borderWidth: variant === 'outlined' ? 1 : undefined,
         borderColor: getBorderColor(),
         opacity: loading ? 0.8 : 1,
-        width: fullWidth ? '100%' as const : 'auto' as const,
+        width: fullWidth ? ('100%' as const) : ('auto' as const),
       },
       label: {
         fontSize: sizeMap[size].fontSize,
@@ -209,12 +207,12 @@ export function Button({
       },
     };
   });
-  
+
   const isDisabled = disabled || loading;
-  
+
   const getLoadingColor = () => {
     if (disabled) return styles.label.color;
-    
+
     switch (variant) {
       case 'filled':
         return '#FFFFFF';
@@ -225,13 +223,13 @@ export function Button({
         return styles.label.color;
     }
   };
-  
+
   const loadingSize = {
     sm: 16,
     md: 20,
     lg: 24,
   }[size];
-  
+
   return (
     <TouchableOpacity
       style={[styles.button, style]}
@@ -255,4 +253,4 @@ export function Button({
   );
 }
 
-export default React.memo(Button); 
+export default React.memo(Button);

@@ -1,4 +1,4 @@
-import { User } from '@/src/types/auth';
+import { User } from '@/src/features/auth/types';
 
 /**
  * Creates a mock User object for testing.

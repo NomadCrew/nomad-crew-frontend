@@ -2,14 +2,49 @@
  * @jest-environment jsdom
  */
 
-import { act } from '@testing-library/react-native';
-import { useLocationStore, MemberLocation } from '@/src/store/useLocationStore';
-import { resetAllStores, setupAuthenticatedUser } from '../helpers';
-import { createMockUser } from '../factories';
-import * as Location from 'expo-location';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// Mock the auth service module BEFORE importing any stores
+// This is required because the service module throws if env vars are missing
+jest.mock('@/src/features/auth/service', () => {
+  const mockAuth = {
+    signUp: jest.fn(),
+    signInWithPassword: jest.fn(),
+    signInWithIdToken: jest.fn(),
+    signOut: jest.fn(),
+    getSession: jest.fn(),
+    refreshSession: jest.fn(),
+    onAuthStateChange: jest.fn(() => ({
+      data: { subscription: { unsubscribe: jest.fn() } },
+    })),
+  };
 
-import { api } from '@/src/api/api-client';
+  return {
+    __esModule: true,
+    supabase: { auth: mockAuth },
+    refreshSupabaseSession: jest.fn(),
+    registerPushTokenService: jest.fn(),
+    deregisterPushTokenService: jest.fn(),
+  };
+});
+
+// Mock Supabase client
+jest.mock('@/src/api/supabase', () => {
+  const mockAuth = {
+    signUp: jest.fn(),
+    signInWithPassword: jest.fn(),
+    signInWithIdToken: jest.fn(),
+    signOut: jest.fn(),
+    getSession: jest.fn(),
+    refreshSession: jest.fn(),
+    onAuthStateChange: jest.fn(() => ({
+      data: { subscription: { unsubscribe: jest.fn() } },
+    })),
+  };
+
+  return {
+    __esModule: true,
+    supabase: { auth: mockAuth },
+  };
+});
 
 // Mock dependencies
 jest.mock('@/src/api/api-client', () => ({
@@ -20,6 +55,13 @@ jest.mock('@/src/api/api-client', () => ({
     delete: jest.fn(),
   },
   registerAuthHandlers: jest.fn(),
+  getCurrentUserProfile: jest.fn().mockResolvedValue({
+    id: 'user-123',
+    email: 'test@example.com',
+    username: 'testuser',
+  }),
+  onboardUser: jest.fn(),
+  updateContactEmail: jest.fn(),
 }));
 
 jest.mock('@/src/utils/logger', () => ({
@@ -27,6 +69,7 @@ jest.mock('@/src/utils/logger', () => ({
     debug: jest.fn(),
     error: jest.fn(),
     warn: jest.fn(),
+    info: jest.fn(),
   },
 }));
 
@@ -45,6 +88,28 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   multiRemove: jest.fn(() => Promise.resolve()),
 }));
 
+// Mock expo-secure-store (used by auth store)
+jest.mock('expo-secure-store', () => ({
+  getItemAsync: jest.fn().mockResolvedValue(null),
+  setItemAsync: jest.fn().mockResolvedValue(undefined),
+  deleteItemAsync: jest.fn().mockResolvedValue(undefined),
+}));
+
+// Mock simulator auth utility
+jest.mock('@/src/utils/simulator-auth', () => ({
+  getSimulatorAuthState: jest.fn().mockReturnValue(null),
+}));
+
+// Now we can import after mocks are set up
+import { act } from '@testing-library/react-native';
+import { useLocationStore, MemberLocation } from '@/src/features/location/store/useLocationStore';
+import { resetAllStores, setupAuthenticatedUser } from '../helpers';
+import { createMockUser } from '../factories';
+import * as Location from 'expo-location';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import { api } from '@/src/api/api-client';
+
 describe('useLocationStore', () => {
   const mockUser = createMockUser({ id: 'user-123' });
   const tripId = 'trip-123';
@@ -55,6 +120,7 @@ describe('useLocationStore', () => {
     setupAuthenticatedUser(mockUser);
 
     // Reset location store state
+    // Note: activeTripId is a new field in the refactored store
     useLocationStore.setState({
       isLocationSharingEnabled: false,
       currentLocation: null,
@@ -62,6 +128,7 @@ describe('useLocationStore', () => {
       isTrackingLocation: false,
       memberLocations: {},
       locationSubscription: null,
+      activeTripId: null,
     });
   });
 
@@ -91,9 +158,7 @@ describe('useLocationStore', () => {
     });
 
     it('should handle AsyncStorage errors gracefully', async () => {
-      (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(
-        new Error('Storage error')
-      );
+      (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(new Error('Storage error'));
 
       // Should not throw
       await useLocationStore.getState().setLocationSharingEnabled(true);
@@ -309,34 +374,71 @@ describe('useLocationStore', () => {
   });
 
   describe('getMemberLocations', () => {
+    // The new store implementation calls the real API (no MOCK_MODE)
+    // We need to mock the API response to test properly
+    const mockMemberLocations: MemberLocation[] = [
+      {
+        userId: 'user-1',
+        name: 'User 1',
+        location: {
+          latitude: 48.8566,
+          longitude: 2.3522,
+          accuracy: 10,
+          timestamp: Date.now(),
+        },
+      },
+      {
+        userId: 'user-2',
+        name: 'User 2',
+        location: {
+          latitude: 48.857,
+          longitude: 2.353,
+          accuracy: 15,
+          timestamp: Date.now(),
+        },
+      },
+    ];
+
     beforeEach(() => {
       useLocationStore.setState({ isLocationSharingEnabled: true });
+      // Reset API mock to return member locations
+      (api.get as jest.Mock).mockResolvedValue({ data: mockMemberLocations });
     });
 
     it('should fetch member locations successfully', async () => {
-      // Note: In MOCK_MODE, the store uses mock data instead of API calls
-      // This test verifies the mock data generation works correctly
-
+      // The new store calls the API to fetch locations
       const locations = await useLocationStore.getState().getMemberLocations(tripId);
 
-      // In MOCK_MODE, it generates 3 mock locations by default
       expect(locations.length).toBeGreaterThan(0);
       const state = useLocationStore.getState();
       expect(state.memberLocations[tripId]).toBeDefined();
       expect(Object.keys(state.memberLocations[tripId]).length).toBeGreaterThan(0);
+      expect(api.get).toHaveBeenCalled();
     });
 
     it('should handle stale locations (>30 min)', async () => {
-      // Note: In MOCK_MODE, the store generates mock data
-      // This test verifies that locations are returned without filtering
+      // Mock API to return locations with old timestamps
+      const staleLocations: MemberLocation[] = [
+        {
+          userId: 'user-old',
+          name: 'Old User',
+          location: {
+            latitude: 48.8566,
+            longitude: 2.3522,
+            accuracy: 10,
+            timestamp: Date.now() - 60 * 60 * 1000, // 1 hour ago
+          },
+        },
+      ];
+      (api.get as jest.Mock).mockResolvedValue({ data: staleLocations });
 
       const locations = await useLocationStore.getState().getMemberLocations(tripId);
 
       // Locations should be returned (filtering is UI responsibility)
       expect(locations.length).toBeGreaterThan(0);
 
-      // All locations should have timestamps (recent, since they're mocked)
-      locations.forEach(loc => {
+      // All locations should have timestamps
+      locations.forEach((loc) => {
         expect(loc.location.timestamp).toBeDefined();
         expect(typeof loc.location.timestamp).toBe('number');
       });
@@ -351,67 +453,44 @@ describe('useLocationStore', () => {
       expect(api.get).not.toHaveBeenCalled();
     });
 
-    it('should handle empty member locations', async () => {
-      // Note: In MOCK_MODE, the store always generates mock data
-      // To test empty locations, we'd need to disable MOCK_MODE or test the API path
-      // For now, this test documents the expected behavior when MOCK_MODE is off
+    it('should handle empty member locations from API', async () => {
+      (api.get as jest.Mock).mockResolvedValue({ data: [] });
 
       const locations = await useLocationStore.getState().getMemberLocations(tripId);
 
-      // In MOCK_MODE, mock data is always generated
-      // When MOCK_MODE is disabled and API returns [], this should be empty
       expect(Array.isArray(locations)).toBe(true);
+      expect(locations.length).toBe(0);
     });
 
     it('should handle API errors gracefully', async () => {
-      // Note: In MOCK_MODE, API is not called so we can't test API errors
-      // This test would work when MOCK_MODE is disabled
+      (api.get as jest.Mock).mockRejectedValue(new Error('Network error'));
 
       const locations = await useLocationStore.getState().getMemberLocations(tripId);
 
-      // In MOCK_MODE, should return mock data even if API would fail
-      // When MOCK_MODE is off and API fails, should return []
+      // Should return empty array on error
       expect(Array.isArray(locations)).toBe(true);
+      expect(locations.length).toBe(0);
     });
 
-    it('should use mock data in MOCK_MODE with current location', async () => {
-      const currentLocation: Location.LocationObject = {
-        coords: {
-          latitude: 48.8566,
-          longitude: 2.3522,
-          altitude: null,
-          accuracy: 10,
-          altitudeAccuracy: null,
-          heading: null,
-          speed: null,
-        },
-        timestamp: Date.now(),
-      };
+    it('should fetch and store locations correctly', async () => {
+      const locations = await useLocationStore.getState().getMemberLocations(tripId);
 
-      useLocationStore.setState({ currentLocation });
+      // Verify locations are stored in state
+      expect(locations.length).toBe(2);
+      const state = useLocationStore.getState();
+      expect(state.memberLocations[tripId]['user-1']).toBeDefined();
+      expect(state.memberLocations[tripId]['user-2']).toBeDefined();
+    });
+
+    it('should handle non-array API response gracefully', async () => {
+      // Mock API returning invalid data
+      (api.get as jest.Mock).mockResolvedValue({ data: null });
 
       const locations = await useLocationStore.getState().getMemberLocations(tripId);
 
-      // Should generate 3 mock locations around current location
-      expect(locations.length).toBeGreaterThan(0);
-      locations.forEach(loc => {
-        // Should be within ~1km of current location (0.01 degree offset)
-        expect(Math.abs(loc.location.latitude - 48.8566)).toBeLessThan(0.01);
-        expect(Math.abs(loc.location.longitude - 2.3522)).toBeLessThan(0.01);
-      });
-    });
-
-    it('should use default coordinates in MOCK_MODE without current location', async () => {
-      useLocationStore.setState({ currentLocation: null });
-
-      const locations = await useLocationStore.getState().getMemberLocations(tripId);
-
-      // Should generate mock locations around San Francisco (37.7749, -122.4194)
-      expect(locations.length).toBeGreaterThan(0);
-      locations.forEach(loc => {
-        expect(Math.abs(loc.location.latitude - 37.7749)).toBeLessThan(0.01);
-        expect(Math.abs(loc.location.longitude + 122.4194)).toBeLessThan(0.01);
-      });
+      // Should return empty array for invalid response
+      expect(Array.isArray(locations)).toBe(true);
+      expect(locations.length).toBe(0);
     });
   });
 
@@ -469,8 +548,8 @@ describe('useLocationStore', () => {
         userId: 'user-1',
         name: 'User 1',
         location: {
-          latitude: 48.8600,
-          longitude: 2.3500,
+          latitude: 48.86,
+          longitude: 2.35,
           accuracy: 10,
           timestamp: Date.now(),
         },
@@ -480,7 +559,7 @@ describe('useLocationStore', () => {
       useLocationStore.getState().updateMemberLocation(tripId, updatedLocation);
 
       const state = useLocationStore.getState();
-      expect(state.memberLocations[tripId]['user-1'].location.latitude).toBe(48.8600);
+      expect(state.memberLocations[tripId]['user-1'].location.latitude).toBe(48.86);
     });
   });
 
@@ -499,11 +578,13 @@ describe('useLocationStore', () => {
 
       useLocationStore.getState().updateMemberLocation(tripId, memberLocation);
       expect(useLocationStore.getState().memberLocations[tripId]).toBeDefined();
+      expect(Object.keys(useLocationStore.getState().memberLocations[tripId]).length).toBe(1);
 
       useLocationStore.getState().clearMemberLocations(tripId);
 
       const state = useLocationStore.getState();
-      expect(state.memberLocations[tripId]).toBeUndefined();
+      // The new implementation sets the trip to an empty object instead of undefined
+      expect(state.memberLocations[tripId]).toEqual({});
     });
 
     it('should handle clearing non-existent trip gracefully', () => {
@@ -511,7 +592,8 @@ describe('useLocationStore', () => {
       useLocationStore.getState().clearMemberLocations('non-existent-trip');
 
       const state = useLocationStore.getState();
-      expect(state.memberLocations['non-existent-trip']).toBeUndefined();
+      // The new implementation sets it to empty object
+      expect(state.memberLocations['non-existent-trip']).toEqual({});
     });
 
     it('should not affect other trips', () => {
@@ -531,7 +613,7 @@ describe('useLocationStore', () => {
         name: 'User 2',
         location: {
           latitude: 40.7128,
-          longitude: -74.0060,
+          longitude: -74.006,
           accuracy: 10,
           timestamp: Date.now(),
         },
@@ -543,8 +625,10 @@ describe('useLocationStore', () => {
       useLocationStore.getState().clearMemberLocations('trip-1');
 
       const state = useLocationStore.getState();
-      expect(state.memberLocations['trip-1']).toBeUndefined();
+      // The new implementation sets trip-1 to empty object
+      expect(state.memberLocations['trip-1']).toEqual({});
       expect(state.memberLocations['trip-2']).toBeDefined();
+      expect(Object.keys(state.memberLocations['trip-2']).length).toBe(1);
     });
   });
 

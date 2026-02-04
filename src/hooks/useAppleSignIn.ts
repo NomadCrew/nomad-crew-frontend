@@ -26,7 +26,7 @@ export function useAppleSignIn() {
         setIsAppleAuthAvailable(isAvailable);
       }
     };
-    
+
     checkAvailability();
   }, []);
 
@@ -35,7 +35,7 @@ export function useAppleSignIn() {
       setError('Apple Sign-In is not available on this device.');
       // Optionally, provide a more user-friendly alert here
       logger.warn('AUTH', 'Apple Sign-In not available.');
-      return;
+      return undefined;
     }
 
     setIsLoading(true);
@@ -49,7 +49,9 @@ export function useAppleSignIn() {
 
       // Show a message in Expo Go
       if (isExpoGo) {
-        console.log('Apple Sign-In may have limited functionality in Expo Go. For best results, use a development build.');
+        console.log(
+          'Apple Sign-In may have limited functionality in Expo Go. For best results, use a development build.'
+        );
         // We'll still try to authenticate in Expo Go, as it might work
       }
 
@@ -90,21 +92,23 @@ export function useAppleSignIn() {
     } catch (err: any) {
       logger.error('AUTH', 'Apple Sign-In or Supabase auth failed:', err.message, err.code);
       // Check if the error is a user cancellation
-      if (err.code === 'ERR_APPLE_CANCELLED' || err.code === 'ERR_CANCELED') { // Expo Apple Auth uses ERR_CANCELED
+      if (err.code === 'ERR_APPLE_CANCELLED' || err.code === 'ERR_CANCELED') {
+        // Expo Apple Auth uses ERR_CANCELED
         logger.info('AUTH', 'Apple Sign-In cancelled by user.');
         // Don't set a generic error message for user cancellation
       } else {
         await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY); // Clear for other errors
         setError(err.message || 'An error occurred during Apple Sign-In.');
-        useAuthStore.setState({ 
-            user: null, 
-            token: null, 
-            status: 'unauthenticated', 
-            loading: false, 
-            error: err.message 
+        useAuthStore.setState({
+          user: null,
+          token: null,
+          status: 'unauthenticated',
+          loading: false,
+          error: err.message,
         });
       }
       setIsLoading(false);
+      return undefined;
       // Do not re-throw, allow UI to react to isLoading/error
     }
   }, [isAppleAuthAvailable, handleAppleSignInSuccess]);

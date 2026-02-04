@@ -2,22 +2,16 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Surface, Text, Avatar } from 'react-native-paper';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
-import { 
-  Notification, 
-  TripInviteNotification, 
+import {
+  Notification,
+  TripInvitationNotification,
   TripUpdateNotification,
-  TodoNotification,
-  MemberNotification,
-  WeatherNotification,
-  ChatNotification,
-  LocationNotification,
-  isTripInviteNotification,
+  ChatMessageNotification,
+  MemberAddedNotification,
+  isTripInvitationNotification,
   isTripUpdateNotification,
-  isTodoNotification,
-  isMemberNotification,
-  isWeatherNotification,
-  isChatNotification,
-  isLocationNotification
+  isChatMessageNotification,
+  isMemberAddedNotification,
 } from '../types/notification';
 import { router } from 'expo-router';
 import { useNotificationStore } from '../store/useNotificationStore';
@@ -60,7 +54,7 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
     const id = setTimeout(() => {
       dismiss();
     }, duration);
-    
+
     setTimeoutId(id);
 
     return () => {
@@ -95,25 +89,21 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
     }
 
     // Mark notification as read
-    notificationStore.markAsRead(notification.id);
+    notificationStore.markNotificationRead(notification.id);
 
     // Navigate based on notification type
-    if (isTripInviteNotification(notification)) {
+    if (isTripInvitationNotification(notification)) {
       // Navigate to notifications screen for trip invites
-      router.push('/notifications');
-    } else if (isTripUpdateNotification(notification) || 
-               isTodoNotification(notification) || 
-               isMemberNotification(notification) || 
-               isWeatherNotification(notification) || 
-               isLocationNotification(notification)) {
+      router.push('/(authenticated)/(tabs)/notifications' as any);
+    } else if (isTripUpdateNotification(notification) || isMemberAddedNotification(notification)) {
       // Navigate to the trip screen
-      router.push(`/trips/${notification.tripId}`);
-    } else if (isChatNotification(notification)) {
+      router.push(`/trip/${notification.metadata.tripID}`);
+    } else if (isChatMessageNotification(notification)) {
       // Navigate to the chat screen
-      router.push(`/trips/${notification.tripId}/chat`);
+      router.push(`/trip/${notification.metadata.chatID}/chat`);
     } else {
       // Generic notification - go to notifications screen
-      router.push('/notifications');
+      router.push('/(authenticated)/(tabs)/notifications' as any);
     }
 
     // Dismiss the toast
@@ -122,127 +112,82 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
 
   // Decide which icon to show based on notification type
   const getNotificationIcon = () => {
-    if (isTripInviteNotification(notification)) return "account-plus";
-    if (isTripUpdateNotification(notification)) return "map-marker-path";
-    if (isTodoNotification(notification)) return "checkbox-marked-circle-outline";
-    if (isMemberNotification(notification)) return "account-group";
-    if (isWeatherNotification(notification)) {
-      return notification.type === 'WEATHER_ALERT' ? "weather-lightning" : "weather";
-    }
-    if (isChatNotification(notification)) return "chat";
-    if (isLocationNotification(notification)) return "map-marker";
-    return "bell";  // Default
+    if (isTripInvitationNotification(notification)) return 'account-plus';
+    if (isTripUpdateNotification(notification)) return 'map-marker-path';
+    if (isMemberAddedNotification(notification)) return 'account-group';
+    if (isChatMessageNotification(notification)) return 'chat';
+    return 'bell'; // Default
   };
 
   const renderIcon = () => {
     return (
-      <Avatar.Icon 
-        size={40} 
+      <Avatar.Icon
+        size={40}
         icon={getNotificationIcon()}
-        color={theme.colors.onPrimary}
-        style={{ backgroundColor: theme.colors.primary }}
+        color={theme.colors.text.onPrimary}
+        style={{ backgroundColor: theme.colors.primary.main }}
       />
     );
   };
 
   const renderContent = () => {
-    if (isTripInviteNotification(notification)) {
-      const inviteNotification = notification as TripInviteNotification;
+    if (isTripInvitationNotification(notification)) {
       return (
         <View>
           <Text variant="titleMedium">Trip Invitation</Text>
           <Text variant="bodyMedium" numberOfLines={2}>
-            <Text style={{ fontWeight: 'bold' }}>{inviteNotification.inviterName}</Text> has invited you to join their trip
+            <Text style={{ fontWeight: 'bold' }}>{notification.metadata.inviterName}</Text> has
+            invited you to join{' '}
+            <Text style={{ fontWeight: 'bold' }}>{notification.metadata.tripName}</Text>
           </Text>
         </View>
       );
     }
-    
+
     if (isTripUpdateNotification(notification)) {
-      const updateNotification = notification as TripUpdateNotification;
-      const title = updateNotification.type === 'TRIP_STATUS' ? 'Trip Status Changed' : 'Trip Updated';
       return (
         <View>
-          <Text variant="titleMedium">{title}</Text>
+          <Text variant="titleMedium">Trip Updated</Text>
           <Text variant="bodyMedium" numberOfLines={2}>
-            <Text style={{ fontWeight: 'bold' }}>{updateNotification.updaterName}</Text> updated {updateNotification.tripName}
+            <Text style={{ fontWeight: 'bold' }}>{notification.metadata.updaterName}</Text> updated{' '}
+            {notification.metadata.tripName}
           </Text>
         </View>
       );
     }
-    
-    if (isTodoNotification(notification)) {
-      const todoNotification = notification as TodoNotification;
-      const action = todoNotification.type === 'TODO_CREATED' ? 'created' : 
-                    todoNotification.type === 'TODO_UPDATED' ? 'updated' : 'completed';
+
+    if (isMemberAddedNotification(notification)) {
       return (
         <View>
-          <Text variant="titleMedium">Todo {action}</Text>
+          <Text variant="titleMedium">Member Added</Text>
           <Text variant="bodyMedium" numberOfLines={2}>
-            <Text style={{ fontWeight: 'bold' }}>{todoNotification.creatorName}</Text> {action} "{todoNotification.todoText}"
+            <Text style={{ fontWeight: 'bold' }}>{notification.metadata.adderUserName}</Text> added{' '}
+            <Text style={{ fontWeight: 'bold' }}>{notification.metadata.addedUserName}</Text> to{' '}
+            {notification.metadata.tripName}
           </Text>
         </View>
       );
     }
-    
-    if (isMemberNotification(notification)) {
-      const memberNotification = notification as MemberNotification;
-      const action = memberNotification.type === 'MEMBER_ADDED' ? 'joined' : 
-                    memberNotification.type === 'MEMBER_REMOVED' ? 'left' : 'changed role';
-      return (
-        <View>
-          <Text variant="titleMedium">Member {action}</Text>
-          <Text variant="bodyMedium" numberOfLines={2}>
-            <Text style={{ fontWeight: 'bold' }}>{memberNotification.memberName}</Text> has {action} {memberNotification.tripName}
-          </Text>
-        </View>
-      );
-    }
-    
-    if (isWeatherNotification(notification)) {
-      const weatherNotification = notification as WeatherNotification;
-      const title = weatherNotification.type === 'WEATHER_ALERT' ? 'Weather Alert' : 'Weather Update';
-      return (
-        <View>
-          <Text variant="titleMedium">{title}</Text>
-          <Text variant="bodyMedium" numberOfLines={2}>
-            {weatherNotification.type === 'WEATHER_ALERT' ? 
-              (weatherNotification.data.alertMessage || `Alert for ${weatherNotification.tripLocation}`) : 
-              `Weather update for ${weatherNotification.tripLocation}`}
-          </Text>
-        </View>
-      );
-    }
-    
-    if (isChatNotification(notification)) {
-      const chatNotification = notification as ChatNotification;
+
+    if (isChatMessageNotification(notification)) {
       return (
         <View>
           <Text variant="titleMedium">New Message</Text>
           <Text variant="bodyMedium" numberOfLines={2}>
-            <Text style={{ fontWeight: 'bold' }}>{chatNotification.senderName}</Text>: {chatNotification.data.messagePreview}
+            <Text style={{ fontWeight: 'bold' }}>{notification.metadata.senderName}</Text>:{' '}
+            {notification.metadata.messagePreview}
           </Text>
         </View>
       );
     }
-    
-    if (isLocationNotification(notification)) {
-      const locationNotification = notification as LocationNotification;
-      return (
-        <View>
-          <Text variant="titleMedium">Location Update</Text>
-          <Text variant="bodyMedium" numberOfLines={2}>
-            <Text style={{ fontWeight: 'bold' }}>{locationNotification.memberName}</Text> is now at {locationNotification.data.locationName || 'a new location'}
-          </Text>
-        </View>
-      );
-    }
-    
+
     // Generic notification
     return (
       <View>
-        <Text variant="titleMedium">{(notification as any).title}</Text>
-        <Text variant="bodyMedium" numberOfLines={2}>{(notification as any).message}</Text>
+        <Text variant="titleMedium">Notification</Text>
+        <Text variant="bodyMedium" numberOfLines={2}>
+          {notification.message}
+        </Text>
       </View>
     );
   };
@@ -294,4 +239,4 @@ const styles = StyleSheet.create({
   textContainer: {
     flex: 1,
   },
-}); 
+});

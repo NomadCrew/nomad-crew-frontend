@@ -1,5 +1,50 @@
 /* global jest */
 
+// Set up environment variables for tests FIRST
+process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://test-project.supabase.co';
+process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key-for-jest';
+process.env.EXPO_PUBLIC_PROJECT_ID = 'test-project-id';
+
+// Mock localStorage FIRST before any imports
+const localStorageMock = {
+  getItem: jest.fn(),
+  setItem: jest.fn(),
+  removeItem: jest.fn(),
+  clear: jest.fn(),
+  key: jest.fn(),
+  length: 0,
+};
+Object.defineProperty(global, 'localStorage', {
+  value: localStorageMock,
+  writable: true,
+});
+
+// Mock TanStack Query persisters that use localStorage
+jest.mock('@tanstack/query-sync-storage-persister', () => ({
+  createSyncStoragePersister: jest.fn(() => ({
+    persistClient: jest.fn(),
+    removeClient: jest.fn(),
+  })),
+}));
+
+jest.mock('@tanstack/react-query-persist-client', () => ({
+  PersistQueryClientProvider: ({ children }) => children,
+}));
+
+// Mock the query client module to prevent persister initialization
+jest.mock('./src/lib/query-client', () => {
+  const { QueryClient } = jest.requireActual('@tanstack/react-query');
+  return {
+    queryClient: new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    }),
+    queryPersister: { persistClient: jest.fn(), removeClient: jest.fn() },
+  };
+});
+
 // Mock expo-router
 jest.mock('expo-router/entry');
 jest.mock('expo-router', () => ({
@@ -57,17 +102,6 @@ jest.mock('react-native', () => {
   return RN;
 });
 
-// Mock localStorage for Supabase
-const localStorageMock = {
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-  clear: jest.fn(),
-  length: 0,
-  key: jest.fn(),
-};
-global.localStorage = localStorageMock;
-
 // Mock expo-notifications
 jest.mock('expo-notifications', () => ({
   getPermissionsAsync: jest.fn(),
@@ -76,22 +110,35 @@ jest.mock('expo-notifications', () => ({
   setNotificationHandler: jest.fn(),
 }));
 
-// Mock Supabase client
-jest.mock('@/src/auth/supabaseClient', () => ({
-  supabase: {
-    auth: {
-      signUp: jest.fn(),
-      signInWithPassword: jest.fn(),
-      signInWithIdToken: jest.fn(),
-      signOut: jest.fn(),
-      getSession: jest.fn(),
-      refreshSession: jest.fn(),
-      onAuthStateChange: jest.fn(() => ({
-        data: { subscription: { unsubscribe: jest.fn() } }
-      })),
-    },
+// Mock Supabase - mock the @supabase/supabase-js module directly
+const mockSupabaseClient = {
+  auth: {
+    signUp: jest.fn(),
+    signInWithPassword: jest.fn(),
+    signInWithIdToken: jest.fn(),
+    signOut: jest.fn(),
+    getSession: jest.fn(),
+    refreshSession: jest.fn(),
+    onAuthStateChange: jest.fn(() => ({
+      data: { subscription: { unsubscribe: jest.fn() } }
+    })),
   },
+  from: jest.fn(() => ({
+    select: jest.fn().mockReturnThis(),
+    insert: jest.fn().mockReturnThis(),
+    update: jest.fn().mockReturnThis(),
+    delete: jest.fn().mockReturnThis(),
+    eq: jest.fn().mockReturnThis(),
+    single: jest.fn(),
+  })),
+};
+
+jest.mock('@supabase/supabase-js', () => ({
+  createClient: jest.fn(() => mockSupabaseClient),
 }));
+
+// Also provide the supabase export for direct imports
+global.mockSupabaseClient = mockSupabaseClient;
 
 // Setup test environment
 global.fetch = jest.fn(); 

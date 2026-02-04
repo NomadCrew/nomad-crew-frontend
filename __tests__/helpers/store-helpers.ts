@@ -1,6 +1,6 @@
-import { useAuthStore } from '@/src/store/useAuthStore';
-import { useTripStore } from '@/src/store/useTripStore';
-import { User } from '@/src/types/auth';
+import { useAuthStore } from '@/src/features/auth/store';
+import { useTripStore } from '@/src/features/trips/store';
+import { User } from '@/src/features/auth/types';
 
 /**
  * Store Test Helpers

@@ -37,6 +37,16 @@ export const ServerEventType = z.enum([
 
 export type ServerEventType = z.infer<typeof ServerEventType>;
 
+// Connection Status
+export const WebSocketStatus = z.enum([
+  'CONNECTING',
+  'CONNECTED',
+  'DISCONNECTED',
+  'ERROR'
+]);
+
+export type WebSocketStatus = z.infer<typeof WebSocketStatus>;
+
 // Metadata schema
 export const EventMetadataSchema = z.object({
   correlationID: z.string().optional(),
@@ -47,12 +57,11 @@ export const EventMetadataSchema = z.object({
 
 // Base event schema
 export const BaseEventSchema = z.object({
-  id: z.string().uuid(),
-  type: z.nativeEnum(ServerEventType),
+  id: z.string(),
+  type: ServerEventType,
+  tripId: z.string(),
+  userId: z.string().optional(),
   timestamp: z.string().datetime(),
-  tripId: z.string().uuid().optional(),
-  userId: z.string().uuid().optional(), // User who triggered the event
-  source: z.enum(['SERVER', 'CLIENT']).optional(), // Origin of the event
   version: z.number(),
   metadata: z.object({
     correlationId: z.string().optional(),

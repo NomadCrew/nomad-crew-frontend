@@ -10,49 +10,54 @@ import { TravelVanAnimation } from '@/src/components/TravelVanAnimation';
 
 const PUNS = [
   "Let's make it official! Pick a username your crew will remember.",
-  "Your username is your passport to adventure ✈️.",
+  'Your username is your passport to adventure ✈️.',
   "No more 'user1234'—let's get creative!",
-  "This is your NomadCrew nickname. Make it fun!",
-  "What should we call you on your next trip?",
-  "Claim your travel alias!",
-  "Your username, your vibe.",
-  "Give us a name. We promise not to judge. Probably.",
-  "The crew needs to know who to blame for getting lost.",
-  "Your identity on this trip. Choose wisely (or not).",
-  "No pressure, but this name might end up on a group T-shirt.",
-  "Be the legend. Start with the name.",
+  'This is your NomadCrew nickname. Make it fun!',
+  'What should we call you on your next trip?',
+  'Claim your travel alias!',
+  'Your username, your vibe.',
+  'Give us a name. We promise not to judge. Probably.',
+  'The crew needs to know who to blame for getting lost.',
+  'Your identity on this trip. Choose wisely (or not).',
+  'No pressure, but this name might end up on a group T-shirt.',
+  'Be the legend. Start with the name.',
   "This isn't just a username. It's your call sign.",
   "You're one username away from becoming the group's meme.",
-  "Make it epic. Or weird. We support both.",
-  "Think Bond. But like... budget-travel Bond.",
-  "Pick a name. The campfire stories start here.",
-  "Avoid names you used on Facebook. Trust us.",
-  "Type a name. Feel powerful. Become unstoppable.",
+  'Make it epic. Or weird. We support both.',
+  'Think Bond. But like... budget-travel Bond.',
+  'Pick a name. The campfire stories start here.',
+  'Avoid names you used on Facebook. Trust us.',
+  'Type a name. Feel powerful. Become unstoppable.',
 ];
 
 const usernames = [
-  "xXx_SlayerBoi420_xXx",
-  "password123",
-  "toenail_collector",
-  "notavirus.exe",
-  "__underscore__king__",
-  "69_cheeseburgerz_69",
-  "i_luv_taxidermy",
-  "ur_mom_dot_com",
-  "flat_earth_daddy",
-  "emotional_baggage69",
-  "crustybagel",
-  "C0d3r_B0y_2008",
-  "grandmas_wrath",
-  "twerky_turtle",
-  "butter_fartz",
-  "sadboi.vibes.only",
-  "why_am_I_like_this",
-  "uncle_touchy",
-  "milkman_returns",
-  "secretnachos"
+  'xXx_SlayerBoi420_xXx',
+  'password123',
+  'toenail_collector',
+  'notavirus.exe',
+  '__underscore__king__',
+  '69_cheeseburgerz_69',
+  'i_luv_taxidermy',
+  'ur_mom_dot_com',
+  'flat_earth_daddy',
+  'emotional_baggage69',
+  'crustybagel',
+  'C0d3r_B0y_2008',
+  'grandmas_wrath',
+  'twerky_turtle',
+  'butter_fartz',
+  'sadboi.vibes.only',
+  'why_am_I_like_this',
+  'uncle_touchy',
+  'milkman_returns',
+  'secretnachos',
 ];
 
+/**
+ * Selects a random pun from the PUNS array.
+ *
+ * @returns A single pun string randomly chosen from `PUNS`.
+ */
 function getRandomPun() {
   return PUNS[Math.floor(Math.random() * PUNS.length)];
 }
@@ -63,13 +68,21 @@ function getRandomUsername() {
 
 console.log('[UsernameStep] File loaded, starting UsernameStep component render');
 
+/**
+ * Onboarding step that prompts the user to choose a username, submits it to the backend, and routes to the next screen.
+ *
+ * Displays a random pun, pre-fills the input from the current user or email prefix, shows validation errors, and updates
+ * the local user profile after successful submission. Navigation goes to the contact-email onboarding screen if a
+ * contact email is required; otherwise it proceeds to the main trips tab.
+ *
+ * @returns A React element that renders the username selection UI used during onboarding.
+ */
 export default function UsernameStep() {
   console.log('[UsernameStep] Inside UsernameStep function - rendering');
   const user = useAuthStore((state) => state.user);
-  // @ts-ignore - Temporarily ignore for logging, AuthState type might be missing action signatures
   const setUser = useAuthStore((state) => state.setUser);
-  // @ts-ignore - Temporarily ignore for logging, AuthState type might be missing action signatures
   const setNeedsUsername = useAuthStore((state) => state.setNeedsUsername);
+  const needsContactEmail = useAuthStore((state) => state.needsContactEmail);
   // Prefer current username, then email prefix, then random
   const initialUsername = user?.username || user?.email?.split('@')[0] || getRandomUsername();
   const [username, setUsername] = useState(initialUsername);
@@ -78,10 +91,10 @@ export default function UsernameStep() {
   const [pun] = useState(getRandomPun());
   const { theme } = useAppTheme();
 
-  const isUnchanged = username.trim() === initialUsername.trim();
+  const isUnchanged = (username?.trim() ?? '') === (initialUsername?.trim() ?? '');
 
   const handleSubmit = async () => {
-    if (!username.trim()) {
+    if (!username?.trim()) {
       setError('Username is required');
       return;
     }
@@ -96,7 +109,13 @@ export default function UsernameStep() {
       console.log('Fetched backend user after setting username:', updatedUser);
       setUser(updatedUser);
       setNeedsUsername(false);
-      router.replace('/(auth)/login');
+      // Navigate to contact-email screen if needed, otherwise go to main app
+      if (needsContactEmail) {
+        console.log('Username set, routing to contact-email screen');
+        router.replace('/(onboarding)/contact-email');
+      } else {
+        router.replace('/(tabs)/trips');
+      }
     } catch (e: any) {
       // If backend returns uniqueness error, show it
       if (e?.response?.data?.message?.toLowerCase().includes('username')) {
@@ -111,15 +130,34 @@ export default function UsernameStep() {
 
   return (
     <ThemedView fullScreen style={{ justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-      <ThemedText variant="heading.h1" style={{ fontSize: 32, marginBottom: 8, textAlign: 'center' }}>
+      <ThemedText
+        variant="heading.h1"
+        style={{ fontSize: 32, marginBottom: 8, textAlign: 'center' }}
+      >
         👋 Welcome, Nomad!
       </ThemedText>
       <TravelVanAnimation />
-      <ThemedText variant="body.large" color="content.secondary" style={{ marginBottom: 20, textAlign: 'center', fontSize: 18 }}>
+      <ThemedText
+        variant="body.large"
+        color="content.secondary"
+        style={{ marginBottom: 20, textAlign: 'center', fontSize: 18 }}
+      >
         {pun}
       </ThemedText>
-      <ThemedView style={[styles.card, { backgroundColor: theme.colors.surface.default, borderRadius: theme.borderRadius.lg, shadowColor: theme.colors.primary.main }]}> 
-        <ThemedText variant="body.medium" style={{ marginBottom: 8, textAlign: 'center', fontWeight: '600' }}>
+      <ThemedView
+        style={[
+          styles.card,
+          {
+            backgroundColor: theme.colors.surface.default,
+            borderRadius: theme.borderRadius.lg,
+            shadowColor: theme.colors.primary.main,
+          },
+        ]}
+      >
+        <ThemedText
+          variant="body.medium"
+          style={{ marginBottom: 8, textAlign: 'center', fontWeight: '600' }}
+        >
           Choose your username
         </ThemedText>
         <TextInput
@@ -139,7 +177,9 @@ export default function UsernameStep() {
           placeholderTextColor={theme.colors.content.tertiary}
         />
         {error ? (
-          <ThemedText color="error.main" style={styles.error}>{error}</ThemedText>
+          <ThemedText color="error.main" style={styles.error}>
+            {error}
+          </ThemedText>
         ) : null}
         <Pressable
           style={({ pressed }) => [
@@ -204,4 +244,4 @@ const styles = StyleSheet.create({
     fontSize: 18,
     letterSpacing: 0.5,
   },
-}); 
+});
