@@ -1,5 +1,10 @@
 /* global jest */
 
+// Set up environment variables for tests FIRST
+process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://test-project.supabase.co';
+process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key-for-jest';
+process.env.EXPO_PUBLIC_PROJECT_ID = 'test-project-id';
+
 // Mock localStorage FIRST before any imports
 const localStorageMock = {
   getItem: jest.fn(),
@@ -105,22 +110,35 @@ jest.mock('expo-notifications', () => ({
   setNotificationHandler: jest.fn(),
 }));
 
-// Mock Supabase client
-jest.mock('@/src/auth/supabaseClient', () => ({
-  supabase: {
-    auth: {
-      signUp: jest.fn(),
-      signInWithPassword: jest.fn(),
-      signInWithIdToken: jest.fn(),
-      signOut: jest.fn(),
-      getSession: jest.fn(),
-      refreshSession: jest.fn(),
-      onAuthStateChange: jest.fn(() => ({
-        data: { subscription: { unsubscribe: jest.fn() } }
-      })),
-    },
+// Mock Supabase - mock the @supabase/supabase-js module directly
+const mockSupabaseClient = {
+  auth: {
+    signUp: jest.fn(),
+    signInWithPassword: jest.fn(),
+    signInWithIdToken: jest.fn(),
+    signOut: jest.fn(),
+    getSession: jest.fn(),
+    refreshSession: jest.fn(),
+    onAuthStateChange: jest.fn(() => ({
+      data: { subscription: { unsubscribe: jest.fn() } }
+    })),
   },
+  from: jest.fn(() => ({
+    select: jest.fn().mockReturnThis(),
+    insert: jest.fn().mockReturnThis(),
+    update: jest.fn().mockReturnThis(),
+    delete: jest.fn().mockReturnThis(),
+    eq: jest.fn().mockReturnThis(),
+    single: jest.fn(),
+  })),
+};
+
+jest.mock('@supabase/supabase-js', () => ({
+  createClient: jest.fn(() => mockSupabaseClient),
 }));
+
+// Also provide the supabase export for direct imports
+global.mockSupabaseClient = mockSupabaseClient;
 
 // Setup test environment
 global.fetch = jest.fn(); 
