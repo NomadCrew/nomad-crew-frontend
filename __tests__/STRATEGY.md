@@ -22,7 +22,7 @@ After analyzing 9 failing test suites, we have identified **four distinct root c
 **Problem:**
 The stores were refactored to feature-based architecture:
 
-- `src/store/useAuthStore.ts` now re-exports from `src/features/auth/store.ts`
+- `src/features/auth/store.ts` is the canonical auth store location
 - `src/features/auth/store.ts` imports from `src/features/auth/service.ts`
 - `src/features/auth/service.ts` contains a **runtime validation** that throws if Supabase env vars are missing:
   ```typescript
@@ -31,6 +31,8 @@ The stores were refactored to feature-based architecture:
   }
   ```
 
+**Note:** The `src/store/useAuthStore.ts` shim has been removed. All imports now use `@/src/features/auth/store` directly.
+
 **Why Current Mocks Fail:**
 The `jest.setup.js` sets `process.env.EXPO_PUBLIC_SUPABASE_URL` and `process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY` at the top, but the module is loaded **before** the mock can intercept. The real `src/features/auth/service.ts` is evaluated, causing the throw.
 
@@ -38,9 +40,8 @@ The `jest.setup.js` sets `process.env.EXPO_PUBLIC_SUPABASE_URL` and `process.env
 
 ```
 useAuthStore.test.ts
-  -> @/src/store/useAuthStore
-    -> @/src/features/auth/store
-      -> @/src/features/auth/service (THROWS - env vars not available at module load time)
+  -> @/src/features/auth/store
+    -> @/src/features/auth/service (THROWS - env vars not available at module load time)
 ```
 
 ---
@@ -373,10 +374,11 @@ The API retry tests use fake timers which may conflict with real async operation
 
 ### Compatibility Re-exports
 
-- `src/store/useAuthStore.ts` - Re-exports from features/auth/store
 - `src/store/useTripStore.ts` - Re-exports from features/trips/store
 - `src/store/useLocationStore.ts` - (Check if re-export or original)
 - `src/store/useChatStore.ts` - (Check if re-export or original)
+
+Note: The `src/store/useAuthStore.ts` shim was removed. Use `@/src/features/auth/store` directly.
 
 ### Test Infrastructure
 

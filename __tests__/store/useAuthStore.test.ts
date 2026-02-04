@@ -34,8 +34,8 @@ jest.mock('@/src/features/auth/service', () => {
   };
 });
 
-// Also mock the legacy path for backwards compatibility
-jest.mock('@/src/auth/supabaseClient', () => {
+// Also mock the Supabase client
+jest.mock('@/src/api/supabase', () => {
   const mockAuth = {
     signUp: jest.fn(),
     signInWithPassword: jest.fn(),
@@ -55,7 +55,7 @@ jest.mock('@/src/auth/supabaseClient', () => {
 });
 
 // Now we can import the store after mocks are set up
-import { useAuthStore } from '@/src/store/useAuthStore';
+import { useAuthStore } from '@/src/features/auth/store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { api } from '@/src/api/api-client';

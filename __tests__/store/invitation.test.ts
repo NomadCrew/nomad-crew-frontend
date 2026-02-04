@@ -20,16 +20,16 @@ jest.mock('@/src/features/auth/service', () => ({
 }));
 
 import { act } from '@testing-library/react-native';
-import { useTripStore } from '@/src/store/useTripStore';
-import { useAuthStore } from '@/src/store/useAuthStore';
+import { useTripStore } from '@/src/features/trips/store';
+import { useAuthStore } from '@/src/features/auth/store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { resetAllStores, setupAuthenticatedUser } from '../helpers';
 import { createMockUser, createMockTrip, createMockInvitation } from '../factories';
 
 import { api, apiClient } from '@/src/api/api-client';
 
-// Mock Supabase (kept for backwards compatibility with old import paths)
-jest.mock('@/src/auth/supabaseClient', () => ({
+// Mock Supabase client
+jest.mock('@/src/api/supabase', () => ({
   supabase: {
     auth: {
       signUp: jest.fn(),

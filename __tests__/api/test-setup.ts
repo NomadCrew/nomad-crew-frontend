@@ -69,7 +69,7 @@ jest.mock('@/src/utils/token', () => ({
 }));
 
 // Mock Supabase client completely
-jest.mock('@/src/auth/supabaseClient', () => ({
+jest.mock('@/src/api/supabase', () => ({
   supabase: {
     auth: {
       getSession: jest.fn(() => Promise.resolve({ data: { session: null }, error: null })),

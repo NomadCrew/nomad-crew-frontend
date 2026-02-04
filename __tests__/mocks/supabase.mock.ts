@@ -8,13 +8,13 @@ import { Session } from '@supabase/supabase-js';
  *
  * @example
  * // In test setup
- * jest.mock('@/src/auth/supabaseClient', () => ({
+ * jest.mock('@/src/api/supabase', () => ({
  *   supabase: createSupabaseMock()
  * }));
  *
  * @example
  * // In test
- * const { supabase } = require('@/src/auth/supabaseClient');
+ * const { supabase } = require('@/src/api/supabase');
  * supabase.auth.signInWithPassword.mockResolvedValue(
  *   mockSuccessfulSignIn(createMockSession())
  * );
@@ -30,9 +30,9 @@ export const createSupabaseMock = () => ({
     onAuthStateChange: jest.fn(() => ({
       data: {
         subscription: {
-          unsubscribe: jest.fn()
-        }
-      }
+          unsubscribe: jest.fn(),
+        },
+      },
     })),
   },
 });
@@ -48,27 +48,28 @@ export const createSupabaseMock = () => ({
  *   user: { email: 'custom@example.com' }
  * });
  */
-export const createMockSession = (overrides: Partial<Session> = {}): Session => ({
-  access_token: 'mock-access-token-123',
-  refresh_token: 'mock-refresh-token-456',
-  expires_in: 3600,
-  expires_at: Math.floor(Date.now() / 1000) + 3600,
-  token_type: 'bearer',
-  user: {
-    id: 'user-123',
-    app_metadata: {},
-    user_metadata: {
-      username: 'testuser',
-      firstName: 'Test',
-      lastName: 'User',
+export const createMockSession = (overrides: Partial<Session> = {}): Session =>
+  ({
+    access_token: 'mock-access-token-123',
+    refresh_token: 'mock-refresh-token-456',
+    expires_in: 3600,
+    expires_at: Math.floor(Date.now() / 1000) + 3600,
+    token_type: 'bearer',
+    user: {
+      id: 'user-123',
+      app_metadata: {},
+      user_metadata: {
+        username: 'testuser',
+        firstName: 'Test',
+        lastName: 'User',
+      },
+      aud: 'authenticated',
+      created_at: new Date().toISOString(),
+      email: 'test@example.com',
+      ...overrides.user,
     },
-    aud: 'authenticated',
-    created_at: new Date().toISOString(),
-    email: 'test@example.com',
-    ...overrides.user,
-  },
-  ...overrides,
-} as Session);
+    ...overrides,
+  }) as Session;
 
 /**
  * Creates a successful sign-in response.
@@ -111,8 +112,7 @@ export const mockAuthError = (message: string, code?: string) => ({
  * @example
  * supabase.auth.getSession.mockResolvedValue(mockSessionExpired());
  */
-export const mockSessionExpired = () =>
-  mockAuthError('Session expired', 'SESSION_EXPIRED');
+export const mockSessionExpired = () => mockAuthError('Session expired', 'SESSION_EXPIRED');
 
 /**
  * Creates a successful sign-up response (email confirmation required).

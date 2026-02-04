@@ -24,8 +24,8 @@ jest.mock('@/src/features/auth/service', () => ({
 }));
 
 import { act } from '@testing-library/react-native';
-import { useTripStore } from '@/src/store/useTripStore';
-import { useAuthStore } from '@/src/store/useAuthStore';
+import { useTripStore } from '@/src/features/trips/store';
+import { useAuthStore } from '@/src/features/auth/store';
 import { createMockUser } from '@/__tests__/factories/user.factory';
 import { createMockTrip, createMockMember } from '@/__tests__/factories/trip.factory';
 import { resetAllStores, setupAuthenticatedUser } from '@/__tests__/helpers/store-helpers';
@@ -49,7 +49,7 @@ jest.mock('@supabase/supabase-js', () => ({
 }));
 
 // Mock Supabase client exports
-jest.mock('@/src/auth/supabaseClient', () => ({
+jest.mock('@/src/api/supabase', () => ({
   supabase: {
     auth: {
       signUp: jest.fn(),

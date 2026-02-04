@@ -13,6 +13,7 @@ Comprehensive test suite for the authentication store (`useAuthStore.ts`) with *
 ## Test Categories
 
 ### 1. Initialize (5 tests)
+
 - ✓ Session recovery with valid session
 - ✓ Initialization without session
 - ✓ Error handling during recovery
@@ -20,18 +21,21 @@ Comprehensive test suite for the authentication store (`useAuthStore.ts`) with *
 - ✓ Exception handling
 
 ### 2. Register (4 tests)
+
 - ✓ Successful registration with email verification
 - ✓ Duplicate email error handling
 - ✓ Registration with minimal fields
 - ✓ Unknown error types
 
 ### 3. Login (4 tests)
+
 - ✓ Successful login with full user data
 - ✓ Invalid credentials error
 - ✓ Missing session error
 - ✓ Missing email in session
 
 ### 4. Refresh Session (5 tests)
+
 - ✓ Successful token refresh
 - ✓ No refresh token available
 - ✓ Refresh error with state clearing
@@ -39,6 +43,7 @@ Comprehensive test suite for the authentication store (`useAuthStore.ts`) with *
 - ✓ getSession error handling
 
 ### 5. Logout (5 tests)
+
 - ✓ Complete state clearing
 - ✓ Local state clearing when Supabase fails
 - ✓ AsyncStorage clearing
@@ -46,6 +51,7 @@ Comprehensive test suite for the authentication store (`useAuthStore.ts`) with *
 - ✓ Unexpected error handling
 
 ### 6. Google Sign-In (7 tests)
+
 - ✓ Direct ID token format
 - ✓ Nested user format
 - ✓ Data wrapper format
@@ -55,11 +61,13 @@ Comprehensive test suite for the authentication store (`useAuthStore.ts`) with *
 - ✓ Missing session in response
 
 ### 7. Apple Sign-In (3 tests)
+
 - ✓ Successful authentication
 - ✓ Minimal metadata handling
 - ✓ Error handling
 
 ### 8. Additional Features (7 tests)
+
 - ✓ First-time flag setting
 - ✓ Push token registration with permission
 - ✓ Push token without permission
@@ -69,6 +77,7 @@ Comprehensive test suite for the authentication store (`useAuthStore.ts`) with *
 - ✓ Special characters in tokens
 
 ### 9. State Consistency (3 tests)
+
 - ✓ State during failed operations
 - ✓ Error clearing on success
 - ✓ Property preservation during logout
@@ -89,6 +98,7 @@ npm test -- __tests__/store/useAuthStore.test.ts --watch
 ## Test Structure
 
 The tests use:
+
 - **jsdom environment** for localStorage support
 - **Mocked dependencies**: Supabase, AsyncStorage, Notifications, API client
 - **Direct Zustand store testing** (no React hooks required)
@@ -97,6 +107,7 @@ The tests use:
 ## Key Test Patterns
 
 ### 1. State Verification
+
 ```typescript
 const state = useAuthStore.getState();
 expect(state.user?.id).toBe('user-123');
@@ -104,6 +115,7 @@ expect(state.token).toBe('access-token');
 ```
 
 ### 2. Error Handling
+
 ```typescript
 await expect(
   useAuthStore.getState().login({ email: 'wrong', password: 'wrong' })
@@ -111,6 +123,7 @@ await expect(
 ```
 
 ### 3. Mock Setup
+
 ```typescript
 (supabase.auth.signInWithPassword as jest.Mock).mockResolvedValue({
   data: { session: mockSession },
@@ -131,11 +144,13 @@ await expect(
 ## Uncovered Code Paths
 
 The remaining 10.6% uncovered code includes:
+
 - Session recovery fallback logic (lines 122-138, 171-188)
 - Some logger calls (line 42)
 - Push token registration with project ID (lines 532-536)
 
 These are either:
+
 - Complex fallback paths rarely executed
 - Environment-specific code (Expo project ID)
 - Non-critical logging statements
@@ -150,11 +165,11 @@ These are either:
 
 ## Related Files
 
-- **Implementation**: `/src/store/useAuthStore.ts`
-- **Types**: `/src/types/auth.ts`
+- **Implementation**: `/src/features/auth/store.ts`
+- **Types**: `/src/features/auth/types.ts`
 - **API Client**: `/src/api/api-client.ts`
-- **Supabase Client**: `/src/auth/supabaseClient.ts`
+- **Auth Service**: `/src/features/auth/service.ts`
 
 ## Last Updated
 
-2025-11-28
+2026-02-04
