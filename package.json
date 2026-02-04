@@ -37,6 +37,9 @@
       "/__tests__/api/test-setup.ts",
       "/__tests__/test-utils.tsx"
     ],
+    "modulePaths": [
+      "<rootDir>"
+    ],
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/$1"
     },
