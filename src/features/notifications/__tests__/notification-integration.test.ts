@@ -1,7 +1,22 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useNotificationStore } from '../store/useNotificationStore';
 import { notificationService } from '../service';
-import { parseNotification } from '../types/notification';
+import {
+  safeParseNotification,
+  Notification,
+  TripInvitationNotification,
+} from '../types/notification';
+
+// Mock API client
+jest.mock('@/src/api/api-client', () => ({
+  api: {
+    get: jest.fn(),
+    post: jest.fn(),
+    patch: jest.fn(),
+    delete: jest.fn(),
+  },
+  apiClient: {},
+}));
 
 // Mock Supabase
 jest.mock('@/src/api/supabase', () => ({
@@ -34,6 +49,11 @@ jest.mock('@/src/features/auth/store', () => ({
   },
 }));
 
+// Mock AsyncStorage
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
+);
+
 describe('Notification Integration Tests', () => {
   beforeEach(() => {
     // Clear store before each test
@@ -41,43 +61,51 @@ describe('Notification Integration Tests', () => {
       notifications: [],
       unreadCount: 0,
       latestChatMessageToast: null,
-      latestLocationUpdate: null,
+      isFetching: false,
+      isFetchingUnreadCount: false,
+      isMarkingRead: false,
+      isHandlingAction: false,
+      error: null,
+      offset: 0,
+      hasMore: true,
+      hasHydrated: true,
     });
+    jest.clearAllMocks();
   });
 
-  describe('parseNotification', () => {
+  describe('safeParseNotification', () => {
     it('should parse valid TRIP_UPDATE notification', () => {
       const rawNotification = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         type: 'TRIP_UPDATE',
-        priority: 'HIGH',
-        data: {
-          tripId: 'trip-123',
+        message: 'Trip was updated',
+        metadata: {
+          tripID: 'trip-123',
           tripName: 'Summer Vacation',
-          updateType: 'trip_created',
-          updatedBy: 'John Doe',
+          updaterName: 'John Doe',
+          changedFields: ['name', 'description'],
         },
         read: false,
         createdAt: '2024-01-01T00:00:00Z',
       };
 
-      const parsed = parseNotification(rawNotification);
+      const parsed = safeParseNotification(rawNotification);
       expect(parsed).toBeTruthy();
       expect(parsed?.type).toBe('TRIP_UPDATE');
-      expect(parsed?.priority).toBe('HIGH');
-      expect(parsed?.data.tripId).toBe('trip-123');
+      expect(parsed?.message).toBe('Trip was updated');
+      if (parsed?.type === 'TRIP_UPDATE') {
+        expect(parsed.metadata.tripID).toBe('trip-123');
+      }
     });
 
     it('should parse valid CHAT_MESSAGE notification', () => {
       const rawNotification = {
         id: '123e4567-e89b-12d3-a456-426614174001',
         type: 'CHAT_MESSAGE',
-        priority: 'MEDIUM',
-        data: {
-          tripId: 'trip-123',
-          tripName: 'Summer Vacation',
-          chatId: 'chat-456',
-          senderId: 'user-789',
+        message: 'New message from Jane',
+        metadata: {
+          chatID: 'chat-456',
+          messageID: 'msg-789',
           senderName: 'Jane Doe',
           messagePreview: 'Hey everyone, excited for the trip!',
         },
@@ -85,46 +113,60 @@ describe('Notification Integration Tests', () => {
         createdAt: '2024-01-01T00:00:00Z',
       };
 
-      const parsed = parseNotification(rawNotification);
+      const parsed = safeParseNotification(rawNotification);
       expect(parsed).toBeTruthy();
       expect(parsed?.type).toBe('CHAT_MESSAGE');
-      expect(parsed?.data.messagePreview).toBe('Hey everyone, excited for the trip!');
+      if (parsed?.type === 'CHAT_MESSAGE') {
+        expect(parsed.metadata.messagePreview).toBe('Hey everyone, excited for the trip!');
+      }
     });
 
-    it('should parse valid LOCATION_UPDATE notification', () => {
+    it('should parse valid TRIP_INVITATION notification', () => {
       const rawNotification = {
         id: '123e4567-e89b-12d3-a456-426614174002',
-        type: 'LOCATION_UPDATE',
-        priority: 'LOW',
-        data: {
-          tripId: 'trip-123',
+        type: 'TRIP_INVITATION',
+        message: 'You have been invited to Summer Vacation',
+        metadata: {
+          invitationID: 'inv-123',
+          tripID: 'trip-123',
           tripName: 'Summer Vacation',
-          sharedById: 'user-456',
-          sharedByName: 'Bob Smith',
-          location: {
-            lat: 37.7749,
-            lng: -122.4194,
-            name: 'San Francisco',
-          },
+          inviterName: 'Bob Smith',
+          inviterID: 'user-456',
         },
         read: false,
         createdAt: '2024-01-01T00:00:00Z',
       };
 
-      const parsed = parseNotification(rawNotification);
+      const parsed = safeParseNotification(rawNotification);
       expect(parsed).toBeTruthy();
-      expect(parsed?.type).toBe('LOCATION_UPDATE');
-      expect(parsed?.data.location?.lat).toBe(37.7749);
+      expect(parsed?.type).toBe('TRIP_INVITATION');
+      if (parsed?.type === 'TRIP_INVITATION') {
+        expect(parsed.metadata.tripName).toBe('Summer Vacation');
+      }
     });
 
-    it('should return null for invalid notification', () => {
-      const invalidNotification = {
-        id: 'not-a-uuid',
-        type: 'INVALID_TYPE',
-        data: {},
+    it('should return UNKNOWN type for unknown notification types', () => {
+      const unknownNotification = {
+        id: '123e4567-e89b-12d3-a456-426614174003',
+        type: 'SOME_NEW_TYPE',
+        message: 'Some message',
+        metadata: { foo: 'bar' },
+        read: false,
+        createdAt: '2024-01-01T00:00:00Z',
       };
 
-      const parsed = parseNotification(invalidNotification);
+      const parsed = safeParseNotification(unknownNotification);
+      expect(parsed).toBeTruthy();
+      expect(parsed?.type).toBe('UNKNOWN');
+    });
+
+    it('should return null for completely invalid notification', () => {
+      const invalidNotification = {
+        // Missing required fields
+        someField: 'value',
+      };
+
+      const parsed = safeParseNotification(invalidNotification);
       expect(parsed).toBeNull();
     });
   });
@@ -133,15 +175,15 @@ describe('Notification Integration Tests', () => {
     it('should handle incoming TRIP_UPDATE notification', () => {
       const { result } = renderHook(() => useNotificationStore());
 
-      const notification = {
+      const notification: Notification = {
         id: '123e4567-e89b-12d3-a456-426614174000',
-        type: 'TRIP_UPDATE' as const,
-        priority: 'HIGH' as const,
-        data: {
-          tripId: 'trip-123',
+        type: 'TRIP_UPDATE',
+        message: 'Trip was updated',
+        metadata: {
+          tripID: 'trip-123',
           tripName: 'Summer Vacation',
-          updateType: 'trip_created' as const,
-          updatedBy: 'John Doe',
+          updaterName: 'John Doe',
+          changedFields: ['name'],
         },
         read: false,
         createdAt: '2024-01-01T00:00:00Z',
@@ -159,15 +201,13 @@ describe('Notification Integration Tests', () => {
     it('should handle incoming CHAT_MESSAGE notification', () => {
       const { result } = renderHook(() => useNotificationStore());
 
-      const notification = {
+      const notification: Notification = {
         id: '123e4567-e89b-12d3-a456-426614174001',
-        type: 'CHAT_MESSAGE' as const,
-        priority: 'MEDIUM' as const,
-        data: {
-          tripId: 'trip-123',
-          tripName: 'Summer Vacation',
-          chatId: 'chat-456',
-          senderId: 'user-789',
+        type: 'CHAT_MESSAGE',
+        message: 'New message from Jane',
+        metadata: {
+          chatID: 'chat-456',
+          messageID: 'msg-789',
           senderName: 'Jane Doe',
           messagePreview: 'Hey everyone!',
         },
@@ -185,23 +225,19 @@ describe('Notification Integration Tests', () => {
       expect(result.current.unreadCount).toBe(1);
     });
 
-    it('should handle incoming LOCATION_UPDATE notification', () => {
+    it('should handle incoming TRIP_INVITATION notification', () => {
       const { result } = renderHook(() => useNotificationStore());
 
-      const notification = {
+      const notification: Notification = {
         id: '123e4567-e89b-12d3-a456-426614174002',
-        type: 'LOCATION_UPDATE' as const,
-        priority: 'LOW' as const,
-        data: {
-          tripId: 'trip-123',
+        type: 'TRIP_INVITATION',
+        message: 'You have been invited',
+        metadata: {
+          invitationID: 'inv-123',
+          tripID: 'trip-123',
           tripName: 'Summer Vacation',
-          sharedById: 'user-456',
-          sharedByName: 'Bob Smith',
-          location: {
-            lat: 37.7749,
-            lng: -122.4194,
-            name: 'San Francisco',
-          },
+          inviterName: 'Bob Smith',
+          inviterID: 'user-456',
         },
         read: false,
         createdAt: '2024-01-01T00:00:00Z',
@@ -212,21 +248,21 @@ describe('Notification Integration Tests', () => {
       });
 
       expect(result.current.notifications).toHaveLength(1);
-      expect(result.current.latestLocationUpdate).toEqual(notification);
       expect(result.current.unreadCount).toBe(1);
     });
 
     it('should not increment unread count for read notifications', () => {
       const { result } = renderHook(() => useNotificationStore());
 
-      const notification = {
+      const notification: Notification = {
         id: '123e4567-e89b-12d3-a456-426614174000',
-        type: 'TRIP_UPDATE' as const,
-        priority: 'HIGH' as const,
-        data: {
-          tripId: 'trip-123',
+        type: 'TRIP_UPDATE',
+        message: 'Trip was updated',
+        metadata: {
+          tripID: 'trip-123',
           tripName: 'Summer Vacation',
-          updateType: 'trip_created' as const,
+          updaterName: 'John Doe',
+          changedFields: ['name'],
         },
         read: true, // Already read
         createdAt: '2024-01-01T00:00:00Z',
@@ -243,14 +279,15 @@ describe('Notification Integration Tests', () => {
     it('should prevent duplicate notifications', () => {
       const { result } = renderHook(() => useNotificationStore());
 
-      const notification = {
+      const notification: Notification = {
         id: '123e4567-e89b-12d3-a456-426614174000',
-        type: 'TRIP_UPDATE' as const,
-        priority: 'HIGH' as const,
-        data: {
-          tripId: 'trip-123',
+        type: 'TRIP_UPDATE',
+        message: 'Trip was updated',
+        metadata: {
+          tripID: 'trip-123',
           tripName: 'Summer Vacation',
-          updateType: 'trip_created' as const,
+          updaterName: 'John Doe',
+          changedFields: ['name'],
         },
         read: false,
         createdAt: '2024-01-01T00:00:00Z',
@@ -270,14 +307,16 @@ describe('Notification Integration Tests', () => {
     it('should handle trip invitation acceptance', async () => {
       const { result } = renderHook(() => useNotificationStore());
 
-      const notification = {
+      const notification: TripInvitationNotification = {
         id: '123e4567-e89b-12d3-a456-426614174000',
-        type: 'TRIP_UPDATE' as const,
-        priority: 'HIGH' as const,
-        data: {
-          tripId: 'trip-123',
+        type: 'TRIP_INVITATION',
+        message: 'You have been invited to Summer Vacation',
+        metadata: {
+          invitationID: 'inv-123',
+          tripID: 'trip-123',
           tripName: 'Summer Vacation',
-          updateType: 'member_added' as const,
+          inviterName: 'Bob Smith',
+          inviterID: 'user-456',
         },
         read: false,
         createdAt: '2024-01-01T00:00:00Z',
@@ -290,15 +329,55 @@ describe('Notification Integration Tests', () => {
 
       // Mock API response
       const mockApi = require('@/src/api/api-client').api;
-      mockApi.post = jest.fn().mockResolvedValue({ data: {} });
+      mockApi.post.mockResolvedValue({ data: {} });
 
       // Accept invitation
       await act(async () => {
-        await result.current.handleTripUpdateAction(notification, 'accept');
+        await result.current.acceptTripInvitation(notification);
       });
 
-      expect(mockApi.post).toHaveBeenCalledWith('/v1/trips/trip-123/members/accept');
+      expect(mockApi.post).toHaveBeenCalledWith('/v1/invitations/inv-123/accept');
       expect(result.current.notifications[0].read).toBe(true);
+      expect(result.current.unreadCount).toBe(0);
+    });
+
+    it('should handle trip invitation decline', async () => {
+      const { result } = renderHook(() => useNotificationStore());
+
+      const notification: TripInvitationNotification = {
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        type: 'TRIP_INVITATION',
+        message: 'You have been invited to Summer Vacation',
+        metadata: {
+          invitationID: 'inv-123',
+          tripID: 'trip-123',
+          tripName: 'Summer Vacation',
+          inviterName: 'Bob Smith',
+          inviterID: 'user-456',
+        },
+        read: false,
+        createdAt: '2024-01-01T00:00:00Z',
+      };
+
+      // Add notification first
+      act(() => {
+        result.current.handleIncomingNotification(notification);
+      });
+
+      expect(result.current.notifications).toHaveLength(1);
+
+      // Mock API response
+      const mockApi = require('@/src/api/api-client').api;
+      mockApi.post.mockResolvedValue({ data: {} });
+
+      // Decline invitation
+      await act(async () => {
+        await result.current.declineTripInvitation(notification);
+      });
+
+      expect(mockApi.post).toHaveBeenCalledWith('/v1/invitations/inv-123/decline');
+      // Notification should be removed after declining
+      expect(result.current.notifications).toHaveLength(0);
       expect(result.current.unreadCount).toBe(0);
     });
   });
