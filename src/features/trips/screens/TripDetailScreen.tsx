@@ -112,6 +112,7 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
           <QuickActions
             trip={trip}
             setShowInviteModal={setShowInviteModal}
+            onWalletPress={() => router.push('/wallet' as any)}
             onLocationPress={() => router.push(`/location/${tripId}`)}
             onChatPress={() => {
               router.push(`/chat/${tripId}`);

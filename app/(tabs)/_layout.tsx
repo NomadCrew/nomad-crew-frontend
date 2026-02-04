@@ -2,7 +2,7 @@ import React from 'react';
 import { Tabs, Redirect } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
-import { Home, MapPin, Bell, User } from 'lucide-react-native';
+import { Home, Wallet, Bell, User } from 'lucide-react-native';
 import { useAuthStore } from '@/src/features/auth/store';
 import { useOnboarding } from '@/src/providers/OnboardingProvider';
 import { logger } from '@/src/utils/logger';
@@ -105,10 +105,10 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="location"
+        name="wallet"
         options={{
-          title: 'Location',
-          tabBarIcon: ({ color, size }) => <MapPin color={color} size={size} />,
+          title: 'Wallet',
+          tabBarIcon: ({ color, size }) => <Wallet color={color} size={size} />,
           headerShown: false,
         }}
       />
