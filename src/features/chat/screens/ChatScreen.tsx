@@ -267,6 +267,7 @@ const styles = (theme: Theme) =>
       flex: 1,
       fontSize: 18,
       fontWeight: 'bold',
+      color: theme?.colors?.content?.primary || '#333',
     },
     content: {
       flex: 1,
@@ -283,6 +284,7 @@ const styles = (theme: Theme) =>
       marginTop: 10,
       fontSize: 16,
       fontWeight: 'bold',
+      color: theme?.colors?.content?.primary || '#333',
     },
     errorContainer: {
       flex: 1,
@@ -293,6 +295,7 @@ const styles = (theme: Theme) =>
       marginBottom: 10,
       fontSize: 16,
       fontWeight: 'bold',
+      color: theme?.colors?.content?.primary || '#333',
     },
     retryButton: {
       padding: 10,

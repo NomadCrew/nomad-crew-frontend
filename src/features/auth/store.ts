@@ -504,11 +504,13 @@ export const useAuthStore = create<AuthState>()(
               return;
             }
             // Get project ID from expo-constants (same as pushNotificationService.ts)
-            const projectId = Constants.expoConfig?.extra?.eas?.projectId;
-            if (!projectId) {
+            // Can also be set via EXPO_PUBLIC_PROJECT_ID environment variable
+            const projectId =
+              Constants.expoConfig?.extra?.eas?.projectId || process.env.EXPO_PUBLIC_PROJECT_ID;
+            if (!projectId || typeof projectId !== 'string' || projectId.trim() === '') {
               logger.warn(
                 'AUTH',
-                'EAS project ID not found in app config, skipping push token registration'
+                'EAS project ID not found in app config or EXPO_PUBLIC_PROJECT_ID environment variable, skipping push token registration'
               );
               return;
             }
@@ -517,7 +519,7 @@ export const useAuthStore = create<AuthState>()(
             });
             set({ pushToken: token.data });
             const { user } = get();
-            if (user) {
+            if (user !== null && user !== undefined) {
               // await api.post('/users/push-token', { token: token.data }); // Old direct call
               await registerPushTokenService(token.data); // Use service method
             }
@@ -683,7 +685,10 @@ export const useAuthStore = create<AuthState>()(
               needsUsername,
               status: 'authenticated',
             });
-            get().registerPushToken();
+            const currentUser = get().user;
+            if (currentUser !== null && currentUser !== undefined) {
+              get().registerPushToken();
+            }
           } catch (e: any) {
             logger.error('AUTH', 'Error in handleGoogleSignInSuccess', e.message);
             await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
@@ -808,7 +813,10 @@ export const useAuthStore = create<AuthState>()(
               needsContactEmail,
               status: 'authenticated',
             });
-            get().registerPushToken();
+            const currentUser = get().user;
+            if (currentUser !== null && currentUser !== undefined) {
+              get().registerPushToken();
+            }
           } catch (e: any) {
             logger.error('AUTH', 'Error in handleAppleSignInSuccess', e.message);
             await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY); // Ensure cleanup

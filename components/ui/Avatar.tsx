@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Image,
@@ -196,6 +196,9 @@ export function Avatar({
     return null;
   }, [source, user]);
 
+  // Track image loading errors to fall back to initials
+  const [imageError, setImageError] = useState(false);
+
   // Calculate initials for fallback text display
   const displayInitials = useMemo(() => {
     // First priority: direct initials prop
@@ -222,13 +225,17 @@ export function Avatar({
     return '';
   }, [initials, user]);
 
+  // Show image if we have a source and no error occurred
+  const showImage = avatarSource && !imageError;
+
   return (
     <View style={[styles.container as ViewStyle, style]} {...rest}>
-      {avatarSource ? (
+      {showImage ? (
         <Image
           source={{ uri: avatarSource }}
           style={[styles.image as ImageStyle, imageStyle]}
           resizeMode="cover"
+          onError={() => setImageError(true)}
         />
       ) : (
         <Text style={[styles.text as TextStyle, textStyle]}>

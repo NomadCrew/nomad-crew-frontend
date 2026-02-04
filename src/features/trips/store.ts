@@ -51,6 +51,7 @@ interface TripState {
   // Event handling
   handleTripEvent: (event: ServerEvent) => void;
   acceptInvitation: (token: string) => Promise<void>;
+  declineInvitation: (token: string) => Promise<void>;
   checkPendingInvitations: () => Promise<void>;
   persistInvitation: (token: string) => Promise<void>;
 }
@@ -252,6 +253,21 @@ export const useTripStore = create<TripState>()(
         }
       },
 
+      declineInvitation: async (token: string) => {
+        set({ loading: true, error: null });
+        try {
+          await api.post(API_PATHS.trips.declineInvitation, { token });
+          // Remove the persisted token after declining
+          await AsyncStorage.removeItem(`pendingInvitation_${token}`);
+          set({ loading: false });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Failed to decline invitation';
+          logger.error('TRIP', message);
+          set({ error: message, loading: false });
+          throw error;
+        }
+      },
+
       persistInvitation: async (token: string) => {
         set({ loading: true, error: null });
         try {
@@ -357,6 +373,7 @@ export const selectTripActions = (state: TripState) => ({
   updateTripStatus: state.updateTripStatus,
   inviteMember: state.inviteMember,
   acceptInvitation: state.acceptInvitation,
+  declineInvitation: state.declineInvitation,
 });
 
 // Composite selectors (for common combinations)

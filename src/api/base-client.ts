@@ -122,25 +122,29 @@ export class BaseApiClient {
             );
           }
 
-          case 403:
+          case 403: {
             return Promise.reject(
               new ApiError(status, 'FORBIDDEN', ERROR_MESSAGES.FORBIDDEN, responseData)
             );
+          }
 
-          case 404:
+          case 404: {
             return Promise.reject(
               new ApiError(status, 'NOT_FOUND', ERROR_MESSAGES.NOT_FOUND, responseData)
             );
+          }
 
-          case 429:
+          case 429: {
             return Promise.reject(
               new ApiError(status, 'RATE_LIMITED', ERROR_MESSAGES.RATE_LIMITED, responseData)
             );
+          }
 
-          case 500:
+          case 500: {
             return Promise.reject(
               new ApiError(status, 'SERVER_ERROR', ERROR_MESSAGES.SERVER_ERROR, responseData)
             );
+          }
 
           default: {
             // For any other status, try to use response data or fallback
