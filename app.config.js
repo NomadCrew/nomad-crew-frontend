@@ -71,7 +71,7 @@ export default {
         foregroundImage: './assets/images/icon.png',
         backgroundColor: '#ffffff'
       },
-      googleServicesFile: './SECRET/google-services_dev.json',
+      googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? './SECRET/google-services_dev.json',
       package: IS_DEV
         ? 'com.nomadcrew.app.dev'
         : 'com.nomadcrew.app',
