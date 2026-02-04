@@ -1,12 +1,14 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useTripStore } from '@/src/features/trips/store';
-import { View, StyleSheet, Text, Pressable } from 'react-native';
+import { View, StyleSheet, Text, Pressable, InteractionManager } from 'react-native';
 import { GroupLiveMap } from '../components/GroupLiveMap';
 import { useRouter } from 'expo-router';
 import { LoadingScreen } from '@/src/features/common/components/LoadingScreen';
 import { StatusBar } from 'expo-status-bar';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { useEffect, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 import { logger } from '@/src/utils/logger';
 import { api } from '@/src/api/api-client';
 import { API_PATHS } from '@/src/utils/api-paths';
@@ -24,12 +26,37 @@ export default function LocationScreen() {
   const [loading, setLoading] = useState(true);
   const [tripData, setTripData] = useState<Trip | null>(null);
   const [error, setError] = useState<string | null>(null);
-  
+  // Delay map rendering until navigation is complete to prevent Fabric viewState errors
+  // See: https://github.com/facebook/react-native/issues/49077
+  const [isReadyToRenderMap, setIsReadyToRenderMap] = useState(false);
+
   // Supabase Realtime hooks
-  const locations = useLocations({ 
-    tripId: id as string, 
-    autoConnect: !!tripData 
+  const locations = useLocations({
+    tripId: id as string,
+    autoConnect: !!tripData
   });
+
+  // Wait for navigation transition to complete before rendering MapView
+  // This prevents "Unable to find viewState" errors with New Architecture (Fabric)
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
+
+      // Wait for animations/transitions to complete
+      const task = InteractionManager.runAfterInteractions(() => {
+        if (isMounted) {
+          logger.debug('[LocationScreen] Navigation complete, ready to render map');
+          setIsReadyToRenderMap(true);
+        }
+      });
+
+      return () => {
+        isMounted = false;
+        task.cancel();
+        setIsReadyToRenderMap(false);
+      };
+    }, [])
+  );
   
   useEffect(() => {
     const loadTripData = async () => {
@@ -80,11 +107,12 @@ export default function LocationScreen() {
     loadTripData();
   }, [id, trips, fetchTrips]);
   
-  // Show loading screen
-  if (loading) {
+  // Show loading screen while data loads OR while waiting for navigation to complete
+  // The isReadyToRenderMap check prevents Fabric viewState race conditions
+  if (loading || !isReadyToRenderMap) {
     return <LoadingScreen />;
   }
-  
+
   if (error || !tripData) {
     return (
       <View style={styles(theme).errorContainer}>
@@ -92,7 +120,7 @@ export default function LocationScreen() {
         <Text style={styles(theme).errorText}>
           {error || 'Trip not found'}
         </Text>
-        <Pressable 
+        <Pressable
           style={styles(theme).backButton}
           onPress={() => router.back()}
         >
@@ -105,9 +133,9 @@ export default function LocationScreen() {
   return (
     <View style={styles(theme).container}>
       <StatusBar style="light" />
-      <GroupLiveMap 
-        trip={tripData} 
-        onClose={() => router.back()} 
+      <GroupLiveMap
+        trip={tripData}
+        onClose={() => router.back()}
         isStandalone={true}
         supabaseLocations={locations}
       />

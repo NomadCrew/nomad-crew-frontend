@@ -1,24 +1,46 @@
-import React, { useEffect } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import React, { useEffect, useMemo, useCallback } from 'react';
+import { StyleSheet, View, ScrollView, RefreshControl } from 'react-native';
 import { Text, Button, ActivityIndicator } from 'react-native-paper';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { FlashList } from '@shopify/flash-list';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { useNotificationStore } from '../store/useNotificationStore';
-import { NotificationItem } from './NotificationItem';
-import { FlashList } from '@shopify/flash-list';
+import {
+  Notification,
+  TripInvitationNotification,
+  isTripInvitationNotification,
+} from '../types/notification';
+import { SwipeableNotificationItem } from './SwipeableNotificationItem';
+import { InvitationCard } from './InvitationCard';
+import { ActivityItem } from './ActivityItem';
+import { EmptyNotificationState, EmptyStateType } from './EmptyNotificationState';
+
+export type NotificationFilter = 'invitations' | 'activity' | 'all';
 
 interface NotificationListProps {
+  filter?: NotificationFilter;
   onItemPress?: (notificationId: string) => void;
 }
 
-export const NotificationList: React.FC<NotificationListProps> = ({ onItemPress }) => {
-  const theme = useAppTheme().theme;
-  const { 
+/**
+ * Notification list component with filtering support.
+ * Renders different item components based on notification type:
+ * - Invitations use InvitationCard
+ * - Other types use ActivityItem
+ * All items are wrapped in SwipeableNotificationItem for swipe actions.
+ */
+export const NotificationList: React.FC<NotificationListProps> = ({
+  filter = 'all',
+  onItemPress,
+}) => {
+  const { theme } = useAppTheme();
+  const {
     notifications,
     unreadCount,
     isFetching: loading,
     error,
     fetchNotifications,
-    markAllNotificationsRead: markAllAsRead
+    markAllNotificationsRead: markAllAsRead,
   } = useNotificationStore();
 
   useEffect(() => {
@@ -26,29 +48,67 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onItemPress 
     fetchNotifications();
   }, [fetchNotifications]);
 
-  const handleItemPress = (notificationId: string) => {
-    if (onItemPress) {
-      onItemPress(notificationId);
+  // Filter notifications based on the filter prop
+  const filteredNotifications = useMemo(() => {
+    switch (filter) {
+      case 'invitations':
+        return notifications.filter(isTripInvitationNotification);
+      case 'activity':
+        return notifications.filter((n) => !isTripInvitationNotification(n));
+      case 'all':
+      default:
+        return notifications;
     }
-  };
+  }, [notifications, filter]);
 
-  const handleRefresh = () => {
+  // Calculate unread count for filtered list
+  const filteredUnreadCount = useMemo(() => {
+    return filteredNotifications.filter((n) => !n.read).length;
+  }, [filteredNotifications]);
+
+  const handleItemPress = useCallback(
+    (notificationId: string) => {
+      onItemPress?.(notificationId);
+    },
+    [onItemPress]
+  );
+
+  const handleRefresh = useCallback(() => {
     fetchNotifications();
-  };
+  }, [fetchNotifications]);
 
-  const handleMarkAllAsRead = async () => {
+  const handleMarkAllAsRead = useCallback(async () => {
     await markAllAsRead();
-  };
+  }, [markAllAsRead]);
 
-  if (loading && notifications.length === 0) {
+  // Render individual notification item
+  const renderItem = useCallback(
+    ({ item }: { item: Notification }) => {
+      const content = isTripInvitationNotification(item) ? (
+        <InvitationCard invitation={item as TripInvitationNotification} />
+      ) : (
+        <ActivityItem notification={item} onPress={() => handleItemPress(item.id)} />
+      );
+
+      return <SwipeableNotificationItem notification={item}>{content}</SwipeableNotificationItem>;
+    },
+    [handleItemPress]
+  );
+
+  // Get empty state type based on filter
+  const emptyStateType: EmptyStateType = filter === 'all' ? 'all' : filter;
+
+  // Loading state
+  if (loading && filteredNotifications.length === 0) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <ActivityIndicator size="large" color={theme.colors.primary.main} />
       </View>
     );
   }
 
-  if (error && notifications.length === 0) {
+  // Error state
+  if (error && filteredNotifications.length === 0) {
     return (
       <View style={styles.centerContainer}>
         <Text variant="bodyLarge" style={styles.errorText}>
@@ -61,48 +121,50 @@ export const NotificationList: React.FC<NotificationListProps> = ({ onItemPress 
     );
   }
 
-  if (notifications.length === 0) {
+  // Empty state - wrap in ScrollView with RefreshControl for pull-to-refresh
+  if (filteredNotifications.length === 0) {
     return (
-      <View style={styles.centerContainer}>
-        <Text variant="bodyLarge" style={styles.emptyText}>
-          No notifications yet
-        </Text>
-      </View>
+      <ScrollView
+        contentContainerStyle={styles.emptyScrollContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={loading}
+            onRefresh={handleRefresh}
+            tintColor={theme.colors.primary.main}
+          />
+        }
+      >
+        <EmptyNotificationState type={emptyStateType} />
+      </ScrollView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      {unreadCount > 0 && (
+    <GestureHandlerRootView style={styles.container}>
+      {/* Unread count header - only show for 'all' filter */}
+      {filter === 'all' && filteredUnreadCount > 0 && (
         <View style={styles.header}>
           <Text variant="bodyMedium">
-            You have {unreadCount} unread {unreadCount === 1 ? 'notification' : 'notifications'}
+            You have {filteredUnreadCount} unread{' '}
+            {filteredUnreadCount === 1 ? 'notification' : 'notifications'}
           </Text>
-          <Button 
-            mode="text" 
-            onPress={handleMarkAllAsRead}
-            compact
-          >
+          <Button mode="text" onPress={handleMarkAllAsRead} compact>
             Mark all as read
           </Button>
         </View>
       )}
-      
+
       <FlashList
-        data={notifications}
-        renderItem={({ item }) => (
-          <NotificationItem 
-            notification={item} 
-            onPress={() => handleItemPress(item.id)} 
-          />
-        )}
+        data={filteredNotifications}
+        renderItem={renderItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
-        estimatedItemSize={120}
+        // @ts-expect-error estimatedItemSize exists but type inference is complex with discriminated unions
+        estimatedItemSize={filter === 'invitations' ? 160 : 100}
         onRefresh={handleRefresh}
         refreshing={loading}
       />
-    </View>
+    </GestureHandlerRootView>
   );
 };
 
@@ -116,6 +178,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
   },
+  emptyScrollContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -124,10 +191,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   listContent: {
-    padding: 16,
-  },
-  emptyText: {
-    opacity: 0.7,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
   errorText: {
     color: 'red',
@@ -137,4 +202,4 @@ const styles = StyleSheet.create({
   retryButton: {
     marginTop: 8,
   },
-}); 
+});

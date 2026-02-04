@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import 'react-native-url-polyfill/auto';
 
 // ---
@@ -16,11 +17,15 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY || SUPABASE_ANON_KEY === 'YOUR_SUPABASE_
 // ---
 // Create a singleton Supabase client
 // ---
+// NOTE: Explicitly pass AsyncStorage to avoid "window is not defined" error
+// during Metro bundling. Without this, Supabase tries to auto-detect storage
+// which fails in Node.js environment.
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: false, // For React Native
+    storage: AsyncStorage,
   },
 });
 

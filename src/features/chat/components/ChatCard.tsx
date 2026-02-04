@@ -12,11 +12,7 @@ interface ChatCardProps {
   minimized?: boolean;
 }
 
-export const ChatCard: React.FC<ChatCardProps> = ({ 
-  tripId, 
-  onPress,
-  minimized = false
-}) => {
+export const ChatCard: React.FC<ChatCardProps> = ({ tripId, onPress, minimized = false }) => {
   const { theme } = useAppTheme();
   const { messagesByTripId } = useChatStore();
   const [unreadCount, setUnreadCount] = useState(0);
@@ -26,14 +22,14 @@ export const ChatCard: React.FC<ChatCardProps> = ({
     created_at: string;
   } | null>(null);
   const [lastMessageTime, setLastMessageTime] = useState('');
-  
+
   // Get theme colors
   const primaryColor = theme.colors.primary.main;
   const backgroundColor = theme.colors.background.surface;
   const textColor = theme.colors.content.primary;
   const secondaryTextColor = theme.colors.content.secondary;
   const tertiaryTextColor = theme.colors.content.tertiary;
-  
+
   // Get styles using themed styles hook
   const styles = useThemedStyles((theme) => {
     return StyleSheet.create({
@@ -114,91 +110,76 @@ export const ChatCard: React.FC<ChatCardProps> = ({
       },
     });
   });
-  
+
   // Update last message and unread count when messages change
   useEffect(() => {
     const messages = messagesByTripId[tripId] || [];
-    
+
     // Set last message
     if (messages.length > 0) {
       const lastMsg = messages[0];
-      setLastMessage({
-        content: lastMsg.message.content,
-        sender: {
-          name: lastMsg.message.sender.name
-        },
-        created_at: lastMsg.message.created_at
-      });
-      
-      // Format relative time
-      setLastMessageTime(formatRelativeTime(new Date(lastMsg.message.created_at)));
+      if (lastMsg?.message) {
+        setLastMessage({
+          content: lastMsg.message.content,
+          sender: {
+            name: lastMsg.message.sender?.name || 'Unknown',
+          },
+          created_at: lastMsg.message.created_at,
+        });
+
+        // Format relative time
+        setLastMessageTime(formatRelativeTime(new Date(lastMsg.message.created_at)));
+      } else {
+        setLastMessage(null);
+        setLastMessageTime('');
+      }
     } else {
       setLastMessage(null);
       setLastMessageTime('');
     }
-    
+
     // Calculate unread count (this is a placeholder - actual implementation would depend on read receipts)
     // For now, we'll just show a badge if there are any messages
     setUnreadCount(messages.length > 0 ? 1 : 0);
   }, [messagesByTripId, tripId]);
-  
+
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-      <View style={[
-        styles.container,
-        minimized && styles.minimizedContainer
-      ]}>
+      <View style={[styles.container, minimized && styles.minimizedContainer]}>
         {!minimized && (
           <View style={styles.header}>
             <View style={styles.titleContainer}>
-              <MessageSquare 
-                size={20} 
-                color={primaryColor} 
-              />
-              <Text style={styles.title}>
-                Trip Chat
-              </Text>
+              <MessageSquare size={20} color={primaryColor} />
+              <Text style={styles.title}>Trip Chat</Text>
             </View>
-            
+
             {unreadCount > 0 && (
               <View style={styles.badge}>
-                <Text style={styles.badgeText}>
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </Text>
+                <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
               </View>
             )}
           </View>
         )}
-        
-        <View style={[
-          styles.content,
-          minimized && styles.minimizedContent
-        ]}>
+
+        <View style={[styles.content, minimized && styles.minimizedContent]}>
           {lastMessage ? (
             <>
               <View style={styles.messageContainer}>
                 <Text style={styles.sender} numberOfLines={1}>
                   {lastMessage.sender.name}:
                 </Text>
-                <Text 
-                  style={styles.message}
-                  numberOfLines={minimized ? 1 : 2}
-                >
+                <Text style={styles.message} numberOfLines={minimized ? 1 : 2}>
                   {lastMessage.content}
                 </Text>
               </View>
-              
-              <Text style={styles.time}>
-                {lastMessageTime}
-              </Text>
+
+              <Text style={styles.time}>{lastMessageTime}</Text>
             </>
           ) : (
-            <Text style={styles.emptyText}>
-              No messages yet. Start the conversation!
-            </Text>
+            <Text style={styles.emptyText}>No messages yet. Start the conversation!</Text>
           )}
         </View>
       </View>
     </TouchableOpacity>
   );
-}; 
+};

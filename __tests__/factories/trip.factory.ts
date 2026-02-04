@@ -1,4 +1,4 @@
-import { Trip, TripStatus } from '@/src/types/trip';
+import { Trip, TripStatus } from '@/src/features/trips/types';
 
 /**
  * Creates a mock Trip object for testing.
@@ -47,12 +47,14 @@ export const createMockTrip = (overrides: Partial<Trip> = {}): Trip => ({
  * @example
  * const member = createMockMember({ role: 'admin' });
  */
-export const createMockMember = (overrides: Partial<{
-  userId: string;
-  name?: string;
-  role: 'owner' | 'admin' | 'member';
-  joinedAt: string;
-}> = {}) => ({
+export const createMockMember = (
+  overrides: Partial<{
+    userId: string;
+    name?: string;
+    role: 'owner' | 'admin' | 'member';
+    joinedAt: string;
+  }> = {}
+) => ({
   userId: 'user-123',
   name: 'Test User',
   role: 'member' as const,

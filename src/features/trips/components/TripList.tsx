@@ -1,16 +1,9 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, ViewStyle } from 'react-native';
-import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { ThemedView } from '@/src/components/ThemedView';
 import { ThemedText } from '@/src/components/ThemedText';
 import { TripCard } from './TripCard';
 import { Trip } from '@/src/features/trips/types';
-import { useTripStore } from '@/src/features/trips/store';
-
-interface TripSection {
-  title: string;
-  data: Trip[];
-}
 
 interface Props {
   onTripPress?: (trip: Trip) => void;
@@ -24,7 +17,7 @@ const GHOST_CARD: Trip = {
   description: 'Spacer for layout',
   destination: {
     address: 'Ghost Destination',
-    placeId: 'ghost-place-id'
+    placeId: 'ghost-place-id',
   },
   startDate: new Date().toISOString(),
   endDate: new Date().toISOString(),
@@ -33,67 +26,67 @@ const GHOST_CARD: Trip = {
   isGhostCard: true,
   createdAt: '',
   updatedAt: '',
-  members: []
+  members: [
+    {
+      userId: 'system',
+      role: 'owner' as const,
+      joinedAt: new Date().toISOString(),
+    },
+  ],
 };
 
-export function TripList({ onTripPress, style, trips: propTrips }: Props) {
-  const { theme } = useAppTheme();
-  const { trips: storeTrips } = useTripStore();
-  
-  const trips = propTrips || storeTrips;
+export function TripList({ onTripPress, style, trips: propTrips = [] }: Props) {
+  const trips = propTrips;
 
   // Defensive normalization: ensure every trip has a valid members array
-  const safeTrips = trips.map(trip => {
+  const safeTrips: Trip[] = trips.map((trip) => {
     if (!Array.isArray(trip.members)) {
       console.error('[TripList] Malformed members array:', trip.id, trip.members, trip);
     }
     return {
       ...trip,
       members: Array.isArray(trip.members) ? trip.members : [],
-    };
+    } as Trip;
   });
 
   const sections = useMemo(() => {
     const now = new Date();
-  
-    const activeTrips = safeTrips.filter(trip => {
+
+    const activeTrips = safeTrips.filter((trip) => {
       const startDate = new Date(trip.startDate);
       const endDate = new Date(trip.endDate);
       return (
         (trip.status === 'PLANNING' || trip.status === 'ACTIVE') &&
-        startDate <= now && endDate >= now
+        startDate <= now &&
+        endDate >= now
       );
     });
-  
-    const upcomingTrips = safeTrips.filter(trip => {
+
+    const upcomingTrips = safeTrips.filter((trip) => {
       const startDate = new Date(trip.startDate);
-      return (
-        (trip.status === 'PLANNING' || trip.status === 'ACTIVE') &&
-        startDate > now
-      );
+      return (trip.status === 'PLANNING' || trip.status === 'ACTIVE') && startDate > now;
     });
-  
-    const pastTrips = safeTrips.filter(trip => {
+
+    const pastTrips = safeTrips.filter((trip) => {
       const endDate = new Date(trip.endDate);
-      return (
-        (trip.status === 'COMPLETED' || trip.status === 'CANCELLED') ||
-        endDate < now
-      );
+      return trip.status === 'COMPLETED' || trip.status === 'CANCELLED' || endDate < now;
     });
-  
+
     // Create sections first
     let sections = [
       { title: 'Active Trips', data: activeTrips },
       { title: 'Upcoming Trips', data: upcomingTrips },
       { title: 'Past Trips', data: pastTrips },
-    ].filter(section => section.data.length > 0);
-  
+    ].filter((section) => section.data.length > 0);
+
     // Add ghost card to the last section if there are any sections
     if (sections.length > 0) {
       const lastSection = sections[sections.length - 1];
-      lastSection.data = [...lastSection.data, GHOST_CARD];
+      if (lastSection) {
+        lastSection.data = [...lastSection.data, GHOST_CARD];
+      }
     }
-  
+
     return sections;
   }, [safeTrips]);
 
@@ -106,10 +99,7 @@ export function TripList({ onTripPress, style, trips: propTrips }: Props) {
               key={trip.id}
               trip={trip}
               onPress={() => !trip.isGhostCard && onTripPress?.(trip)}
-              style={[
-                styles.card,
-                trip.isGhostCard && styles.ghostCard
-              ]}
+              style={[styles.card, trip.isGhostCard && styles.ghostCard]}
             />
           ))}
         </ThemedView>
@@ -117,11 +107,7 @@ export function TripList({ onTripPress, style, trips: propTrips }: Props) {
 
       {trips.length === 0 && (
         <ThemedView style={styles.emptyContainer}>
-          <ThemedText
-            variant="body.large"
-            color="content.secondary"
-            style={styles.emptyText}
-          >
+          <ThemedText variant="body.large" color="content.secondary" style={styles.emptyText}>
             No trips found. Create your first trip to get started!
           </ThemedText>
         </ThemedView>
@@ -129,7 +115,6 @@ export function TripList({ onTripPress, style, trips: propTrips }: Props) {
     </ThemedView>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: {
@@ -164,4 +149,4 @@ const styles = StyleSheet.create({
     shadowOpacity: 0,
     borderWidth: 0,
   },
-}); 
+});

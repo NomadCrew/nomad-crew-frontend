@@ -1,4 +1,4 @@
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://eihszqnmmgbrcxtymskn.supabase.co';
+const SUPABASE_URL = 'https://eihszqnmmgbrcxtymskn.supabase.co';
 
 const getEnvironment = () => {
   switch (process.env.APP_VARIANT) {
@@ -25,11 +25,13 @@ export default {
     icon: './assets/images/icon.png',
     scheme: 'nomadcrew',
     userInterfaceStyle: 'automatic',
-    newArchEnabled: true,
+    // Disabled until react-native-maps has stable Fabric support
+    // See: https://github.com/react-native-maps/react-native-maps/discussions/5355
+    newArchEnabled: false,
     splash: {
-      image: './assets/images/splash.png',
-      resizeMode: 'cover',
-      backgroundColor: '#ffffff'
+      image: './assets/images/icon.png',
+      resizeMode: 'contain',
+      backgroundColor: '#F46315'
     },
     assetBundlePatterns: ['**/*'],
     ios: {
@@ -69,8 +71,9 @@ export default {
         foregroundImage: './assets/images/icon.png',
         backgroundColor: '#ffffff'
       },
-      package: IS_DEV 
-        ? 'com.nomadcrew.app.dev' 
+      googleServicesFile: './SECRET/google-services_dev.json',
+      package: IS_DEV
+        ? 'com.nomadcrew.app.dev'
         : 'com.nomadcrew.app',
       config: {
         googleMaps: {
@@ -134,7 +137,6 @@ export default {
     },
     plugins: [
       'expo-router',
-      'expo-web-browser',
       ['expo-location', {
         locationAlwaysAndWhenInUsePermission: 'Allow $(PRODUCT_NAME) to access your location to find nearby crews, share your location with trip members, and display your position on the map.'
       }],
@@ -165,9 +167,10 @@ export default {
         teamId: '27DC66D35A'
       }],
       ['expo-splash-screen', {
-        image: './assets/images/splash.png',
-        resizeMode: 'cover',
-        backgroundColor: '#ffffff'
+        image: './assets/images/icon.png',
+        imageWidth: 200,
+        resizeMode: 'contain',
+        backgroundColor: '#F46315'
       }],
       ['expo-font', {
         fonts: [

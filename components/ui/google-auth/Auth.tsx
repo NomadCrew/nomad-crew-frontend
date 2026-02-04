@@ -5,8 +5,14 @@ interface AuthButtonProps {
   onPress?: () => void;
 }
 
+/**
+ * Renders a Google sign-in button that invokes an optional callback, then initiates the Google sign-in flow.
+ *
+ * @param onPress - Optional callback invoked immediately when the button is pressed, before starting sign-in.
+ * @returns The configured Google sign-in button element
+ */
 export default function AuthButton({ onPress }: AuthButtonProps) {
-  const signIn = useGoogleSignIn();
+  const { signIn } = useGoogleSignIn();
 
   return (
     <GoogleSigninButton

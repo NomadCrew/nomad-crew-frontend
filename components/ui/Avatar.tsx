@@ -1,5 +1,14 @@
-import React, { useMemo } from 'react';
-import { View, Image, Text, StyleSheet, ViewProps, StyleProp, ViewStyle, TextStyle, ImageStyle } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import {
+  View,
+  Image,
+  Text,
+  ViewProps,
+  StyleProp,
+  ViewStyle,
+  TextStyle,
+  ImageStyle,
+} from 'react-native';
 import { useThemedStyles } from '@/src/theme/utils';
 
 export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
@@ -20,37 +29,37 @@ export interface AvatarProps extends ViewProps {
    * The size of the avatar
    */
   size?: AvatarSize;
-  
+
   /**
    * The shape of the avatar
    */
   variant?: AvatarVariant;
-  
+
   /**
    * The source of the avatar image
    */
   source?: string;
-  
+
   /**
    * The initials to display when no image is available
    */
   initials?: string;
-  
+
   /**
    * The background color for the avatar when displaying initials
    */
   backgroundColor?: string;
-  
+
   /**
    * Additional styles for the avatar container
    */
   style?: StyleProp<ViewStyle>;
-  
+
   /**
    * Additional styles for the avatar image
    */
   imageStyle?: StyleProp<ImageStyle>;
-  
+
   /**
    * Additional styles for the avatar text
    */
@@ -63,7 +72,13 @@ export interface AvatarProps extends ViewProps {
 }
 
 /**
- * Avatar component for displaying user profile images or initials
+ * Render a user avatar that prefers an explicit image source and falls back to a user's profile picture, a generated avatar image, or initials.
+ *
+ * @param source - Explicit image URL to display; takes precedence over user data.
+ * @param initials - Text to display when no image is available; used before deriving initials from `user`.
+ * @param backgroundColor - Background color used when rendering initials.
+ * @param user - Optional user data used to derive a profile image or initials. If `user.profilePicture` exists and `user.appleUser` is not true, that picture is used; otherwise a generated avatar URL is produced from the user's name, username, or email.
+ * @returns The rendered avatar React element.
  */
 export function Avatar({
   size = 'md',
@@ -80,7 +95,7 @@ export function Avatar({
   const styles = useThemedStyles((theme) => {
     // Safely access theme properties with fallbacks
     const primaryColor = theme?.colors?.primary?.main || '#F46315';
-    
+
     // Size mappings
     const sizeMap = {
       xs: 24,
@@ -89,7 +104,7 @@ export function Avatar({
       lg: 48,
       xl: 64,
     };
-    
+
     // Font size mappings based on avatar size
     const fontSizeMap = {
       xs: theme?.typography?.size?.xs || 12,
@@ -98,11 +113,11 @@ export function Avatar({
       lg: theme?.typography?.size?.lg || 18,
       xl: theme?.typography?.size?.xl || 20,
     };
-    
+
     // Border radius mappings based on variant and size
     const getBorderRadius = () => {
       const dimension = sizeMap[size];
-      
+
       switch (variant) {
         case 'circle':
           return dimension / 2;
@@ -114,7 +129,7 @@ export function Avatar({
           return dimension / 2;
       }
     };
-    
+
     return {
       container: {
         width: sizeMap[size],
@@ -149,7 +164,7 @@ export function Avatar({
     if (user?.profilePicture && !user?.appleUser) {
       return user.profilePicture;
     }
-    
+
     // Third priority: generate avatar with UI Avatars
     // Always use for Apple users, or as fallback for any user without profile pic
     if (user) {
@@ -158,7 +173,7 @@ export function Avatar({
       const lastName = user.lastName || '';
       const username = user.username || '';
       const email = user.email || '';
-      
+
       // Get initials - either from name parts or username or email
       let displayName = '';
       if (firstName || lastName) {
@@ -167,19 +182,22 @@ export function Avatar({
         displayName = username;
       } else if (email) {
         // Use email before the @ symbol
-        displayName = email.split('@')[0];
+        displayName = email.split('@')[0] ?? '';
       }
-      
+
       if (displayName) {
         // Generate UI Avatars URL with better settings for our app
         // Using random background colors for visual variety
         return `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random&color=fff&size=256&bold=true`;
       }
     }
-    
+
     // No valid source found
     return null;
   }, [source, user]);
+
+  // Track image loading errors to fall back to initials
+  const [imageError, setImageError] = useState(false);
 
   // Calculate initials for fallback text display
   const displayInitials = useMemo(() => {
@@ -187,7 +205,7 @@ export function Avatar({
     if (initials) {
       return initials;
     }
-    
+
     // Second priority: derive from user data
     if (user) {
       if (user.firstName && user.lastName) {
@@ -203,17 +221,21 @@ export function Avatar({
         return user.email[0];
       }
     }
-    
+
     return '';
   }, [initials, user]);
-  
+
+  // Show image if we have a source and no error occurred
+  const showImage = avatarSource && !imageError;
+
   return (
     <View style={[styles.container as ViewStyle, style]} {...rest}>
-      {avatarSource ? (
+      {showImage ? (
         <Image
           source={{ uri: avatarSource }}
           style={[styles.image as ImageStyle, imageStyle]}
           resizeMode="cover"
+          onError={() => setImageError(true)}
         />
       ) : (
         <Text style={[styles.text as TextStyle, textStyle]}>

@@ -1,67 +1,42 @@
-export type LogModule = 
-  | 'UI' 
-  | 'AUTH' 
-  | 'TRIP' 
-  | 'LOCATION' 
-  | 'CHAT' 
-  | 'STORE' 
-  | 'API' 
-  | 'DEEPLINK' 
-  | 'INVITATION' 
-  | 'NOTIFICATION' 
-  | 'ChatStore' 
-  | 'location'
-  | 'todo'
-  | 'chat'
-  | 'Chat Input'
-  | 'Generating mock member locations around' 
-  | 'Generated mock locations:' 
-  | 'Setting location sharing enabled:' 
-  | 'Failed to save location sharing preference' 
-  | 'Not starting location tracking because sharing is disabled' 
-  | 'Already tracking location, not starting again' 
-  | 'Starting location tracking for trip:' 
-  | 'Location permission not granted:' 
-  | 'Location update received:' 
-  | 'Location tracking started successfully' 
-  | 'Failed to start location tracking:' 
-  | 'Stopping location tracking' 
-  | 'No user found, not updating location' 
-  | 'MOCK' 
-  | 'Failed to update location' 
-  | 'Getting member locations for trip:' 
-  | 'Location sharing disabled, not fetching member locations' 
-  | 'Using current location for mock data:' 
-  | 'No current location, using default coordinates for mock data' 
-  | 'Making API call to get member locations' 
-  | 'Received member locations:' 
-  | 'Failed to get member locations' 
-  | 'Loaded location sharing preference from storage:' 
-  | 'Failed to load location sharing preference' 
-  | 'Failed to save notifications' 
-  | 'Failed to mark notification as read' 
-  | 'Failed to mark all notifications as read' 
-  | 'Failed to clear notifications' 
-  | 'Failed to accept trip invite' 
-  | 'Failed to decline trip invite' 
-  | 'Failed to fetch notifications' 
-  | 'Chat Screen' 
-  | 'Mobile Chat Screen' 
-  | 'API Client' 
-  | 'AUTH API'
-  | 'useChatMessages'
-  | 'useLocations'
-  | 'usePresence'
-  | 'useReactions'
-  | 'useReadReceipts'
-
+export type LogModule =
+  // Core modules
   | 'APP'
+  | 'API'
+  | 'API-CLIENT'
+  | 'API Client' // Legacy, should migrate to API-CLIENT
+  | 'UI'
+  | 'STORE'
+  | 'WS'
+  // Feature modules
+  | 'AUTH'
+  | 'AUTH-API'
+  | 'AUTH API' // Legacy, should migrate to AUTH-API
+  | 'AUTH-SERVICE'
+  | 'AUTH SERVICE' // Legacy, should migrate to AUTH-SERVICE
+  | 'AUTH-GUARD'
+  | 'AUTH-PROVIDER'
+  | 'TRIP'
+  | 'TRIP-DETAIL'
+  | 'Trip Detail Screen' // Legacy, should migrate to TRIP-DETAIL
+  | 'CHAT'
+  | 'CHAT-SCREEN'
+  | 'Chat Screen' // Legacy, should migrate to CHAT-SCREEN
+  | 'MOBILE-CHAT-SCREEN'
+  | 'Mobile Chat Screen' // Legacy, should migrate to MOBILE-CHAT-SCREEN
+  | 'Chat Input' // Legacy, should migrate to CHAT-INPUT
+  | 'ChatStore'
+  | 'TODO'
+  | 'LOCATION'
+  | 'LOCATION-SCREEN'
+  | 'NOTIFICATION'
+  | 'INVITATION'
   | 'INVITE'
-  | 'ONBOARDING'
-  | 'TripDetailScreen'
-  | 'ChatScreen'
-  | 'LocationScreen'
-  | 'GroupLiveMap';
+  | 'DEEPLINK'
+  // Utility modules
+  | 'MOCK'
+  // Allow any string for backwards compatibility with logger calls that use full sentences
+  // TODO: Migrate all logger calls to use proper module identifiers
+  | (string & {});
 
 export const logger = {
   debug: (module: LogModule, ...args: unknown[]) => {
@@ -72,7 +47,7 @@ export const logger = {
   log: (module: LogModule, ...args: unknown[]) => {
     console.log(`[${module}]`, ...args);
   },
-  info: (module: LogModule | string, ...args: unknown[]) => {
+  info: (module: LogModule, ...args: unknown[]) => {
     console.info(`[${module}]`, ...args);
   },
   error: (module: LogModule, ...args: unknown[]) => {
@@ -80,5 +55,5 @@ export const logger = {
   },
   warn: (module: LogModule, ...args: unknown[]) => {
     console.warn(`[${module}]`, ...args);
-  }
-}; 
+  },
+};

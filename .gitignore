@@ -50,4 +50,20 @@ op.txt
 GOOGLE_API_KEYS.txt
 
 .cursorrules
-.cursor/*.local-changes-backup/
+.cursor/*
+
+# Local backup directories
+.local-changes-backup/
+
+# Secrets directory (local credentials)
+SECRET/
+
+# Logs and coverage
+logs/
+coverage/
+
+# Editor configs
+.claude/
+
+# Auto-generated
+nativewind-env.d.ts

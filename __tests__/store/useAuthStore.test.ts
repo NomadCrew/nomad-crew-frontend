@@ -4,32 +4,87 @@
 
 import type { Session as SupabaseSession } from '@supabase/supabase-js';
 
-import { supabase } from '@/src/auth/supabaseClient';
-import { useAuthStore } from '@/src/store/useAuthStore';
+// Create the mock supabase object that will be shared across all mocks
+// Note: jest.mock is hoisted, so we need to define the mock object inline
+// or use a factory function that creates it
+
+// Mock the auth service module BEFORE importing the store
+// This is required because the service module throws if env vars are missing
+// and Jest needs to intercept the module before it loads
+jest.mock('@/src/features/auth/service', () => {
+  // Define mock inside the factory so it's available when hoisted
+  const mockAuth = {
+    signUp: jest.fn(),
+    signInWithPassword: jest.fn(),
+    signInWithIdToken: jest.fn(),
+    signOut: jest.fn(),
+    getSession: jest.fn(),
+    refreshSession: jest.fn(),
+    onAuthStateChange: jest.fn(() => ({
+      data: { subscription: { unsubscribe: jest.fn() } },
+    })),
+  };
+
+  return {
+    __esModule: true,
+    supabase: { auth: mockAuth },
+    refreshSupabaseSession: jest.fn(),
+    registerPushTokenService: jest.fn(),
+    deregisterPushTokenService: jest.fn(),
+  };
+});
+
+// Also mock the Supabase client
+jest.mock('@/src/api/supabase', () => {
+  const mockAuth = {
+    signUp: jest.fn(),
+    signInWithPassword: jest.fn(),
+    signInWithIdToken: jest.fn(),
+    signOut: jest.fn(),
+    getSession: jest.fn(),
+    refreshSession: jest.fn(),
+    onAuthStateChange: jest.fn(() => ({
+      data: { subscription: { unsubscribe: jest.fn() } },
+    })),
+  };
+
+  return {
+    __esModule: true,
+    supabase: { auth: mockAuth },
+  };
+});
+
+// Now we can import the store after mocks are set up
+import { useAuthStore } from '@/src/features/auth/store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { api } from '@/src/api/api-client';
 
-// Mock Supabase
-jest.mock('@/src/auth/supabaseClient', () => ({
-  supabase: {
-    auth: {
-      signUp: jest.fn(),
-      signInWithPassword: jest.fn(),
-      signInWithIdToken: jest.fn(),
-      signOut: jest.fn(),
-      getSession: jest.fn(),
-      refreshSession: jest.fn(),
-    },
-  },
-}));
+// Get reference to the mocked supabase for test assertions
+// We need to require the module to get the actual mock instance
+const { supabase } = require('@/src/features/auth/service');
 
 // Mock dependencies
 jest.mock('@/src/api/api-client', () => ({
   registerAuthHandlers: jest.fn(),
   api: {
     post: jest.fn(),
+    get: jest.fn(),
+    put: jest.fn(),
+    delete: jest.fn(),
   },
+  // Mock backend user profile API
+  onboardUser: jest.fn().mockResolvedValue({
+    id: 'user-123',
+    email: 'test@example.com',
+    username: 'testuser',
+  }),
+  getCurrentUserProfile: jest.fn().mockResolvedValue({
+    id: 'user-123',
+    email: 'test@example.com',
+    username: 'testuser',
+  }),
+  updateContactEmail: jest.fn(),
 }));
 
 jest.mock('@/src/utils/logger', () => ({
@@ -37,6 +92,7 @@ jest.mock('@/src/utils/logger', () => ({
     debug: jest.fn(),
     error: jest.fn(),
     warn: jest.fn(),
+    info: jest.fn(),
   },
 }));
 
@@ -47,16 +103,61 @@ jest.mock('@/src/api/auth-api', () => ({
   },
 }));
 
+// Mock expo-secure-store (used by the new auth store)
+jest.mock('expo-secure-store', () => ({
+  getItemAsync: jest.fn().mockResolvedValue(null),
+  setItemAsync: jest.fn().mockResolvedValue(undefined),
+  deleteItemAsync: jest.fn().mockResolvedValue(undefined),
+}));
+
 jest.mock('expo-notifications', () => ({
   getPermissionsAsync: jest.fn(),
   getExpoPushTokenAsync: jest.fn(),
+}));
+
+// Mock expo-constants for push token registration
+jest.mock('expo-constants', () => ({
+  expoConfig: {
+    extra: {
+      eas: {
+        projectId: 'test-project-id',
+      },
+    },
+  },
+}));
+
+// Mock simulator auth utility
+jest.mock('@/src/utils/simulator-auth', () => ({
+  getSimulatorAuthState: jest.fn().mockReturnValue(null),
 }));
 
 describe('useAuthStore', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
+    // Reset SecureStore mock to default resolved state
+    // This prevents test pollution from tests that mock rejection
+    const SecureStore = require('expo-secure-store');
+    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(null);
+    (SecureStore.setItemAsync as jest.Mock).mockResolvedValue(undefined);
+    (SecureStore.deleteItemAsync as jest.Mock).mockResolvedValue(undefined);
+
+    // Reset API mocks to default state
+    const { getCurrentUserProfile, onboardUser } = require('@/src/api/api-client');
+    getCurrentUserProfile.mockResolvedValue({
+      id: 'user-123',
+      email: 'test@example.com',
+      username: 'testuser',
+    });
+    onboardUser.mockResolvedValue({
+      id: 'user-123',
+      email: 'test@example.com',
+      username: 'testuser',
+    });
+
     // Reset the store to initial state
+    // Note: The store now includes needsUsername and needsContactEmail fields
+    // added during the auth service refactor
     useAuthStore.setState({
       user: null,
       token: null,
@@ -68,6 +169,8 @@ describe('useAuthStore', () => {
       isVerifying: false,
       status: 'unauthenticated',
       pushToken: null,
+      needsUsername: false,
+      needsContactEmail: false,
     });
   });
 
@@ -81,8 +184,8 @@ describe('useAuthStore', () => {
             username: 'testuser',
             firstName: 'Test',
             lastName: 'User',
-            avatar_url: 'https://example.com/avatar.jpg'
-          }
+            avatar_url: 'https://example.com/avatar.jpg',
+          },
         },
         access_token: 'access-token',
         refresh_token: 'refresh-token',
@@ -136,11 +239,20 @@ describe('useAuthStore', () => {
     });
 
     it('should handle missing user metadata gracefully', async () => {
+      // The new store fetches backend profile during initialize
+      // Mock it to return minimal user data
+      const { getCurrentUserProfile } = require('@/src/api/api-client');
+      getCurrentUserProfile.mockResolvedValue({
+        id: 'user-456',
+        email: 'minimal@example.com',
+        username: '', // Empty username from backend
+      });
+
       const mockSession = {
         user: {
           id: 'user-456',
           email: 'minimal@example.com',
-          user_metadata: {}
+          user_metadata: {},
         },
         access_token: 'access-token',
         refresh_token: 'refresh-token',
@@ -161,9 +273,7 @@ describe('useAuthStore', () => {
     });
 
     it('should handle exception during initialization', async () => {
-      (supabase.auth.getSession as jest.Mock).mockRejectedValue(
-        new Error('Network failure')
-      );
+      (supabase.auth.getSession as jest.Mock).mockRejectedValue(new Error('Network failure'));
 
       await useAuthStore.getState().initialize();
 
@@ -172,27 +282,37 @@ describe('useAuthStore', () => {
   });
 
   describe('register', () => {
-    it('should register user successfully and set isVerifying', async () => {
+    it('should register user successfully and set status to verifying when email verification required', async () => {
+      // When Supabase returns user but no session, email verification is required
       (supabase.auth.signUp as jest.Mock).mockResolvedValue({
         data: {
-          user: { id: 'new-user' },
-          session: null // Email verification required
+          user: {
+            id: 'new-user',
+            email: 'new@example.com',
+            user_metadata: {
+              username: 'newuser',
+            },
+          },
+          session: null, // Email verification required
         },
         error: null,
       });
 
       await useAuthStore.getState().register({
-          email: 'new@example.com',
-          password: 'password123',
-          username: 'newuser',
-          firstName: 'New',
-          lastName: 'User',
-        });
+        email: 'new@example.com',
+        password: 'password123',
+        username: 'newuser',
+        firstName: 'New',
+        lastName: 'User',
+      });
 
       const state = useAuthStore.getState();
-      expect(state.isVerifying).toBe(true);
+      // The new store implementation sets status: 'verifying' when email verification is pending
+      expect(state.status).toBe('verifying');
       expect(state.loading).toBe(false);
       expect(state.error).toBeNull();
+      // User object should be set with partial data
+      expect(state.user?.id).toBe('new-user');
       expect(supabase.auth.signUp).toHaveBeenCalledWith({
         email: 'new@example.com',
         password: 'password123',
@@ -201,8 +321,8 @@ describe('useAuthStore', () => {
             username: 'newuser',
             firstName: 'New',
             lastName: 'User',
-          }
-        }
+          },
+        },
       });
     });
 
@@ -224,7 +344,8 @@ describe('useAuthStore', () => {
       const state = useAuthStore.getState();
       expect(state.error).toBe('User already registered');
       expect(state.loading).toBe(false);
-      expect(state.isVerifying).toBe(false);
+      // On error, status should be unauthenticated
+      expect(state.status).toBe('unauthenticated');
     });
 
     it('should handle registration with only required fields', async () => {
@@ -234,10 +355,10 @@ describe('useAuthStore', () => {
       });
 
       await useAuthStore.getState().register({
-          email: 'minimal@example.com',
-          password: 'password123',
-          username: 'minimaluser',
-        });
+        email: 'minimal@example.com',
+        password: 'password123',
+        username: 'minimaluser',
+      });
 
       expect(supabase.auth.signUp).toHaveBeenCalledWith({
         email: 'minimal@example.com',
@@ -247,8 +368,8 @@ describe('useAuthStore', () => {
             username: 'minimaluser',
             firstName: undefined,
             lastName: undefined,
-          }
-        }
+          },
+        },
       });
     });
 
@@ -271,6 +392,10 @@ describe('useAuthStore', () => {
   });
 
   describe('login', () => {
+    // Mock getCurrentUserProfile for login tests
+    // The new store fetches user profile from backend after successful Supabase login
+    const { getCurrentUserProfile } = require('@/src/api/api-client');
+
     it('should login successfully and set user state', async () => {
       const mockSession = {
         user: {
@@ -280,8 +405,8 @@ describe('useAuthStore', () => {
             username: 'testuser',
             firstName: 'Test',
             lastName: 'User',
-            avatar_url: 'https://example.com/avatar.jpg'
-          }
+            avatar_url: 'https://example.com/avatar.jpg',
+          },
         },
         access_token: 'access-token',
         refresh_token: 'refresh-token',
@@ -292,10 +417,20 @@ describe('useAuthStore', () => {
         error: null,
       });
 
+      // Mock backend profile fetch that happens after successful login
+      getCurrentUserProfile.mockResolvedValue({
+        id: 'user-123',
+        email: 'test@example.com',
+        username: 'testuser',
+        firstName: 'Test',
+        lastName: 'User',
+        profilePicture: 'https://example.com/avatar.jpg',
+      });
+
       await useAuthStore.getState().login({
-          email: 'test@example.com',
-          password: 'password123',
-        });
+        email: 'test@example.com',
+        password: 'password123',
+      });
 
       const state = useAuthStore.getState();
       expect(state.user?.email).toBe('test@example.com');
@@ -304,19 +439,29 @@ describe('useAuthStore', () => {
       expect(state.refreshToken).toBe('refresh-token');
       expect(state.loading).toBe(false);
       expect(state.error).toBeNull();
-      expect(state.isVerifying).toBe(false);
+      expect(state.status).toBe('authenticated');
     });
 
     it('should handle invalid credentials error', async () => {
+      // The new store throws on error, so we need to catch
+      // The error from Supabase is an object { message: '...' }
       (supabase.auth.signInWithPassword as jest.Mock).mockResolvedValue({
         data: { session: null },
         error: { message: 'Invalid login credentials' },
       });
 
-      await useAuthStore.getState().login({
+      // The store throws the error object (not Error instance)
+      // and also sets the error state
+      try {
+        await useAuthStore.getState().login({
           email: 'wrong@example.com',
           password: 'wrongpassword',
         });
+        // Should not reach here
+        expect(true).toBe(false);
+      } catch (err: any) {
+        expect(err.message).toBe('Invalid login credentials');
+      }
 
       const state = useAuthStore.getState();
       expect(state.user).toBeNull();
@@ -331,12 +476,13 @@ describe('useAuthStore', () => {
         error: null,
       });
 
+      // The new store throws 'Login successful but no session returned.'
       await expect(
         useAuthStore.getState().login({
           email: 'test@example.com',
           password: 'password123',
         })
-      ).rejects.toThrow('No session returned during login');
+      ).rejects.toThrow('Login successful but no session returned');
 
       expect(useAuthStore.getState().loading).toBe(false);
     });
@@ -346,7 +492,7 @@ describe('useAuthStore', () => {
         user: {
           id: 'user-789',
           email: null,
-          user_metadata: { username: 'nomail' }
+          user_metadata: { username: 'nomail' },
         },
         access_token: 'access-token',
         refresh_token: 'refresh-token',
@@ -357,10 +503,18 @@ describe('useAuthStore', () => {
         error: null,
       });
 
+      // The new store fetches user profile from backend after successful login
+      // Return a user with empty email to match the session
+      getCurrentUserProfile.mockResolvedValue({
+        id: 'user-789',
+        email: '',
+        username: 'nomail',
+      });
+
       await useAuthStore.getState().login({
-          email: 'test@example.com',
-          password: 'password123',
-        });
+        email: 'test@example.com',
+        password: 'password123',
+      });
 
       expect(useAuthStore.getState().user?.email).toBe('');
     });
@@ -377,8 +531,8 @@ describe('useAuthStore', () => {
           id: 'user-123',
           email: 'test@example.com',
           user_metadata: {
-            username: 'testuser'
-          }
+            username: 'testuser',
+          },
         },
         access_token: 'new-access-token',
         refresh_token: 'new-refresh-token',
@@ -403,20 +557,33 @@ describe('useAuthStore', () => {
       expect(state.status).toBe('authenticated');
     });
 
-    it('should clear auth state when no refresh token available', async () => {
+    it('should clear auth state when refresh fails and recovery fails', async () => {
       useAuthStore.setState({
         token: 'old-token',
-        user: { id: '123', email: 'test@example.com', username: 'test' }
+        user: { id: '123', email: 'test@example.com', username: 'test' },
       });
 
+      // The new store first calls refreshSession directly, then recovers on failure
+      // Mock getSession to return null (no existing session to recover)
       (supabase.auth.getSession as jest.Mock).mockResolvedValue({
         data: { session: null },
         error: null,
       });
 
-      await expect(
-        useAuthStore.getState().refreshSession()
-      ).rejects.toThrow('No refresh token available and session recovery failed.');
+      // Mock refreshSession to fail
+      (supabase.auth.refreshSession as jest.Mock).mockResolvedValue({
+        data: { session: null },
+        error: { message: 'Invalid refresh token' },
+      });
+
+      // The store throws the error
+      try {
+        await useAuthStore.getState().refreshSession();
+        // Should not reach here
+        expect(true).toBe(false);
+      } catch (err: any) {
+        expect(err.message).toBe('Invalid refresh token');
+      }
 
       const state = useAuthStore.getState();
       expect(state.user).toBeNull();
@@ -435,9 +602,7 @@ describe('useAuthStore', () => {
         error: { message: 'Refresh token expired' },
       });
 
-      await expect(
-        useAuthStore.getState().refreshSession()
-      ).rejects.toThrow();
+      await expect(useAuthStore.getState().refreshSession()).rejects.toThrow();
 
       const state = useAuthStore.getState();
       expect(state.user).toBeNull();
@@ -458,9 +623,9 @@ describe('useAuthStore', () => {
         error: null,
       });
 
-      await expect(
-        useAuthStore.getState().refreshSession()
-      ).rejects.toThrow('Failed to refresh session - no session returned from Supabase');
+      await expect(useAuthStore.getState().refreshSession()).rejects.toThrow(
+        'Failed to refresh session - no session returned from Supabase'
+      );
     });
 
     it('should handle getSession error', async () => {
@@ -506,7 +671,7 @@ describe('useAuthStore', () => {
     it('should clear local state even if Supabase signOut fails', async () => {
       useAuthStore.setState({
         user: { id: '123', email: 'test@example.com', username: 'test' },
-        token: 'token'
+        token: 'token',
       });
 
       (supabase.auth.signOut as jest.Mock).mockResolvedValue({
@@ -521,39 +686,45 @@ describe('useAuthStore', () => {
       expect(state.status).toBe('unauthenticated');
     });
 
-    it('should clear AsyncStorage during logout', async () => {
+    it('should clear SecureStore during logout', async () => {
+      // The new store uses SecureStore instead of AsyncStorage for token storage
+      const SecureStore = require('expo-secure-store');
+      // Reset the mock to ensure clean state
+      (SecureStore.deleteItemAsync as jest.Mock).mockResolvedValue(undefined);
       (supabase.auth.signOut as jest.Mock).mockResolvedValue({ error: null });
 
       await useAuthStore.getState().logout();
 
-      expect(AsyncStorage.multiRemove).toHaveBeenCalledWith([
-        'supabase.auth.token',
-        'supabase.auth.refreshToken',
-        'supabase.auth.user'
-      ]);
+      // The new store deletes the access token from SecureStore
+      expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('supabase_access_token');
     });
 
-    it('should handle AsyncStorage clearing errors gracefully', async () => {
+    it('should handle SecureStore clearing errors gracefully', async () => {
+      const SecureStore = require('expo-secure-store');
       (supabase.auth.signOut as jest.Mock).mockResolvedValue({ error: null });
-      (AsyncStorage.multiRemove as jest.Mock).mockRejectedValue(
-        new Error('Storage error')
-      );
+      // Set up the mock to reject for this specific test
+      (SecureStore.deleteItemAsync as jest.Mock).mockRejectedValueOnce(new Error('Storage error'));
 
       await useAuthStore.getState().logout();
 
       // Should still clear auth state
       expect(useAuthStore.getState().user).toBeNull();
+
+      // Reset the mock for subsequent tests
+      (SecureStore.deleteItemAsync as jest.Mock).mockResolvedValue(undefined);
     });
 
     it('should handle unexpected errors during logout', async () => {
+      const SecureStore = require('expo-secure-store');
+      // Reset SecureStore mock first
+      (SecureStore.deleteItemAsync as jest.Mock).mockResolvedValue(undefined);
+
       useAuthStore.setState({
         user: { id: '123', email: 'test@example.com', username: 'test' },
-        token: 'token'
+        token: 'token',
       });
 
-      (supabase.auth.signOut as jest.Mock).mockRejectedValue(
-        new Error('Unexpected error')
-      );
+      (supabase.auth.signOut as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
       await useAuthStore.getState().logout();
 
@@ -564,151 +735,144 @@ describe('useAuthStore', () => {
   });
 
   describe('handleGoogleSignInSuccess', () => {
-    it('should authenticate with Google ID token (direct format)', async () => {
-      const mockSession = {
+    // Note: The new store API has changed significantly
+    // handleGoogleSignInSuccess now takes a Supabase Session directly
+    // The Google sign-in flow (calling signInWithIdToken) now happens at the hook level
+    // The store just processes the resulting session
+    const { getCurrentUserProfile } = require('@/src/api/api-client');
+
+    it('should process Google sign-in session and set user state', async () => {
+      // Create a valid Supabase session object
+      const mockGoogleSession: SupabaseSession = {
         user: {
           id: 'google-user',
           email: 'google@example.com',
           user_metadata: {
             username: 'googleuser',
-            avatar_url: 'https://google.com/avatar.jpg'
-          }
+            avatar_url: 'https://google.com/avatar.jpg',
+            full_name: 'Google User',
+          },
+          aud: 'authenticated',
+          created_at: '2024-01-01T00:00:00Z',
         },
         access_token: 'google-access-token',
         refresh_token: 'google-refresh-token',
+        expires_in: 3600,
+        token_type: 'bearer',
       };
 
-      (supabase.auth.signInWithIdToken as jest.Mock).mockResolvedValue({
-        data: { session: mockSession },
-        error: null,
+      // Mock backend profile fetch
+      getCurrentUserProfile.mockResolvedValue({
+        id: 'google-user',
+        email: 'google@example.com',
+        username: 'googleuser',
+        profilePicture: 'https://google.com/avatar.jpg',
       });
 
-      await useAuthStore.getState().handleGoogleSignInSuccess({
-          idToken: 'google-id-token',
-        });
+      await useAuthStore.getState().handleGoogleSignInSuccess(mockGoogleSession);
 
       const state = useAuthStore.getState();
       expect(state.user?.id).toBe('google-user');
       expect(state.user?.email).toBe('google@example.com');
       expect(state.token).toBe('google-access-token');
       expect(state.loading).toBe(false);
-      expect(state.isVerifying).toBe(false);
-      expect(supabase.auth.signInWithIdToken).toHaveBeenCalledWith({
-        provider: 'google',
-        token: 'google-id-token',
-      });
+      expect(state.status).toBe('authenticated');
     });
 
-    it('should handle nested user format', async () => {
-      const mockSession = {
-        user: { id: 'google-user', email: 'google@example.com', user_metadata: {} },
+    it('should set needsUsername when backend profile not found', async () => {
+      const mockSession: SupabaseSession = {
+        user: {
+          id: 'new-google-user',
+          email: 'newuser@example.com',
+          user_metadata: {},
+          aud: 'authenticated',
+          created_at: '2024-01-01T00:00:00Z',
+        },
         access_token: 'access-token',
         refresh_token: 'refresh-token',
+        expires_in: 3600,
+        token_type: 'bearer',
       };
 
-      (supabase.auth.signInWithIdToken as jest.Mock).mockResolvedValue({
-        data: { session: mockSession },
-        error: null,
+      // Simulate backend user not found (404)
+      const { onboardUser } = require('@/src/api/api-client');
+      const notFoundError = new Error('Not found');
+      (notFoundError as any).response = { status: 404 };
+      getCurrentUserProfile.mockRejectedValue(notFoundError);
+
+      // Mock onboarding to also need username
+      onboardUser.mockResolvedValue({
+        id: 'new-google-user',
+        email: 'newuser@example.com',
+        username: '', // No username yet
       });
 
-      await useAuthStore.getState().handleGoogleSignInSuccess({
-          user: { idToken: 'nested-id-token' }
-        });
-
-      expect(supabase.auth.signInWithIdToken).toHaveBeenCalledWith({
-        provider: 'google',
-        token: 'nested-id-token',
-      });
-    });
-
-    it('should handle data wrapper format', async () => {
-      const mockSession = {
-        user: { id: 'google-user', email: 'google@example.com', user_metadata: {} },
-        access_token: 'access-token',
-        refresh_token: 'refresh-token',
-      };
-
-      (supabase.auth.signInWithIdToken as jest.Mock).mockResolvedValue({
-        data: { session: mockSession },
-        error: null,
-      });
-
-      await useAuthStore.getState().handleGoogleSignInSuccess({
-          data: { idToken: 'data-wrapped-token' }
-        });
-
-      expect(supabase.auth.signInWithIdToken).toHaveBeenCalledWith({
-        provider: 'google',
-        token: 'data-wrapped-token',
-      });
-    });
-
-    it('should handle authentication wrapper format', async () => {
-      const mockSession = {
-        user: { id: 'google-user', email: 'google@example.com', user_metadata: {} },
-        access_token: 'access-token',
-        refresh_token: 'refresh-token',
-      };
-
-      (supabase.auth.signInWithIdToken as jest.Mock).mockResolvedValue({
-        data: { session: mockSession },
-        error: null,
-      });
-
-      await useAuthStore.getState().handleGoogleSignInSuccess({
-          authentication: { idToken: 'auth-wrapped-token' }
-        });
-
-      expect(supabase.auth.signInWithIdToken).toHaveBeenCalledWith({
-        provider: 'google',
-        token: 'auth-wrapped-token',
-      });
-    });
-
-    it('should handle missing ID token', async () => {
-      await expect(
-        useAuthStore.getState().handleGoogleSignInSuccess({})
-      ).rejects.toThrow('No ID token in response');
+      await useAuthStore.getState().handleGoogleSignInSuccess(mockSession);
 
       const state = useAuthStore.getState();
-      expect(state.error).toBe('No ID token in response');
+      expect(state.needsUsername).toBe(true);
+      expect(state.status).toBe('authenticated');
+    });
+
+    it('should handle session with minimal user metadata', async () => {
+      const mockSession: SupabaseSession = {
+        user: {
+          id: 'minimal-user',
+          email: 'minimal@example.com',
+          user_metadata: {},
+          aud: 'authenticated',
+          created_at: '2024-01-01T00:00:00Z',
+        },
+        access_token: 'access-token',
+        refresh_token: 'refresh-token',
+        expires_in: 3600,
+        token_type: 'bearer',
+      };
+
+      getCurrentUserProfile.mockResolvedValue({
+        id: 'minimal-user',
+        email: 'minimal@example.com',
+        username: 'minimaluser',
+      });
+
+      await useAuthStore.getState().handleGoogleSignInSuccess(mockSession);
+
+      const state = useAuthStore.getState();
+      expect(state.user).toBeTruthy();
       expect(state.loading).toBe(false);
     });
 
-    it('should handle Supabase sign-in error', async () => {
-      const mockError = { message: 'Invalid ID token' };
-      (supabase.auth.signInWithIdToken as jest.Mock).mockResolvedValue({
-        data: { session: null },
-        error: mockError,
-      });
+    it('should handle profile fetch errors gracefully', async () => {
+      const mockSession: SupabaseSession = {
+        user: {
+          id: 'error-user',
+          email: 'error@example.com',
+          user_metadata: { username: 'erroruser' },
+          aud: 'authenticated',
+          created_at: '2024-01-01T00:00:00Z',
+        },
+        access_token: 'access-token',
+        refresh_token: 'refresh-token',
+        expires_in: 3600,
+        token_type: 'bearer',
+      };
 
-      try {
-        await useAuthStore.getState().handleGoogleSignInSuccess({
-          idToken: 'invalid-token'
-        });
-        expect(true).toBe(false); // Should not reach here
-      } catch (error: any) {
-        expect(error.message).toBe('Invalid ID token');
-      }
+      // Non-404 error
+      getCurrentUserProfile.mockRejectedValue(new Error('Network error'));
 
-      expect(useAuthStore.getState().loading).toBe(false);
-    });
+      await useAuthStore.getState().handleGoogleSignInSuccess(mockSession);
 
-    it('should handle missing session in response', async () => {
-      (supabase.auth.signInWithIdToken as jest.Mock).mockResolvedValue({
-        data: { session: null },
-        error: null,
-      });
-
-      await expect(
-        useAuthStore.getState().handleGoogleSignInSuccess({
-          idToken: 'valid-token'
-        })
-      ).rejects.toThrow('No session returned from Google sign-in');
+      // Should still be authenticated with fallback user data
+      const state = useAuthStore.getState();
+      expect(state.status).toBe('authenticated');
+      expect(state.needsUsername).toBe(true);
     });
   });
 
   describe('handleAppleSignInSuccess', () => {
+    // The new store fetches backend profile after Apple sign-in
+    const { getCurrentUserProfile } = require('@/src/api/api-client');
+
     it('should authenticate with Apple session', async () => {
       const mockAppleSession: SupabaseSession = {
         user: {
@@ -718,7 +882,7 @@ describe('useAuthStore', () => {
             username: 'appleuser',
             firstName: 'Apple',
             lastName: 'User',
-            avatar_url: 'https://apple.com/avatar.jpg'
+            avatar_url: 'https://apple.com/avatar.jpg',
           },
           aud: 'authenticated',
           created_at: '2024-01-01T00:00:00Z',
@@ -728,6 +892,16 @@ describe('useAuthStore', () => {
         expires_in: 3600,
         token_type: 'bearer',
       };
+
+      // Mock backend profile fetch
+      getCurrentUserProfile.mockResolvedValue({
+        id: 'apple-user',
+        email: 'apple@example.com',
+        username: 'appleuser',
+        firstName: 'Apple',
+        lastName: 'User',
+        appleUser: true,
+      });
 
       await useAuthStore.getState().handleAppleSignInSuccess(mockAppleSession);
 
@@ -739,7 +913,7 @@ describe('useAuthStore', () => {
       expect(state.token).toBe('apple-access-token');
       expect(state.refreshToken).toBe('apple-refresh-token');
       expect(state.loading).toBe(false);
-      expect(state.isVerifying).toBe(false);
+      expect(state.status).toBe('authenticated');
     });
 
     it('should handle Apple session with minimal metadata', async () => {
@@ -757,25 +931,67 @@ describe('useAuthStore', () => {
         token_type: 'bearer',
       };
 
+      // Simulate backend returning minimal user (needs username)
+      getCurrentUserProfile.mockRejectedValue(
+        Object.assign(new Error('Not found'), { response: { status: 404 } })
+      );
+
+      const { onboardUser } = require('@/src/api/api-client');
+      onboardUser.mockResolvedValue({
+        id: 'apple-user-2',
+        email: '',
+        username: '',
+        appleUser: true,
+      });
+
       await useAuthStore.getState().handleAppleSignInSuccess(mockAppleSession);
 
       const state = useAuthStore.getState();
-      expect(state.user?.email).toBe('');
-      expect(state.user?.username).toBe('');
+      // User should be created from fallback data
       expect(state.user?.appleUser).toBe(true);
+      expect(state.needsUsername).toBe(true);
     });
 
-    it('should handle errors during Apple sign-in', async () => {
+    it('should handle errors during Apple sign-in gracefully', async () => {
       // Simulate an error by passing invalid data
       const invalidSession = null as any;
 
-      await expect(
-        useAuthStore.getState().handleAppleSignInSuccess(invalidSession)
-      ).rejects.toThrow();
+      // The new implementation catches errors and sets error state
+      // instead of throwing (to allow UI to handle)
+      await useAuthStore.getState().handleAppleSignInSuccess(invalidSession);
 
       const state = useAuthStore.getState();
       expect(state.loading).toBe(false);
       expect(state.error).toBeTruthy();
+      expect(state.status).toBe('unauthenticated');
+    });
+
+    it('should detect Apple private relay email and set needsContactEmail', async () => {
+      const mockAppleSession: SupabaseSession = {
+        user: {
+          id: 'apple-private-user',
+          email: 'hidden@privaterelay.appleid.com',
+          user_metadata: {},
+          aud: 'authenticated',
+          created_at: '2024-01-01T00:00:00Z',
+        },
+        access_token: 'apple-token',
+        refresh_token: 'apple-refresh',
+        expires_in: 3600,
+        token_type: 'bearer',
+      };
+
+      getCurrentUserProfile.mockResolvedValue({
+        id: 'apple-private-user',
+        email: 'hidden@privaterelay.appleid.com',
+        username: 'appleuser',
+        appleUser: true,
+      });
+
+      await useAuthStore.getState().handleAppleSignInSuccess(mockAppleSession);
+
+      const state = useAuthStore.getState();
+      expect(state.needsContactEmail).toBe(true);
     });
   });
 
@@ -790,6 +1006,9 @@ describe('useAuthStore', () => {
   });
 
   describe('registerPushToken', () => {
+    // The new store uses registerPushTokenService from the service module
+    const { registerPushTokenService } = require('@/src/features/auth/service');
+
     it('should register push token when permission granted', async () => {
       useAuthStore.setState({
         user: { id: 'user-123', email: 'test@example.com', username: 'test' },
@@ -803,15 +1022,14 @@ describe('useAuthStore', () => {
         data: 'ExponentPushToken[xxxxxx]',
       });
 
-      (api.post as jest.Mock).mockResolvedValue({});
+      (registerPushTokenService as jest.Mock).mockResolvedValue({});
 
       await useAuthStore.getState().registerPushToken();
 
       const state = useAuthStore.getState();
       expect(state.pushToken).toBe('ExponentPushToken[xxxxxx]');
-      expect(api.post).toHaveBeenCalledWith('/users/push-token', {
-        token: 'ExponentPushToken[xxxxxx]',
-      });
+      // The new store uses the service function instead of direct api.post
+      expect(registerPushTokenService).toHaveBeenCalledWith('ExponentPushToken[xxxxxx]');
     });
 
     it('should not register push token when permission not granted', async () => {
@@ -822,7 +1040,7 @@ describe('useAuthStore', () => {
       await useAuthStore.getState().registerPushToken();
 
       expect(Notifications.getExpoPushTokenAsync).not.toHaveBeenCalled();
-      expect(api.post).not.toHaveBeenCalled();
+      expect(registerPushTokenService).not.toHaveBeenCalled();
     });
 
     it('should handle push token registration error', async () => {
@@ -857,12 +1075,15 @@ describe('useAuthStore', () => {
 
       await useAuthStore.getState().registerPushToken();
 
-      expect(api.post).not.toHaveBeenCalled();
+      // The new store still sets pushToken locally but doesn't call the service
+      expect(registerPushTokenService).not.toHaveBeenCalled();
       expect(useAuthStore.getState().pushToken).toBe('ExponentPushToken[xxxxxx]');
     });
   });
 
   describe('edge cases and error handling', () => {
+    const { getCurrentUserProfile } = require('@/src/api/api-client');
+
     it('should handle concurrent login attempts', async () => {
       const mockSession = {
         user: { id: 'user-123', email: 'test@example.com', user_metadata: {} },
@@ -873,6 +1094,13 @@ describe('useAuthStore', () => {
       (supabase.auth.signInWithPassword as jest.Mock).mockResolvedValue({
         data: { session: mockSession, user: mockSession.user },
         error: null,
+      });
+
+      // Mock backend profile fetch for concurrent logins
+      getCurrentUserProfile.mockResolvedValue({
+        id: 'user-123',
+        email: 'test@example.com',
+        username: 'testuser',
       });
 
       // Trigger multiple logins at once
@@ -905,10 +1133,17 @@ describe('useAuthStore', () => {
         error: null,
       });
 
+      // Mock backend profile fetch
+      getCurrentUserProfile.mockResolvedValue({
+        id: 'user-123',
+        email: 'test@example.com',
+        username: 'testuser',
+      });
+
       await useAuthStore.getState().login({
-          email: 'test@example.com',
-          password: 'password123',
-        });
+        email: 'test@example.com',
+        password: 'password123',
+      });
 
       const state = useAuthStore.getState();
       expect(state.token).toBe('token-with-special-chars-!@#$%^&*()');
@@ -930,16 +1165,26 @@ describe('useAuthStore', () => {
   });
 
   describe('state consistency', () => {
+    const { getCurrentUserProfile } = require('@/src/api/api-client');
+
     it('should maintain consistent state during failed operations', async () => {
       (supabase.auth.signInWithPassword as jest.Mock).mockResolvedValue({
         data: { session: null },
         error: { message: 'Server error' },
       });
 
-      await useAuthStore.getState().login({
+      // The new implementation throws the error object
+      // Use try/catch instead of rejects.toThrow since the error is a plain object
+      try {
+        await useAuthStore.getState().login({
           email: 'test@example.com',
           password: 'password123',
         });
+        // Should not reach here
+        expect(true).toBe(false);
+      } catch (err: any) {
+        expect(err.message).toBe('Server error');
+      }
 
       const finalState = useAuthStore.getState();
       expect(finalState.user).toBeNull();
@@ -954,10 +1199,18 @@ describe('useAuthStore', () => {
         error: { message: 'Invalid credentials' },
       });
 
-      await useAuthStore.getState().login({
+      // The new implementation throws the error object
+      // Use try/catch since the error is a plain object, not Error instance
+      try {
+        await useAuthStore.getState().login({
           email: 'wrong@example.com',
           password: 'wrong',
         });
+        // Should not reach here
+        expect(true).toBe(false);
+      } catch (err: any) {
+        expect(err.message).toBe('Invalid credentials');
+      }
 
       expect(useAuthStore.getState().error).toBe('Invalid credentials');
 
@@ -973,10 +1226,17 @@ describe('useAuthStore', () => {
         error: null,
       });
 
+      // Mock backend profile fetch
+      getCurrentUserProfile.mockResolvedValue({
+        id: 'user-123',
+        email: 'test@example.com',
+        username: 'testuser',
+      });
+
       await useAuthStore.getState().login({
-          email: 'test@example.com',
-          password: 'correct',
-        });
+        email: 'test@example.com',
+        password: 'correct',
+      });
 
       const state = useAuthStore.getState();
       expect(state.error).toBeNull();

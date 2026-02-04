@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom utility classes for common patterns */
+@layer utilities {
+  /* Text styles matching your theme */
+  .text-heading {
+    @apply font-heading text-text-primary dark:text-text-primary-dark;
+  }
+  
+  .text-body {
+    @apply font-body text-text-secondary dark:text-text-secondary-dark;
+  }
+
+  /* Common component patterns */
+  .card {
+    @apply bg-surface dark:bg-surface-dark rounded-md p-md shadow-md;
+  }
+  
+  .button-primary {
+    @apply bg-primary text-white rounded-md px-lg py-sm font-medium;
+  }
+  
+  .button-secondary {
+    @apply bg-secondary text-white rounded-md px-lg py-sm font-medium;
+  }
+
+  /* Animation utilities */
+  .animate-press {
+    @apply active:scale-95 transition-transform duration-100;
+  }
+}
+
+/* Platform-specific styles */
+@layer components {
+  /* iOS-specific adjustments */
+  .ios-safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .ios-safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

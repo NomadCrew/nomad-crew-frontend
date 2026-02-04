@@ -1,0 +1,1 @@
+export { BentoCarousel, type BentoCarouselProps, type CarouselItem } from './BentoCarousel';
