@@ -119,10 +119,8 @@ module.exports = [
       '.expo/**',
       'dist/**',
       'coverage/**',
-      '*.config.js',
-      'babel.config.js',
-      'metro.config.js',
-      'jest.setup.js',
+      '**/*.js',
+      'scripts/**',
     ],
   },
 ];
