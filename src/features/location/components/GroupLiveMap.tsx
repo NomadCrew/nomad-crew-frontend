@@ -442,29 +442,6 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
           </View>
         )}
 
-        {/* Debug overlay to show current state */}
-        {__DEV__ && (
-          <View
-            style={{
-              position: 'absolute',
-              top: 10,
-              right: 10,
-              backgroundColor: 'rgba(0,0,0,0.7)',
-              padding: 8,
-              borderRadius: 4,
-              zIndex: 2000,
-            }}
-          >
-            <Text style={{ color: 'white', fontSize: 10 }}>
-              Loading: {isLoading.toString()}
-              {'\n'}
-              MapLoaded: {mapLoaded.toString()}
-              {'\n'}
-              ShowOverlay: {(isLoading && !mapLoaded).toString()}
-            </Text>
-          </View>
-        )}
-
         {/* Error overlay */}
         {mapError && (
           <View style={styles(theme).errorOverlay}>
