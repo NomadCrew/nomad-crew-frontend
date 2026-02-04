@@ -24,7 +24,6 @@
   },
   "jest": {
     "preset": "jest-expo",
-    "testEnvironment": "jsdom",
     "testMatch": [
       "**/__tests__/**/*.test.{ts,tsx}",
       "**/*.test.{ts,tsx}"
