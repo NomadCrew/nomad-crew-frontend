@@ -1,0 +1,46 @@
+# WSL2 Configuration for React Native Development
+# Copy this file to C:\Users\<YOUR_USERNAME>\.wslconfig
+
+[wsl2]
+# Limit memory to prevent WSL from consuming all available RAM
+memory=8GB
+
+# Limit processor count
+processors=4
+
+# Set swap size
+swap=4GB
+
+# Enable localhost forwarding
+localhostForwarding=true
+
+# Disable page reporting to save memory
+pageReporting=false
+
+# Turn on default connection to bind WSL 2 localhost to Windows localhost
+localhostforwarding=true
+
+# Disable nested virtualization
+nestedVirtualization=false
+
+# Turns on output console showing contents of dmesg when opening a WSL 2 distro for debugging
+debugConsole=false
+
+[experimental]
+# Enable systemd support
+autoMemoryReclaim=gradual
+
+# Better networking performance
+networkingMode=mirrored
+
+# DNS tunneling for better resolution
+dnsTunneling=true
+
+# Firewall rules application
+firewall=true
+
+# Auto proxy detection
+autoProxy=true
+
+# Sparse VHD support for smaller disk usage
+sparseVhd=true
