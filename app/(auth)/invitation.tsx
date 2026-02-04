@@ -127,6 +127,11 @@ export default function InvitationScreen() {
 
   // Extract fetch logic as a reusable callback for both initial load and retry
   const fetchInvitationDetails = useCallback(async () => {
+    // Clear previous state to prevent stale UI when token changes
+    setInvitation(null);
+    setError(null);
+    setIsLoading(true);
+
     logger.debug(
       'INVITATION',
       `Fetching with token: ${typeof token === 'string' ? token.substring(0, 15) + '...' : 'none'}`
