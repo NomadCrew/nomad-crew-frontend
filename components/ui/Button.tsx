@@ -147,7 +147,17 @@ export function Button({
       if (variantColors && typeof variantColors === 'object' && 'background' in variantColors) {
         return (variantColors as { background: string }).background;
       }
-      return primarySurface;
+
+      // Variant-specific fallbacks when theme colors are missing
+      switch (variant) {
+        case 'filled':
+          return primarySurface;
+        case 'outlined':
+        case 'ghost':
+          return 'transparent';
+        default:
+          return primarySurface;
+      }
     };
 
     const getBorderColor = () => {
