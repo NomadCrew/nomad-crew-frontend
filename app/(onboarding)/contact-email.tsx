@@ -89,7 +89,7 @@ export default function ContactEmailStep() {
   };
 
   const handleSkip = () => {
-    // Allow skipping for now, but remind user later
+    // Allow skipping
     setNeedsContactEmail(false);
     router.replace('/(tabs)/trips');
   };

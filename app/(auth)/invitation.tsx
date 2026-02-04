@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
-import { ActivityIndicator, ScrollView, StyleSheet } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '@/src/features/auth/store';
 import { ThemedView } from '@/components/ThemedView';
@@ -153,6 +153,10 @@ export default function InvitationScreen() {
         await AsyncStorage.setItem('pendingInvitation', token);
       } catch (storageError) {
         logger.error('INVITATION', 'Failed to store pending invitation:', storageError);
+        Alert.alert(
+          'Storage Error',
+          'Unable to save invitation. Please try the link again after logging in.'
+        );
       }
       router.replace('/(auth)/login');
       return;
@@ -230,7 +234,7 @@ export default function InvitationScreen() {
     setIsDeclining(true);
     try {
       logger.debug('INVITATION', 'Declining invitation...');
-      await tripApi.declineInvitation(token);
+      await useTripStore.getState().declineInvitation(token);
       logger.debug('INVITATION', 'Invitation declined successfully');
 
       // Navigate to home

@@ -181,7 +181,7 @@ export const ChatList: React.FC<ChatListProps> = ({
       }
 
       // Determine if we should show the avatar
-      // Show avatar if it's the last message or if the sender is different from the next message
+      // Show avatar if it's the first message or if the sender is different from the previous message
       const showAvatar =
         index === 0 || sortedMessages[index - 1]?.message?.sender?.id !== item.message.sender.id;
 
@@ -253,7 +253,7 @@ export const ChatList: React.FC<ChatListProps> = ({
         ref={flashListRef}
         data={sortedMessages}
         renderItem={renderItem}
-        keyExtractor={(item) => item.message?.id ?? `fallback-${Math.random()}`}
+        keyExtractor={(item, index) => item.message?.id ?? `fallback-${index}`}
         contentContainerStyle={styles.messageList}
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmptyComponent}
