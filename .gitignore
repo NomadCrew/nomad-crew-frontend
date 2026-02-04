@@ -54,3 +54,16 @@ GOOGLE_API_KEYS.txt
 
 # Local backup directories
 .local-changes-backup/
+
+# Secrets directory (local credentials)
+SECRET/
+
+# Logs and coverage
+logs/
+coverage/
+
+# Editor configs
+.claude/
+
+# Auto-generated
+nativewind-env.d.ts
