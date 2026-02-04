@@ -20,7 +20,7 @@ export default {
   expo: {
     name: IS_DEV ? 'NomadCrew (Dev)' : 'NomadCrew',
     slug: 'nomad-crew-frontend',
-    version: '1.0.0',
+    version: '0.1.0',
     orientation: 'portrait',
     icon: './assets/images/icon.png',
     scheme: 'nomadcrew',
