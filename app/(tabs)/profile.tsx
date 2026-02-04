@@ -92,6 +92,18 @@ export default function ProfileScreen() {
 
         try {
           const profile = await fetchUserProfile();
+
+          // Sync profile data back to auth store (username, firstName, lastName, etc.)
+          if (profile.username || profile.firstName || profile.lastName) {
+            setUser({
+              ...user,
+              username: profile.username || user.username,
+              firstName: profile.firstName || user.firstName,
+              lastName: profile.lastName || user.lastName,
+              createdAt: profile.createdAt || user.createdAt,
+            });
+          }
+
           if (profile.locationPrivacyPreference) {
             setLocationPrivacy(profile.locationPrivacyPreference);
           }
@@ -104,7 +116,7 @@ export default function ProfileScreen() {
       };
 
       loadUserProfile();
-    }, [user?.id])
+    }, [user, setUser])
   );
 
   // Format joined date
