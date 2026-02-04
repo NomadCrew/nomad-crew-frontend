@@ -1,7 +1,7 @@
 {
   "name": "nomad-crew-frontend",
   "main": "expo-router/entry",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "scripts": {
     "start": "expo start -c",
     "health-check": "node scripts/health-check.js",
