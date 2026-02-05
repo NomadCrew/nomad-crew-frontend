@@ -12,18 +12,18 @@ module.exports = {
         // Map your existing theme colors to Tailwind
         primary: {
           DEFAULT: '#F46315', // Your orange
-          light: '#FF8A4C',
-          dark: '#D64500',
-          50: '#FFF4ED',
-          100: '#FFE6D5',
-          200: '#FECAAA',
-          300: '#FDA574',
-          400: '#FB723C',
+          light: '#FF8F5E',
+          dark: '#E14F04',
+          50: '#FFF7ED',
+          100: '#FFE8D7',
+          200: '#FFD0B5',
+          300: '#FFB088',
+          400: '#FF8F5E',
           500: '#F46315',
-          600: '#E8430C',
-          700: '#C0320C',
-          800: '#992A12',
-          900: '#7B2612',
+          600: '#E14F04',
+          700: '#BA3A02',
+          800: '#942D05',
+          900: '#7A2705',
         },
         secondary: {
           DEFAULT: '#4A5568',
@@ -53,7 +53,7 @@ module.exports = {
       },
       fontFamily: {
         // Map to your existing fonts
-        body: ['Inter', 'system-ui'],
+        body: ['Manrope', 'system-ui'],
         heading: ['Manrope', 'system-ui'],
         mono: ['SpaceMono', 'monospace'],
       },
