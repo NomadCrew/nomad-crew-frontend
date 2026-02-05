@@ -1,0 +1,23 @@
+# Ensure consistent line endings across platforms
+# Shell scripts and env files must use LF (macOS/Linux build servers)
+*.sh text eol=lf
+*.env text eol=lf
+.xcode.env text eol=lf
+.xcode.env.local text eol=lf
+Podfile text eol=lf
+Gemfile text eol=lf
+
+# iOS native files
+ios/.xcode.env text eol=lf
+ios/Podfile text eol=lf
+
+# Keep binary files as-is
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
