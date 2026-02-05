@@ -87,14 +87,14 @@ export const createTypography = (baseFontFamily = 'Manrope') => ({
     h1: {
       fontSize: typographySizes['2xl'],
       lineHeight: typographySizes['2xl'] * lineHeights.tight,
-      fontWeight: weights.bold,
+      fontWeight: weights.semibold,
       fontFamily: baseFontFamily,
       letterSpacing: letterSpacing.tight,
     },
     h2: {
       fontSize: typographySizes.xl,
       lineHeight: typographySizes.xl * lineHeights.tight,
-      fontWeight: weights.bold,
+      fontWeight: weights.semibold,
       fontFamily: baseFontFamily,
       letterSpacing: letterSpacing.tight,
     },
