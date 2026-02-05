@@ -1,23 +1,60 @@
-# Ensure consistent line endings across platforms
-# Shell scripts and env files must use LF (macOS/Linux build servers)
+# Force LF line endings for all text files (builds run on macOS/Linux)
+* text=auto eol=lf
+
+# Explicitly mark text file types
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Shell / env / config
 *.sh text eol=lf
 *.env text eol=lf
 .xcode.env text eol=lf
 .xcode.env.local text eol=lf
 Podfile text eol=lf
 Gemfile text eol=lf
+*.rb text eol=lf
 
-# iOS native files
-ios/.xcode.env text eol=lf
-ios/Podfile text eol=lf
+# iOS native
+*.swift text eol=lf
+*.m text eol=lf
+*.h text eol=lf
+*.plist text eol=lf
+*.pbxproj text eol=lf
+*.xcscheme text eol=lf
+*.entitlements text eol=lf
+*.storyboard text eol=lf
+*.modulemap text eol=lf
 
-# Keep binary files as-is
+# Android native
+*.java text eol=lf
+*.kt text eol=lf
+*.gradle text eol=lf
+*.xml text eol=lf
+*.pro text eol=lf
+*.properties text eol=lf
+
+# Binary files — do not touch
 *.png binary
 *.jpg binary
 *.jpeg binary
 *.gif binary
 *.ico binary
+*.webp binary
 *.ttf binary
 *.otf binary
 *.woff binary
 *.woff2 binary
+*.aab binary
+*.apk binary
+*.ipa binary
+*.jar binary
+*.keystore binary
+*.jks binary
