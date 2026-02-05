@@ -74,9 +74,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({ tripId }) => {
       },
       sendButton: {
         marginLeft: 8,
-        width: 36,
-        height: 36,
-        borderRadius: 18,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
         backgroundColor: theme.colors.primary.main,
         justifyContent: 'center',
         alignItems: 'center',
@@ -190,7 +190,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ tripId }) => {
         {isSending ? (
           <ActivityIndicator size="small" color="#FFFFFF" />
         ) : (
-          <Send size={18} color="#FFFFFF" />
+          <Send size={20} color="#FFFFFF" />
         )}
       </TouchableOpacity>
     </View>
