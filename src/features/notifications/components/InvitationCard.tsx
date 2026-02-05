@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react';
-import { View, StyleSheet, Pressable } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, StyleSheet } from 'react-native';
 import { Text, Button, Avatar, Surface } from 'react-native-paper';
 import { formatDistanceToNow } from 'date-fns';
-import { UserPlus } from 'lucide-react-native';
+import { UserPlus, Check, X } from 'lucide-react-native';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { Theme } from '@/src/theme/types';
 import { TripInvitationNotification } from '../types/notification';
@@ -22,6 +22,7 @@ interface InvitationCardProps {
  * - Avatar placeholder for inviter
  * - Accept/Decline action buttons
  * - Unread indicator via background tint
+ * - Shows accepted/declined state after action completes
  */
 export const InvitationCard: React.FC<InvitationCardProps> = ({
   invitation,
@@ -30,6 +31,7 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
 }) => {
   const { theme } = useAppTheme();
   const { acceptTripInvitation, declineTripInvitation, isHandlingAction } = useNotificationStore();
+  const [actionResult, setActionResult] = useState<'accepted' | 'declined' | null>(null);
 
   const formattedTime = useMemo(() => {
     try {
@@ -52,9 +54,12 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
   const handleAccept = async () => {
     if (onAccept) {
       onAccept();
-    } else {
-      await acceptTripInvitation(invitation);
-      // Navigate to trip after accepting
+      return;
+    }
+    await acceptTripInvitation(invitation);
+    // Store catches errors internally; check error state to determine success
+    if (!useNotificationStore.getState().error) {
+      setActionResult('accepted');
       router.push(`/trip/${invitation.metadata.tripID}`);
     }
   };
@@ -62,8 +67,11 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
   const handleDecline = async () => {
     if (onDecline) {
       onDecline();
-    } else {
-      await declineTripInvitation(invitation);
+      return;
+    }
+    await declineTripInvitation(invitation);
+    if (!useNotificationStore.getState().error) {
+      setActionResult('declined');
     }
   };
 
@@ -104,35 +112,56 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
           </Text>
         )}
 
-        {/* Footer: Timestamp + Action buttons */}
+        {/* Footer: Timestamp + Action buttons or result */}
         <View style={themedStyles.footer}>
           <Text variant="labelSmall" style={themedStyles.timestamp}>
             {formattedTime}
           </Text>
 
-          <View style={themedStyles.actions}>
-            <Button
-              mode="outlined"
-              onPress={handleDecline}
-              style={themedStyles.declineButton}
-              labelStyle={themedStyles.declineLabel}
-              compact
-              loading={isHandlingAction}
-              disabled={isHandlingAction}
-            >
-              Decline
-            </Button>
-            <Button
-              mode="contained"
-              onPress={handleAccept}
-              style={themedStyles.acceptButton}
-              compact
-              loading={isHandlingAction}
-              disabled={isHandlingAction}
-            >
-              Accept
-            </Button>
-          </View>
+          {actionResult ? (
+            <View style={themedStyles.resultContainer}>
+              {actionResult === 'accepted' ? (
+                <Check size={16} color={theme.colors.status.success.content} />
+              ) : (
+                <X size={16} color={theme.colors.content.tertiary} />
+              )}
+              <Text
+                variant="labelMedium"
+                style={[
+                  themedStyles.resultText,
+                  actionResult === 'accepted'
+                    ? themedStyles.acceptedText
+                    : themedStyles.declinedText,
+                ]}
+              >
+                {actionResult === 'accepted' ? 'Accepted' : 'Declined'}
+              </Text>
+            </View>
+          ) : (
+            <View style={themedStyles.actions}>
+              <Button
+                mode="outlined"
+                onPress={handleDecline}
+                style={themedStyles.declineButton}
+                labelStyle={themedStyles.declineLabel}
+                compact
+                loading={isHandlingAction}
+                disabled={isHandlingAction}
+              >
+                Decline
+              </Button>
+              <Button
+                mode="contained"
+                onPress={handleAccept}
+                style={themedStyles.acceptButton}
+                compact
+                loading={isHandlingAction}
+                disabled={isHandlingAction}
+              >
+                Accept
+              </Button>
+            </View>
+          )}
         </View>
       </View>
     </Surface>
@@ -210,5 +239,19 @@ const styles = (theme: Theme) =>
     },
     acceptButton: {
       backgroundColor: theme.colors.primary.main,
+    },
+    resultContainer: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 4,
+    },
+    resultText: {
+      fontWeight: '600' as const,
+    },
+    acceptedText: {
+      color: theme.colors.status.success.content,
+    },
+    declinedText: {
+      color: theme.colors.content.tertiary,
     },
   });
