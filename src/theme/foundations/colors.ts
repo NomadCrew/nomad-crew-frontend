@@ -97,12 +97,12 @@ export const colorTokens = {
 export const createSemanticColors = (isDark: boolean) => ({
   // Interactive colors
   primary: {
-    main: isDark ? colorTokens.orange[400] : colorTokens.orange[700],
-    default: isDark ? colorTokens.orange[400] : colorTokens.orange[700],
+    main: isDark ? colorTokens.orange[400] : colorTokens.orange[500],
+    default: isDark ? colorTokens.orange[400] : colorTokens.orange[500],
     surface: isDark ? colorTokens.orange[900] : colorTokens.orange[50],
     border: isDark ? colorTokens.orange[700] : colorTokens.orange[300],
-    hover: isDark ? colorTokens.orange[300] : colorTokens.orange[800],
-    pressed: isDark ? colorTokens.orange[200] : colorTokens.orange[900],
+    hover: isDark ? colorTokens.orange[300] : colorTokens.orange[600],
+    pressed: isDark ? colorTokens.orange[200] : colorTokens.orange[700],
     disabled: isDark ? colorTokens.orange[800] : colorTokens.orange[200],
     text: isDark ? colorTokens.orange[50] : '#FFFFFF',
     onPrimary: '#FFFFFF',
@@ -196,13 +196,13 @@ export const createSemanticColors = (isDark: boolean) => ({
   },
   outlined: {
     background: 'transparent',
-    text: isDark ? colorTokens.orange[400] : colorTokens.orange[700],
+    text: isDark ? colorTokens.orange[400] : colorTokens.orange[500],
     border: isDark ? colorTokens.orange[700] : colorTokens.orange[300],
   },
   // Alias for outlined (for backward compatibility)
   outline: {
     background: 'transparent',
-    text: isDark ? colorTokens.orange[400] : colorTokens.orange[700],
+    text: isDark ? colorTokens.orange[400] : colorTokens.orange[500],
     border: isDark ? colorTokens.orange[700] : colorTokens.orange[300],
   },
   // Top-level onPrimary for backward compatibility
@@ -221,7 +221,7 @@ export const createSemanticColors = (isDark: boolean) => ({
   },
   chat: {
     userBubble: {
-      background: isDark ? '#BA3A02' : '#BA3A02',
+      background: isDark ? colorTokens.orange[700] : colorTokens.orange[500],
       text: '#FFFFFF',
       meta: isDark ? '#FFD0B5' : '#FFE8D7',
     },
@@ -229,7 +229,7 @@ export const createSemanticColors = (isDark: boolean) => ({
       background: isDark ? colorTokens.gray[700] : '#F3F4F6',
       text: isDark ? '#FFFFFF' : '#1F2937',
       meta: isDark ? colorTokens.gray[400] : '#4B5563',
-      sender: isDark ? colorTokens.orange[300] : '#BA3A02',
+      sender: isDark ? colorTokens.orange[300] : colorTokens.orange[500],
     },
     typing: {
       text: isDark ? colorTokens.gray[300] : '#4B5563',
