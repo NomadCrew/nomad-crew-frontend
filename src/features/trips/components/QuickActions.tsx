@@ -224,7 +224,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
                 style={({ pressed }) => [styles(theme).actionItem, { opacity: pressed ? 0.6 : 1 }]}
               >
                 <View style={styles(theme).iconContainer}>
-                  {action.icon({ size: 18, color: theme.colors.primary.main })}
+                  {action.icon({ size: 20, color: theme.colors.primary.main })}
                 </View>
                 <Text style={styles(theme).actionLabel} numberOfLines={1}>
                   {action.label}
@@ -367,8 +367,8 @@ const styles = (theme: Theme) =>
       height: 64,
     },
     iconContainer: {
-      width: 34,
-      height: 34,
+      width: 44,
+      height: 44,
       borderRadius: theme.shape?.borderRadius.medium ?? 12,
       backgroundColor: theme.colors.primary.surface,
       alignItems: 'center',
