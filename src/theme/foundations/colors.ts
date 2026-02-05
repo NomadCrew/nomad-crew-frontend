@@ -112,7 +112,7 @@ export const createSemanticColors = (isDark: boolean) => ({
   content: {
     primary: isDark ? '#F8FAFC' : '#1A1A1A',
     secondary: isDark ? '#CBD5E1' : '#404040',
-    tertiary: isDark ? '#555555' : '#555555',
+    tertiary: isDark ? '#94A3B8' : '#6B7280',
     disabled: isDark ? '#475569' : '#D4D4D4',
     onSurface: isDark ? '#FFFFFF' : colorTokens.gray[900],
     onSurfaceVariant: isDark ? colorTokens.gray[300] : colorTokens.gray[700],
@@ -123,7 +123,7 @@ export const createSemanticColors = (isDark: boolean) => ({
   text: {
     primary: isDark ? '#F8FAFC' : '#1A1A1A',
     secondary: isDark ? '#CBD5E1' : '#404040',
-    tertiary: isDark ? '#555555' : '#555555',
+    tertiary: isDark ? '#94A3B8' : '#6B7280',
     disabled: isDark ? '#475569' : '#D4D4D4',
     onPrimary: '#FFFFFF', // Text color on primary color background
   },
