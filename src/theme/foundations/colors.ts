@@ -208,8 +208,8 @@ export const createSemanticColors = (isDark: boolean) => ({
   // Top-level onPrimary for backward compatibility
   onPrimary: '#FFFFFF',
   border: {
-    default: isDark ? colorTokens.gray[700] : colorTokens.pastel.darkCoral,
-    strong: isDark ? colorTokens.gray[600] : colorTokens.pastel.darkCoral,
+    default: isDark ? colorTokens.gray[700] : '#E8DDD6',
+    strong: isDark ? colorTokens.gray[600] : '#C4B5AA',
   },
   background: {
     default: isDark ? colorTokens.gray[900] : colorTokens.pastel.lightPeach,
