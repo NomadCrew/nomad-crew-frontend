@@ -179,7 +179,7 @@ export default {
       }],
       ['expo-notifications', {
         icon: './assets/images/icon.png',
-        color: '#000000'
+        color: '#F46315'
       }]
     ],
     experiments: {
