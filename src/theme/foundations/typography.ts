@@ -207,7 +207,7 @@ export const createTypography = (baseFontFamily = 'Manrope') => ({
   caption: {
     fontSize: typographySizes.xs,
     lineHeight: typographySizes.xs * lineHeights.normal,
-    fontWeight: weights.normal,
+    fontWeight: weights.medium,
     fontFamily: baseFontFamily,
     letterSpacing: letterSpacing.wide,
   },
