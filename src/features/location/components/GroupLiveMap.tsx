@@ -19,6 +19,7 @@ import { LocationSharingToggle } from './LocationSharingToggle';
 import { logger } from '@/src/utils/logger';
 import { Surface } from 'react-native-paper';
 import { Theme } from '@/src/theme/types';
+import type { MemberLocation } from '../types';
 
 const DEFAULT_COORDINATES = {
   latitude: 37.7749,
@@ -32,7 +33,7 @@ interface GroupLiveMapProps {
   onClose: () => void;
   isStandalone?: boolean;
   supabaseLocations: {
-    locations: any[];
+    memberLocations: MemberLocation[];
     isLoading: boolean;
     error: string | null;
     connectionStatus: string;
@@ -116,10 +117,9 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
 
   // Use Supabase Realtime location data with defensive check - memoized
   const memberLocationArray = useMemo(() => {
-    // Handle both array and paginated response formats
-    const locations = supabaseLocations?.locations;
+    const locations = supabaseLocations?.memberLocations;
     return Array.isArray(locations) ? locations : [];
-  }, [supabaseLocations?.locations]);
+  }, [supabaseLocations?.memberLocations]);
 
   // Convert trip members to the format needed for color assignment
   const tripMembers: TripMember[] = (trip.members || []).map((m) => ({
@@ -341,23 +341,15 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
 
     return (
       <MapView
-        key={`map-${trip.id}-${Platform.OS}-${mapLoadAttempts}`}
+        key={`map-${mapLoadAttempts}`}
         ref={mapRef}
         style={styles(theme).map}
         provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-        region={region}
+        initialRegion={region}
         onMapReady={handleMapReady}
-        onMapLoaded={() => console.log('[MapDebug] onMapLoaded fired')}
-        loadingEnabled={!mapLoaded}
+        loadingEnabled
         showsUserLocation={isLocationSharingEnabled}
         showsMyLocationButton
-        showsCompass
-        // REMOVED: minZoomLevel - causes crashes on iOS with initialRegion
-        // minZoomLevel={5}
-        maxZoomLevel={20}
-        scrollEnabled
-        zoomEnabled
-        rotateEnabled
       >
         {memberLocationArray.map((m) => {
           if (m.userId === user?.id) return null;
@@ -395,16 +387,6 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
       </MapView>
     );
   };
-
-  console.log('[GroupLiveMap] Component rendering, tripId:', trip.id);
-  console.log(
-    '[GroupLiveMap] mapLoaded:',
-    mapLoaded,
-    'isLoading:',
-    isLoading,
-    'mapError:',
-    mapError
-  );
 
   return (
     <View style={styles(theme).container}>
