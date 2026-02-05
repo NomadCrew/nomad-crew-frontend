@@ -131,7 +131,7 @@ export const createSemanticColors = (isDark: boolean) => ({
   // Surface colors
   surface: {
     default: isDark ? colorTokens.gray[900] : colorTokens.pastel.peachLight,
-    variant: isDark ? colorTokens.gray[800] : colorTokens.pastel.darkPeach,
+    variant: isDark ? colorTokens.gray[800] : '#F5E6DD',
   },
   status: {
     error: {
