@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/src/api/supabase';
 import { api } from '@/src/api/api-client';
 import { API_PATHS } from '@/src/utils/api-paths';
 import { logger } from '@/src/utils/logger';
 import { RealtimeChannel } from '@supabase/supabase-js';
+import type { MemberLocation } from '@/src/features/location/types';
 
 export type LocationPrivacyLevel = 'hidden' | 'approximate' | 'precise';
 
@@ -31,7 +32,10 @@ export interface UseLocationsParams {
 }
 
 export interface UseLocationsReturn {
+  /** Raw Supabase row data — use for database operations */
   locations: Location[];
+  /** Domain-typed locations for UI consumption */
+  memberLocations: MemberLocation[];
   isLoading: boolean;
   error: string | null;
   connectionStatus: string;
@@ -43,7 +47,23 @@ export interface UseLocationsReturn {
   getVisibleLocations: () => Location[];
 }
 
-export function useLocations({ tripId, autoConnect = true }: UseLocationsParams): UseLocationsReturn {
+/** Maps a Supabase location row to the MemberLocation domain type */
+function mapToMemberLocation(row: Location): MemberLocation {
+  return {
+    userId: row.user_id,
+    name: row.user_name,
+    location: {
+      latitude: row.latitude,
+      longitude: row.longitude,
+      timestamp: new Date(row.updated_at).getTime(),
+    },
+  };
+}
+
+export function useLocations({
+  tripId,
+  autoConnect = true,
+}: UseLocationsParams): UseLocationsReturn {
   const [locations, setLocations] = useState<Location[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,20 +100,23 @@ export function useLocations({ tripId, autoConnect = true }: UseLocationsParams)
   }, [tripId]);
 
   // Update location via API
-  const updateLocation = useCallback(async (request: UpdateLocationRequest) => {
-    if (!tripId) return;
+  const updateLocation = useCallback(
+    async (request: UpdateLocationRequest) => {
+      if (!tripId) return;
 
-    try {
-      await api.put(API_PATHS.location.byTrip(tripId), {
-        latitude: request.latitude,
-        longitude: request.longitude,
-        privacy_level: request.privacyLevel || 'precise'
-      });
-    } catch (err) {
-      logger.error('useLocations', 'Failed to update location:', err);
-      throw err;
-    }
-  }, [tripId]);
+      try {
+        await api.put(API_PATHS.location.byTrip(tripId), {
+          latitude: request.latitude,
+          longitude: request.longitude,
+          privacy_level: request.privacyLevel || 'precise',
+        });
+      } catch (err) {
+        logger.error('useLocations', 'Failed to update location:', err);
+        throw err;
+      }
+    },
+    [tripId]
+  );
 
   // Refresh locations (alias for fetchLocations)
   const refreshLocations = useCallback(async () => {
@@ -101,13 +124,16 @@ export function useLocations({ tripId, autoConnect = true }: UseLocationsParams)
   }, [fetchLocations]);
 
   // Get location by user ID
-  const getLocationByUserId = useCallback((userId: string): Location | undefined => {
-    return locations.find(location => location.user_id === userId);
-  }, [locations]);
+  const getLocationByUserId = useCallback(
+    (userId: string): Location | undefined => {
+      return locations.find((location) => location.user_id === userId);
+    },
+    [locations]
+  );
 
   // Get visible locations (respecting privacy settings)
   const getVisibleLocations = useCallback((): Location[] => {
-    return locations.filter(location => {
+    return locations.filter((location) => {
       // Always show if sharing is disabled
       if (!location.is_sharing_enabled) {
         return false;
@@ -127,54 +153,55 @@ export function useLocations({ tripId, autoConnect = true }: UseLocationsParams)
   }, [locations]);
 
   // Handle realtime events
-  const handleRealtimeEvent = useCallback((payload: any) => {
-    if (!isMountedRef.current) return;
+  const handleRealtimeEvent = useCallback(
+    (payload: any) => {
+      if (!isMountedRef.current) return;
 
-    logger.debug('useLocations', 'Received realtime event:', payload);
+      logger.debug('useLocations', 'Received realtime event:', payload);
 
-    const { eventType, new: newRecord, old: oldRecord } = payload;
+      const { eventType, new: newRecord, old: oldRecord } = payload;
 
-    setLocations(currentLocations => {
-      switch (eventType) {
-        case 'INSERT':
-          if (newRecord && newRecord.trip_id === tripId) {
-            logger.debug('useLocations', 'Adding new location for trip:', tripId, newRecord);
-            // Check if location already exists to avoid duplicates
-            const exists = currentLocations.some(loc => loc.id === newRecord.id);
-            if (!exists) {
-              return [...currentLocations, newRecord];
+      setLocations((currentLocations) => {
+        switch (eventType) {
+          case 'INSERT':
+            if (newRecord && newRecord.trip_id === tripId) {
+              logger.debug('useLocations', 'Adding new location for trip:', tripId, newRecord);
+              // Check if location already exists to avoid duplicates
+              const exists = currentLocations.some((loc) => loc.id === newRecord.id);
+              if (!exists) {
+                return [...currentLocations, newRecord];
+              }
             }
-          }
-          return currentLocations;
+            return currentLocations;
 
-        case 'UPDATE':
-          if (newRecord && newRecord.trip_id === tripId) {
-            logger.debug('useLocations', 'Updating location for trip:', tripId, newRecord);
-            return currentLocations.map(loc =>
-              loc.id === newRecord.id ? newRecord : loc
-            );
-          }
-          return currentLocations;
+          case 'UPDATE':
+            if (newRecord && newRecord.trip_id === tripId) {
+              logger.debug('useLocations', 'Updating location for trip:', tripId, newRecord);
+              return currentLocations.map((loc) => (loc.id === newRecord.id ? newRecord : loc));
+            }
+            return currentLocations;
 
-        case 'DELETE':
-          if (oldRecord) {
-            logger.debug('useLocations', 'Deleting location for trip:', tripId, oldRecord);
-            return currentLocations.filter(loc => loc.id !== oldRecord.id);
-          }
-          return currentLocations;
+          case 'DELETE':
+            if (oldRecord) {
+              logger.debug('useLocations', 'Deleting location for trip:', tripId, oldRecord);
+              return currentLocations.filter((loc) => loc.id !== oldRecord.id);
+            }
+            return currentLocations;
 
-        default:
-          return currentLocations;
-      }
-    });
-  }, [tripId]);
+          default:
+            return currentLocations;
+        }
+      });
+    },
+    [tripId]
+  );
 
   // Connect to Supabase Realtime
   const connect = useCallback(() => {
     if (!tripId || channelRef.current) return;
 
     logger.debug('useLocations', 'Connecting to realtime for trip:', tripId);
-    
+
     const channel = supabase
       .channel(`trip-locations-${tripId}`)
       .on(
@@ -190,7 +217,7 @@ export function useLocations({ tripId, autoConnect = true }: UseLocationsParams)
       .subscribe((status) => {
         logger.debug('useLocations', 'Subscription status:', status);
         setConnectionStatus(status);
-        
+
         if (status === 'SUBSCRIBED') {
           setError(null);
         } else if (status === 'CHANNEL_ERROR') {
@@ -211,6 +238,9 @@ export function useLocations({ tripId, autoConnect = true }: UseLocationsParams)
     }
   }, []);
 
+  // Transform raw Supabase rows to domain-typed MemberLocation objects
+  const memberLocations = useMemo(() => locations.map(mapToMemberLocation), [locations]);
+
   // Setup and cleanup
   useEffect(() => {
     isMountedRef.current = true;
@@ -228,6 +258,7 @@ export function useLocations({ tripId, autoConnect = true }: UseLocationsParams)
 
   return {
     locations,
+    memberLocations,
     isLoading,
     error,
     connectionStatus,
@@ -238,4 +269,4 @@ export function useLocations({ tripId, autoConnect = true }: UseLocationsParams)
     getLocationByUserId,
     getVisibleLocations,
   };
-} 
+}
