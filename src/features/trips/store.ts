@@ -12,7 +12,7 @@ import {
 } from './types';
 import { API_PATHS } from '@/src/utils/api-paths';
 import { registerStoreReset } from '@/src/utils/store-reset';
-import { ServerEvent } from '@/src/types/events';
+import { ServerEvent, isTripEvent, isWeatherEvent, isMemberEvent } from '@/src/types/events';
 import { mapWeatherCode } from '@/src/utils/weather';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '@/src/features/auth/store';
@@ -22,7 +22,10 @@ import { normalizeTrip } from './adapters/normalizeTrip';
 
 interface TripState {
   trips: Trip[];
-  loading: boolean;
+  isCreating: boolean;
+  isFetching: boolean;
+  isUpdating: boolean;
+  isDeleting: boolean;
   error: string | null;
   selectedTrip: Trip | null;
   // Core operations
@@ -62,7 +65,10 @@ export const useTripStore = create<TripState>()(
   devtools(
     (set, get) => ({
       trips: [],
-      loading: false,
+      isCreating: false,
+      isFetching: false,
+      isUpdating: false,
+      isDeleting: false,
       error: null,
       selectedTrip: null,
 
@@ -71,7 +77,7 @@ export const useTripStore = create<TripState>()(
       },
 
       createTrip: async (tripData: CreateTripInput) => {
-        set({ loading: true, error: null });
+        set({ isCreating: true, error: null });
         try {
           const currentUser = useAuthStore.getState().user;
           if (!currentUser) {
@@ -97,36 +103,36 @@ export const useTripStore = create<TripState>()(
           const normalizedTrip = normalizeTrip(response.data);
           set((state) => ({
             trips: [...state.trips, normalizedTrip],
-            loading: false,
+            isCreating: false,
           }));
           return normalizedTrip;
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to create trip';
           logger.error('TRIP', errorMessage);
-          set({ error: errorMessage, loading: false });
+          set({ error: errorMessage, isCreating: false });
           throw error;
         }
       },
 
       updateTrip: async (id, input) => {
-        set({ loading: true, error: null });
+        set({ isUpdating: true, error: null });
         try {
           const response = await api.put<Trip>(`${API_PATHS.trips.byId(id)}`, input);
           const normalizedTrip = normalizeTrip(response.data);
           set((state) => ({
             trips: state.trips.map((trip) => (trip.id === id ? normalizedTrip : trip)),
-            loading: false,
+            isUpdating: false,
           }));
           return normalizedTrip;
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to update trip';
-          set({ error: message, loading: false });
+          set({ error: message, isUpdating: false });
           throw error;
         }
       },
 
       fetchTrips: async () => {
-        set({ loading: true, error: null });
+        set({ isFetching: true, error: null });
         logger.info('TRIP', 'fetchTrips started.');
         try {
           const response = await api.get<Trip[]>(API_PATHS.trips.list);
@@ -135,27 +141,27 @@ export const useTripStore = create<TripState>()(
           logger.info('TRIP', 'Normalized trips:', trips);
           set({
             trips: trips || ([] as Trip[]),
-            loading: false,
+            isFetching: false,
           });
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to fetch trips';
           logger.error('TRIP', 'fetchTrips error:', message, error);
-          set({ error: message, loading: false });
+          set({ error: message, isFetching: false });
           throw error;
         }
       },
 
       deleteTrip: async (id) => {
-        set({ loading: true, error: null });
+        set({ isDeleting: true, error: null });
         try {
           await api.delete(`${API_PATHS.trips.byId(id)}`);
           set((state) => ({
             trips: state.trips.filter((trip) => trip.id !== id),
-            loading: false,
+            isDeleting: false,
           }));
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to delete trip';
-          set({ error: message, loading: false });
+          set({ error: message, isDeleting: false });
           throw error;
         }
       },
@@ -166,46 +172,46 @@ export const useTripStore = create<TripState>()(
       },
 
       updateTripStatus: async (id: string, status: TripStatus) => {
-        set({ loading: true, error: null });
+        set({ isUpdating: true, error: null });
         try {
           const requestBody: UpdateTripStatusRequest = { status };
           await api.patch<UpdateTripStatusResponse>(API_PATHS.trips.updateStatus(id), requestBody);
           set((state) => ({
             trips: state.trips.map((trip) => (trip.id === id ? { ...trip, status } : trip)),
-            loading: false,
+            isUpdating: false,
           }));
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to update trip status';
-          set({ error: message, loading: false });
+          set({ error: message, isUpdating: false });
           throw error;
         }
       },
 
       inviteMember: async (tripId: string, email: string, role: 'owner' | 'admin' | 'member') => {
-        set({ loading: true, error: null });
+        set({ isUpdating: true, error: null });
         try {
           await api.post(API_PATHS.trips.invite(tripId), { email, role });
           // Optionally, refetch trip data or update locally if the API returns the updated trip
           // For now, we assume a WebSocket event will update the trip details with new invitation
-          set({ loading: false });
+          set({ isUpdating: false });
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to invite member';
           logger.error('TRIP', { tripId, email, role, error: message });
-          set({ error: message, loading: false });
+          set({ error: message, isUpdating: false });
           throw error;
         }
       },
 
       revokeInvitation: async (tripId: string, invitationId: string) => {
-        set({ loading: true, error: null });
+        set({ isUpdating: true, error: null });
         try {
           // TODO: Add revoke invitation endpoint to API_PATHS.trips if available
           // await api.delete(API_PATHS.trips.revokeInvitation(tripId, invitationId));
           // For now, just set loading to false
-          set({ loading: false });
+          set({ isUpdating: false });
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to revoke invitation';
-          set({ error: message, loading: false });
+          set({ error: message, isUpdating: false });
           throw error;
         }
       },
@@ -215,72 +221,72 @@ export const useTripStore = create<TripState>()(
         userId: string,
         role: 'owner' | 'admin' | 'member'
       ) => {
-        set({ loading: true, error: null });
+        set({ isUpdating: true, error: null });
         try {
           // TODO: Add update member role endpoint to API_PATHS.trips if available
           // await api.patch(API_PATHS.trips.updateMemberRole(tripId, userId), { role });
-          set({ loading: false });
+          set({ isUpdating: false });
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to update member role';
-          set({ error: message, loading: false });
+          set({ error: message, isUpdating: false });
           throw error;
         }
       },
 
       removeMember: async (tripId: string, userId: string) => {
-        set({ loading: true, error: null });
+        set({ isDeleting: true, error: null });
         try {
           // TODO: Add remove member endpoint to API_PATHS.trips if available
           // await api.delete(API_PATHS.trips.removeMember(tripId, userId));
-          set({ loading: false });
+          set({ isDeleting: false });
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to remove member';
-          set({ error: message, loading: false });
+          set({ error: message, isDeleting: false });
           throw error;
         }
       },
 
       acceptInvitation: async (token: string) => {
-        set({ loading: true, error: null });
+        set({ isUpdating: true, error: null });
         try {
           await api.post(API_PATHS.trips.acceptInvitation, { token });
           // Remove the persisted token after successful acceptance
           await AsyncStorage.removeItem(`pendingInvitation_${token}`);
-          set({ loading: false });
+          set({ isUpdating: false });
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to accept invitation';
           logger.error('TRIP', message);
-          set({ error: message, loading: false });
+          set({ error: message, isUpdating: false });
           throw error;
         }
       },
 
       declineInvitation: async (token: string) => {
-        set({ loading: true, error: null });
+        set({ isUpdating: true, error: null });
         try {
           await api.post(API_PATHS.trips.declineInvitation, { token });
           // Remove the persisted token after declining
           await AsyncStorage.removeItem(`pendingInvitation_${token}`);
-          set({ loading: false });
+          set({ isUpdating: false });
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to decline invitation';
           logger.error('TRIP', message);
-          set({ error: message, loading: false });
+          set({ error: message, isUpdating: false });
           throw error;
         }
       },
 
       persistInvitation: async (token: string) => {
-        set({ loading: true, error: null });
+        set({ isUpdating: true, error: null });
         try {
           await AsyncStorage.setItem(`pendingInvitation_${token}`, token);
           logger.info('Persisted invitation token:', token);
-          set({ loading: false });
+          set({ isUpdating: false });
         } catch (error) {
           const message =
             error instanceof Error ? error.message : 'Failed to persist invitation token';
           logger.error('TRIP', message);
-          set({ error: message, loading: false });
+          set({ error: message, isUpdating: false });
           throw error;
         }
       },
@@ -320,13 +326,192 @@ export const useTripStore = create<TripState>()(
       },
 
       handleTripEvent: (event: ServerEvent) => {
-        // TODO: Add type guards for event.payload if needed
-        // Example: if (isTripEvent(event)) { ... }
-        // For now, skip ambiguous event handling logic
+        try {
+          const { type, tripId } = event;
+
+          switch (type) {
+            case 'TRIP_UPDATED': {
+              if (isTripEvent(event)) {
+                const payload = event.payload;
+                set((state) => ({
+                  trips: state.trips.map((trip) =>
+                    trip.id === payload.id
+                      ? {
+                          ...trip,
+                          name: payload.name,
+                          status: payload.status as TripStatus,
+                          ...(payload.startDate && { startDate: payload.startDate }),
+                          ...(payload.endDate && { endDate: payload.endDate }),
+                          ...(payload.description !== undefined && {
+                            description: payload.description,
+                          }),
+                        }
+                      : trip
+                  ),
+                }));
+              }
+              break;
+            }
+
+            case 'TRIP_DELETED': {
+              set((state) => ({
+                trips: state.trips.filter((trip) => trip.id !== tripId),
+                // Clear selectedTrip if it was the deleted one
+                selectedTrip: state.selectedTrip?.id === tripId ? null : state.selectedTrip,
+              }));
+              break;
+            }
+
+            case 'TRIP_CREATED': {
+              const payload = event.payload as Record<string, unknown>;
+              const newTrip = normalizeTrip(payload);
+              set((state) => {
+                // Avoid duplicates
+                const exists = state.trips.some((t) => t.id === newTrip.id);
+                if (exists) return state;
+                return { trips: [...state.trips, newTrip] };
+              });
+              break;
+            }
+
+            case 'TRIP_STARTED':
+            case 'TRIP_ENDED':
+            case 'TRIP_STATUS_UPDATED': {
+              const statusPayload = event.payload as { status?: string };
+              const newStatus =
+                type === 'TRIP_STARTED'
+                  ? 'ACTIVE'
+                  : type === 'TRIP_ENDED'
+                    ? 'COMPLETED'
+                    : (statusPayload?.status as TripStatus | undefined);
+
+              if (newStatus) {
+                set((state) => ({
+                  trips: state.trips.map((trip) =>
+                    trip.id === tripId ? { ...trip, status: newStatus as TripStatus } : trip
+                  ),
+                }));
+              }
+              break;
+            }
+
+            case 'WEATHER_UPDATED': {
+              if (isWeatherEvent(event)) {
+                const { payload } = event;
+                const condition = mapWeatherCode(payload.weather_code);
+                const forecast: WeatherForecast[] = payload.hourly_forecast.map((entry) => ({
+                  time: entry.timestamp,
+                  temperature: entry.temperature_2m,
+                  precipitation: entry.precipitation,
+                }));
+
+                set((state) => ({
+                  trips: state.trips.map((trip) =>
+                    trip.id === payload.tripId
+                      ? {
+                          ...trip,
+                          weatherTemp: `${Math.round(payload.temperature_2m)}`,
+                          weatherCondition: condition,
+                          weatherForecast: forecast,
+                        }
+                      : trip
+                  ),
+                }));
+              }
+              break;
+            }
+
+            case 'MEMBER_ADDED': {
+              if (isMemberEvent(event)) {
+                const { payload } = event;
+                set((state) => ({
+                  trips: state.trips.map((trip) => {
+                    if (trip.id !== tripId) return trip;
+                    const members = trip.members || [];
+                    // Avoid duplicate members
+                    if (payload.userId && members.some((m) => m.userId === payload.userId)) {
+                      return trip;
+                    }
+                    return {
+                      ...trip,
+                      members: [
+                        ...members,
+                        {
+                          userId: payload.userId || '',
+                          role: (payload.role as 'owner' | 'admin' | 'member') || 'member',
+                          joinedAt: new Date().toISOString(),
+                        },
+                      ],
+                    };
+                  }),
+                }));
+              }
+              break;
+            }
+
+            case 'MEMBER_REMOVED': {
+              if (isMemberEvent(event)) {
+                const { payload } = event;
+                set((state) => ({
+                  trips: state.trips.map((trip) => {
+                    if (trip.id !== tripId) return trip;
+                    return {
+                      ...trip,
+                      members: (trip.members || []).filter((m) => m.userId !== payload.userId),
+                    };
+                  }),
+                }));
+              }
+              break;
+            }
+
+            case 'MEMBER_ROLE_UPDATED': {
+              if (isMemberEvent(event)) {
+                const { payload } = event;
+                set((state) => ({
+                  trips: state.trips.map((trip) => {
+                    if (trip.id !== tripId) return trip;
+                    return {
+                      ...trip,
+                      members: (trip.members || []).map((m) =>
+                        m.userId === payload.userId
+                          ? {
+                              ...m,
+                              role: (payload.role as 'owner' | 'admin' | 'member') || m.role,
+                            }
+                          : m
+                      ),
+                    };
+                  }),
+                }));
+              }
+              break;
+            }
+
+            default:
+              // Unhandled event type - no action needed
+              break;
+          }
+        } catch (error) {
+          logger.error(
+            'TRIP',
+            'Error handling trip event:',
+            error instanceof Error ? error.message : error,
+            event.type
+          );
+        }
       },
 
       reset: () => {
-        set({ trips: [], loading: false, error: null, selectedTrip: null });
+        set({
+          trips: [],
+          isCreating: false,
+          isFetching: false,
+          isUpdating: false,
+          isDeleting: false,
+          error: null,
+          selectedTrip: null,
+        });
       },
     }),
     { name: 'TripStore' }
@@ -346,9 +531,21 @@ registerStoreReset('TripStore', () => useTripStore.getState().reset());
 
 // Basic state selectors
 export const selectTrips = (state: TripState) => state.trips;
-export const selectLoading = (state: TripState) => state.loading;
 export const selectError = (state: TripState) => state.error;
 export const selectSelectedTrip = (state: TripState) => state.selectedTrip;
+
+// Per-operation loading selectors
+export const selectIsCreating = (state: TripState) => state.isCreating;
+export const selectIsFetching = (state: TripState) => state.isFetching;
+export const selectIsUpdating = (state: TripState) => state.isUpdating;
+export const selectIsDeleting = (state: TripState) => state.isDeleting;
+
+/** Returns true if any operation is in progress. */
+export const selectIsLoading = (state: TripState) =>
+  state.isCreating || state.isFetching || state.isUpdating || state.isDeleting;
+
+/** Backward-compatible selector: returns isFetching (most common use case). */
+export const selectLoading = (state: TripState) => state.isFetching;
 
 // Derived selectors
 export const selectTripById = (id: string) => (state: TripState) =>
@@ -388,6 +585,10 @@ export const selectTripActions = (state: TripState) => ({
 // Composite selectors (for common combinations)
 export const selectTripsWithLoading = (state: TripState) => ({
   trips: state.trips,
-  loading: state.loading,
+  loading: state.isFetching,
+  isCreating: state.isCreating,
+  isFetching: state.isFetching,
+  isUpdating: state.isUpdating,
+  isDeleting: state.isDeleting,
   error: state.error,
 });

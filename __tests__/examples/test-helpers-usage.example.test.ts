@@ -362,7 +362,7 @@ describe('Test Helpers Usage Examples', () => {
       // Assert: Trips are loaded
       const tripState = getTripState();
       expect(tripState.trips).toHaveLength(2);
-      expect(tripState.loading).toBe(false);
+      expect(tripState.isFetching).toBe(false);
       expect(tripState.error).toBeNull();
     });
   });

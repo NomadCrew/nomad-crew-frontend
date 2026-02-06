@@ -109,7 +109,7 @@ describe('useTripStore', () => {
 
       expect(result.id).toBe('trip-123');
       expect(useTripStore.getState().trips).toHaveLength(1);
-      expect(useTripStore.getState().loading).toBe(false);
+      expect(useTripStore.getState().isCreating).toBe(false);
     });
 
     it('should add creator as owner member', async () => {
@@ -195,14 +195,14 @@ describe('useTripStore', () => {
       });
 
       // Check loading is true during request
-      expect(useTripStore.getState().loading).toBe(true);
+      expect(useTripStore.getState().isCreating).toBe(true);
 
       await act(async () => {
         await createPromise;
       });
 
       // Check loading is false after completion
-      expect(useTripStore.getState().loading).toBe(false);
+      expect(useTripStore.getState().isCreating).toBe(false);
     });
   });
 
@@ -506,7 +506,7 @@ describe('useTripStore', () => {
       // The stub implementation doesn't update state, so members remain unchanged
       const trip = useTripStore.getState().trips[0];
       expect(trip.members).toHaveLength(2);
-      expect(useTripStore.getState().loading).toBe(false);
+      expect(useTripStore.getState().isDeleting).toBe(false);
     });
 
     it('should set loading to false after operation completes', async () => {
@@ -516,7 +516,7 @@ describe('useTripStore', () => {
         await useTripStore.getState().removeMember('trip-123', 'user-456');
       });
 
-      expect(useTripStore.getState().loading).toBe(false);
+      expect(useTripStore.getState().isDeleting).toBe(false);
     });
 
     it.skip('should call correct API endpoint (TODO: not implemented)', async () => {
@@ -556,7 +556,7 @@ describe('useTripStore', () => {
       const trip = useTripStore.getState().trips[0];
       const member = trip.members!.find((m) => m.userId === 'user-456');
       expect(member!.role).toBe('member'); // Role unchanged due to stub
-      expect(useTripStore.getState().loading).toBe(false);
+      expect(useTripStore.getState().isUpdating).toBe(false);
     });
 
     it('should set loading to false after operation completes', async () => {
@@ -566,7 +566,7 @@ describe('useTripStore', () => {
         await useTripStore.getState().updateMemberRole('trip-123', 'user-456', 'admin');
       });
 
-      expect(useTripStore.getState().loading).toBe(false);
+      expect(useTripStore.getState().isUpdating).toBe(false);
     });
 
     it.skip('should send role to API (TODO: not implemented)', async () => {
@@ -667,7 +667,7 @@ describe('useTripStore', () => {
       // The stub implementation doesn't update state, so invitations remain unchanged
       const trip = useTripStore.getState().trips[0];
       expect(trip.invitations).toHaveLength(1);
-      expect(useTripStore.getState().loading).toBe(false);
+      expect(useTripStore.getState().isUpdating).toBe(false);
     });
 
     it('should set loading to false after operation completes', async () => {
@@ -677,7 +677,7 @@ describe('useTripStore', () => {
         await useTripStore.getState().revokeInvitation('trip-123', 'invitation-token-123');
       });
 
-      expect(useTripStore.getState().loading).toBe(false);
+      expect(useTripStore.getState().isUpdating).toBe(false);
     });
   });
 
