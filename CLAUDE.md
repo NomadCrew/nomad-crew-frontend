@@ -1,285 +1,176 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code working in the NomadCrew frontend repository.
+For ambiguous requests, clarify assumptions before executing.
 
-## Response Protocol
+## Quick Reference — Commands
 
-Before executing ANY non-trivial task, first compile the request into a structured specification:
-
-### Step 1: Classify Intent
-Identify the primary intent: `research` | `decision` | `design` | `code` | `writing` | `ops`
-
-### Step 2: State the Objective
-Write a single clear sentence describing what success looks like.
-
-### Step 3: Document Assumptions
-List any defaults being applied due to missing information. Format:
-- **Assumption:** [What you're assuming]
-- **Reason:** [Why this is a reasonable default]
-
-### Step 4: Define Verification Criteria
-List pass/fail criteria that will confirm the task is complete.
-
-### Step 5: Execute
-Only after completing steps 1-4, proceed with the work.
-
-### When to Skip This Protocol
-- Simple questions with obvious answers
-- Single-file edits with clear instructions
-- Commands the user explicitly specifies
-
-### Example
-
-**User:** "Add dark mode"
-
-**Compiled:**
-- **Intent:** code
-- **Objective:** Implement theme switching between light and dark modes
-- **Assumptions:**
-  - System preference detection desired (modern UX standard)
-  - Toggle placement in header (common pattern, not specified)
-  - Persist preference in localStorage (standard approach)
-- **Verification:**
-  - [ ] Toggle switches between light/dark
-  - [ ] Preference persists across sessions
-  - [ ] Respects system preference on first visit
-
-**Then execute.**
-
----
-
-## Development Commands
-
-### Core Development
 ```bash
-# Start development server with cache clear
-npm start
-
-# Run on specific platforms
-npm run android
-npm run ios
-npm run web
-
-# Run linting
-npm run lint
-
-# Run tests
-npm test
-npm run test:watch
-npm run test:coverage
-
-# Run type checking (TypeScript)
-npx tsc --noEmit
+npm start                    # Dev server (expo start -c)
+npm run android / ios / web  # Platform-specific
+npm run lint                 # ESLint
+npm run format               # Prettier write
+npm test                     # Jest
+npm run test:watch           # Jest watch mode
+npm run test:coverage        # Jest with coverage
+npm run test:e2e             # Maestro E2E tests
+npx tsc --noEmit             # Type checking
 ```
 
-### Building and Deployment
-```bash
-# EAS Build commands
-eas build --platform ios --profile development
-eas build --platform android --profile development
-eas build --platform all --profile preview
-eas build --platform all --profile production
+**EAS Builds:** `eas build --platform <ios|android|all> --profile <development|preview|production>`
+**Store Submit:** `eas submit --platform <ios|android> --profile production`
 
-# Submit to stores
-eas submit --platform ios --profile production
-eas submit --platform android --profile production
-```
+## Stack
 
-## High-Level Architecture
+React Native + Expo SDK 52 · TypeScript (strict) · Expo Router · Zustand (7 stores) · TanStack React Query · React Native Paper + NativeWind · Supabase Auth + Realtime · Custom WebSocket (Go backend) · CASL permissions · Zod validation · axios + axios-retry
 
-### Frontend Stack
-- **Framework**: React Native with Expo SDK 52
-- **Language**: TypeScript with strict mode
-- **Navigation**: Expo Router (file-based routing) + React Navigation
-- **State Management**: Zustand stores (auth, trips, chat, todos, location, notifications)
-- **UI Framework**: React Native Paper + custom theme system
-- **Real-time**: Supabase Realtime for WebSocket connections
-- **Authentication**: Supabase Auth with Google/Apple OAuth
+## Project Structure
 
-### Project Structure
 ```
 src/
-├── api/              # API clients and backend communication
-├── features/         # Feature-based modules (auth, chat, trips, etc.)
-│   └── [feature]/
-│       ├── components/
-│       ├── hooks/
-│       ├── screens/
-│       ├── store.ts
-│       └── types.ts
-├── theme/           # Custom theme system with light/dark modes
-├── hooks/           # Global React hooks
-├── types/           # Global TypeScript types
-└── utils/           # Helper functions and utilities
+├── api/              # ApiClient (axios singleton), AuthApi, BaseApiClient, env config
+├── components/       # Shared UI: atoms/ molecules/ organisms/ templates/ common/ ui/
+├── constants/        # Onboarding content
+├── events/           # eventBus.ts — cross-feature event communication
+├── features/         # Feature modules (see below)
+├── hooks/            # Global hooks (useAuth, useProtectedRoute, useNetworkStatus, etc.)
+├── lib/              # query-client.ts (TanStack React Query + AsyncStorage persister)
+├── providers/        # OnboardingProvider
+├── theme/            # ThemeProvider, createStyles, Paper adapter, light/dark tokens
+├── types/            # Global types: ApiError, ServerEvent, event type guards, declarations
+└── utils/            # api-paths.ts, store-reset.ts, logger.ts, weather.ts, token.ts
 
-app/                 # Expo Router screens and layouts
-├── (auth)/         # Authentication flow screens
-├── (tabs)/         # Main tab navigation
-├── (onboarding)/   # Onboarding screens
-└── _layout.tsx     # Root layout with providers
+app/                  # Expo Router
+├── _layout.tsx       # Root layout (provider hierarchy below)
+├── AppInitializer.tsx # Startup: fonts, auth init, notifications, splash
+├── (auth)/           # login, register, email, verify-email, invitation
+├── (onboarding)/     # welcome, username, contact-email, permissions
+├── (tabs)/           # trips, notifications, wallet, profile
+├── trip/[id].tsx     # Trip detail
+├── chat/[tripId].tsx # Trip chat
+├── invite/[id].tsx   # Invitation + accept/[token].tsx
+└── location/[id].tsx # Live location map
 ```
 
-### Key Architectural Patterns
+### Feature Modules (`src/features/`)
 
-1. **Feature-Based Organization**: Each major feature (auth, chat, trips, etc.) is self-contained with its own components, hooks, store, and types.
+| Feature           | Store                  | Key files                                                                                                  |
+| ----------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **auth**          | `useAuthStore`         | `service.ts` (Supabase client), `secure-storage.ts` (SecureStore adapter), `permissions/ability.ts` (CASL) |
+| **trips**         | `useTripStore`         | `adapters/normalizeTrip.ts`, `queries.ts` (React Query), `hooks.ts`                                        |
+| **chat**          | `useChatStore`         | `service.ts`, offline message queue, read receipts                                                         |
+| **todos**         | `useTodoStore`         | `queries.ts` (React Query), `api.ts`                                                                       |
+| **wallet**        | `useWalletStore`       | `adapters/normalizeDocument.ts`, Supabase Realtime subscriptions                                           |
+| **location**      | `useLocationStore`     | `store/useLocationStore.ts`, `components/GroupLiveMap.tsx`                                                 |
+| **notifications** | `useNotificationStore` | `store/useNotificationStore.ts`, `services/pushNotificationService.ts`                                     |
+| **websocket**     | —                      | `WebSocketManager.ts` (singleton), `WebSocketConnection.ts`                                                |
+| **users**         | —                      | `api.ts` (search, autocomplete)                                                                            |
 
-2. **Zustand State Management**: 
-   - Each feature has its own Zustand store
-   - Stores handle async operations, persistence, and WebSocket updates
-   - Example: `useAuthStore`, `useTripStore`, `useChatStore`
+## Architecture
 
-3. **Theme System**:
-   - Custom theme implementation with React Native Paper integration
-   - Supports light/dark modes with semantic color tokens
-   - Theme utilities for consistent styling across components
-   - Located in `src/theme/` with foundations (colors, typography, spacing)
+### Provider Hierarchy (root layout)
 
-4. **Real-time Updates**:
-   - Supabase Realtime channels for live data synchronization
-   - Event-based architecture for handling WebSocket messages
-   - Automatic reconnection and error handling
-
-5. **Authentication Flow**:
-   - Supabase Auth integration with secure token storage
-   - Support for email/password and social logins (Google, Apple)
-   - Protected routes with automatic redirection
-   - Onboarding flow for new users
-
-6. **API Communication**:
-   - Centralized API client with automatic token injection
-   - Error handling and retry logic
-   - Type-safe API calls with TypeScript
-
-### Environment Configuration
-- **Development**: Uses `.dev` bundle identifiers and development API endpoints
-- **Production**: Uses production bundle identifiers and live APIs
-- Environment variables prefixed with `EXPO_PUBLIC_` for client-side access
-
-### Testing Strategy
-- Jest with React Native Testing Library
-- Custom test utilities for theme and provider mocks
-- Component and integration testing focus
-- Mock implementations for native modules
-
-### Critical Dependencies
-- **Supabase**: Authentication and real-time data (`https://efmqiltdajvqenndmylz.supabase.co`)
-- **Google Maps**: Location services (separate API keys for iOS/Android)
-- **Expo Modules**: Location, notifications, secure storage, etc.
-
-### Code Principles
-- Functional components with hooks (no class components)
-- TypeScript interfaces over types (avoid enums, use const maps)
-- Modular, reusable components
-- Declarative JSX patterns
-- Naming: directories use kebab-case, components use PascalCase, hooks use camelCase with 'use' prefix
-
-### Performance Considerations
-- Use `@shopify/flash-list` for large lists
-- Implement memoization where appropriate
-- Lazy loading with React Suspense
-- Image optimization and caching strategies
-
-### Security Practices
-- Secure token storage with Expo SecureStore
-- Input sanitization for user-generated content
-- API key restrictions and proper scoping
-- No hardcoded credentials or sensitive data
-
-## Design Patterns
-
-### Provider Pattern
-The app uses React Context providers for cross-cutting concerns:
-- **AuthProvider**: Manages authentication state and deep linking (`src/features/auth/components/AuthProvider.tsx`)
-- **OnboardingProvider**: Tracks first-time user state (`src/providers/OnboardingProvider.tsx`)
-- **ThemeProvider**: Provides theme context throughout the app
-- **NotificationProvider**: Handles in-app notification display
-
-### Guard Pattern
-Route protection and conditional rendering:
-- **AuthGuard**: Protects routes requiring authentication, handles token refresh (`src/features/auth/components/AuthGuard.tsx`)
-- **OnboardingGate**: Controls access based on onboarding completion (`src/components/common/OnboardingGate.tsx`)
-- Priority-based gating: Username requirement > First-time user > Authentication
-
-### Store Pattern (Zustand)
-Each feature has a dedicated Zustand store with standardized patterns:
-- Async operations with loading/error states
-- Event handlers for real-time updates
-- Persistence with AsyncStorage
-- Example structure: `{ state, actions, eventHandlers }`
-
-### Adapter Pattern
-Data normalization between backend and frontend:
-- **normalizeTrip**: Transforms backend trip data to frontend format (`src/features/trips/adapters/normalizeTrip.ts`)
-- Ensures consistent data structure across the app
-- Handles missing or malformed data gracefully
-
-### Hook Composition Pattern
-Custom hooks that compose multiple concerns:
-- **useResponsiveLayout**: Combines window dimensions with theme breakpoints
-- **useThemedStyles**: Merges theme-aware styles with component props
-- **useProtectedRoute**: Combines auth state with navigation
-
-### Theme Factory Pattern
-Style creation utilities for consistent theming:
-- **createStyles**: Factory function for creating memoized, theme-aware styles
-- Returns StyleSheet objects optimized for React Native
-- Example: `const useStyles = createStyles((theme) => ({ ... }))`
-
-## Development Workflow
-
-### Expo Development Client
-The app uses Expo's development client for a native development experience:
-```bash
-# Build development client
-eas build --platform ios --profile development
-eas build --platform android --profile development
-
-# Start dev server for development builds
-npm start
+```
+PersistQueryClientProvider → GestureHandlerRootView → ThemeProvider → OnboardingProvider
+  → AbilityProvider (CASL) → PaperProvider → AuthErrorBoundary → AppInitializer → Slot
 ```
 
-### Physical Device Testing
-Always test on physical devices for accurate performance and behavior:
-- Development builds are configured for internal distribution
-- Use QR codes or direct installation for testing
-- Supports hot reload and debugging tools
-- Environment-specific builds with `.dev` bundle identifiers
+### API Layer
 
-### EAS Build Configuration
-Build profiles in `eas.json`:
-- **development**: Debug builds with development client
-- **preview**: Internal testing builds
-- **production**: App store builds with auto-increment versioning
+- **`BaseApiClient`** → axios + retry (3x exponential) → error interceptors
+- **`ApiClient`** extends Base → singleton → auth token injection, preemptive refresh, 401 queue
+- **`AuthApi`** extends Base → singleton → separate client to avoid circular deps
+- **All endpoints** defined in `src/utils/api-paths.ts` via `createApiPath()` (prefixes `/v1/`)
+- **Backend URLs:** dev = `EXPO_PUBLIC_DEV_API_URL` or `localhost:8080`, prod = `https://api.nomadcrew.uk`
 
-### Environment Management
-- Development uses `APP_VARIANT=development`
-- Production uses `APP_VARIANT=production`
-- Google OAuth configured with environment-specific client IDs
-- Separate bundle identifiers per environment
+### Dual Real-Time Architecture
 
-## Additional Architectural Patterns
+1. **Custom WebSocket** (`src/features/websocket/WebSocketManager.ts`): Connects to Go backend (`ws://[base]/v1/ws`). Routes events to location, chat, and notification stores. Reconnects with exponential backoff.
+2. **Supabase Realtime**: Used by wallet store (`postgres_changes` on `wallet_documents`) and notification service. Also handles `onAuthStateChange` session events.
 
-### Event-Driven Architecture
-Real-time updates through Supabase channels:
-- Feature stores subscribe to relevant events
-- Event handlers update local state
-- Automatic reconnection on network changes
-- Example: `handleTripEvent`, `handleChatMessage`
+### Auth Flow
 
-### Responsive Design Patterns
-- **useWindowDimensions**: React Native's built-in hook for responsive layouts
-- **Breakpoints**: Defined in theme for tablet/desktop layouts
-- **Grid system**: Dynamic columns based on screen size
-- **Container constraints**: Max width for large screens
+Supabase Auth → tokens in expo-secure-store (chunked for 2048-byte limit) → `AuthGuard` protects routes → `OnboardingGate` checks username/contact-email → `registerAuthHandlers()` connects auth store to API client for token refresh
 
-### Error Boundary Patterns
-- Feature-specific error boundaries (e.g., `TodoErrorBoundary`)
-- Graceful fallbacks for component failures
-- Error logging to external services
-- User-friendly error messages
+### State Management Split
 
-### Lazy Loading Patterns
-- Route-based code splitting with Expo Router
-- Dynamic imports for heavy components
-- Suspense boundaries for loading states
-- Prefetching for anticipated navigation
+- **Zustand** — client state, complex async flows (auth, chat, location, wallet)
+- **TanStack React Query** — server-state caching (trips queries, todos queries), persisted to AsyncStorage
+- **Store reset** — `registerStoreReset()` per store, `resetAllStores()` on logout (`src/utils/store-reset.ts`)
+
+### Store Conventions
+
+- Per-operation loading flags: `isCreating`, `isFetching`, `isUpdating`, `isDeleting` (not single `loading`)
+- Granular selectors: `selectIsCreating`, `selectIsFetching`, etc.
+- Event handlers for real-time: `handleTripEvent`, `handleDocumentEvent`, etc.
+- Type guards from `src/types/events.ts`: `isTripEvent`, `isWeatherEvent`, `isMemberEvent`, `isChatEvent`
+
+## Critical Warnings
+
+- **EAS Secrets**: Never reference EAS secrets in `eas.json` `env` field — they auto-load into builds. Putting `@SECRET_NAME` in env overrides with the literal string. See `docs/EAS_SECRETS_GUIDE.md`.
+- **Component naming**: Use `AppButton`, `AppCard` (not `Button`, `Card`) to avoid React Native Paper conflicts.
+- **Supabase URL**: `eihszqnmmgbrcxtymskn.supabase.co` (configured in `app.config.js`)
+- **Secure storage**: Auth tokens use `secureStorage` adapter (expo-secure-store with chunking), NOT AsyncStorage. See `src/features/auth/secure-storage.ts`.
+- **API paths**: All endpoints MUST go through `src/utils/api-paths.ts`. Don't hardcode paths.
+- **`nul` file**: Windows artifact — gitignore it, don't commit.
+
+## Code Conventions
+
+- Functional components + hooks only (no class components)
+- TypeScript interfaces over types; avoid enums, use const maps
+- Directories: kebab-case · Components: PascalCase · Hooks: `use` prefix, camelCase
+- Components follow atomic design: `src/components/atoms/`, `molecules/`, `organisms/`, `templates/`
+- Path alias: `@/` maps to project root (e.g., `@/src/features/auth/store`)
+
+## Testing
+
+- **Unit/Integration**: Jest + React Native Testing Library (`npm test`)
+- **E2E**: Maestro (`.maestro/flows/` — auth, chat, trips, smoke-test)
+- **Test utils**: `__tests__/test-utils.tsx` (custom render with providers)
+- **Factories**: `__tests__/factories/` (user, trip, invitation)
+- **Mocks**: `__tests__/mocks/` (API responses, Supabase)
+- **Pre-commit**: husky + lint-staged
+
+## Environment
+
+- `APP_VARIANT=development` → `.dev` bundle IDs, dev API
+- `APP_VARIANT=production` → production bundle IDs, live API
+- Client-accessible env vars use `EXPO_PUBLIC_*` prefix
+- Google OAuth: separate client IDs per platform/environment
+- Config: `app.config.js` (dynamic), `eas.json` (build profiles: dev/preview/production)
+
+## Specialized Documentation Index
+
+### Setup & Operations
+
+| Doc                                | When to consult                                                       |
+| ---------------------------------- | --------------------------------------------------------------------- |
+| `docs/DEVELOPMENT_SETUP.md`        | Setting up dev environment, env vars, device testing, common errors   |
+| `docs/EAS_SECRETS_GUIDE.md`        | EAS build secrets, file-based secrets, `EXPO_PUBLIC_*` prefix rules   |
+| `docs/GOOGLE_API_KEYS.md`          | Google Maps/Places/OAuth key inventory, native SDK vs HTTP fetch keys |
+| `docs/PUSH_NOTIFICATIONS_SETUP.md` | APNs keys, FCM config, Expo Push API flow, troubleshooting            |
+| `docs/WSL_REACT_NATIVE_SETUP.md`   | WSL2-specific dev setup                                               |
+
+### Architecture & Integration
+
+| Doc                                 | When to consult                                                            |
+| ----------------------------------- | -------------------------------------------------------------------------- |
+| `docs/BACKEND_INTEGRATION_GUIDE.md` | Dual-database arch: NeonDB (primary via Go API) + Supabase (auth/realtime) |
+| `docs/CHAT.md`                      | Chat hooks, Realtime tables, message types, API endpoints                  |
+| `docs/ATOMIC_DESIGN_MIGRATION.md`   | Component migration status, import path conventions                        |
+| `docs/code-quality-audit.md`        | Known tech debt, priority fixes, pattern recommendations                   |
+
+### Store Submission
+
+| Doc                           | When to consult                   |
+| ----------------------------- | --------------------------------- |
+| `store/RELEASE_CHECKLIST.md`  | Play Store release steps          |
+| `store/PLAY_STORE_LISTING.md` | Store listing content             |
+| `store/SCREENSHOT_GUIDE.md`   | Screenshot capture and processing |
+
+### Feature Planning
+
+| Doc                    | When to consult                 |
+| ---------------------- | ------------------------------- |
+| `.planning/PROJECT.md` | Wallet feature project overview |
+| `.planning/ROADMAP.md` | Wallet feature phase breakdown  |
