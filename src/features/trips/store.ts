@@ -11,6 +11,7 @@ import {
   WeatherForecast,
 } from './types';
 import { API_PATHS } from '@/src/utils/api-paths';
+import { registerStoreReset } from '@/src/utils/store-reset';
 import { ServerEvent } from '@/src/types/events';
 import { mapWeatherCode } from '@/src/utils/weather';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -53,6 +54,8 @@ interface TripState {
   declineInvitation: (token: string) => Promise<void>;
   checkPendingInvitations: () => Promise<void>;
   persistInvitation: (token: string) => Promise<void>;
+  // Reset
+  reset: () => void;
 }
 
 export const useTripStore = create<TripState>()(
@@ -321,10 +324,16 @@ export const useTripStore = create<TripState>()(
         // Example: if (isTripEvent(event)) { ... }
         // For now, skip ambiguous event handling logic
       },
+
+      reset: () => {
+        set({ trips: [], loading: false, error: null, selectedTrip: null });
+      },
     }),
     { name: 'TripStore' }
   )
 );
+
+registerStoreReset('TripStore', () => useTripStore.getState().reset());
 
 // ====================
 // SELECTORS

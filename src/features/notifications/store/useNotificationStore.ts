@@ -13,6 +13,7 @@ import { ServerEvent } from '@/src/types/events';
 import { apiClient, api } from '@/src/api/api-client';
 import { API_PATHS } from '@/src/utils/api-paths';
 import { logger } from '@/src/utils/logger';
+import { registerStoreReset } from '@/src/utils/store-reset';
 
 const NOTIFICATION_LIMIT = 100; // Max notifications to keep in state/storage
 const API_PAGE_LIMIT = 20; // How many notifications to fetch per API call
@@ -48,6 +49,7 @@ interface NotificationState {
   setHasHydrated: (state: boolean) => void;
   clearNotifications: () => void;
   deleteNotification: (notificationId: string) => Promise<void>;
+  reset: () => void;
 }
 
 export const useNotificationStore = create<NotificationState>()(
@@ -359,6 +361,30 @@ export const useNotificationStore = create<NotificationState>()(
             set({ isHandlingAction: false });
           }
         },
+
+        reset: () => {
+          // Clear AsyncStorage persistence
+          AsyncStorage.removeItem(STORAGE_KEY).catch((error) => {
+            logger.error(
+              'NotificationStore',
+              'Failed to clear notification AsyncStorage on reset:',
+              error
+            );
+          });
+
+          set({
+            notifications: [],
+            unreadCount: 0,
+            latestChatMessageToast: null,
+            isFetching: false,
+            isFetchingUnreadCount: false,
+            isMarkingRead: false,
+            isHandlingAction: false,
+            error: null,
+            offset: 0,
+            hasMore: true,
+          });
+        },
       }),
       {
         name: STORAGE_KEY,
@@ -397,6 +423,8 @@ export const useNotificationStore = create<NotificationState>()(
     { name: 'NotificationStore' }
   )
 );
+
+registerStoreReset('NotificationStore', () => useNotificationStore.getState().reset());
 
 /**
  * Selector to get the latest unread chat message notification for toast display.

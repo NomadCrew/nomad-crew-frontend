@@ -22,6 +22,7 @@ import {
 import { normalizeDocument, normalizeDocuments } from './adapters/normalizeDocument';
 import { supabase } from '@/src/features/auth/service';
 import { logger } from '@/src/utils/logger';
+import { registerStoreReset } from '@/src/utils/store-reset';
 
 /**
  * Wallet store state interface
@@ -557,6 +558,8 @@ export const useWalletStore = create<WalletState>()(
     { name: 'WalletStore' }
   )
 );
+
+registerStoreReset('WalletStore', () => useWalletStore.getState().reset());
 
 /**
  * Selector hooks for common queries
