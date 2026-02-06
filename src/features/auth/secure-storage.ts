@@ -26,6 +26,11 @@ async function removeChunks(key: string): Promise<void> {
   const countRaw = await SecureStore.getItemAsync(`${key}${CHUNK_COUNT_SUFFIX}`);
   if (countRaw !== null) {
     const count = parseInt(countRaw, 10);
+    if (!Number.isInteger(count) || count < 0) {
+      logger.warn('AUTH', `SecureStorage: invalid chunk count for key "${key}": ${countRaw}`);
+      await SecureStore.deleteItemAsync(`${key}${CHUNK_COUNT_SUFFIX}`);
+      return;
+    }
     const deletions: Promise<void>[] = [];
     for (let i = 0; i < count; i++) {
       deletions.push(SecureStore.deleteItemAsync(chunkKey(key, i)));
@@ -60,6 +65,10 @@ export const secureStorage = {
       if (countRaw !== null) {
         // Value was chunked — reassemble
         const count = parseInt(countRaw, 10);
+        if (!Number.isInteger(count) || count < 0) {
+          logger.warn('AUTH', `SecureStorage: invalid chunk count for key "${key}": ${countRaw}`);
+          return null;
+        }
         const chunks: string[] = [];
         for (let i = 0; i < count; i++) {
           const chunk = await SecureStore.getItemAsync(chunkKey(key, i));
