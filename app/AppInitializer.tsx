@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuthStore } from '../src/features/auth/store';
@@ -11,6 +11,7 @@ import {
 } from '../src/features/notifications/utils/notifications';
 import { setupPushNotifications } from '../src/features/notifications/services/pushNotificationService';
 import { router } from 'expo-router';
+import { setupNotificationServiceListener } from '@/src/features/notifications/service';
 
 // NOTE: SplashScreen.preventAutoHideAsync() is called in _layout.tsx at global scope
 // This is the correct pattern per Expo documentation
@@ -44,6 +45,7 @@ export default function AppInitializer({ children }: { children: React.ReactNode
   const [fontsLoaded, fontError] = useFonts(customFonts);
   const [splashHidden, setSplashHidden] = useState(false);
   const [notificationsConfigured, setNotificationsConfigured] = useState(false);
+  const notificationServiceInitRef = useRef(false);
 
   // Initialize auth when component mounts
   useEffect(() => {
@@ -66,6 +68,12 @@ export default function AppInitializer({ children }: { children: React.ReactNode
   useEffect(() => {
     async function initPushNotifications() {
       if (authInitialized && isAuthenticated) {
+        // Set up notification service listener (once)
+        if (!notificationServiceInitRef.current) {
+          setupNotificationServiceListener();
+          notificationServiceInitRef.current = true;
+        }
+
         logger.debug('APP', 'User authenticated, setting up push notifications...');
         try {
           const token = await setupPushNotifications();
