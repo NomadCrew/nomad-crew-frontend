@@ -20,7 +20,7 @@ import {
   shouldCompress,
 } from './services';
 import { normalizeDocument, normalizeDocuments } from './adapters/normalizeDocument';
-import { supabase } from '@/src/api/supabase';
+import { supabase } from '@/src/features/auth/service';
 import { logger } from '@/src/utils/logger';
 
 /**

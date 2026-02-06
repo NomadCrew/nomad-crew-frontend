@@ -75,7 +75,7 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 );
 
 import { api } from '@/src/api/api-client';
-import { supabase } from '@/src/api/supabase';
+import { supabase } from '@/src/features/auth/service';
 import { useAuthStore } from '@/src/features/auth/store';
 import { useTripStore } from '@/src/features/trips/store';
 
