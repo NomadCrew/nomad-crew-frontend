@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { supabase } from '@/src/api/supabase';
+import { supabase } from '@/src/features/auth/service';
 import { api } from '@/src/api/api-client';
 import { API_PATHS } from '@/src/utils/api-paths';
 import { logger } from '@/src/utils/logger';

@@ -147,7 +147,11 @@ export interface ChatState {
   fetchMessages: (tripId: string, refresh?: boolean) => Promise<void>;
   fetchMoreMessages: (tripId: string) => Promise<void>;
   sendMessage: (params: { tripId: string; content: string }) => Promise<ChatMessage | null>;
-  sendChatMessage: (tripId: string, content: string, optimisticId?: string) => Promise<ChatMessage | null>;
+  sendChatMessage: (
+    tripId: string,
+    content: string,
+    optimisticId?: string
+  ) => Promise<ChatMessage | null>;
   markAsRead: (tripId: string, messageId: string) => Promise<void>;
   handleChatEvent: (event: ServerEvent) => void;
   setTypingStatus: (tripId: string, isTyping: boolean) => Promise<void>;
@@ -160,4 +164,6 @@ export interface ChatState {
   processQueue: () => Promise<void>;
   removeFromQueue: (id: string) => void;
   markQueueItemFailed: (id: string) => void;
+  // Reset
+  reset: () => void;
 }

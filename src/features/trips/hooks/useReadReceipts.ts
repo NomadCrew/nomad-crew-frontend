@@ -1,12 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/src/features/auth/service';
 import { api } from '@/src/api/api-client';
+import { API_PATHS } from '@/src/utils/api-paths';
 import { logger } from '@/src/utils/logger';
-import type { 
-  ChatReadReceipt, 
-  UpdateLastReadRequest,
-  SupabaseRealtimePayload 
-} from '../types';
+import type { ChatReadReceipt, UpdateLastReadRequest, SupabaseRealtimePayload } from '../types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface UseReadReceiptsOptions {
@@ -28,9 +25,9 @@ interface UseReadReceiptsReturn {
   disconnect: () => void;
 }
 
-export function useReadReceipts({ 
-  tripId, 
-  autoConnect = true 
+export function useReadReceipts({
+  tripId,
+  autoConnect = true,
 }: UseReadReceiptsOptions): UseReadReceiptsReturn {
   const [readReceipts, setReadReceipts] = useState<ChatReadReceipt[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -41,97 +38,108 @@ export function useReadReceipts({
   const isMountedRef = useRef(true);
 
   // Update last read message via REST API
-  const updateLastRead = useCallback(async (messageId: string) => {
-    try {
-      const payload: UpdateLastReadRequest = { last_message_id: messageId };
-      await api.put(`/trips/${tripId}/chat/last-read`, payload);
-      // Read receipt will be updated via realtime subscription
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update read status';
-      setError(errorMessage);
-      logger.error('useReadReceipts', 'Failed to update read status:', err);
-      throw err;
-    }
-  }, [tripId]);
+  const updateLastRead = useCallback(
+    async (messageId: string) => {
+      try {
+        const payload: UpdateLastReadRequest = { last_message_id: messageId };
+        await api.put(API_PATHS.readReceipts.updateLastRead(tripId), payload);
+        // Read receipt will be updated via realtime subscription
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to update read status';
+        setError(errorMessage);
+        logger.error('useReadReceipts', 'Failed to update read status:', err);
+        throw err;
+      }
+    },
+    [tripId]
+  );
 
   // Get read receipts for a specific message
-  const getReadReceiptsForMessage = useCallback((messageId: string): ChatReadReceipt[] => {
-    return readReceipts.filter(receipt => receipt.message_id === messageId);
-  }, [readReceipts]);
+  const getReadReceiptsForMessage = useCallback(
+    (messageId: string): ChatReadReceipt[] => {
+      return readReceipts.filter((receipt) => receipt.message_id === messageId);
+    },
+    [readReceipts]
+  );
 
   // Get last read receipt by user
-  const getLastReadByUser = useCallback((userId: string): ChatReadReceipt | undefined => {
-    const userReceipts = readReceipts
-      .filter(receipt => receipt.user_id === userId)
-      .sort((a, b) => new Date(b.read_at).getTime() - new Date(a.read_at).getTime());
-    
-    return userReceipts[0];
-  }, [readReceipts]);
+  const getLastReadByUser = useCallback(
+    (userId: string): ChatReadReceipt | undefined => {
+      const userReceipts = readReceipts
+        .filter((receipt) => receipt.user_id === userId)
+        .sort((a, b) => new Date(b.read_at).getTime() - new Date(a.read_at).getTime());
+
+      return userReceipts[0];
+    },
+    [readReceipts]
+  );
 
   // Check if user has read a specific message
-  const hasUserRead = useCallback((messageId: string, userId: string): boolean => {
-    return readReceipts.some(receipt => 
-      receipt.message_id === messageId && receipt.user_id === userId
-    );
-  }, [readReceipts]);
+  const hasUserRead = useCallback(
+    (messageId: string, userId: string): boolean => {
+      return readReceipts.some(
+        (receipt) => receipt.message_id === messageId && receipt.user_id === userId
+      );
+    },
+    [readReceipts]
+  );
 
   // Get unread count for a user
-  const getUnreadCount = useCallback((
-    userId: string, 
-    messages: { id: string; created_at: string }[]
-  ): number => {
-    const lastRead = getLastReadByUser(userId);
-    
-    if (!lastRead) {
-      return messages.length;
-    }
+  const getUnreadCount = useCallback(
+    (userId: string, messages: { id: string; created_at: string }[]): number => {
+      const lastRead = getLastReadByUser(userId);
 
-    const lastReadTime = new Date(lastRead.read_at).getTime();
-    
-    return messages.filter(message => {
-      const messageTime = new Date(message.created_at).getTime();
-      return messageTime > lastReadTime;
-    }).length;
-  }, [getLastReadByUser]);
+      if (!lastRead) {
+        return messages.length;
+      }
+
+      const lastReadTime = new Date(lastRead.read_at).getTime();
+
+      return messages.filter((message) => {
+        const messageTime = new Date(message.created_at).getTime();
+        return messageTime > lastReadTime;
+      }).length;
+    },
+    [getLastReadByUser]
+  );
 
   // Handle realtime events
-  const handleRealtimeEvent = useCallback((payload: SupabaseRealtimePayload<ChatReadReceipt>) => {
-    if (!isMountedRef.current) return;
+  const handleRealtimeEvent = useCallback(
+    (payload: SupabaseRealtimePayload<ChatReadReceipt>) => {
+      if (!isMountedRef.current) return;
 
-    logger.debug('useReadReceipts', 'Received realtime event:', payload);
+      logger.debug('useReadReceipts', 'Received realtime event:', payload);
 
-    switch (payload.eventType) {
-      case 'INSERT':
-        if (payload.new && payload.new.trip_id === tripId) {
-          setReadReceipts(prev => {
-            // Check if read receipt already exists to prevent duplicates
-            const exists = prev.some(r => r.id === payload.new.id);
-            if (exists) return prev;
-            
-            return [...prev, payload.new];
-          });
-        }
-        break;
+      switch (payload.eventType) {
+        case 'INSERT':
+          if (payload.new && payload.new.trip_id === tripId) {
+            setReadReceipts((prev) => {
+              // Check if read receipt already exists to prevent duplicates
+              const exists = prev.some((r) => r.id === payload.new.id);
+              if (exists) return prev;
 
-      case 'UPDATE':
-        if (payload.new && payload.new.trip_id === tripId) {
-          setReadReceipts(prev => 
-            prev.map(receipt => 
-              receipt.id === payload.new.id ? payload.new : receipt
-            )
-          );
-        }
-        break;
+              return [...prev, payload.new];
+            });
+          }
+          break;
 
-      case 'DELETE':
-        if (payload.old && payload.old.trip_id === tripId) {
-          setReadReceipts(prev => 
-            prev.filter(receipt => receipt.id !== payload.old.id)
-          );
-        }
-        break;
-    }
-  }, [tripId]);
+        case 'UPDATE':
+          if (payload.new && payload.new.trip_id === tripId) {
+            setReadReceipts((prev) =>
+              prev.map((receipt) => (receipt.id === payload.new.id ? payload.new : receipt))
+            );
+          }
+          break;
+
+        case 'DELETE':
+          if (payload.old && payload.old.trip_id === tripId) {
+            setReadReceipts((prev) => prev.filter((receipt) => receipt.id !== payload.old.id));
+          }
+          break;
+      }
+    },
+    [tripId]
+  );
 
   // Connect to Supabase Realtime
   const connect = useCallback(() => {
@@ -141,16 +149,20 @@ export function useReadReceipts({
 
     const channel = supabase
       .channel(`trip-read-receipts-${tripId}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'supabase_chat_read_receipts',
-        filter: `trip_id=eq.${tripId}`,
-      }, handleRealtimeEvent)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'supabase_chat_read_receipts',
+          filter: `trip_id=eq.${tripId}`,
+        },
+        handleRealtimeEvent
+      )
       .subscribe((status) => {
         logger.debug('useReadReceipts', 'Subscription status:', status);
         setIsConnected(status === 'SUBSCRIBED');
-        
+
         if (status === 'SUBSCRIBED') {
           setError(null);
         } else if (status === 'CHANNEL_ERROR') {
@@ -188,7 +200,7 @@ export function useReadReceipts({
   // Cleanup on unmount
   useEffect(() => {
     isMountedRef.current = true;
-    
+
     return () => {
       isMountedRef.current = false;
       disconnect();
@@ -208,4 +220,4 @@ export function useReadReceipts({
     connect,
     disconnect,
   };
-} 
+}

@@ -110,19 +110,19 @@ export function AppButton({
     // Size mappings
     const sizeMap = {
       sm: {
-        height: 32,
+        height: 44,
         paddingHorizontal: 12,
         fontSize: theme?.typography?.size?.sm || 14,
         iconSize: 16,
       },
       md: {
-        height: 40,
+        height: 48,
         paddingHorizontal: 16,
         fontSize: theme?.typography?.size?.md || 16,
         iconSize: 18,
       },
       lg: {
-        height: 48,
+        height: 56,
         paddingHorizontal: 20,
         fontSize: theme?.typography?.size?.lg || 18,
         iconSize: 20,

@@ -35,7 +35,10 @@ export const resetAllStores = () => {
 
   useTripStore.setState({
     trips: [],
-    loading: false,
+    isCreating: false,
+    isFetching: false,
+    isUpdating: false,
+    isDeleting: false,
     error: null,
     selectedTrip: null,
   });
@@ -224,7 +227,8 @@ export const waitForTripLoading = (timeout: number = 5000): Promise<void> => {
     const startTime = Date.now();
 
     const checkLoading = () => {
-      if (!useTripStore.getState().loading) {
+      const state = useTripStore.getState();
+      if (!state.isCreating && !state.isFetching && !state.isUpdating && !state.isDeleting) {
         resolve();
         return;
       }

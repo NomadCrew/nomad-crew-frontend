@@ -196,7 +196,6 @@ export const UserAutocomplete = ({
   return (
     <View style={themedStyles.container}>
       <AutocompleteDropdown
-        ref={dropdownController}
         controller={(controller) => {
           dropdownController.current = controller;
         }}

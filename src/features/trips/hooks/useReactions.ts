@@ -1,12 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/src/features/auth/service';
 import { api } from '@/src/api/api-client';
+import { API_PATHS } from '@/src/utils/api-paths';
 import { logger } from '@/src/utils/logger';
-import type { 
-  ChatReaction, 
-  AddReactionRequest,
-  SupabaseRealtimePayload 
-} from '../types';
+import type { ChatReaction, AddReactionRequest, SupabaseRealtimePayload } from '../types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface UseReactionsOptions {
@@ -30,10 +27,10 @@ interface UseReactionsReturn {
   disconnect: () => void;
 }
 
-export function useReactions({ 
-  tripId, 
+export function useReactions({
+  tripId,
   messageId,
-  autoConnect = true 
+  autoConnect = true,
 }: UseReactionsOptions): UseReactionsReturn {
   const [reactions, setReactions] = useState<ChatReaction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -44,100 +41,118 @@ export function useReactions({
   const isMountedRef = useRef(true);
 
   // Fetch reactions for a specific message
-  const fetchReactionsForMessage = useCallback(async (msgId: string) => {
-    try {
-      setIsLoading(true);
-      setError(null);
+  const fetchReactionsForMessage = useCallback(
+    async (msgId: string) => {
+      try {
+        setIsLoading(true);
+        setError(null);
 
-      const response = await api.get<ChatReaction[]>(
-        `/trips/${tripId}/chat/messages/${msgId}/reactions`
-      );
+        const response = await api.get<ChatReaction[]>(API_PATHS.reactions.list(tripId, msgId));
 
-      if (!isMountedRef.current) return;
+        if (!isMountedRef.current) return;
 
-      // If we're fetching for a specific message, replace only those reactions
-      if (messageId === msgId) {
-        setReactions(response.data);
-      } else {
-        // Otherwise, merge with existing reactions
-        setReactions(prev => {
-          const filtered = prev.filter(r => r.message_id !== msgId);
-          return [...filtered, ...response.data];
-        });
+        // If we're fetching for a specific message, replace only those reactions
+        if (messageId === msgId) {
+          setReactions(response.data);
+        } else {
+          // Otherwise, merge with existing reactions
+          setReactions((prev) => {
+            const filtered = prev.filter((r) => r.message_id !== msgId);
+            return [...filtered, ...response.data];
+          });
+        }
+
+        setError(null);
+      } catch (err) {
+        if (!isMountedRef.current) return;
+
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch reactions';
+        setError(errorMessage);
+        logger.error('useReactions', 'Failed to fetch reactions:', err);
+      } finally {
+        if (!isMountedRef.current) return;
+        setIsLoading(false);
       }
-
-      setError(null);
-    } catch (err) {
-      if (!isMountedRef.current) return;
-      
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch reactions';
-      setError(errorMessage);
-      logger.error('useReactions', 'Failed to fetch reactions:', err);
-    } finally {
-      if (!isMountedRef.current) return;
-      setIsLoading(false);
-    }
-  }, [tripId, messageId]);
+    },
+    [tripId, messageId]
+  );
 
   // Add reaction via REST API
-  const addReaction = useCallback(async (msgId: string, emoji: string) => {
-    try {
-      const payload: AddReactionRequest = { emoji };
-      await api.post(`/trips/${tripId}/chat/messages/${msgId}/reactions`, payload);
-      // Reaction will be added via realtime subscription
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to add reaction';
-      setError(errorMessage);
-      logger.error('useReactions', 'Failed to add reaction:', err);
-      throw err;
-    }
-  }, [tripId]);
+  const addReaction = useCallback(
+    async (msgId: string, emoji: string) => {
+      try {
+        const payload: AddReactionRequest = { emoji };
+        await api.post(API_PATHS.reactions.add(tripId, msgId), payload);
+        // Reaction will be added via realtime subscription
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to add reaction';
+        setError(errorMessage);
+        logger.error('useReactions', 'Failed to add reaction:', err);
+        throw err;
+      }
+    },
+    [tripId]
+  );
 
   // Remove reaction via REST API
-  const removeReaction = useCallback(async (msgId: string, reactionType: string) => {
-    try {
-      await api.delete(`/trips/${tripId}/chat/messages/${msgId}/reactions/${reactionType}`);
-      // Reaction will be removed via realtime subscription
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to remove reaction';
-      setError(errorMessage);
-      logger.error('useReactions', 'Failed to remove reaction:', err);
-      throw err;
-    }
-  }, [tripId]);
+  const removeReaction = useCallback(
+    async (msgId: string, reactionType: string) => {
+      try {
+        await api.delete(API_PATHS.reactions.remove(tripId, msgId, reactionType));
+        // Reaction will be removed via realtime subscription
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to remove reaction';
+        setError(errorMessage);
+        logger.error('useReactions', 'Failed to remove reaction:', err);
+        throw err;
+      }
+    },
+    [tripId]
+  );
 
   // Get reactions for a specific message
-  const getReactionsForMessage = useCallback((msgId: string): ChatReaction[] => {
-    return reactions.filter(reaction => reaction.message_id === msgId);
-  }, [reactions]);
+  const getReactionsForMessage = useCallback(
+    (msgId: string): ChatReaction[] => {
+      return reactions.filter((reaction) => reaction.message_id === msgId);
+    },
+    [reactions]
+  );
 
   // Get reactions by emoji for a specific message
-  const getReactionsByEmoji = useCallback((msgId: string, emoji: string): ChatReaction[] => {
-    return reactions.filter(reaction => 
-      reaction.message_id === msgId && reaction.emoji === emoji
-    );
-  }, [reactions]);
+  const getReactionsByEmoji = useCallback(
+    (msgId: string, emoji: string): ChatReaction[] => {
+      return reactions.filter(
+        (reaction) => reaction.message_id === msgId && reaction.emoji === emoji
+      );
+    },
+    [reactions]
+  );
 
   // Check if user has reacted with specific emoji
-  const hasUserReacted = useCallback((msgId: string, emoji: string, userId: string): boolean => {
-    return reactions.some(reaction => 
-      reaction.message_id === msgId && 
-      reaction.emoji === emoji && 
-      reaction.user_id === userId
-    );
-  }, [reactions]);
+  const hasUserReacted = useCallback(
+    (msgId: string, emoji: string, userId: string): boolean => {
+      return reactions.some(
+        (reaction) =>
+          reaction.message_id === msgId && reaction.emoji === emoji && reaction.user_id === userId
+      );
+    },
+    [reactions]
+  );
 
   // Get reaction counts by emoji for a message
-  const getReactionCounts = useCallback((msgId: string): Record<string, number> => {
-    const messageReactions = getReactionsForMessage(msgId);
-    const counts: Record<string, number> = {};
-    
-    messageReactions.forEach(reaction => {
-      counts[reaction.emoji] = (counts[reaction.emoji] || 0) + 1;
-    });
-    
-    return counts;
-  }, [getReactionsForMessage]);
+  const getReactionCounts = useCallback(
+    (msgId: string): Record<string, number> => {
+      const messageReactions = getReactionsForMessage(msgId);
+      const counts: Record<string, number> = {};
+
+      messageReactions.forEach((reaction) => {
+        counts[reaction.emoji] = (counts[reaction.emoji] || 0) + 1;
+      });
+
+      return counts;
+    },
+    [getReactionsForMessage]
+  );
 
   // Handle realtime events
   const handleRealtimeEvent = useCallback((payload: SupabaseRealtimePayload<ChatReaction>) => {
@@ -148,11 +163,11 @@ export function useReactions({
     switch (payload.eventType) {
       case 'INSERT':
         if (payload.new) {
-          setReactions(prev => {
+          setReactions((prev) => {
             // Check if reaction already exists to prevent duplicates
-            const exists = prev.some(r => r.id === payload.new.id);
+            const exists = prev.some((r) => r.id === payload.new.id);
             if (exists) return prev;
-            
+
             return [...prev, payload.new];
           });
         }
@@ -160,19 +175,15 @@ export function useReactions({
 
       case 'UPDATE':
         if (payload.new) {
-          setReactions(prev => 
-            prev.map(reaction => 
-              reaction.id === payload.new.id ? payload.new : reaction
-            )
+          setReactions((prev) =>
+            prev.map((reaction) => (reaction.id === payload.new.id ? payload.new : reaction))
           );
         }
         break;
 
       case 'DELETE':
         if (payload.old) {
-          setReactions(prev => 
-            prev.filter(reaction => reaction.id !== payload.old.id)
-          );
+          setReactions((prev) => prev.filter((reaction) => reaction.id !== payload.old.id));
         }
         break;
     }
@@ -186,17 +197,20 @@ export function useReactions({
 
     const channel = supabase
       .channel(`trip-reactions-${tripId}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'supabase_chat_reactions',
-        // Note: We subscribe to all reactions for the trip, not filtered by message
-        // This allows us to get reactions for all messages in the trip
-      }, handleRealtimeEvent)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'supabase_chat_reactions',
+          filter: `trip_id=eq.${tripId}`,
+        },
+        handleRealtimeEvent
+      )
       .subscribe((status) => {
         logger.debug('useReactions', 'Subscription status:', status);
         setIsConnected(status === 'SUBSCRIBED');
-        
+
         if (status === 'SUBSCRIBED') {
           setError(null);
         } else if (status === 'CHANNEL_ERROR') {
@@ -239,7 +253,7 @@ export function useReactions({
   // Cleanup on unmount
   useEffect(() => {
     isMountedRef.current = true;
-    
+
     return () => {
       isMountedRef.current = false;
       disconnect();
@@ -260,4 +274,4 @@ export function useReactions({
     connect,
     disconnect,
   };
-} 
+}

@@ -1,7 +1,7 @@
 // src/features/wallet/services/storageUpload.ts
 // Supabase Storage upload service for wallet documents
 
-import { supabase } from '@/src/api/supabase';
+import { supabase } from '@/src/features/auth/service';
 import { WalletType } from '../types';
 
 /**

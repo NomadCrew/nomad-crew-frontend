@@ -17,6 +17,7 @@ import { WebSocketManager } from '@/src/features/websocket/WebSocketManager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '@/src/api/api-client';
 import { API_PATHS } from '@/src/utils/api-paths';
+import { registerStoreReset } from '@/src/utils/store-reset';
 import { v4 as uuidv4 } from 'uuid';
 import { useEffect } from 'react';
 
@@ -860,10 +861,39 @@ export const useChatStore = create<ChatState>()(
           ),
         }));
       },
+
+      reset: () => {
+        // Clear AsyncStorage persistence
+        AsyncStorage.multiRemove([
+          MESSAGES_STORAGE_KEY,
+          READ_RECEIPTS_STORAGE_KEY,
+          LAST_READ_STORAGE_KEY,
+        ]).catch((error) => {
+          logger.error('ChatStore', 'Failed to clear chat AsyncStorage on reset:', error);
+        });
+
+        set({
+          messagesByTripId: {},
+          isLoadingMessages: false,
+          hasMoreMessages: {},
+          messagePagination: {},
+          typingUsers: {},
+          errors: {},
+          userCache: {},
+          isSending: false,
+          isLoading: false,
+          error: null,
+          lastReadMessageIds: {},
+          readReceipts: {},
+          offlineQueue: [],
+        });
+      },
     }),
     { name: 'ChatStore' }
   )
 );
+
+registerStoreReset('ChatStore', () => useChatStore.getState().reset());
 
 // ====================
 // SELECTORS

@@ -26,27 +26,6 @@ jest.mock('@/src/features/auth/service', () => ({
   },
 }));
 
-// Mock the supabase module
-jest.mock('@/src/api/supabase', () => ({
-  supabase: {
-    auth: {
-      signUp: jest.fn(),
-      signInWithPassword: jest.fn(),
-      signInWithIdToken: jest.fn(),
-      signOut: jest.fn(),
-      getSession: jest.fn(),
-      refreshSession: jest.fn(),
-      onAuthStateChange: jest.fn(() => ({
-        data: {
-          subscription: {
-            unsubscribe: jest.fn(),
-          },
-        },
-      })),
-    },
-  },
-}));
-
 // Mock API client
 jest.mock('@/src/api/api-client', () => ({
   api: {
@@ -75,7 +54,7 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 );
 
 import { api } from '@/src/api/api-client';
-import { supabase } from '@/src/api/supabase';
+import { supabase } from '@/src/features/auth/service';
 import { useAuthStore } from '@/src/features/auth/store';
 import { useTripStore } from '@/src/features/trips/store';
 
@@ -383,7 +362,7 @@ describe('Test Helpers Usage Examples', () => {
       // Assert: Trips are loaded
       const tripState = getTripState();
       expect(tripState.trips).toHaveLength(2);
-      expect(tripState.loading).toBe(false);
+      expect(tripState.isFetching).toBe(false);
       expect(tripState.error).toBeNull();
     });
   });

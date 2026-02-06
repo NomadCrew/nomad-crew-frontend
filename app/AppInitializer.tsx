@@ -1,12 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuthStore } from '../src/features/auth/store';
 import { Text, View, ActivityIndicator } from 'react-native';
 import { logger } from '../src/utils/logger';
 import { useOnboarding } from '../src/providers/OnboardingProvider';
-import { configureNotifications } from '../src/features/notifications/utils/notifications';
+import {
+  configureNotifications,
+  getPendingNotificationNavigation,
+} from '../src/features/notifications/utils/notifications';
 import { setupPushNotifications } from '../src/features/notifications/services/pushNotificationService';
+import { router, useRootNavigationState } from 'expo-router';
+import { setupNotificationServiceListener } from '@/src/features/notifications/service';
 
 // NOTE: SplashScreen.preventAutoHideAsync() is called in _layout.tsx at global scope
 // This is the correct pattern per Expo documentation
@@ -37,9 +42,11 @@ export default function AppInitializer({ children }: { children: React.ReactNode
   const { initialize: initializeAuth, isInitialized: authInitialized, status } = useAuthStore();
   const isAuthenticated = status === 'authenticated';
   const { isInitialized: onboardingInitialized } = useOnboarding();
+  const rootNavigationState = useRootNavigationState();
   const [fontsLoaded, fontError] = useFonts(customFonts);
   const [splashHidden, setSplashHidden] = useState(false);
   const [notificationsConfigured, setNotificationsConfigured] = useState(false);
+  const notificationServiceInitRef = useRef(false);
 
   // Initialize auth when component mounts
   useEffect(() => {
@@ -62,6 +69,12 @@ export default function AppInitializer({ children }: { children: React.ReactNode
   useEffect(() => {
     async function initPushNotifications() {
       if (authInitialized && isAuthenticated) {
+        // Set up notification service listener (once)
+        if (!notificationServiceInitRef.current) {
+          setupNotificationServiceListener();
+          notificationServiceInitRef.current = true;
+        }
+
         logger.debug('APP', 'User authenticated, setting up push notifications...');
         try {
           const token = await setupPushNotifications();
@@ -110,6 +123,23 @@ export default function AppInitializer({ children }: { children: React.ReactNode
 
     hideSplash();
   }, [fontsLoaded, authInitialized, onboardingInitialized]);
+
+  // Apply pending notification navigation after app is fully ready
+  // Uses useRootNavigationState to deterministically wait for router readiness
+  // instead of a fragile setTimeout (which can fail on slow devices)
+  useEffect(() => {
+    if (!rootNavigationState?.key) {
+      return;
+    }
+
+    if (splashHidden && authInitialized && isAuthenticated) {
+      const pendingNav = getPendingNotificationNavigation();
+      if (pendingNav) {
+        logger.info('APP', 'Applying pending notification navigation', { path: pendingNav });
+        router.push(pendingNav as any);
+      }
+    }
+  }, [rootNavigationState?.key, splashHidden, authInitialized, isAuthenticated]);
 
   // Handle font loading error
   if (fontError) {

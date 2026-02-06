@@ -1,6 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logger } from '@/src/utils/logger';
+import { secureStorage } from '@/src/features/auth/secure-storage';
 
 // Supabase Client Initialization
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -20,7 +20,7 @@ export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKe
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
-    storage: AsyncStorage, // Using AsyncStorage for Supabase session persistence
+    storage: secureStorage, // Using SecureStore for encrypted session persistence
   },
 });
 
@@ -37,7 +37,6 @@ export const refreshSupabaseSession = async () => {
  * This sends the Expo push token to our backend for storage.
  */
 export const registerPushTokenService = async (pushToken: string) => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { api } = require('@/src/api/api-client');
   const { API_PATHS } = require('@/src/utils/api-paths');
   const { Platform } = require('react-native');
@@ -54,7 +53,6 @@ export const registerPushTokenService = async (pushToken: string) => {
  * Deregisters the given push token from the backend (e.g., on logout).
  */
 export const deregisterPushTokenService = async (pushToken: string) => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { api } = require('@/src/api/api-client');
   const { API_PATHS } = require('@/src/utils/api-paths');
 

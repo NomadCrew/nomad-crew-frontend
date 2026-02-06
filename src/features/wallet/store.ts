@@ -5,6 +5,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import {
   WalletDocument,
+  WalletDocumentResponse,
   DocumentType,
   CreateDocumentInput,
   UpdateDocumentInput,
@@ -20,8 +21,21 @@ import {
   shouldCompress,
 } from './services';
 import { normalizeDocument, normalizeDocuments } from './adapters/normalizeDocument';
-import { supabase } from '@/src/api/supabase';
+import { supabase } from '@/src/features/auth/service';
 import { logger } from '@/src/utils/logger';
+import { registerStoreReset } from '@/src/utils/store-reset';
+
+/**
+ * Supabase Realtime postgres_changes event payload for wallet_documents
+ */
+interface DocumentChangeEvent {
+  eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+  new: Record<string, any>;
+  old: Record<string, any>;
+  schema: string;
+  table: string;
+  commit_timestamp: string;
+}
 
 /**
  * Wallet store state interface
@@ -538,8 +552,119 @@ export const useWalletStore = create<WalletState>()(
       // ==========================================
 
       handleDocumentEvent: (event: unknown) => {
-        // TODO: Implement event handling for real-time updates
-        logger.info('WALLET', 'Document event received', { event });
+        try {
+          const payload = event as DocumentChangeEvent;
+          logger.info('WALLET', 'Document event received', {
+            eventType: payload.eventType,
+            table: payload.table,
+          });
+
+          switch (payload.eventType) {
+            case 'INSERT': {
+              const document = normalizeDocument(payload.new as WalletDocumentResponse);
+              const state = get();
+
+              // Skip if document already exists (prevent duplicates from local operations)
+              const existsInPersonal = state.personalDocuments.some(
+                (doc) => doc.id === document.id
+              );
+              const existsInGroup = Object.values(state.groupDocuments).some((docs) =>
+                docs.some((doc) => doc.id === document.id)
+              );
+
+              if (existsInPersonal || existsInGroup) {
+                logger.info('WALLET', 'Skipping duplicate INSERT event', {
+                  id: document.id,
+                });
+                return;
+              }
+
+              if (document.walletType === 'personal') {
+                set((state) => ({
+                  personalDocuments: [document, ...state.personalDocuments],
+                }));
+              } else if (document.walletType === 'group' && document.tripId) {
+                set((state) => ({
+                  groupDocuments: {
+                    ...state.groupDocuments,
+                    [document.tripId!]: [
+                      document,
+                      ...(state.groupDocuments[document.tripId!] || []),
+                    ],
+                  },
+                }));
+              }
+
+              logger.info('WALLET', 'Document inserted via realtime', {
+                id: document.id,
+                walletType: document.walletType,
+              });
+              break;
+            }
+
+            case 'UPDATE': {
+              const document = normalizeDocument(payload.new as WalletDocumentResponse);
+
+              const updateInArray = (docs: WalletDocument[]) =>
+                docs.map((doc) => (doc.id === document.id ? document : doc));
+
+              set((state) => ({
+                personalDocuments: updateInArray(state.personalDocuments),
+                groupDocuments: Object.fromEntries(
+                  Object.entries(state.groupDocuments).map(([tripId, docs]) => [
+                    tripId,
+                    updateInArray(docs),
+                  ])
+                ),
+                selectedDocument:
+                  state.selectedDocument?.id === document.id ? document : state.selectedDocument,
+              }));
+
+              logger.info('WALLET', 'Document updated via realtime', {
+                id: document.id,
+              });
+              break;
+            }
+
+            case 'DELETE': {
+              const deletedId = (payload.old as { id: string }).id;
+
+              if (!deletedId) {
+                logger.error('WALLET', 'DELETE event missing document id', payload.old);
+                return;
+              }
+
+              const filterOut = (docs: WalletDocument[]) =>
+                docs.filter((doc) => doc.id !== deletedId);
+
+              set((state) => ({
+                personalDocuments: filterOut(state.personalDocuments),
+                groupDocuments: Object.fromEntries(
+                  Object.entries(state.groupDocuments).map(([tripId, docs]) => [
+                    tripId,
+                    filterOut(docs),
+                  ])
+                ),
+                selectedDocument:
+                  state.selectedDocument?.id === deletedId ? null : state.selectedDocument,
+              }));
+
+              logger.info('WALLET', 'Document deleted via realtime', {
+                id: deletedId,
+              });
+              break;
+            }
+
+            default:
+              logger.info('WALLET', 'Unknown document event type', {
+                eventType: (payload as any).eventType,
+              });
+          }
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : 'Failed to handle document event';
+          logger.error('WALLET', 'handleDocumentEvent error:', message);
+        }
       },
 
       // ==========================================
@@ -557,6 +682,8 @@ export const useWalletStore = create<WalletState>()(
     { name: 'WalletStore' }
   )
 );
+
+registerStoreReset('WalletStore', () => useWalletStore.getState().reset());
 
 /**
  * Selector hooks for common queries

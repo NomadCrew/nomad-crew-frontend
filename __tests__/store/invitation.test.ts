@@ -28,40 +28,6 @@ import { createMockUser, createMockTrip, createMockInvitation } from '../factori
 
 import { api, apiClient } from '@/src/api/api-client';
 
-// Mock Supabase client
-jest.mock('@/src/api/supabase', () => ({
-  supabase: {
-    auth: {
-      signUp: jest.fn(),
-      signInWithPassword: jest.fn(),
-      signInWithIdToken: jest.fn(),
-      signOut: jest.fn(),
-      getSession: jest.fn().mockResolvedValue({
-        data: {
-          session: {
-            access_token: 'test-token',
-            refresh_token: 'refresh-token',
-            user: { id: 'user-123', email: 'test@example.com' },
-            expires_at: Date.now() + 3600000,
-          },
-        },
-        error: null,
-      }),
-      refreshSession: jest.fn().mockResolvedValue({
-        data: {
-          session: {
-            access_token: 'test-token',
-            refresh_token: 'refresh-token',
-            user: { id: 'user-123', email: 'test@example.com' },
-            expires_at: Date.now() + 3600000,
-          },
-        },
-        error: null,
-      }),
-    },
-  },
-}));
-
 jest.mock('@/src/api/api-client', () => ({
   api: { get: jest.fn(), post: jest.fn(), delete: jest.fn() },
   apiClient: { getAxiosInstance: jest.fn() },
@@ -287,7 +253,7 @@ describe('Trip Invitations', () => {
       await expect(useTripStore.getState().acceptInvitation('test-token')).rejects.toThrow();
 
       expect(useTripStore.getState().error).toBe('Acceptance failed');
-      expect(useTripStore.getState().loading).toBe(false);
+      expect(useTripStore.getState().isUpdating).toBe(false);
     });
   });
 
@@ -310,7 +276,7 @@ describe('Trip Invitations', () => {
       // Note: Stub doesn't update state, so invitations remain unchanged
       const trip = useTripStore.getState().trips[0];
       expect(trip.invitations).toHaveLength(1);
-      expect(useTripStore.getState().loading).toBe(false);
+      expect(useTripStore.getState().isUpdating).toBe(false);
     });
 
     it('should not modify invitations array (stub behavior)', async () => {
@@ -516,7 +482,7 @@ describe('Trip Invitations', () => {
       });
 
       // Stub completes without error
-      expect(useTripStore.getState().loading).toBe(false);
+      expect(useTripStore.getState().isUpdating).toBe(false);
     });
 
     it('should handle malformed invitation token', async () => {

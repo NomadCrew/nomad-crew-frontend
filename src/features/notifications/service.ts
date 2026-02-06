@@ -1,7 +1,7 @@
-import { supabase } from '@/src/api/supabase';
+import { supabase } from '@/src/features/auth/service';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { useNotificationStore } from './store/useNotificationStore';
-import { parseNotification, Notification } from './types/notification';
+import { safeParseNotification, Notification } from './types/notification';
 import { logger } from '@/src/utils/logger';
 import { useAuthStore } from '../auth/store';
 
@@ -87,11 +87,11 @@ class NotificationService {
   private handleNotificationInsert(data: any) {
     try {
       // Parse the notification data from the database
-      const notification = parseNotification(data);
+      const notification = safeParseNotification(data);
       if (notification) {
         // Add to store
         useNotificationStore.getState().handleIncomingNotification(notification);
-        
+
         // Log for debugging
         logger.info('NotificationService: Processed new notification', {
           type: notification.type,
@@ -111,17 +111,17 @@ class NotificationService {
    */
   private handleNotificationUpdate(data: any) {
     try {
-      const notification = parseNotification(data);
+      const notification = safeParseNotification(data);
       if (notification) {
         // Update in store if it exists
         const store = useNotificationStore.getState();
-        const existingIndex = store.notifications.findIndex(n => n.id === notification.id);
-        
+        const existingIndex = store.notifications.findIndex((n) => n.id === notification.id);
+
         if (existingIndex !== -1) {
           // Update the notification in the store
           const updatedNotifications = [...store.notifications];
           updatedNotifications[existingIndex] = notification;
-          
+
           useNotificationStore.setState({
             notifications: updatedNotifications,
           });

@@ -11,7 +11,9 @@ import {
 } from '../types/notification';
 import { ServerEvent } from '@/src/types/events';
 import { apiClient, api } from '@/src/api/api-client';
+import { API_PATHS } from '@/src/utils/api-paths';
 import { logger } from '@/src/utils/logger';
+import { registerStoreReset } from '@/src/utils/store-reset';
 
 const NOTIFICATION_LIMIT = 100; // Max notifications to keep in state/storage
 const API_PAGE_LIMIT = 20; // How many notifications to fetch per API call
@@ -47,6 +49,7 @@ interface NotificationState {
   setHasHydrated: (state: boolean) => void;
   clearNotifications: () => void;
   deleteNotification: (notificationId: string) => Promise<void>;
+  reset: () => void;
 }
 
 export const useNotificationStore = create<NotificationState>()(
@@ -74,7 +77,7 @@ export const useNotificationStore = create<NotificationState>()(
           set({ isFetchingUnreadCount: true, error: null });
           try {
             // Get all notifications with status=unread and use the response length as the count
-            const response = await api.get<Notification[]>('/v1/notifications', {
+            const response = await api.get<Notification[]>(API_PATHS.notifications.list, {
               params: { status: 'unread' },
             });
             set({ unreadCount: response.data.length });
@@ -102,7 +105,7 @@ export const useNotificationStore = create<NotificationState>()(
           const currentOffset = options.loadMore ? offset : 0;
 
           try {
-            const response = await api.get<Notification[]>('/v1/notifications', {
+            const response = await api.get<Notification[]>(API_PATHS.notifications.list, {
               params: { limit, offset: currentOffset },
             });
             const fetchedNotifications = response.data || [];
@@ -135,7 +138,7 @@ export const useNotificationStore = create<NotificationState>()(
           set({ isMarkingRead: true, error: null });
           try {
             // Use the correct endpoint for marking a single notification as read
-            await api.patch(`/v1/notifications/${notificationId}/read`);
+            await api.patch(API_PATHS.notifications.markRead(notificationId));
 
             set((state) => ({
               notifications: state.notifications.map((n) =>
@@ -159,7 +162,7 @@ export const useNotificationStore = create<NotificationState>()(
           set({ isMarkingRead: true, error: null });
           try {
             // Use the correct endpoint for marking all notifications as read
-            await api.patch('/v1/notifications/read-all');
+            await api.patch(API_PATHS.notifications.markAllRead);
 
             set((state) => ({
               notifications: state.notifications.map((n) => ({ ...n, read: true })),
@@ -236,7 +239,7 @@ export const useNotificationStore = create<NotificationState>()(
 
           try {
             // POST to the backend's business logic endpoint for accepting
-            await api.post(`/v1/invitations/${invitationId}/accept`);
+            await api.post(API_PATHS.invitations.accept(invitationId));
 
             // Success! We rely on the backend to potentially send a follow-up
             // WebSocket message (e.g., MEMBER_ADDED or TRIP_UPDATE) to reflect the change.
@@ -275,7 +278,7 @@ export const useNotificationStore = create<NotificationState>()(
           const invitationId = notification.metadata.invitationID;
 
           try {
-            await api.post(`/v1/invitations/${invitationId}/decline`);
+            await api.post(API_PATHS.invitations.decline(invitationId));
             logger.info(`Declined trip invitation: ${invitationId}`);
 
             set((state) => ({
@@ -304,7 +307,9 @@ export const useNotificationStore = create<NotificationState>()(
           set({ isHandlingAction: true, error: null });
           try {
             // Call backend to delete all notifications
-            const response = await api.delete<{ deleted_count: number }>('/v1/notifications');
+            const response = await api.delete<{ deleted_count: number }>(
+              API_PATHS.notifications.deleteAll
+            );
             logger.info(`Deleted ${response.data.deleted_count} notifications from server`);
 
             // Clear from Zustand state
@@ -336,7 +341,7 @@ export const useNotificationStore = create<NotificationState>()(
 
           set({ isHandlingAction: true, error: null });
           try {
-            await api.delete(`/v1/notifications/${notificationId}`);
+            await api.delete(API_PATHS.notifications.delete(notificationId));
 
             set((state) => ({
               notifications: state.notifications.filter((n) => n.id !== notificationId),
@@ -355,6 +360,30 @@ export const useNotificationStore = create<NotificationState>()(
           } finally {
             set({ isHandlingAction: false });
           }
+        },
+
+        reset: () => {
+          // Clear AsyncStorage persistence
+          AsyncStorage.removeItem(STORAGE_KEY).catch((error) => {
+            logger.error(
+              'NotificationStore',
+              'Failed to clear notification AsyncStorage on reset:',
+              error
+            );
+          });
+
+          set({
+            notifications: [],
+            unreadCount: 0,
+            latestChatMessageToast: null,
+            isFetching: false,
+            isFetchingUnreadCount: false,
+            isMarkingRead: false,
+            isHandlingAction: false,
+            error: null,
+            offset: 0,
+            hasMore: true,
+          });
         },
       }),
       {
@@ -394,6 +423,8 @@ export const useNotificationStore = create<NotificationState>()(
     { name: 'NotificationStore' }
   )
 );
+
+registerStoreReset('NotificationStore', () => useNotificationStore.getState().reset());
 
 /**
  * Selector to get the latest unread chat message notification for toast display.

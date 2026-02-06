@@ -42,4 +42,7 @@ export interface LocationState {
 
   // Initialization
   init?: () => Promise<void>; // Optional because it's called internally
+
+  // Reset
+  reset: () => void;
 }

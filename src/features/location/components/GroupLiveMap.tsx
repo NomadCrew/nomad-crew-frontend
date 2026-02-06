@@ -392,7 +392,11 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
     <View style={styles(theme).container}>
       <View style={styles(theme).header}>
         <Text style={styles(theme).title}>{isStandalone ? 'Live Map' : 'Group Location'}</Text>
-        <Pressable onPress={onClose}>
+        <Pressable
+          onPress={onClose}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          style={{ minWidth: 44, minHeight: 44, justifyContent: 'center', alignItems: 'center' }}
+        >
           <Text style={styles(theme).closeButtonText}>{isStandalone ? 'Back' : 'Close'}</Text>
         </Pressable>
       </View>
