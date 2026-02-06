@@ -48,23 +48,6 @@ jest.mock('@supabase/supabase-js', () => ({
   })),
 }));
 
-// Mock Supabase client exports
-jest.mock('@/src/api/supabase', () => ({
-  supabase: {
-    auth: {
-      signUp: jest.fn(),
-      signInWithPassword: jest.fn(),
-      signInWithIdToken: jest.fn(),
-      signOut: jest.fn(),
-      getSession: jest.fn(),
-      refreshSession: jest.fn(),
-      onAuthStateChange: jest.fn(() => ({
-        data: { subscription: { unsubscribe: jest.fn() } },
-      })),
-    },
-  },
-}));
-
 // Mock API
 jest.mock('@/src/api/api-client', () => ({
   api: {

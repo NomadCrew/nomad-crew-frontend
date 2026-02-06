@@ -28,40 +28,6 @@ import { createMockUser, createMockTrip, createMockInvitation } from '../factori
 
 import { api, apiClient } from '@/src/api/api-client';
 
-// Mock Supabase client
-jest.mock('@/src/api/supabase', () => ({
-  supabase: {
-    auth: {
-      signUp: jest.fn(),
-      signInWithPassword: jest.fn(),
-      signInWithIdToken: jest.fn(),
-      signOut: jest.fn(),
-      getSession: jest.fn().mockResolvedValue({
-        data: {
-          session: {
-            access_token: 'test-token',
-            refresh_token: 'refresh-token',
-            user: { id: 'user-123', email: 'test@example.com' },
-            expires_at: Date.now() + 3600000,
-          },
-        },
-        error: null,
-      }),
-      refreshSession: jest.fn().mockResolvedValue({
-        data: {
-          session: {
-            access_token: 'test-token',
-            refresh_token: 'refresh-token',
-            user: { id: 'user-123', email: 'test@example.com' },
-            expires_at: Date.now() + 3600000,
-          },
-        },
-        error: null,
-      }),
-    },
-  },
-}));
-
 jest.mock('@/src/api/api-client', () => ({
   api: { get: jest.fn(), post: jest.fn(), delete: jest.fn() },
   apiClient: { getAxiosInstance: jest.fn() },

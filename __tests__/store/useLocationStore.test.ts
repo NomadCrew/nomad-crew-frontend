@@ -26,26 +26,6 @@ jest.mock('@/src/features/auth/service', () => {
   };
 });
 
-// Mock Supabase client
-jest.mock('@/src/api/supabase', () => {
-  const mockAuth = {
-    signUp: jest.fn(),
-    signInWithPassword: jest.fn(),
-    signInWithIdToken: jest.fn(),
-    signOut: jest.fn(),
-    getSession: jest.fn(),
-    refreshSession: jest.fn(),
-    onAuthStateChange: jest.fn(() => ({
-      data: { subscription: { unsubscribe: jest.fn() } },
-    })),
-  };
-
-  return {
-    __esModule: true,
-    supabase: { auth: mockAuth },
-  };
-});
-
 // Mock dependencies
 jest.mock('@/src/api/api-client', () => ({
   api: {

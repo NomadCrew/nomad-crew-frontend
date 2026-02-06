@@ -34,26 +34,6 @@ jest.mock('@/src/features/auth/service', () => {
   };
 });
 
-// Also mock the Supabase client
-jest.mock('@/src/api/supabase', () => {
-  const mockAuth = {
-    signUp: jest.fn(),
-    signInWithPassword: jest.fn(),
-    signInWithIdToken: jest.fn(),
-    signOut: jest.fn(),
-    getSession: jest.fn(),
-    refreshSession: jest.fn(),
-    onAuthStateChange: jest.fn(() => ({
-      data: { subscription: { unsubscribe: jest.fn() } },
-    })),
-  };
-
-  return {
-    __esModule: true,
-    supabase: { auth: mockAuth },
-  };
-});
-
 // Now we can import the store after mocks are set up
 import { useAuthStore } from '@/src/features/auth/store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
