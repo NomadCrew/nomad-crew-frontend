@@ -10,7 +10,7 @@ import {
   getPendingNotificationNavigation,
 } from '../src/features/notifications/utils/notifications';
 import { setupPushNotifications } from '../src/features/notifications/services/pushNotificationService';
-import { router } from 'expo-router';
+import { router, useRootNavigationState } from 'expo-router';
 import { setupNotificationServiceListener } from '@/src/features/notifications/service';
 
 // NOTE: SplashScreen.preventAutoHideAsync() is called in _layout.tsx at global scope
@@ -42,6 +42,7 @@ export default function AppInitializer({ children }: { children: React.ReactNode
   const { initialize: initializeAuth, isInitialized: authInitialized, status } = useAuthStore();
   const isAuthenticated = status === 'authenticated';
   const { isInitialized: onboardingInitialized } = useOnboarding();
+  const rootNavigationState = useRootNavigationState();
   const [fontsLoaded, fontError] = useFonts(customFonts);
   const [splashHidden, setSplashHidden] = useState(false);
   const [notificationsConfigured, setNotificationsConfigured] = useState(false);
@@ -124,19 +125,21 @@ export default function AppInitializer({ children }: { children: React.ReactNode
   }, [fontsLoaded, authInitialized, onboardingInitialized]);
 
   // Apply pending notification navigation after app is fully ready
+  // Uses useRootNavigationState to deterministically wait for router readiness
+  // instead of a fragile setTimeout (which can fail on slow devices)
   useEffect(() => {
-    if (splashHidden && authInitialized && isAuthenticated) {
-      // Small delay to ensure navigation stack is ready
-      const timer = setTimeout(() => {
-        const pendingNav = getPendingNotificationNavigation();
-        if (pendingNav) {
-          logger.info('APP', 'Applying pending notification navigation', { path: pendingNav });
-          router.push(pendingNav as any);
-        }
-      }, 100);
-      return () => clearTimeout(timer);
+    if (!rootNavigationState?.key) {
+      return;
     }
-  }, [splashHidden, authInitialized, isAuthenticated]);
+
+    if (splashHidden && authInitialized && isAuthenticated) {
+      const pendingNav = getPendingNotificationNavigation();
+      if (pendingNav) {
+        logger.info('APP', 'Applying pending notification navigation', { path: pendingNav });
+        router.push(pendingNav as any);
+      }
+    }
+  }, [rootNavigationState?.key, splashHidden, authInitialized, isAuthenticated]);
 
   // Handle font loading error
   if (fontError) {
