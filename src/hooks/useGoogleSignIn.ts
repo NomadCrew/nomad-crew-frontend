@@ -120,7 +120,7 @@ export function useGoogleSignIn() {
     try {
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
       const userInfo = await GoogleSignin.signIn();
-      console.log('Google userInfo:', userInfo);
+      logger.debug('AUTH', 'Google sign-in completed');
 
       // Support both possible return shapes
       const idToken = userInfo.idToken || userInfo.data?.idToken;
@@ -133,7 +133,7 @@ export function useGoogleSignIn() {
         provider: 'google',
         token: idToken,
       });
-      console.log('Supabase signInWithIdToken response:', { data, supabaseError });
+      logger.debug('AUTH', 'Supabase ID token exchange completed');
 
       if (supabaseError) {
         await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);

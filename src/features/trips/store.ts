@@ -12,7 +12,6 @@ import {
 } from './types';
 import { API_PATHS } from '@/src/utils/api-paths';
 import { ServerEvent } from '@/src/types/events';
-import { useTodoStore } from '@/src/features/todos/store';
 import { mapWeatherCode } from '@/src/utils/weather';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '@/src/features/auth/store';
@@ -273,6 +272,7 @@ export const useTripStore = create<TripState>()(
         try {
           await AsyncStorage.setItem(`pendingInvitation_${token}`, token);
           logger.info('Persisted invitation token:', token);
+          set({ loading: false });
         } catch (error) {
           const message =
             error instanceof Error ? error.message : 'Failed to persist invitation token';
@@ -382,5 +382,3 @@ export const selectTripsWithLoading = (state: TripState) => ({
   loading: state.loading,
   error: state.error,
 });
-
-// Import getUserDisplayName from auth utilsimport { getUserDisplayName } from '../auth/utils';
