@@ -11,6 +11,7 @@ const getEnvironment = () => {
 
 const ENV = getEnvironment();
 const IS_DEV = ENV === 'development';
+const IS_PROD = ENV === 'production';
 
 // Extract client ID from the full URL for URL scheme
 const getClientId = (fullClientId) => fullClientId?.split('.')[0] || '';
@@ -69,9 +70,11 @@ export default {
     android: {
       adaptiveIcon: {
         foregroundImage: './assets/images/icon.png',
-        backgroundColor: '#ffffff'
+        backgroundColor: '#F46315'
       },
-      googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? './SECRET/google-services_dev.json',
+      googleServicesFile:
+        process.env.GOOGLE_SERVICES_JSON ??
+        (IS_PROD ? './SECRET/google-services_prod.json' : './SECRET/google-services_dev.json'),
       package: IS_DEV
         ? 'com.nomadcrew.app.dev'
         : 'com.nomadcrew.app',
@@ -179,7 +182,7 @@ export default {
       }],
       ['expo-notifications', {
         icon: './assets/images/icon.png',
-        color: '#000000'
+        color: '#F46315'
       }]
     ],
     experiments: {

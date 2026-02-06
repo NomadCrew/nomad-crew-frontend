@@ -23,6 +23,9 @@ import * as ExpoNotifications from 'expo-notifications';
 // Lazy-loaded Notifications module - only imported on physical devices
 let Notifications: typeof ExpoNotifications | null = null;
 
+// Pending navigation from notification tap (stored until app is ready)
+let pendingNotificationNavigation: string | null = null;
+
 // Initialize notifications module on physical devices
 function initializeNotificationsModule() {
   if (Device.isDevice) {
@@ -35,6 +38,23 @@ function initializeNotificationsModule() {
 
 // Initialize immediately
 initializeNotificationsModule();
+
+/**
+ * Get and clear any pending navigation from a notification tap.
+ * Call this after app initialization is complete.
+ */
+export function getPendingNotificationNavigation(): string | null {
+  const pending = pendingNotificationNavigation;
+  pendingNotificationNavigation = null;
+  return pending;
+}
+
+/**
+ * Check if there's a pending notification navigation.
+ */
+export function hasPendingNotificationNavigation(): boolean {
+  return pendingNotificationNavigation !== null;
+}
 
 // Define token interface
 interface InvitationToken {
@@ -112,12 +132,13 @@ async function handleNotificationResponse(response: ExpoNotifications.Notificati
     console.log('[NOTIFICATION] User state:', { hasUser: !!user, userId: user?.id });
 
     if (user) {
-      console.log('[NOTIFICATION] User is logged in, navigating to notifications');
+      console.log('[NOTIFICATION] User is logged in, storing pending navigation to notifications');
       // For invitation notifications, navigate to notifications tab
       // The user needs to accept/decline the invitation before viewing the trip
       // (They won't have permission to view trip details until they're a member)
-      console.log('[NOTIFICATION] Navigating to notifications tab to handle invitation');
-      router.push('/(tabs)/notifications');
+      // Store the navigation intent - it will be applied after app initialization
+      pendingNotificationNavigation = '/(tabs)/notifications';
+      console.log('[NOTIFICATION] Pending navigation stored, will navigate after app ready');
     } else {
       // Not logged in - redirect to login
       console.log('[NOTIFICATION] User not logged in, redirecting to auth');
@@ -197,9 +218,11 @@ async function handleNotificationResponse(response: ExpoNotifications.Notificati
 
   // Handle other notification types - navigate to notifications tab
   if (data?.type) {
-    console.log('[NOTIFICATION] Unknown notification type, navigating to notifications tab');
-    logger.debug('NOTIFICATION', 'Navigating to notifications for type', { type: data.type });
-    router.push('/(tabs)/notifications');
+    console.log(
+      '[NOTIFICATION] Unknown notification type, storing pending navigation to notifications'
+    );
+    logger.debug('NOTIFICATION', 'Storing pending navigation for type', { type: data.type });
+    pendingNotificationNavigation = '/(tabs)/notifications';
   } else {
     console.log('[NOTIFICATION] No type in notification data, ignoring');
   }

@@ -40,7 +40,7 @@ const defaultBreakpoints = {
 export function createTheme(options: ThemeOptions = {}): Theme {
   const {
     isDark = false,
-    fontFamily = 'Inter',
+    fontFamily = 'Manrope',
     spacing: customSpacing,
     borderRadius: customBorderRadius,
     breakpoints: customBreakpoints,
