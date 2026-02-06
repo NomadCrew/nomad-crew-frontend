@@ -60,4 +60,30 @@ export const API_PATHS = {
     deregister: createApiPath('users/push-token'),
     deregisterAll: createApiPath('users/push-tokens'),
   },
+  // Notification endpoints
+  notifications: {
+    list: createApiPath('notifications'),
+    markRead: (id: string) => createApiPath(`notifications/${id}/read`),
+    markAllRead: createApiPath('notifications/read-all'),
+    delete: (id: string) => createApiPath(`notifications/${id}`),
+    deleteAll: createApiPath('notifications'),
+  },
+  // Invitation endpoints (ID-based, used by notification store)
+  invitations: {
+    accept: (id: string) => createApiPath(`invitations/${id}/accept`),
+    decline: (id: string) => createApiPath(`invitations/${id}/decline`),
+  },
+  // Chat reaction endpoints
+  reactions: {
+    list: (tripId: string, messageId: string) =>
+      createApiPath(`trips/${tripId}/chat/messages/${messageId}/reactions`),
+    add: (tripId: string, messageId: string) =>
+      createApiPath(`trips/${tripId}/chat/messages/${messageId}/reactions`),
+    remove: (tripId: string, messageId: string, reactionType: string) =>
+      createApiPath(`trips/${tripId}/chat/messages/${messageId}/reactions/${reactionType}`),
+  },
+  // Read receipt endpoints
+  readReceipts: {
+    updateLastRead: (tripId: string) => createApiPath(`trips/${tripId}/chat/last-read`),
+  },
 } as const;
