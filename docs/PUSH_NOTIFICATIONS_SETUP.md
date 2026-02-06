@@ -6,7 +6,7 @@ NomadCrew uses Expo Push Notifications to deliver notifications to iOS and Andro
 
 ## Architecture
 
-```
+```text
 Backend → Expo Push API → APNs/FCM → Device
 ```
 
@@ -65,7 +65,7 @@ Backend → Expo Push API → APNs/FCM → Device
 
 1. **Check backend logs** for ticket ID:
 
-   ```
+   ```text
    Push notification ticket successful {"ticketId": "..."}
    ```
 

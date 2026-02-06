@@ -17,11 +17,11 @@ import { useTripStore } from '@/src/features/trips/store';
 function throttle<T extends (...args: any[]) => any>(
   func: T,
   delay: number
-): (...args: Parameters<T>) => void {
+): ((...args: Parameters<T>) => void) & { cancel: () => void } {
   let lastCall = 0;
   let timeoutId: NodeJS.Timeout | null = null;
 
-  return (...args: Parameters<T>) => {
+  const throttled = (...args: Parameters<T>) => {
     const now = Date.now();
     const timeSinceLastCall = now - lastCall;
 
@@ -40,6 +40,15 @@ function throttle<T extends (...args: any[]) => any>(
       }, delay - timeSinceLastCall);
     }
   };
+
+  throttled.cancel = () => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+  };
+
+  return throttled;
 }
 
 /**
@@ -356,6 +365,10 @@ export const useLocationStore = create<LocationState>()(
         if (locationSubscription) {
           locationSubscription.remove();
         }
+
+        // Cancel any pending throttled server updates to prevent
+        // stale API calls after logout
+        throttledServerUpdate.cancel();
 
         set({
           isLocationSharingEnabled: false,
