@@ -253,7 +253,7 @@ describe('Trip Invitations', () => {
       await expect(useTripStore.getState().acceptInvitation('test-token')).rejects.toThrow();
 
       expect(useTripStore.getState().error).toBe('Acceptance failed');
-      expect(useTripStore.getState().loading).toBe(false);
+      expect(useTripStore.getState().isUpdating).toBe(false);
     });
   });
 
@@ -276,7 +276,7 @@ describe('Trip Invitations', () => {
       // Note: Stub doesn't update state, so invitations remain unchanged
       const trip = useTripStore.getState().trips[0];
       expect(trip.invitations).toHaveLength(1);
-      expect(useTripStore.getState().loading).toBe(false);
+      expect(useTripStore.getState().isUpdating).toBe(false);
     });
 
     it('should not modify invitations array (stub behavior)', async () => {
@@ -482,7 +482,7 @@ describe('Trip Invitations', () => {
       });
 
       // Stub completes without error
-      expect(useTripStore.getState().loading).toBe(false);
+      expect(useTripStore.getState().isUpdating).toBe(false);
     });
 
     it('should handle malformed invitation token', async () => {
