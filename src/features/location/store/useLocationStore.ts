@@ -295,7 +295,6 @@ export const useLocationStore = create<LocationState>()(
             logger.warn('LOCATION', 'API returned non-array for member locations:', {
               tripId,
               responseType: typeof locations,
-              response: locations,
             });
             // Set empty object for this trip to avoid stale data
             set((state) => ({

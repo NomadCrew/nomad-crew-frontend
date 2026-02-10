@@ -220,7 +220,7 @@ export const waitForAuthLoading = (timeout: number = 5000): Promise<void> => {
  *
  * @example
  * await waitForTripLoading();
- * expect(getTripState().loading).toBe(false);
+ * expect(getTripState().isFetching).toBe(false);
  */
 export const waitForTripLoading = (timeout: number = 5000): Promise<void> => {
   return new Promise((resolve, reject) => {

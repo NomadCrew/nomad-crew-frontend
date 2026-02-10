@@ -177,7 +177,15 @@ export default {
       }],
       ['expo-font', {
         fonts: [
-          './assets/fonts/SpaceMono-Regular.ttf'
+          './assets/fonts/SpaceMono-Regular.ttf',
+          './assets/fonts/Manrope/Manrope-VariableFont_wght.ttf',
+          './assets/fonts/Manrope/static/Manrope-Regular.ttf',
+          './assets/fonts/Manrope/static/Manrope-Light.ttf',
+          './assets/fonts/Manrope/static/Manrope-Medium.ttf',
+          './assets/fonts/Manrope/static/Manrope-SemiBold.ttf',
+          './assets/fonts/Manrope/static/Manrope-Bold.ttf',
+          './assets/fonts/Manrope/static/Manrope-ExtraBold.ttf',
+          './assets/fonts/Manrope/static/Manrope-ExtraLight.ttf'
         ]
       }],
       ['expo-notifications', {
