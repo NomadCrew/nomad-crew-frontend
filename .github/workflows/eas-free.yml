@@ -1,0 +1,234 @@
+name: React Native CI/CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      buildType:
+        type: choice
+        description: "Build type to run"
+        options:
+          - dev
+          - prod-apk
+          - prod-aab
+          - ios-dev
+          - ios-prod
+          - publish-expo
+          - all
+      platform:
+        type: choice
+        description: "Platform to build"
+        default: "all"
+        options:
+          - android
+          - ios
+          - all
+
+env:
+  EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+  # Optional Apple auth (mostly for submit / repairing credentials)
+  EXPO_APPLE_ID: ${{ secrets.EXPO_APPLE_ID }}
+  EXPO_APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.EXPO_APPLE_APP_SPECIFIC_PASSWORD }}
+  # Non-interactive iOS team selection
+  EXPO_APPLE_TEAM_ID: ${{ secrets.EXPO_APPLE_TEAM_ID }}
+  EXPO_APPLE_TEAM_TYPE: ${{ secrets.EXPO_APPLE_TEAM_TYPE }}
+  NODE_OPTIONS: --openssl-legacy-provider
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🏗 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🏗 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "yarn"
+
+      - name: 📦 Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+
+      - name: 📦 Setup yarn cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: 📦 Install dependencies
+        run: yarn install
+
+      - name: 🧪 Run TypeScript check
+        run: yarn tsc
+
+      - name: 🧹 Run ESLint
+        run: yarn lint
+
+      - name: 🎨 Run Prettier check
+        run: yarn format:check
+
+  build-and-deploy:
+    needs: test
+    if: github.event_name == 'workflow_dispatch'
+    strategy:
+      matrix:
+        platform: [android]
+        include:
+          - platform: ios
+            runs-on: macos-latest
+    runs-on: ${{ matrix.platform == 'ios' && 'macos-latest' || 'ubuntu-latest' }}
+    steps:
+      - name: 🏗 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🏗 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "yarn"
+
+      - name: 📦 Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+
+      - name: 📦 Setup yarn cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: 📦 Install dependencies
+        run: |
+          yarn install
+          yarn global add eas-cli@latest
+
+      - name: 📱 Setup EAS build cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.eas-build-local
+          key: ${{ runner.os }}-eas-build-local-${{ hashFiles('**/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-eas-build-local-
+
+      - name: 🔄 Verify EAS CLI installation
+        run: |
+          echo "EAS CLI version:"
+          eas --version
+
+      - name: 📋 Fix package.json main entry
+        shell: bash
+        run: |
+          node -e "const fs=require('fs');const p='package.json';if(!fs.existsSync(p)){console.error('package.json not found');process.exit(1);}const pkg=JSON.parse(fs.readFileSync(p,'utf8'));pkg.main='node_modules/expo/AppEntry.js';fs.writeFileSync(p,JSON.stringify(pkg,null,2)+'\n');console.log('Updated package.json main entry:',pkg.main);"
+
+      - name: 📋 Update metro.config.js for SVG support
+        run: |
+          if [ -f ./metro.config.js ]; then
+            echo "Creating backup of metro.config.js"
+            cp ./metro.config.js ./metro.config.js.backup
+            echo "Updating metro.config.js to CommonJS format"
+            cat > ./metro.config.js << 'EOFMARKER'
+          /* eslint-disable @typescript-eslint/no-var-requires */
+          const { getDefaultConfig } = require('expo/metro-config');
+
+          const config = getDefaultConfig(__dirname);
+
+          const { transformer, resolver } = config;
+
+          config.transformer = {
+            ...transformer,
+            babelTransformerPath: require.resolve('react-native-svg-transformer/expo'),
+          };
+
+          config.resolver = {
+            ...resolver,
+            assetExts: resolver.assetExts.filter(ext => ext !== 'svg'),
+            sourceExts: [...resolver.sourceExts, 'svg'],
+          };
+
+          module.exports = config;
+          EOFMARKER
+            echo "metro.config.js updated to CommonJS format"
+          else
+            echo "metro.config.js not found"
+          fi
+
+      - name: 📱 Build Development APK
+        if: matrix.platform == 'android' && (github.event.inputs.platform == 'all' || github.event.inputs.platform == 'android') && (github.event.inputs.buildType == 'all' || github.event.inputs.buildType == 'dev')
+        run: |
+          # Build with increased memory limit
+          export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
+          eas build --platform android --profile development --local --non-interactive --output=./app-dev.apk
+        env:
+          NODE_ENV: development
+
+      - name: 📱 Build Production APK
+        if: matrix.platform == 'android' && (github.event.inputs.platform == 'all' || github.event.inputs.platform == 'android') && (github.event.inputs.buildType == 'all' || github.event.inputs.buildType == 'prod-apk')
+        run: |
+          export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
+          eas build --platform android --profile production-apk --local --non-interactive --output=./app-prod.apk
+        env:
+          NODE_ENV: production
+
+      - name: 📱 Build Production AAB
+        if: matrix.platform == 'android' && (github.event.inputs.platform == 'all' || github.event.inputs.platform == 'android') && (github.event.inputs.buildType == 'all' || github.event.inputs.buildType == 'prod-aab')
+        run: |
+          export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
+          eas build --platform android --profile production --local --non-interactive --output=./app-prod.aab
+        env:
+          NODE_ENV: production
+
+      - name: 📱 Build iOS Development
+        if: matrix.platform == 'ios' && (github.event.inputs.platform == 'all' || github.event.inputs.platform == 'ios') && (github.event.inputs.buildType == 'all' || github.event.inputs.buildType == 'ios-dev')
+        shell: bash
+        env:
+          EXPO_ASC_API_KEY: ${{ secrets.EXPO_ASC_API_KEY_DEV || secrets.EXPO_ASC_API_KEY }}
+          EXPO_ASC_KEY_ID: ${{ secrets.EXPO_ASC_KEY_ID_DEV || secrets.EXPO_ASC_KEY_ID }}
+          EXPO_ASC_ISSUER_ID: ${{ secrets.EXPO_ASC_ISSUER_ID }}
+          NODE_ENV: development
+        run: |
+          export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
+          if [ -n "${EXPO_ASC_API_KEY:-}" ] && [ -n "${EXPO_ASC_KEY_ID:-}" ] && [ -n "${EXPO_ASC_ISSUER_ID:-}" ]; then
+            printf '%s' "$EXPO_ASC_API_KEY" > asc-api-key.p8
+            export EXPO_ASC_API_KEY_PATH="$GITHUB_WORKSPACE/asc-api-key.p8"
+          fi
+          eas build --platform ios --profile development --local --non-interactive --output=./app-ios-dev.ipa
+
+      - name: 📱 Build iOS Production
+        if: matrix.platform == 'ios' && (github.event.inputs.platform == 'all' || github.event.inputs.platform == 'ios') && (github.event.inputs.buildType == 'all' || github.event.inputs.buildType == 'ios-prod')
+        shell: bash
+        env:
+          EXPO_ASC_API_KEY: ${{ secrets.EXPO_ASC_API_KEY_PROD || secrets.EXPO_ASC_API_KEY }}
+          EXPO_ASC_KEY_ID: ${{ secrets.EXPO_ASC_KEY_ID_PROD || secrets.EXPO_ASC_KEY_ID }}
+          EXPO_ASC_ISSUER_ID: ${{ secrets.EXPO_ASC_ISSUER_ID }}
+          NODE_ENV: production
+        run: |
+          export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
+          if [ -n "${EXPO_ASC_API_KEY:-}" ] && [ -n "${EXPO_ASC_KEY_ID:-}" ] && [ -n "${EXPO_ASC_ISSUER_ID:-}" ]; then
+            printf '%s' "$EXPO_ASC_API_KEY" > asc-api-key.p8
+            export EXPO_ASC_API_KEY_PATH="$GITHUB_WORKSPACE/asc-api-key.p8"
+          fi
+          eas build --platform ios --profile production --local --non-interactive --output=./app-ios-prod.ipa
+
+      - name: 🚀 Publish to Expo
+        if: github.event.inputs.buildType == 'all' || github.event.inputs.buildType == 'publish-expo'
+        run: |
+          eas update --auto
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: 📦 Upload build artifacts to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-builds
+          path: |
+            ./app-dev.apk
+            ./app-prod.apk
+            ./app-prod.aab
+            ./app-ios-dev.ipa
+            ./app-ios-prod.ipa
+          retention-days: 7
