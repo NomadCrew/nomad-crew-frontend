@@ -764,10 +764,7 @@ export const useAuthStore = create<AuthState>()(
             if (needsContactEmail) {
               logger.info(
                 'AUTH',
-                'Apple private relay email detected, contact email collection required',
-                {
-                  email: session.user.email,
-                }
+                'Apple private relay email detected, contact email collection required'
               );
             }
 

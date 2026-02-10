@@ -1,5 +1,13 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet, Keyboard, ActivityIndicator, Platform } from 'react-native';
+import {
+  View,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Keyboard,
+  ActivityIndicator,
+  Platform,
+} from 'react-native';
 import { Send } from 'lucide-react-native';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { useChatStore } from '../store';
@@ -11,19 +19,17 @@ interface ChatInputProps {
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({ tripId }) => {
-  logger.debug('CHAT', `Rendering ChatInput for trip ${tripId}`);
-  
   const { theme } = useAppTheme();
   const { sendMessage, setTypingStatus, isSending } = useChatStore();
   const [message, setMessage] = useState('');
   const inputRef = useRef<TextInput>(null);
   const [isTyping, setIsTyping] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   // Log when the component mounts and unmounts
   useEffect(() => {
     logger.debug('CHAT', `ChatInput mounted for trip ${tripId}`);
-    
+
     return () => {
       logger.debug('CHAT', `ChatInput unmounted for trip ${tripId}`);
       // Clear any typing timeout when unmounting
@@ -34,14 +40,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({ tripId }) => {
       setTypingStatus(tripId, false);
     };
   }, [tripId, setTypingStatus]);
-  
+
   // Log when sending state changes
   useEffect(() => {
     if (isSending) {
       logger.debug('CHAT', 'Message sending in progress');
     }
   }, [isSending]);
-  
+
   const styles = useThemedStyles((theme) => {
     return StyleSheet.create({
       container: {
@@ -94,22 +100,26 @@ export const ChatInput: React.FC<ChatInputProps> = ({ tripId }) => {
   });
 
   // Handle typing status changes
-  const handleTypingStatus = useCallback((text: string) => {
-    const newIsTyping = text.length > 0;
-    
-    // Only trigger if the typing status changed
-    if (newIsTyping !== isTyping) {
-      setIsTyping(newIsTyping);
-      
-      // Update typing status in the store
-      setTypingStatus(tripId, newIsTyping);
-      logger.debug('CHAT', `User typing status changed to: ${newIsTyping ? 'typing' : 'not typing'}`);
-      
-      // Clear existing timeout
+  const handleTypingStatus = useCallback(
+    (text: string) => {
+      const newIsTyping = text.length > 0;
+
+      // Clear existing timeout on every keystroke to reset the 5s inactivity timer
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
       }
-      
+
+      // Only update store if the typing status changed
+      if (newIsTyping !== isTyping) {
+        setIsTyping(newIsTyping);
+        setTypingStatus(tripId, newIsTyping);
+        logger.debug(
+          'CHAT',
+          `User typing status changed to: ${newIsTyping ? 'typing' : 'not typing'}`
+        );
+      }
+
       // Set a new timeout to reset typing status after 5 seconds of inactivity
       if (newIsTyping) {
         typingTimeoutRef.current = setTimeout(() => {
@@ -118,41 +128,48 @@ export const ChatInput: React.FC<ChatInputProps> = ({ tripId }) => {
           logger.debug('CHAT', 'User typing status reset due to inactivity');
         }, 5000);
       }
-    }
-  }, [isTyping, setTypingStatus, tripId]);
+    },
+    [isTyping, setTypingStatus, tripId]
+  );
 
   // Handle text change
-  const handleTextChange = useCallback((text: string) => {
-    setMessage(text);
-    handleTypingStatus(text);
-  }, [handleTypingStatus]);
+  const handleTextChange = useCallback(
+    (text: string) => {
+      setMessage(text);
+      handleTypingStatus(text);
+    },
+    [handleTypingStatus]
+  );
 
   // Handle send
   const handleSend = useCallback(async () => {
     logger.info('CHAT', 'Send button pressed');
-    
+
     if (message.trim() === '' || isSending) {
       logger.debug('CHAT', 'Send prevented: message empty or already sending');
       return;
     }
-    
+
     const trimmedMessage = message.trim();
-    
+
     // Only log and send if tripId is defined
     if (tripId) {
-      logger.info('CHAT', `Sending message in trip ${tripId}: "${trimmedMessage.substring(0, 20)}${trimmedMessage.length > 20 ? '...' : ''}"`);
+      logger.info(
+        'CHAT',
+        `Sending message in trip ${tripId}: "${trimmedMessage.substring(0, 20)}${trimmedMessage.length > 20 ? '...' : ''}"`
+      );
     } else {
       logger.warn('CHAT', 'Attempted to send message but tripId is undefined');
       return;
     }
-    
+
     setMessage('');
     Keyboard.dismiss();
-    
+
     // Reset typing status
     setIsTyping(false);
     setTypingStatus(tripId, false);
-    
+
     try {
       // Send message directly using the chat store
       await sendMessage({ tripId, content: trimmedMessage });
@@ -181,7 +198,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ tripId }) => {
       <TouchableOpacity
         style={[
           styles.sendButton,
-          (message.trim() === '' || isSending) && styles.disabledSendButton
+          (message.trim() === '' || isSending) && styles.disabledSendButton,
         ]}
         onPress={handleSend}
         disabled={message.trim() === '' || isSending}
@@ -195,4 +212,4 @@ export const ChatInput: React.FC<ChatInputProps> = ({ tripId }) => {
       </TouchableOpacity>
     </View>
   );
-}; 
+};

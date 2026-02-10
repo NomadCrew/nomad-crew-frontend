@@ -31,7 +31,8 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
 }) => {
   const { theme } = useAppTheme();
   const { acceptTripInvitation, declineTripInvitation, isHandlingAction } = useNotificationStore();
-  const [actionResult, setActionResult] = useState<'accepted' | 'declined' | null>(null);
+  const [actionResult, setActionResult] = useState<'accepted' | 'declined' | 'error' | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const formattedTime = useMemo(() => {
     try {
@@ -56,11 +57,16 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
       onAccept();
       return;
     }
+    setErrorMessage(null);
     await acceptTripInvitation(invitation);
-    // Store catches errors internally; check error state to determine success
-    if (!useNotificationStore.getState().error) {
+    const storeState = useNotificationStore.getState();
+    if (!storeState.error) {
       setActionResult('accepted');
+      setErrorMessage(null);
       router.push(`/trip/${invitation.metadata.tripID}`);
+    } else {
+      setActionResult('error');
+      setErrorMessage(storeState.error);
     }
   };
 
@@ -69,13 +75,19 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
       onDecline();
       return;
     }
+    setErrorMessage(null);
     await declineTripInvitation(invitation);
-    if (!useNotificationStore.getState().error) {
+    const storeState = useNotificationStore.getState();
+    if (!storeState.error) {
       setActionResult('declined');
+      setErrorMessage(null);
+    } else {
+      setActionResult('error');
+      setErrorMessage(storeState.error);
     }
   };
 
-  const themedStyles = styles(theme);
+  const themedStyles = useMemo(() => styles(theme), [theme]);
 
   return (
     <Surface
@@ -118,7 +130,36 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
             {formattedTime}
           </Text>
 
-          {actionResult ? (
+          {actionResult === 'error' ? (
+            <View style={themedStyles.errorContainer}>
+              <Text variant="labelSmall" style={themedStyles.errorText} numberOfLines={1}>
+                {errorMessage || 'Something went wrong'}
+              </Text>
+              <View style={themedStyles.actions}>
+                <Button
+                  mode="outlined"
+                  onPress={handleDecline}
+                  style={themedStyles.declineButton}
+                  labelStyle={themedStyles.declineLabel}
+                  compact
+                  loading={isHandlingAction}
+                  disabled={isHandlingAction}
+                >
+                  Decline
+                </Button>
+                <Button
+                  mode="contained"
+                  onPress={handleAccept}
+                  style={themedStyles.acceptButton}
+                  compact
+                  loading={isHandlingAction}
+                  disabled={isHandlingAction}
+                >
+                  Retry Accept
+                </Button>
+              </View>
+            </View>
+          ) : actionResult ? (
             <View style={themedStyles.resultContainer}>
               {actionResult === 'accepted' ? (
                 <Check size={16} color={theme.colors.status.success.content} />
@@ -241,17 +282,25 @@ const styles = (theme: Theme) =>
       backgroundColor: theme.colors.primary.main,
     },
     resultContainer: {
-      flexDirection: 'row' as const,
-      alignItems: 'center' as const,
-      gap: 4,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.inline.xs,
     },
     resultText: {
-      fontWeight: '600' as const,
+      fontWeight: '600',
     },
     acceptedText: {
       color: theme.colors.status.success.content,
     },
     declinedText: {
       color: theme.colors.content.tertiary,
+    },
+    errorText: {
+      color: theme.colors.status.error.content,
+    },
+    errorContainer: {
+      flexDirection: 'column',
+      alignItems: 'flex-end',
+      gap: theme.spacing.stack.xs,
     },
   });

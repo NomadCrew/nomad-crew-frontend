@@ -215,7 +215,7 @@ EOFMARKER
           eas build --platform ios --profile production --local --non-interactive --output=./app-ios-prod.ipa
 
       - name: 🚀 Publish to Expo
-        if: github.event.inputs.buildType == 'all' || github.event.inputs.buildType == 'publish-expo'
+        if: matrix.platform == 'android' && (github.event.inputs.buildType == 'all' || github.event.inputs.buildType == 'publish-expo')
         run: |
           eas update --auto
         env:
@@ -224,7 +224,7 @@ EOFMARKER
       - name: 📦 Upload build artifacts to GitHub
         uses: actions/upload-artifact@v4
         with:
-          name: app-builds
+          name: app-builds-${{ matrix.platform }}
           path: |
             ./app-dev.apk
             ./app-prod.apk
@@ -232,3 +232,4 @@ EOFMARKER
             ./app-ios-dev.ipa
             ./app-ios-prod.ipa
           retention-days: 7
+          if-no-files-found: ignore

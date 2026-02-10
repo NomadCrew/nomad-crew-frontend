@@ -28,7 +28,7 @@ async function removeChunks(key: string): Promise<void> {
     const count = parseInt(countRaw, 10);
     const deletions: Promise<void>[] = [];
 
-    if (!Number.isInteger(count) || count < 0) {
+    if (!Number.isInteger(count) || count <= 0) {
       logger.warn(
         'AUTH',
         `SecureStorage: invalid chunk count for key "${key}": ${countRaw}, falling back to scan`
@@ -74,7 +74,7 @@ export const secureStorage = {
       if (countRaw !== null) {
         // Value was chunked — reassemble
         const count = parseInt(countRaw, 10);
-        if (!Number.isInteger(count) || count < 0) {
+        if (!Number.isInteger(count) || count <= 0) {
           logger.warn('AUTH', `SecureStorage: invalid chunk count for key "${key}": ${countRaw}`);
           return null;
         }

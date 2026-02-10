@@ -70,8 +70,9 @@ export function useReactions({
         setError(errorMessage);
         logger.error('useReactions', 'Failed to fetch reactions:', err);
       } finally {
-        if (!isMountedRef.current) return;
-        setIsLoading(false);
+        if (isMountedRef.current) {
+          setIsLoading(false);
+        }
       }
     },
     [tripId, messageId]

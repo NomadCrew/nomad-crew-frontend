@@ -16,6 +16,7 @@ export interface Location {
   latitude: number;
   longitude: number;
   privacy_level: LocationPrivacyLevel;
+  is_sharing_enabled?: boolean;
   created_at: string;
   updated_at: string;
 }
