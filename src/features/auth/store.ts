@@ -30,6 +30,7 @@ import {
   updateContactEmail as updateContactEmailApi,
 } from '@/src/api/api-client';
 import { getSimulatorAuthState } from '@/src/utils/simulator-auth';
+import { resetAllStores } from '@/src/utils/store-reset';
 
 const ACCESS_TOKEN_KEY = 'supabase_access_token'; // Added constant
 
@@ -763,10 +764,7 @@ export const useAuthStore = create<AuthState>()(
             if (needsContactEmail) {
               logger.info(
                 'AUTH',
-                'Apple private relay email detected, contact email collection required',
-                {
-                  email: session.user.email,
-                }
+                'Apple private relay email detected, contact email collection required'
               );
             }
 
@@ -839,6 +837,10 @@ export const useAuthStore = create<AuthState>()(
           const { pushToken } = get(); // Get current push token before clearing state
           try {
             logger.debug('AUTH', 'Logging out user.');
+
+            // 0. Reset all other stores BEFORE clearing auth state
+            // so stores can still read auth state during their cleanup if needed
+            resetAllStores();
 
             // 1. Attempt to deregister push token from backend FIRST
             if (pushToken) {

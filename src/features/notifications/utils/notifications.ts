@@ -30,6 +30,14 @@ let pendingNotificationNavigation: string | null = null;
 function initializeNotificationsModule() {
   if (Device.isDevice) {
     Notifications = ExpoNotifications;
+    // Display push notifications when app is in foreground
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+      }),
+    });
     console.log('[NOTIFICATION] Module initialized for physical device');
   } else {
     console.log('[NOTIFICATION] Skipping module init - running on simulator/emulator');

@@ -6,6 +6,7 @@ import { API_PATHS } from '@/src/utils/api-paths';
 import { useAuthStore } from '@/src/features/auth/store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logger } from '@/src/utils/logger';
+import { registerStoreReset } from '@/src/utils/store-reset';
 import { MemberLocation, LocationState } from '../types';
 import { useTripStore } from '@/src/features/trips/store';
 
@@ -16,11 +17,11 @@ import { useTripStore } from '@/src/features/trips/store';
 function throttle<T extends (...args: any[]) => any>(
   func: T,
   delay: number
-): (...args: Parameters<T>) => void {
+): ((...args: Parameters<T>) => void) & { cancel: () => void } {
   let lastCall = 0;
   let timeoutId: NodeJS.Timeout | null = null;
 
-  return (...args: Parameters<T>) => {
+  const throttled = (...args: Parameters<T>) => {
     const now = Date.now();
     const timeSinceLastCall = now - lastCall;
 
@@ -39,6 +40,15 @@ function throttle<T extends (...args: any[]) => any>(
       }, delay - timeSinceLastCall);
     }
   };
+
+  throttled.cancel = () => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+  };
+
+  return throttled;
 }
 
 /**
@@ -285,7 +295,6 @@ export const useLocationStore = create<LocationState>()(
             logger.warn('LOCATION', 'API returned non-array for member locations:', {
               tripId,
               responseType: typeof locations,
-              response: locations,
             });
             // Set empty object for this trip to avoid stale data
             set((state) => ({
@@ -349,6 +358,28 @@ export const useLocationStore = create<LocationState>()(
         }));
       },
 
+      reset: () => {
+        // Stop location tracking and clean up GPS watchers
+        const { locationSubscription } = get();
+        if (locationSubscription) {
+          locationSubscription.remove();
+        }
+
+        // Cancel any pending throttled server updates to prevent
+        // stale API calls after logout
+        throttledServerUpdate.cancel();
+
+        set({
+          isLocationSharingEnabled: false,
+          currentLocation: null,
+          locationError: null,
+          isTrackingLocation: false,
+          activeTripId: null,
+          memberLocations: {},
+          locationSubscription: null,
+        });
+      },
+
       // Initialize store from AsyncStorage
       async init() {
         try {
@@ -366,6 +397,8 @@ export const useLocationStore = create<LocationState>()(
     { name: 'LocationStore' }
   )
 );
+
+registerStoreReset('LocationStore', () => useLocationStore.getState().reset());
 
 // Call init function to load initial state from AsyncStorage
 useLocationStore.getState().init?.();

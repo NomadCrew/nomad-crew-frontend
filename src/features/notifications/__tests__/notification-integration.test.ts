@@ -19,7 +19,7 @@ jest.mock('@/src/api/api-client', () => ({
 }));
 
 // Mock Supabase
-jest.mock('@/src/api/supabase', () => ({
+jest.mock('@/src/features/auth/service', () => ({
   supabase: {
     channel: jest.fn(() => ({
       on: jest.fn().mockReturnThis(),
@@ -27,6 +27,9 @@ jest.mock('@/src/api/supabase', () => ({
     })),
     removeChannel: jest.fn(),
   },
+  refreshSupabaseSession: jest.fn(),
+  registerPushTokenService: jest.fn(),
+  deregisterPushTokenService: jest.fn(),
 }));
 
 // Mock logger
