@@ -97,12 +97,12 @@ export const colorTokens = {
 export const createSemanticColors = (isDark: boolean) => ({
   // Interactive colors
   primary: {
-    main: isDark ? colorTokens.orange[400] : colorTokens.orange[700],
-    default: isDark ? colorTokens.orange[400] : colorTokens.orange[700],
+    main: isDark ? colorTokens.orange[400] : colorTokens.orange[500],
+    default: isDark ? colorTokens.orange[400] : colorTokens.orange[500],
     surface: isDark ? colorTokens.orange[900] : colorTokens.orange[50],
     border: isDark ? colorTokens.orange[700] : colorTokens.orange[300],
-    hover: isDark ? colorTokens.orange[300] : colorTokens.orange[800],
-    pressed: isDark ? colorTokens.orange[200] : colorTokens.orange[900],
+    hover: isDark ? colorTokens.orange[300] : colorTokens.orange[600],
+    pressed: isDark ? colorTokens.orange[200] : colorTokens.orange[700],
     disabled: isDark ? colorTokens.orange[800] : colorTokens.orange[200],
     text: isDark ? colorTokens.orange[50] : '#FFFFFF',
     onPrimary: '#FFFFFF',
@@ -112,7 +112,7 @@ export const createSemanticColors = (isDark: boolean) => ({
   content: {
     primary: isDark ? '#F8FAFC' : '#1A1A1A',
     secondary: isDark ? '#CBD5E1' : '#404040',
-    tertiary: isDark ? '#555555' : '#555555',
+    tertiary: isDark ? '#94A3B8' : '#6B7280',
     disabled: isDark ? '#475569' : '#D4D4D4',
     onSurface: isDark ? '#FFFFFF' : colorTokens.gray[900],
     onSurfaceVariant: isDark ? colorTokens.gray[300] : colorTokens.gray[700],
@@ -123,7 +123,7 @@ export const createSemanticColors = (isDark: boolean) => ({
   text: {
     primary: isDark ? '#F8FAFC' : '#1A1A1A',
     secondary: isDark ? '#CBD5E1' : '#404040',
-    tertiary: isDark ? '#555555' : '#555555',
+    tertiary: isDark ? '#94A3B8' : '#6B7280',
     disabled: isDark ? '#475569' : '#D4D4D4',
     onPrimary: '#FFFFFF', // Text color on primary color background
   },
@@ -131,7 +131,7 @@ export const createSemanticColors = (isDark: boolean) => ({
   // Surface colors
   surface: {
     default: isDark ? colorTokens.gray[900] : colorTokens.pastel.peachLight,
-    variant: isDark ? colorTokens.gray[800] : colorTokens.pastel.darkPeach,
+    variant: isDark ? colorTokens.gray[800] : '#F5E6DD',
   },
   status: {
     error: {
@@ -196,20 +196,20 @@ export const createSemanticColors = (isDark: boolean) => ({
   },
   outlined: {
     background: 'transparent',
-    text: isDark ? colorTokens.orange[400] : colorTokens.orange[700],
+    text: isDark ? colorTokens.orange[400] : colorTokens.orange[500],
     border: isDark ? colorTokens.orange[700] : colorTokens.orange[300],
   },
   // Alias for outlined (for backward compatibility)
   outline: {
     background: 'transparent',
-    text: isDark ? colorTokens.orange[400] : colorTokens.orange[700],
+    text: isDark ? colorTokens.orange[400] : colorTokens.orange[500],
     border: isDark ? colorTokens.orange[700] : colorTokens.orange[300],
   },
   // Top-level onPrimary for backward compatibility
   onPrimary: '#FFFFFF',
   border: {
-    default: isDark ? colorTokens.gray[700] : colorTokens.pastel.darkCoral,
-    strong: isDark ? colorTokens.gray[600] : colorTokens.pastel.darkCoral,
+    default: isDark ? colorTokens.gray[700] : '#E8DDD6',
+    strong: isDark ? colorTokens.gray[600] : '#C4B5AA',
   },
   background: {
     default: isDark ? colorTokens.gray[900] : colorTokens.pastel.lightPeach,
@@ -221,7 +221,7 @@ export const createSemanticColors = (isDark: boolean) => ({
   },
   chat: {
     userBubble: {
-      background: isDark ? '#BA3A02' : '#BA3A02',
+      background: isDark ? colorTokens.orange[700] : colorTokens.orange[500],
       text: '#FFFFFF',
       meta: isDark ? '#FFD0B5' : '#FFE8D7',
     },
@@ -229,7 +229,7 @@ export const createSemanticColors = (isDark: boolean) => ({
       background: isDark ? colorTokens.gray[700] : '#F3F4F6',
       text: isDark ? '#FFFFFF' : '#1F2937',
       meta: isDark ? colorTokens.gray[400] : '#4B5563',
-      sender: isDark ? colorTokens.orange[300] : '#BA3A02',
+      sender: isDark ? colorTokens.orange[300] : colorTokens.orange[500],
     },
     typing: {
       text: isDark ? colorTokens.gray[300] : '#4B5563',

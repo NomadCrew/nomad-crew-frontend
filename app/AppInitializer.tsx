@@ -5,8 +5,12 @@ import { useAuthStore } from '../src/features/auth/store';
 import { Text, View, ActivityIndicator } from 'react-native';
 import { logger } from '../src/utils/logger';
 import { useOnboarding } from '../src/providers/OnboardingProvider';
-import { configureNotifications } from '../src/features/notifications/utils/notifications';
+import {
+  configureNotifications,
+  getPendingNotificationNavigation,
+} from '../src/features/notifications/utils/notifications';
 import { setupPushNotifications } from '../src/features/notifications/services/pushNotificationService';
+import { router } from 'expo-router';
 
 // NOTE: SplashScreen.preventAutoHideAsync() is called in _layout.tsx at global scope
 // This is the correct pattern per Expo documentation
@@ -110,6 +114,21 @@ export default function AppInitializer({ children }: { children: React.ReactNode
 
     hideSplash();
   }, [fontsLoaded, authInitialized, onboardingInitialized]);
+
+  // Apply pending notification navigation after app is fully ready
+  useEffect(() => {
+    if (splashHidden && authInitialized && isAuthenticated) {
+      // Small delay to ensure navigation stack is ready
+      const timer = setTimeout(() => {
+        const pendingNav = getPendingNotificationNavigation();
+        if (pendingNav) {
+          logger.info('APP', 'Applying pending notification navigation', { path: pendingNav });
+          router.push(pendingNav as any);
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [splashHidden, authInitialized, isAuthenticated]);
 
   // Handle font loading error
   if (fontError) {

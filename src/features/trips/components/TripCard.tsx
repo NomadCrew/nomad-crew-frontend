@@ -125,7 +125,7 @@ export const TripCard: React.FC<TripCardProps> = ({
           <InfoRow icon={MapPin} text={trip.destination.address} lightText />
           <InfoRow icon={CalendarClock} text={timing} lightText />
           <InfoRow icon={Clock} text={duration} lightText />
-          <InfoRow icon={Users} text={`${participantCount} ${participantCount !== 1 ? 's' : ''}`} />
+          <InfoRow icon={Users} text={`${participantCount} member${participantCount !== 1 ? 's' : ''}`} lightText />
         </View>
       </View>
     </ImageBackground>
