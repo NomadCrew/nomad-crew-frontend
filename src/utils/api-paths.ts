@@ -31,11 +31,18 @@ export const API_PATHS = {
     ws: (id: string) => createApiPath(`trips/${id}/ws`),
     invite: (tripId: string) => createApiPath(`trips/${tripId}/invitations`),
     invitations: (tripId: string) => createApiPath(`trips/${tripId}/invitations`),
+    revokeInvitation: (tripId: string, invitationId: string) =>
+      createApiPath(`trips/${tripId}/invitations/${invitationId}`),
     acceptInvitation: createApiPath('trips/invitations/accept'),
     declineInvitation: createApiPath('trips/invitations/decline'),
     invitationDetails: createApiPath('trips/invitations/details'),
     messages: (tripId: string) => createApiPath(`trips/${tripId}/chat/messages`),
     messagesRead: (tripId: string) => createApiPath(`trips/${tripId}/chat/messages/read`),
+    members: (tripId: string) => createApiPath(`trips/${tripId}/members`),
+    memberRole: (tripId: string, memberId: string) =>
+      createApiPath(`trips/${tripId}/members/${memberId}/role`),
+    removeMember: (tripId: string, memberId: string) =>
+      createApiPath(`trips/${tripId}/members/${memberId}`),
   },
   todos: {
     create: (tripId: string) => createApiPath(`trips/${tripId}/todos`),
