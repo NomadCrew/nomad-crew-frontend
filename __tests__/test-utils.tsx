@@ -7,7 +7,6 @@ import { extendTheme } from './mocks/theme-compatibility';
 
 // Mock ThemeProvider to avoid loading delay
 jest.mock('../src/theme/ThemeProvider', () => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const React = require('react');
   const { createTheme } = require('../src/theme/create-theme');
   const { extendTheme } = require('./mocks/theme-compatibility');
@@ -29,6 +28,13 @@ jest.mock('../src/theme/ThemeProvider', () => {
       return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
     },
     useTheme: () => ({
+      theme,
+      mode: 'light',
+      setMode: jest.fn(),
+      toggleColorScheme: jest.fn(),
+      isThemeLoaded: true,
+    }),
+    useAppTheme: () => ({
       theme,
       mode: 'light',
       setMode: jest.fn(),

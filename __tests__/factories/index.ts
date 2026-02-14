@@ -11,3 +11,4 @@
 export * from './user.factory';
 export * from './trip.factory';
 export * from './invitation.factory';
+export * from './poll.factory';

@@ -299,6 +299,7 @@ export const isChatEvent = (event: ServerEvent): boolean => {
     'CHAT_REACTION_ADDED',
     'CHAT_REACTION_REMOVED',
     'CHAT_READ_RECEIPT',
+    'CHAT_TYPING_STATUS',
   ].includes(event.type);
 };
 

@@ -1,34 +1,31 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { StyleSheet, View, ActivityIndicator, Pressable } from 'react-native';
 import { Text, Surface, Button } from 'react-native-paper';
 import { FlashList, ListRenderItem } from '@shopify/flash-list';
 import { Plus } from 'lucide-react-native';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import type { Theme } from '@/src/theme/types';
-import { useTripAbility } from '@/src/features/auth/permissions';
-import { usePolls, useCastVote, useRemoveVote, useClosePoll, useDeletePoll } from '../hooks';
+import { usePolls } from '../hooks';
 import type { PollResponse } from '../types';
-import { PollCard } from './PollCard';
 
-interface PollListProps {
+interface PollListCompactProps {
   tripId: string;
+  onPollPress: (poll: PollResponse) => void;
   onCreatePress?: () => void;
 }
 
 const ITEMS_PER_PAGE = 20;
 
-export const PollList: React.FC<PollListProps> = ({ tripId, onCreatePress }) => {
+export const PollListCompact: React.FC<PollListCompactProps> = ({
+  tripId,
+  onPollPress,
+  onCreatePress,
+}) => {
   const { theme } = useAppTheme();
-  const styles = makeStyles(theme);
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const [offset, setOffset] = useState(0);
 
-  const { ability } = useTripAbility();
-
   const { data, isLoading, error, refetch } = usePolls(tripId, offset, ITEMS_PER_PAGE);
-  const castVote = useCastVote();
-  const removeVote = useRemoveVote();
-  const closePoll = useClosePoll();
-  const deletePoll = useDeletePoll();
 
   const polls = data?.data ?? [];
   const pagination = data?.pagination;
@@ -40,62 +37,36 @@ export const PollList: React.FC<PollListProps> = ({ tripId, onCreatePress }) => 
     }
   }, [isLoading, hasMore]);
 
-  const handleVote = useCallback(
-    (pollId: string, optionId: string) => {
-      castVote.mutate({ tripId, pollId, optionId });
-    },
-    [tripId, castVote]
-  );
-
-  const handleRemoveVote = useCallback(
-    (pollId: string, optionId: string) => {
-      removeVote.mutate({ tripId, pollId, optionId });
-    },
-    [tripId, removeVote]
-  );
-
-  const handleClose = useCallback(
-    (pollId: string) => {
-      closePoll.mutate({ tripId, pollId });
-    },
-    [tripId, closePoll]
-  );
-
-  const handleDelete = useCallback(
-    (pollId: string) => {
-      deletePoll.mutate({ tripId, pollId });
-    },
-    [tripId, deletePoll]
-  );
-
   const renderItem: ListRenderItem<PollResponse> = useCallback(
-    ({ item }) => {
-      // Check permissions for this specific poll
-      const canClose = ability.can('update', {
-        __typename: 'Poll' as const,
-        id: item.id,
-        tripId: item.tripId,
-        createdBy: item.createdBy,
-      });
-
-      const canDelete = ability.can('delete', {
-        __typename: 'Poll' as const,
-        id: item.id,
-        tripId: item.tripId,
-        createdBy: item.createdBy,
-      });
-
-      return (
-        <PollCard
-          poll={item}
-          onVote={handleVote}
-          onRemoveVote={handleRemoveVote}
-          onClose={canClose && item.status === 'ACTIVE' ? handleClose : undefined}
-          onDelete={canDelete ? handleDelete : undefined}
+    ({ item }) => (
+      <Pressable
+        onPress={() => onPollPress(item)}
+        style={({ pressed }) => [styles.row, { opacity: pressed ? 0.7 : 1 }]}
+        accessibilityRole="button"
+        accessibilityLabel={`${item.question}, ${item.status === 'ACTIVE' ? 'active' : 'closed'}, ${item.totalVotes} votes`}
+      >
+        <View
+          style={[
+            styles.statusDot,
+            {
+              backgroundColor:
+                item.status === 'ACTIVE'
+                  ? theme.colors.status.success.main
+                  : theme.colors.content.tertiary,
+            },
+          ]}
         />
-      );
-    },
-    [ability, handleVote, handleRemoveVote, handleClose, handleDelete]
+        <View style={styles.textContainer}>
+          <Text style={styles.question} numberOfLines={2}>
+            {item.question}
+          </Text>
+          <Text style={styles.voteCount}>
+            {item.totalVotes} {item.totalVotes === 1 ? 'vote' : 'votes'}
+          </Text>
+        </View>
+      </Pressable>
+    ),
+    [onPollPress, styles, theme]
   );
 
   // Loading state
@@ -114,7 +85,7 @@ export const PollList: React.FC<PollListProps> = ({ tripId, onCreatePress }) => 
     return (
       <View style={styles.container}>
         <Surface style={styles.centerContainer} pointerEvents="box-none">
-          <Text style={styles.errorText}>Oops, your polls got lost in transit. Try again?</Text>
+          <Text style={styles.emptyText}>Failed to load polls</Text>
           <Button mode="contained" onPress={() => refetch()}>
             Retry
           </Button>
@@ -129,10 +100,7 @@ export const PollList: React.FC<PollListProps> = ({ tripId, onCreatePress }) => 
     return (
       <View style={styles.container}>
         <Surface style={styles.centerContainer} pointerEvents="box-none">
-          <Text style={styles.emptyTitle}>No polls yet</Text>
-          <Text style={styles.emptyText}>
-            Democracy hasn't reached this trip yet.{'\n'}Be the first to stir the pot!
-          </Text>
+          <Text style={styles.emptyText}>No polls yet. Create your first one!</Text>
         </Surface>
         <CreateFab onPress={onCreatePress} theme={theme} />
       </View>
@@ -147,7 +115,7 @@ export const PollList: React.FC<PollListProps> = ({ tripId, onCreatePress }) => 
         keyExtractor={(item) => item.id}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
-        estimatedItemSize={250}
+        estimatedItemSize={48}
         contentContainerStyle={styles.listContent}
         ListFooterComponent={
           isLoading ? (
@@ -163,9 +131,9 @@ export const PollList: React.FC<PollListProps> = ({ tripId, onCreatePress }) => 
 // -- FAB sub-component --
 
 const CreateFab: React.FC<{ onPress?: () => void; theme: Theme }> = ({ onPress, theme }) => {
-  if (!onPress) return null;
+  const styles = useMemo(() => makeStyles(theme), [theme]);
 
-  const styles = makeStyles(theme);
+  if (!onPress) return null;
 
   return (
     <Pressable
@@ -203,31 +171,46 @@ const makeStyles = (theme: Theme) =>
       elevation: 0,
     },
     listContent: {
-      paddingHorizontal: 16,
-      paddingTop: 8,
-      paddingBottom: 80,
+      paddingHorizontal: 12,
+      paddingTop: 4,
+      paddingBottom: 72,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      paddingVertical: 10,
+      paddingHorizontal: 8,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.colors.border.default,
+      gap: 8,
+    },
+    statusDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      flexShrink: 0,
+      marginTop: 6,
+    },
+    textContainer: {
+      flex: 1,
+      gap: 2,
+    },
+    question: {
+      ...theme.typography.body.medium,
+      color: theme.colors.content.primary,
+    },
+    voteCount: {
+      ...theme.typography.caption,
+      color: theme.colors.content.tertiary,
     },
     loader: {
       padding: theme.spacing.inset.md,
-    },
-    errorText: {
-      ...theme.typography.body.medium,
-      color: theme.colors.content.secondary,
-      marginBottom: theme.spacing.stack.md,
-      textAlign: 'center',
-    },
-    emptyTitle: {
-      ...theme.typography.heading.h3,
-      color: theme.colors.content.primary,
-      marginBottom: theme.spacing.stack.xs,
-      textAlign: 'center',
     },
     emptyText: {
       ...theme.typography.body.medium,
       color: theme.colors.content.secondary,
       textAlign: 'center',
       marginBottom: theme.spacing.stack.md,
-      lineHeight: 22,
     },
     fab: {
       position: 'absolute',

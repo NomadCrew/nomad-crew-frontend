@@ -97,7 +97,17 @@ export class WebSocketManager {
         onMessage: (messageData: any) => {
           // Note: messageData is already parsed by WebSocketConnection.onmessage
           // Do NOT call JSON.parse again - it would fail with "Unexpected character: o"
-          const parsedData = messageData;
+          // Unwrap {type: "event", payload: {...}} envelope from backend
+          let parsedData = messageData;
+          if (
+            typeof parsedData === 'object' &&
+            parsedData !== null &&
+            parsedData.type === 'event' &&
+            typeof parsedData.payload === 'object' &&
+            parsedData.payload !== null
+          ) {
+            parsedData = parsedData.payload;
+          }
 
           // Attempt 1: Validate as a standardized Notification object
           const notificationResult = ZodNotificationSchema.safeParse(parsedData);

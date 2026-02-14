@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, ScrollView, useWindowDimensions, SafeAreaView, Text, ViewStyle } from 'react-native';
 import { Button } from 'react-native-paper';
 import { router } from 'expo-router';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { BentoGrid } from '@/components/ui/BentoGrid';
 import { TodoList } from '@/src/features/todos/components/TodoList';
-import { PollList } from '@/src/features/polls/components/PollList';
+import { PollListCompact } from '@/src/features/polls/components/PollListCompact';
+import { PollDetailSheet } from '@/src/features/polls/components/PollDetailSheet';
 import { PollCreator } from '@/src/features/polls/components/PollCreator';
+import type { PollResponse } from '@/src/features/polls/types';
 import { BentoCarousel } from '@/components/ui/BentoCarousel';
 import { Trip } from '@/src/features/trips/types';
 import { AddTodoModal } from '@/src/features/todos/components/AddTodoModal';
@@ -43,6 +45,8 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
   const [showMemberModal, setShowMemberModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [selectedPoll, setSelectedPoll] = useState<PollResponse | null>(null);
+  const [showPollDetail, setShowPollDetail] = useState(false);
   const authStore = useAuthStore();
   const { isLocationSharingEnabled, startLocationTracking, stopLocationTracking } =
     useLocationStore();
@@ -88,6 +92,11 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
 
   const containerWidth = Math.min(screenWidth, theme.breakpoints.desktop);
 
+  const handlePollPress = useCallback((poll: PollResponse) => {
+    setSelectedPoll(poll);
+    setShowPollDetail(true);
+  }, []);
+
   const carouselItems = [
     {
       id: 'todo-list',
@@ -99,10 +108,11 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
     },
     {
       id: 'poll-list',
-      component: PollList,
+      component: PollListCompact,
       props: {
         tripId: tripId,
         onCreatePress: () => setShowCreatePoll(true),
+        onPollPress: handlePollPress,
       },
     },
   ];
@@ -310,6 +320,13 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
         tripId={tripId}
         visible={showCreatePoll}
         onClose={() => setShowCreatePoll(false)}
+      />
+
+      <PollDetailSheet
+        tripId={tripId}
+        poll={selectedPoll}
+        visible={showPollDetail}
+        onClose={() => setShowPollDetail(false)}
       />
 
       <InviteModal

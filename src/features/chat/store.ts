@@ -154,9 +154,17 @@ export const useChatStore = create<ChatState>()(
           // Set up callbacks for WebSocket events
           const callbacks = {
             onMessage: (event: any) => {
-              // Only handle ServerEvent types, not Notification types
+              // Only handle chat events, not other ServerEvent types (polls, locations, etc.)
               if (event && typeof event === 'object' && 'type' in event && 'tripId' in event) {
-                get().handleChatEvent(event as ServerEvent);
+                const eventType = (event as ServerEvent).type;
+                if (
+                  eventType.startsWith('CHAT_') ||
+                  eventType === 'MESSAGE_SENT' ||
+                  eventType === 'TYPING_STATUS' ||
+                  eventType === 'MESSAGE_READ'
+                ) {
+                  get().handleChatEvent(event as ServerEvent);
+                }
               }
             },
             onError: (error: Error) => {
@@ -347,9 +355,17 @@ export const useChatStore = create<ChatState>()(
             // Try to connect to the WebSocket
             await wsManager.connect(tripId, {
               onMessage: (event: any) => {
-                // Only handle ServerEvent types
+                // Only handle chat events, not other ServerEvent types
                 if (event && typeof event === 'object' && 'type' in event && 'tripId' in event) {
-                  get().handleChatEvent(event as ServerEvent);
+                  const eventType = (event as ServerEvent).type;
+                  if (
+                    eventType.startsWith('CHAT_') ||
+                    eventType === 'MESSAGE_SENT' ||
+                    eventType === 'TYPING_STATUS' ||
+                    eventType === 'MESSAGE_READ'
+                  ) {
+                    get().handleChatEvent(event as ServerEvent);
+                  }
                 }
               },
             });

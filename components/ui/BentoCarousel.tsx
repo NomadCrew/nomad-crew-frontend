@@ -33,7 +33,7 @@ export const BentoCarousel = ({ items, width, height, onProgressChange }: BentoC
       const Component = item.component;
 
       return (
-        <Animated.View style={{ width, height }}>
+        <Animated.View style={{ width, height, overflow: 'hidden', borderRadius: 24 }}>
           <Component {...(item.props || {})} />
         </Animated.View>
       );

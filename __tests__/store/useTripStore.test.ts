@@ -497,39 +497,27 @@ describe('useTripStore', () => {
       useTripStore.setState({ trips: [tripWithMembers] });
     });
 
-    it('should complete without error (stub implementation)', async () => {
-      // Note: This is a stub - it doesn't actually call API or update state
-      await act(async () => {
-        await useTripStore.getState().removeMember('trip-123', 'user-456');
-      });
-
-      // The stub implementation doesn't update state, so members remain unchanged
-      const trip = useTripStore.getState().trips[0];
-      expect(trip.members).toHaveLength(2);
-      expect(useTripStore.getState().isDeleting).toBe(false);
-    });
-
-    it('should set loading to false after operation completes', async () => {
-      // Note: The stub operation completes synchronously, so we can't observe
-      // the intermediate loading=true state without adding artificial delays
-      await act(async () => {
-        await useTripStore.getState().removeMember('trip-123', 'user-456');
-      });
-
-      expect(useTripStore.getState().isDeleting).toBe(false);
-    });
-
-    it.skip('should call correct API endpoint (TODO: not implemented)', async () => {
-      // This test is skipped because the API call is not implemented yet
+    it('should remove the member and update state', async () => {
       (api.delete as jest.Mock).mockResolvedValue({});
 
       await act(async () => {
         await useTripStore.getState().removeMember('trip-123', 'user-456');
       });
 
-      expect(api.delete).toHaveBeenCalledWith(
-        expect.stringContaining('trips/trip-123/members/user-456')
-      );
+      const trip = useTripStore.getState().trips[0];
+      expect(trip.members).toHaveLength(1);
+      expect(trip.members![0].userId).toBe('user-123');
+      expect(useTripStore.getState().isDeleting).toBe(false);
+    });
+
+    it('should set loading to false after operation completes', async () => {
+      (api.delete as jest.Mock).mockResolvedValue({});
+
+      await act(async () => {
+        await useTripStore.getState().removeMember('trip-123', 'user-456');
+      });
+
+      expect(useTripStore.getState().isDeleting).toBe(false);
     });
   });
 
@@ -546,38 +534,27 @@ describe('useTripStore', () => {
       useTripStore.setState({ trips: [tripWithMembers] });
     });
 
-    it('should complete without error (stub implementation)', async () => {
-      // Note: This is a stub - it doesn't actually call API or update state
-      await act(async () => {
-        await useTripStore.getState().updateMemberRole('trip-123', 'user-456', 'admin');
-      });
-
-      // The stub implementation doesn't update state, so role remains unchanged
-      const trip = useTripStore.getState().trips[0];
-      const member = trip.members!.find((m) => m.userId === 'user-456');
-      expect(member!.role).toBe('member'); // Role unchanged due to stub
-      expect(useTripStore.getState().isUpdating).toBe(false);
-    });
-
-    it('should set loading to false after operation completes', async () => {
-      // Note: The stub operation completes synchronously, so we can't observe
-      // the intermediate loading=true state without adding artificial delays
-      await act(async () => {
-        await useTripStore.getState().updateMemberRole('trip-123', 'user-456', 'admin');
-      });
-
-      expect(useTripStore.getState().isUpdating).toBe(false);
-    });
-
-    it.skip('should send role to API (TODO: not implemented)', async () => {
-      // This test is skipped because the API call is not implemented yet
+    it('should update the member role in state', async () => {
       (api.patch as jest.Mock).mockResolvedValue({});
 
       await act(async () => {
         await useTripStore.getState().updateMemberRole('trip-123', 'user-456', 'admin');
       });
 
-      expect(api.patch).toHaveBeenCalled();
+      const trip = useTripStore.getState().trips[0];
+      const member = trip.members!.find((m) => m.userId === 'user-456');
+      expect(member!.role).toBe('admin');
+      expect(useTripStore.getState().isUpdating).toBe(false);
+    });
+
+    it('should set loading to false after operation completes', async () => {
+      (api.patch as jest.Mock).mockResolvedValue({});
+
+      await act(async () => {
+        await useTripStore.getState().updateMemberRole('trip-123', 'user-456', 'admin');
+      });
+
+      expect(useTripStore.getState().isUpdating).toBe(false);
     });
   });
 
