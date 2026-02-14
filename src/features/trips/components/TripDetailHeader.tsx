@@ -1,11 +1,5 @@
 import React from 'react';
-import {
-  View,
-  ImageBackground,
-  StyleSheet,
-  Pressable,
-  TextStyle,
-} from 'react-native';
+import { View, ImageBackground, StyleSheet, Pressable, TextStyle } from 'react-native';
 import { ArrowLeft, Bookmark } from 'lucide-react-native';
 import { format } from 'date-fns';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
@@ -23,7 +17,8 @@ interface TripHeaderProps {
   containerWidth?: number; // Added for consistency with TripDetailScreen import
 }
 
-export const TripDetailHeader = ({ // Renamed export
+export const TripDetailHeader = ({
+  // Renamed export
   trip,
   onBack,
   onBookmark,
@@ -35,69 +30,83 @@ export const TripDetailHeader = ({ // Renamed export
   const temperature = trip.weatherTemp ?? '6°C';
 
   return (
-    <ImageBackground
-      source={{ uri: trip.backgroundImageUrl }}
-      style={styles(theme).backgroundImage}
-      resizeMode="cover"
-    >
-      <View style={styles(theme).overlay} />
+    <View style={styles(theme).wrapper}>
+      <ImageBackground
+        source={{ uri: trip.backgroundImageUrl }}
+        style={styles(theme).backgroundImage}
+        resizeMode="cover"
+      >
+        <View style={styles(theme).overlay} />
 
-      <View style={styles(theme).container}>
-        <View style={styles(theme).topRow}>
-          <Pressable 
-            onPress={onBack} 
-            style={styles(theme).backButton}
-            android_ripple={{ color: 'rgba(255,255,255,0.2)', radius: 20 }}
-          >
-            <ArrowLeft size={24} color={theme.colors.content.onImage} />
-          </Pressable>
-
-          {onBookmark && (
-            <Pressable 
-              onPress={onBookmark} 
-              style={styles(theme).iconButton}
+        <View style={styles(theme).container}>
+          <View style={styles(theme).topRow}>
+            <Pressable
+              onPress={onBack}
+              style={styles(theme).backButton}
               android_ripple={{ color: 'rgba(255,255,255,0.2)', radius: 20 }}
             >
-              <Bookmark size={24} color={theme.colors.content.onImage} />
+              <ArrowLeft size={24} color={theme.colors.content.onImage} />
             </Pressable>
-          )}
-        </View>
 
-        <View style={styles(theme).infoContainer}>
-          <ThemedText variant="display.large" style={styles(theme).cityName}>
-            {trip.name}
-          </ThemedText>
+            {onBookmark && (
+              <Pressable
+                onPress={onBookmark}
+                style={styles(theme).iconButton}
+                android_ripple={{ color: 'rgba(255,255,255,0.2)', radius: 20 }}
+              >
+                <Bookmark size={24} color={theme.colors.content.onImage} />
+              </Pressable>
+            )}
+          </View>
 
-          <ThemedText
-            variant="body.medium"
-            style={styles(theme).dateText}
-          >
-            {startDateString} – {endDateString}
-          </ThemedText>
+          <View style={styles(theme).infoContainer}>
+            <ThemedText
+              variant="display.large"
+              style={styles(theme).cityName}
+              numberOfLines={2}
+              adjustsFontSizeToFit
+              minimumFontScale={0.6}
+            >
+              {trip.name}
+            </ThemedText>
 
-          <View style={styles(theme).statusAndWeatherContainer}>
-            <View style={styles(theme).statusContainer}>
-              <TripStatusBadge status={trip.status} size="medium" />
-            </View>
-            
-            <View style={styles(theme).weatherRow}>
-              <ThemedText variant="body.medium" style={styles(theme).tempText}>
-                {temperature}
-              </ThemedText>
-              <WeatherIcon condition={weatherCondition} fallback="clear" size={24} color={theme.colors.content.onImage} />
-            </View>
+            <ThemedText variant="body.medium" style={styles(theme).dateText}>
+              {startDateString} – {endDateString}
+            </ThemedText>
           </View>
         </View>
+      </ImageBackground>
+
+      {/* Status + weather row — overlaps hero bottom edge */}
+      <View style={styles(theme).statusAndWeatherContainer}>
+        <View style={styles(theme).statusContainer}>
+          <TripStatusBadge status={trip.status} size="medium" />
+        </View>
+
+        <View style={styles(theme).weatherRow}>
+          <ThemedText variant="body.medium" style={styles(theme).tempText}>
+            {temperature}
+          </ThemedText>
+          <WeatherIcon
+            condition={weatherCondition}
+            fallback="clear"
+            size={24}
+            color={theme.colors.content.onImage}
+          />
+        </View>
       </View>
-    </ImageBackground>
+    </View>
   );
 };
 
 const styles = (theme: Theme) =>
   StyleSheet.create({
+    wrapper: {
+      marginBottom: 20, // space for the overlapping pills below the hero
+    },
     backgroundImage: {
       width: '100%',
-      height: 270,
+      height: 250,
     },
     overlay: {
       ...StyleSheet.absoluteFillObject,
@@ -156,8 +165,11 @@ const styles = (theme: Theme) =>
     statusAndWeatherContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginTop: theme.spacing.stack.sm,
+      justifyContent: 'flex-end',
+      marginTop: -18,
+      marginRight: theme.spacing.inset.md,
       gap: theme.spacing.stack.sm,
+      zIndex: 1,
     },
     statusContainer: {
       backgroundColor: 'rgba(0,0,0,0.3)',
@@ -182,4 +194,4 @@ const styles = (theme: Theme) =>
       fontSize: 16,
       fontWeight: '500',
     } as TextStyle,
-  }); 
+  });
