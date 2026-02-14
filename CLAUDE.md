@@ -1,7 +1,6 @@
-# CLAUDE.md
+# CLAUDE.md — NomadCrew Frontend
 
-Guidance for Claude Code working in the NomadCrew frontend repository.
-For ambiguous requests, clarify assumptions before executing.
+Parent context: `../CLAUDE.md` (project-wide rules, cross-repo integration, agent patterns)
 
 ## Quick Reference — Commands
 
