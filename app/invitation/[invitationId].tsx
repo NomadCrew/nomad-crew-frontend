@@ -1,27 +1,29 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '@/src/features/auth/store';
 import { ThemedView } from '@/components/ThemedView';
-import { useTripStore } from '@/src/features/trips/store';
 import { tripApi } from '@/src/features/trips/api';
+import { api } from '@/src/api/api-client';
+import { API_PATHS } from '@/src/utils/api-paths';
 import { InvitationDetails, InvitationError } from '@/src/features/trips/types';
 import { InvitationPreview } from '@/src/features/trips/components/InvitationPreview';
 import { getErrorFromResponse } from '@/src/features/trips/utils/invitationErrors';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { logger } from '@/src/utils/logger';
 
+const PENDING_INVITATION_ID_KEY = '@pending_invitation_id';
+
 /**
- * Display and manage an invitation identified by the route token.
+ * Display and manage an invitation identified by its UUID.
  *
- * Fetches invitation details, validates the current user's access, and presents accept/decline flows.
- * If no user is signed in the token is stored for later and the user is redirected to login.
- * Errors are translated to user-facing messages with optional actions (navigate, retry, switch account).
- *
- * @returns A React element rendering the invitation screen
+ * Fetches invitation details via the ID-based endpoint, validates the current user's access,
+ * and presents accept/decline flows. If no user is signed in the invitationId is stored
+ * for later and the user is redirected to login.
  */
-export default function InvitationScreen() {
-  const { token } = useLocalSearchParams();
+export default function InvitationByIdScreen() {
+  const { invitationId } = useLocalSearchParams();
   const { user, signOut } = useAuthStore();
   const theme = useAppTheme().theme;
 
@@ -31,39 +33,36 @@ export default function InvitationScreen() {
   const [isAccepting, setIsAccepting] = useState(false);
   const [isDeclining, setIsDeclining] = useState(false);
 
-  // Extract fetch logic as a reusable callback for both initial load and retry
   const fetchInvitationDetails = useCallback(async () => {
-    // Clear previous state to prevent stale UI when token changes
     setInvitation(null);
     setError(null);
     setIsLoading(true);
 
     logger.debug(
       'INVITATION',
-      `Fetching with token: ${typeof token === 'string' ? token.substring(0, 15) + '...' : 'none'}`
+      `Fetching by ID: ${typeof invitationId === 'string' ? invitationId.substring(0, 8) + '...' : 'none'}`
     );
     logger.debug(
       'INVITATION',
       `Auth state: ${user ? 'Logged in as ' + user.email : 'Not logged in'}`
     );
 
-    if (!token || typeof token !== 'string') {
+    if (!invitationId || typeof invitationId !== 'string') {
       setError({
         title: 'Invalid Link',
-        message: 'No invitation token was provided. Please check the link and try again.',
+        message: 'No invitation ID was provided. Please check the link and try again.',
       });
       setIsLoading(false);
       return;
     }
 
-    // If user is not logged in, store token and redirect to login
+    // If user is not logged in, store invitationId and redirect to login
     if (!user) {
-      logger.debug('INVITATION', 'No user logged in, storing invitation for later');
+      logger.debug('INVITATION', 'No user logged in, storing invitation ID for later');
       try {
-        // Use store's persistInvitation to match checkPendingInvitations key format
-        await useTripStore.getState().persistInvitation(token);
+        await AsyncStorage.setItem(PENDING_INVITATION_ID_KEY, invitationId);
       } catch (storageError) {
-        logger.error('INVITATION', 'Failed to persist invitation via store:', storageError);
+        logger.error('INVITATION', 'Failed to persist invitation ID:', storageError);
         Alert.alert(
           'Storage Error',
           'Unable to save invitation. Please try the link again after logging in.'
@@ -74,8 +73,8 @@ export default function InvitationScreen() {
     }
 
     try {
-      logger.debug('INVITATION', 'Fetching invitation details...');
-      const details = await tripApi.getInvitationDetails(token);
+      logger.debug('INVITATION', 'Fetching invitation details by ID...');
+      const details = await tripApi.getInvitationById(invitationId);
       logger.debug('INVITATION', 'Invitation details received:', details);
 
       // Check if invitation is still pending
@@ -93,7 +92,7 @@ export default function InvitationScreen() {
         return;
       }
 
-      // Check email match (additional client-side validation)
+      // Check email match
       if (details.email && user.email && details.email.toLowerCase() !== user.email.toLowerCase()) {
         setError({
           title: 'Wrong Account',
@@ -105,30 +104,33 @@ export default function InvitationScreen() {
       }
 
       setInvitation(details);
+
+      // Clear the pending invitation ID now that it has been loaded successfully
+      AsyncStorage.removeItem(PENDING_INVITATION_ID_KEY).catch((e) =>
+        logger.error('INVITATION', 'Failed to clear pending invitation ID:', e)
+      );
     } catch (err) {
       logger.error('INVITATION', 'Error fetching invitation details:', err);
       setError(getErrorFromResponse(err));
     } finally {
       setIsLoading(false);
     }
-  }, [token, user]);
+  }, [invitationId, user]);
 
-  // Fetch invitation details on mount and when dependencies change
   useEffect(() => {
     fetchInvitationDetails();
   }, [fetchInvitationDetails]);
 
-  // Handle accept invitation
+  // Handle accept invitation (ID-based endpoint)
   const handleAccept = useCallback(async () => {
-    if (!token || typeof token !== 'string') return;
+    if (!invitationId || typeof invitationId !== 'string') return;
 
     setIsAccepting(true);
     try {
-      logger.debug('INVITATION', 'Accepting invitation...');
-      await useTripStore.getState().acceptInvitation(token);
+      logger.debug('INVITATION', 'Accepting invitation by ID...');
+      await api.post(API_PATHS.invitations.accept(invitationId));
       logger.debug('INVITATION', 'Invitation accepted successfully');
 
-      // Navigate to trips list
       router.replace('/(tabs)/trips');
     } catch (err) {
       logger.error('INVITATION', 'Error accepting invitation:', err);
@@ -136,19 +138,18 @@ export default function InvitationScreen() {
     } finally {
       setIsAccepting(false);
     }
-  }, [token]);
+  }, [invitationId]);
 
-  // Handle decline invitation
+  // Handle decline invitation (ID-based endpoint)
   const handleDecline = useCallback(async () => {
-    if (!token || typeof token !== 'string') return;
+    if (!invitationId || typeof invitationId !== 'string') return;
 
     setIsDeclining(true);
     try {
-      logger.debug('INVITATION', 'Declining invitation...');
-      await useTripStore.getState().declineInvitation(token);
+      logger.debug('INVITATION', 'Declining invitation by ID...');
+      await api.post(API_PATHS.invitations.decline(invitationId));
       logger.debug('INVITATION', 'Invitation declined successfully');
 
-      // Navigate to home
       router.replace('/(tabs)' as never);
     } catch (err) {
       logger.error('INVITATION', 'Error declining invitation:', err);
@@ -156,7 +157,7 @@ export default function InvitationScreen() {
     } finally {
       setIsDeclining(false);
     }
-  }, [token]);
+  }, [invitationId]);
 
   // Handle error action buttons
   const handleErrorAction = useCallback(() => {
@@ -178,13 +179,12 @@ export default function InvitationScreen() {
         }
         break;
       case 'retry':
-        // Reset error and directly re-fetch
         setError(null);
         setIsLoading(true);
         fetchInvitationDetails();
         break;
     }
-  }, [error, token, signOut, fetchInvitationDetails]);
+  }, [error, invitationId, signOut, fetchInvitationDetails]);
 
   // Show loading while checking auth or fetching
   if (isLoading && !invitation && !error) {

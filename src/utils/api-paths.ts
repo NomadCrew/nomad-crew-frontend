@@ -77,6 +77,7 @@ export const API_PATHS = {
   },
   // Invitation endpoints (ID-based, used by notification store)
   invitations: {
+    getById: (id: string) => createApiPath(`invitations/${id}`),
     accept: (id: string) => createApiPath(`invitations/${id}/accept`),
     decline: (id: string) => createApiPath(`invitations/${id}/decline`),
   },

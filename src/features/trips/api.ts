@@ -111,6 +111,14 @@ export const tripApi = {
   },
 
   /**
+   * Get invitation details by ID (UUID)
+   */
+  getInvitationById: async (id: string): Promise<InvitationDetails> => {
+    const response = await api.get<InvitationDetails>(API_PATHS.invitations.getById(id));
+    return response.data;
+  },
+
+  /**
    * Get invitation details by token (for preview before accepting)
    */
   getInvitationDetails: async (token: string): Promise<InvitationDetails> => {

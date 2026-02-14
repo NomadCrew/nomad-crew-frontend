@@ -117,6 +117,7 @@ export interface InvitationDetails {
   role: MemberRole;
   createdAt: string;
   expiresAt?: string;
+  memberCount?: number;
   trip?: {
     id: string;
     name: string;

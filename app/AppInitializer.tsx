@@ -8,10 +8,14 @@ import { useOnboarding } from '../src/providers/OnboardingProvider';
 import {
   configureNotifications,
   getPendingNotificationNavigation,
+  setAppInitialized,
 } from '../src/features/notifications/utils/notifications';
 import { setupPushNotifications } from '../src/features/notifications/services/pushNotificationService';
 import { router, useRootNavigationState } from 'expo-router';
 import { setupNotificationServiceListener } from '@/src/features/notifications/service';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const PENDING_INVITATION_ID_KEY = '@pending_invitation_id';
 
 // NOTE: SplashScreen.preventAutoHideAsync() is called in _layout.tsx at global scope
 // This is the correct pattern per Expo documentation
@@ -137,7 +141,25 @@ export default function AppInitializer({ children }: { children: React.ReactNode
       if (pendingNav) {
         logger.info('APP', 'Applying pending notification navigation', { path: pendingNav });
         router.push(pendingNav as any);
+      } else {
+        // Check AsyncStorage for a pending invitation ID (set when a notification
+        // tap occurred while the user was not logged in)
+        AsyncStorage.getItem(PENDING_INVITATION_ID_KEY)
+          .then((pendingInvitationId) => {
+            if (pendingInvitationId) {
+              logger.info('APP', 'Found pending invitation ID in storage', {
+                id: pendingInvitationId,
+              });
+              AsyncStorage.removeItem(PENDING_INVITATION_ID_KEY).catch(() => {});
+              router.push(`/invitation/${pendingInvitationId}` as any);
+            }
+          })
+          .catch((e) => {
+            logger.error('APP', 'Failed to check pending invitation ID:', e);
+          });
       }
+      // Mark app as initialized so warm-start notification taps can navigate directly
+      setAppInitialized();
     }
   }, [rootNavigationState?.key, splashHidden, authInitialized, isAuthenticated]);
 

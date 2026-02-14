@@ -19,12 +19,16 @@ import { jwtDecode } from 'jwt-decode';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import * as ExpoNotifications from 'expo-notifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Lazy-loaded Notifications module - only imported on physical devices
 let Notifications: typeof ExpoNotifications | null = null;
 
 // Pending navigation from notification tap (stored until app is ready)
 let pendingNotificationNavigation: string | null = null;
+
+// Tracks whether the app has fully initialized (AppInitializer has consumed pending nav)
+let appInitialized = false;
 
 // Initialize notifications module on physical devices
 function initializeNotificationsModule() {
@@ -62,6 +66,15 @@ export function getPendingNotificationNavigation(): string | null {
  */
 export function hasPendingNotificationNavigation(): boolean {
   return pendingNotificationNavigation !== null;
+}
+
+/**
+ * Mark the app as initialized. Call from AppInitializer after the first
+ * pending navigation check so that subsequent notification taps (warm start)
+ * can navigate directly instead of relying on the pending navigation mechanism.
+ */
+export function setAppInitialized(): void {
+  appInitialized = true;
 }
 
 // Define token interface
@@ -140,17 +153,31 @@ async function handleNotificationResponse(response: ExpoNotifications.Notificati
     console.log('[NOTIFICATION] User state:', { hasUser: !!user, userId: user?.id });
 
     if (user) {
-      console.log('[NOTIFICATION] User is logged in, storing pending navigation to notifications');
-      // For invitation notifications, navigate to notifications tab
-      // The user needs to accept/decline the invitation before viewing the trip
-      // (They won't have permission to view trip details until they're a member)
-      // Store the navigation intent - it will be applied after app initialization
-      pendingNotificationNavigation = '/(tabs)/notifications';
-      console.log('[NOTIFICATION] Pending navigation stored, will navigate after app ready');
+      const targetPath = invitationId ? `/invitation/${invitationId}` : '/(tabs)/notifications';
+      console.log(`[NOTIFICATION] User is logged in, target: ${targetPath}`);
+
+      if (appInitialized) {
+        // Warm start: app is already running, navigate directly
+        console.log('[NOTIFICATION] App already initialized, navigating directly');
+        router.push(targetPath as any);
+      } else {
+        // Cold start: store for AppInitializer to pick up
+        pendingNotificationNavigation = targetPath;
+        console.log('[NOTIFICATION] Pending navigation stored, will navigate after app ready');
+      }
     } else {
-      // Not logged in - redirect to login
-      console.log('[NOTIFICATION] User not logged in, redirecting to auth');
+      // Not logged in - store invitation intent and redirect to login
+      console.log(
+        '[NOTIFICATION] User not logged in, storing invitation ID and redirecting to auth'
+      );
       logger.debug('NOTIFICATION', 'User not logged in, redirecting to auth');
+      if (invitationId) {
+        try {
+          await AsyncStorage.setItem('@pending_invitation_id', invitationId);
+        } catch (e) {
+          logger.error('NOTIFICATION', 'Failed to store pending invitation ID:', e);
+        }
+      }
       router.replace('/(auth)/login');
     }
     return;
