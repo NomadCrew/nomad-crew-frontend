@@ -9,7 +9,10 @@ import { BentoCarousel } from '@/components/ui/BentoCarousel';
 import { Trip } from '@/src/features/trips/types';
 import { AddTodoModal } from '@/src/features/todos/components/AddTodoModal';
 import { InviteModal } from '@/src/features/trips/components/InviteModal';
+import { MemberManagementModal } from '@/src/features/trips/components/MemberManagementModal';
+import { TripStatusUpdateModal } from '@/src/features/trips/components/TripStatusUpdateModal';
 import { useTripStore } from '@/src/features/trips/store';
+import { useAuthStore } from '@/src/features/auth/store';
 import { useLocationStore } from '@/src/features/location/store/useLocationStore';
 import { TripDetailHeader } from '@/src/features/trips/components/TripDetailHeader';
 import { QuickActions } from '@/src/features/trips/components/QuickActions';
@@ -34,7 +37,10 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
   const { width: screenWidth } = useWindowDimensions();
   const [showAddTodo, setShowAddTodo] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showMemberModal, setShowMemberModal] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const authStore = useAuthStore();
   const { isLocationSharingEnabled, startLocationTracking, stopLocationTracking } =
     useLocationStore();
   const { connectToChat, fetchMessages } = useChatStore();
@@ -112,6 +118,8 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
           <QuickActions
             trip={trip}
             setShowInviteModal={setShowInviteModal}
+            setShowMemberModal={setShowMemberModal}
+            setShowStatusModal={setShowStatusModal}
             onWalletPress={() => router.push('/wallet' as any)}
             onLocationPress={() => router.push(`/location/${tripId}`)}
             onChatPress={() => {
@@ -123,7 +131,16 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
         position: 'right' as const,
       },
     ];
-  }, [carouselItems, trip, tripId, CARD_WIDTH, TALL_CARD_HEIGHT, setShowInviteModal]);
+  }, [
+    carouselItems,
+    trip,
+    tripId,
+    CARD_WIDTH,
+    TALL_CARD_HEIGHT,
+    setShowInviteModal,
+    setShowMemberModal,
+    setShowStatusModal,
+  ]);
 
   // Initialize chat store for compatibility with existing components
   useEffect(() => {
@@ -282,6 +299,82 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
         visible={showInviteModal}
         onClose={() => setShowInviteModal(false)}
         tripId={tripId}
+      />
+
+      <MemberManagementModal
+        visible={showMemberModal}
+        onClose={() => setShowMemberModal(false)}
+        trip={(() => {
+          const tripCopy = { ...trip };
+          if (!tripCopy.members) {
+            tripCopy.members = [];
+          }
+
+          const userId = authStore.user?.id;
+          const getUserDisplayName = (user: any): string => {
+            if (!user) return 'Trip Member';
+            if (user.firstName && user.lastName) return `${user.firstName} ${user.lastName}`;
+            if (user.firstName) return user.firstName;
+            if (user.lastName) return user.lastName;
+            if (user.username && user.username.trim() !== '') return user.username;
+            if (user.email) {
+              const emailName = user.email.split('@')[0];
+              const separator = emailName.includes('.') ? '.' : emailName.includes('_') ? '_' : '';
+              if (separator) {
+                return emailName
+                  .split(separator)
+                  .map((p: string) => p.charAt(0).toUpperCase() + p.slice(1))
+                  .join(' ');
+              }
+              return emailName.charAt(0).toUpperCase() + emailName.slice(1);
+            }
+            return 'Trip Member';
+          };
+
+          // Ensure creator is in members
+          if (!tripCopy.members.some((m) => m.userId === trip.createdBy)) {
+            const creatorName =
+              authStore.user && authStore.user.id === trip.createdBy
+                ? getUserDisplayName(authStore.user)
+                : undefined;
+            tripCopy.members.push({
+              userId: trip.createdBy,
+              name: creatorName,
+              role: 'owner',
+              joinedAt: trip.createdAt,
+            });
+          }
+
+          // Ensure current user is in members
+          if (userId && !tripCopy.members.some((m) => m.userId === userId)) {
+            tripCopy.members.push({
+              userId,
+              name: authStore.user ? getUserDisplayName(authStore.user) : undefined,
+              role: userId === trip.createdBy ? 'owner' : 'member',
+              joinedAt: new Date().toISOString(),
+            });
+          }
+
+          // Fill in missing names
+          if (!Array.isArray(tripCopy.members)) tripCopy.members = [];
+          tripCopy.members = tripCopy.members.map((member) => {
+            if (!member.name) {
+              if (member.userId === userId && authStore.user) {
+                return { ...member, name: getUserDisplayName(authStore.user) };
+              }
+              return { ...member, name: `Member ${member.userId.substring(0, 4)}` };
+            }
+            return member;
+          });
+
+          return tripCopy;
+        })()}
+      />
+
+      <TripStatusUpdateModal
+        visible={showStatusModal}
+        onClose={() => setShowStatusModal(false)}
+        trip={trip}
       />
     </SafeAreaView>
   );

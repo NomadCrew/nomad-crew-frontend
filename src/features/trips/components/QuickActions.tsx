@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { Surface } from 'react-native-paper';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
-import { useAuthStore } from '@/src/features/auth/store';
 import { Theme } from '@/src/theme/types';
 import { Trip } from '@/src/features/trips/types';
 import {
@@ -24,8 +23,6 @@ import {
   Activity,
   MessageSquare,
 } from 'lucide-react-native';
-import { MemberManagementModal } from './MemberManagementModal';
-import { TripStatusUpdateModal } from './TripStatusUpdateModal';
 import { useIsOwner, useIsAdminOrOwner, usePermission } from '@/src/features/auth/permissions';
 
 // Define a type for the icon props
@@ -37,6 +34,8 @@ type IconProps = {
 interface QuickActionsProps {
   trip?: Trip;
   setShowInviteModal?: (show: boolean) => void;
+  setShowMemberModal?: (show: boolean) => void;
+  setShowStatusModal?: (show: boolean) => void;
   onWalletPress?: () => void;
   onLocationPress?: () => void;
   onChatPress?: () => void;
@@ -45,15 +44,13 @@ interface QuickActionsProps {
 export const QuickActions: React.FC<QuickActionsProps> = ({
   trip,
   setShowInviteModal,
+  setShowMemberModal,
+  setShowStatusModal,
   onWalletPress,
   onLocationPress,
   onChatPress,
 }) => {
   const { theme } = useAppTheme();
-  const authStore = useAuthStore();
-  const userId = authStore.user?.id;
-  const [showMemberModal, setShowMemberModal] = useState(false);
-  const [showStatusModal, setShowStatusModal] = useState(false);
 
   // Use the permission system from context (set up by TripDetailScreen)
   // Prefixed with _ since they are imported but not directly used (used in usePermission calls)
@@ -62,39 +59,6 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   // Permission checks using CASL ability
   const canCreateInvitation = usePermission('create', 'Invitation');
   const canUpdateTrip = usePermission('update', 'Trip');
-
-  // Helper function to get the best available display name for a user
-  const getUserDisplayName = (user: any): string => {
-    if (!user) return 'Trip Member';
-
-    if (user.firstName && user.lastName) {
-      return `${user.firstName} ${user.lastName}`;
-    } else if (user.firstName) {
-      return user.firstName;
-    } else if (user.lastName) {
-      return user.lastName;
-    } else if (user.username && user.username.trim() !== '') {
-      return user.username;
-    } else if (user.email) {
-      // Extract name from email (e.g., john.doe@example.com -> John Doe)
-      const emailName = user.email.split('@')[0];
-      if (emailName.includes('.')) {
-        return emailName
-          .split('.')
-          .map((part: string) => part.charAt(0).toUpperCase() + part.slice(1))
-          .join(' ');
-      } else if (emailName.includes('_')) {
-        return emailName
-          .split('_')
-          .map((part: string) => part.charAt(0).toUpperCase() + part.slice(1))
-          .join(' ');
-      }
-      // Just capitalize the email name if no separator
-      return emailName.charAt(0).toUpperCase() + emailName.slice(1);
-    }
-    // Fallback to a generic name
-    return 'Trip Member';
-  };
 
   const actions = [
     {
@@ -116,14 +80,12 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
           },
         ]
       : []),
-    ...(trip
+    ...(trip && setShowMemberModal
       ? [
           {
             icon: (props: IconProps) => <Users {...props} />,
             label: 'Members',
-            onPress: () => {
-              setShowMemberModal(true);
-            },
+            onPress: () => setShowMemberModal(true),
           },
         ]
       : []),
@@ -136,7 +98,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
           },
         ]
       : []),
-    ...(canUpdateTrip
+    ...(canUpdateTrip && setShowStatusModal
       ? [
           {
             icon: (props: IconProps) => <Activity {...props} />,
@@ -242,92 +204,6 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
           )}
         </View>
       </Surface>
-
-      {trip && (
-        <>
-          <MemberManagementModal
-            visible={showMemberModal}
-            onClose={() => setShowMemberModal(false)}
-            trip={(() => {
-              // Create a copy of the trip to avoid modifying the original
-              const tripCopy = { ...trip };
-
-              // Ensure members array exists
-              if (!tripCopy.members) {
-                tripCopy.members = [];
-              }
-
-              // Ensure creator is in members array with owner role
-              const creatorExists = tripCopy.members.some(
-                (member) => member.userId === trip.createdBy
-              );
-              if (!creatorExists) {
-                const currentUser = authStore.user;
-                const creatorName =
-                  currentUser && currentUser.id === trip.createdBy
-                    ? getUserDisplayName(currentUser)
-                    : undefined;
-
-                tripCopy.members.push({
-                  userId: trip.createdBy,
-                  name: creatorName,
-                  role: 'owner',
-                  joinedAt: trip.createdAt,
-                });
-              }
-
-              // Ensure current user is in members array if they're not already
-              if (userId && !tripCopy.members.some((member) => member.userId === userId)) {
-                // Determine the role based on whether they're the creator
-                const role = userId === trip.createdBy ? 'owner' : 'member';
-                const currentUser = authStore.user;
-
-                tripCopy.members.push({
-                  userId: userId,
-                  name: currentUser ? getUserDisplayName(currentUser) : undefined,
-                  role: role,
-                  joinedAt: new Date().toISOString(),
-                });
-              }
-
-              // Make sure all members have names
-              if (!Array.isArray(tripCopy.members)) {
-                console.error(
-                  '[DEBUG] QuickActions: tripCopy.members is not an array:',
-                  tripCopy.members,
-                  tripCopy
-                );
-                tripCopy.members = [];
-              }
-              tripCopy.members = tripCopy.members.map((member) => {
-                if (!member.name) {
-                  // If member is current user, use their info
-                  if (member.userId === userId && authStore.user) {
-                    return {
-                      ...member,
-                      name: getUserDisplayName(authStore.user),
-                    };
-                  }
-                  // For other members without names, add a placeholder
-                  return {
-                    ...member,
-                    name: `Member ${member.userId.substring(0, 4)}`,
-                  };
-                }
-                return member;
-              });
-
-              return tripCopy;
-            })()}
-          />
-
-          <TripStatusUpdateModal
-            visible={showStatusModal}
-            onClose={() => setShowStatusModal(false)}
-            trip={trip}
-          />
-        </>
-      )}
     </>
   );
 };
