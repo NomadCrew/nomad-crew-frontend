@@ -12,6 +12,8 @@ import { InvitationPreview } from '@/src/features/trips/components/InvitationPre
 import { getErrorFromResponse } from '@/src/features/trips/utils/invitationErrors';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { logger } from '@/src/utils/logger';
+import { useQueryClient } from '@tanstack/react-query';
+import { tripKeys } from '@/src/features/trips/queries';
 
 const PENDING_INVITATION_ID_KEY = '@pending_invitation_id';
 
@@ -26,6 +28,7 @@ export default function InvitationByIdScreen() {
   const { invitationId } = useLocalSearchParams();
   const { user, signOut } = useAuthStore();
   const theme = useAppTheme().theme;
+  const queryClient = useQueryClient();
 
   const [invitation, setInvitation] = useState<InvitationDetails | null>(null);
   const [error, setError] = useState<InvitationError | null>(null);
@@ -131,6 +134,9 @@ export default function InvitationByIdScreen() {
       await api.post(API_PATHS.invitations.accept(invitationId));
       logger.debug('INVITATION', 'Invitation accepted successfully');
 
+      // Invalidate trips cache so the newly joined trip appears in the list
+      await queryClient.invalidateQueries({ queryKey: tripKeys.lists() });
+
       router.replace('/(tabs)/trips');
     } catch (err) {
       logger.error('INVITATION', 'Error accepting invitation:', err);
@@ -138,7 +144,7 @@ export default function InvitationByIdScreen() {
     } finally {
       setIsAccepting(false);
     }
-  }, [invitationId]);
+  }, [invitationId, queryClient]);
 
   // Handle decline invitation (ID-based endpoint)
   const handleDecline = useCallback(async () => {

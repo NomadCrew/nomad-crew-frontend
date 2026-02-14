@@ -10,6 +10,8 @@ import { InvitationPreview } from '@/src/features/trips/components/InvitationPre
 import { getErrorFromResponse } from '@/src/features/trips/utils/invitationErrors';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { logger } from '@/src/utils/logger';
+import { useQueryClient } from '@tanstack/react-query';
+import { tripKeys } from '@/src/features/trips/queries';
 
 /**
  * Display and manage an invitation identified by the route token.
@@ -24,6 +26,7 @@ export default function InvitationScreen() {
   const { token } = useLocalSearchParams();
   const { user, signOut } = useAuthStore();
   const theme = useAppTheme().theme;
+  const queryClient = useQueryClient();
 
   const [invitation, setInvitation] = useState<InvitationDetails | null>(null);
   const [error, setError] = useState<InvitationError | null>(null);
@@ -128,6 +131,9 @@ export default function InvitationScreen() {
       await useTripStore.getState().acceptInvitation(token);
       logger.debug('INVITATION', 'Invitation accepted successfully');
 
+      // Invalidate trips cache so the newly joined trip appears in the list
+      await queryClient.invalidateQueries({ queryKey: tripKeys.lists() });
+
       // Navigate to trips list
       router.replace('/(tabs)/trips');
     } catch (err) {
@@ -136,7 +142,7 @@ export default function InvitationScreen() {
     } finally {
       setIsAccepting(false);
     }
-  }, [token]);
+  }, [token, queryClient]);
 
   // Handle decline invitation
   const handleDecline = useCallback(async () => {
