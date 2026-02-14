@@ -8,10 +8,7 @@ export type WebSocketStatus = 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'ERR
 /**
  * Server event types for location updates
  */
-export const LocationEventTypes = [
-  'LOCATION_UPDATED',
-  'LOCATION_SHARING_CHANGED',
-] as const;
+export const LocationEventTypes = ['LOCATION_UPDATED', 'LOCATION_SHARING_CHANGED'] as const;
 
 /**
  * Server event types for chat functionality
@@ -34,11 +31,24 @@ export const ChatEventTypes = [
 ] as const;
 
 /**
+ * Server event types for poll functionality
+ */
+export const PollEventTypes = [
+  'POLL_CREATED',
+  'POLL_UPDATED',
+  'POLL_VOTE_CAST',
+  'POLL_VOTE_REMOVED',
+  'POLL_CLOSED',
+  'POLL_DELETED',
+] as const;
+
+/**
  * All server event types
  */
 export const ServerEventTypes = [
   ...LocationEventTypes,
   ...ChatEventTypes,
+  ...PollEventTypes,
   'TRIP_UPDATED',
   'TRIP_MEMBER_JOINED',
   'TRIP_MEMBER_LEFT',
@@ -49,6 +59,7 @@ export const ServerEventTypes = [
 export type ServerEventType = (typeof ServerEventTypes)[number];
 export type LocationEventType = (typeof LocationEventTypes)[number];
 export type ChatEventType = (typeof ChatEventTypes)[number];
+export type PollEventType = (typeof PollEventTypes)[number];
 
 /**
  * Base server event structure

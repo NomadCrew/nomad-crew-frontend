@@ -50,6 +50,16 @@ export const API_PATHS = {
     list: (tripId: string) => createApiPath(`trips/${tripId}/todos`),
     update: (tripId: string, todoID: string) => createApiPath(`trips/${tripId}/todos/${todoID}`),
   },
+  polls: {
+    create: (tripId: string) => createApiPath(`trips/${tripId}/polls`),
+    list: (tripId: string) => createApiPath(`trips/${tripId}/polls`),
+    byId: (tripId: string, pollId: string) => createApiPath(`trips/${tripId}/polls/${pollId}`),
+    vote: (tripId: string, pollId: string) => createApiPath(`trips/${tripId}/polls/${pollId}/vote`),
+    removeVote: (tripId: string, pollId: string, optionId: string) =>
+      createApiPath(`trips/${tripId}/polls/${pollId}/vote/${optionId}`),
+    close: (tripId: string, pollId: string) =>
+      createApiPath(`trips/${tripId}/polls/${pollId}/close`),
+  },
   // Add location endpoints
   location: {
     update: (tripId: string) => createApiPath(`trips/${tripId}/locations`),

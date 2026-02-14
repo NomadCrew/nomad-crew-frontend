@@ -38,6 +38,12 @@
  * | Expense     | update (others) | Yes   | Yes   | No     |
  * | Expense     | delete (own)    | Yes   | Yes   | Yes    |
  * | Expense     | delete (others) | Yes   | Yes   | No     |
+ * | Poll        | create          | Yes   | Yes   | Yes    |
+ * | Poll        | read            | Yes   | Yes   | Yes    |
+ * | Poll        | update (own)    | Yes   | Yes   | Yes    |
+ * | Poll        | update (others) | Yes   | Yes   | No     |
+ * | Poll        | delete (own)    | Yes   | Yes   | Yes    |
+ * | Poll        | delete (others) | Yes   | Yes   | No     |
  */
 
 import {
@@ -93,14 +99,16 @@ export function defineAbilityFor(context: TripContext | null): AppAbility {
   can('read', 'Chat');
   can('read', 'Location');
   can('read', 'Expense');
+  can('read', 'Poll');
 
   // All members can leave a trip
   can('leave', 'Member');
 
-  // All members can create todos, chat messages, and expenses
+  // All members can create todos, chat messages, expenses, and polls
   can('create', 'Todo');
   can('create', 'Chat');
   can('create', 'Expense');
+  can('create', 'Poll');
 
   // All members can manage their own resources
   can('update', 'Todo', { createdBy: userId });
@@ -111,6 +119,8 @@ export function defineAbilityFor(context: TripContext | null): AppAbility {
   can('update', 'Location', { userId: userId });
   can('update', 'Expense', { createdBy: userId });
   can('delete', 'Expense', { createdBy: userId });
+  can('update', 'Poll', { createdBy: userId });
+  can('delete', 'Poll', { createdBy: userId });
 
   // Admin-level permissions
   if (userRole === 'admin' || userRole === 'owner') {
@@ -135,6 +145,10 @@ export function defineAbilityFor(context: TripContext | null): AppAbility {
     // Can manage other users' expenses
     can('update', 'Expense');
     can('delete', 'Expense');
+
+    // Can manage other users' polls
+    can('update', 'Poll');
+    can('delete', 'Poll');
   }
 
   // Owner-only permissions

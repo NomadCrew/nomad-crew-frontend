@@ -16,6 +16,9 @@ import { useNotificationStore } from '../notifications/store/useNotificationStor
 import { ZodNotificationSchema, Notification } from '../notifications/types/notification';
 import { useTripStore } from '../trips/store';
 import { ZodError } from 'zod';
+import { isPollEvent } from '../../types/events';
+import { pollKeys } from '../polls/queries';
+import { queryClient } from '../../lib/query-client';
 
 interface ConnectionCallbacks {
   onMessage?: (event: Notification | ServerEvent) => void;
@@ -127,6 +130,11 @@ export class WebSocketManager {
 
             if (isChatEvent(eventData)) {
               this.handleChatEvent(eventData);
+              handled = true;
+            }
+
+            if (isPollEvent(eventData)) {
+              this.handlePollEvent(eventData, tripId);
               handled = true;
             }
 
@@ -482,6 +490,30 @@ export class WebSocketManager {
 
     // Forward the mapped event to the chat store
     useChatStore.getState().handleChatEvent(mappedEvent);
+  }
+
+  private handlePollEvent(event: ServerEvent, tripId: string): void {
+    const payload = event.payload as Record<string, unknown> | undefined;
+    const pollId = payload?.pollId as string | undefined;
+
+    logger.debug('WS', `Handling poll event: ${event.type}, pollId: ${pollId}`);
+
+    // Invalidate list for create/delete events
+    if (['POLL_CREATED', 'POLL_DELETED'].includes(event.type)) {
+      queryClient.invalidateQueries({ queryKey: pollKeys.lists() });
+    }
+
+    // Invalidate detail for all events if we have a pollId
+    if (pollId) {
+      queryClient.invalidateQueries({ queryKey: pollKeys.detail(pollId) });
+    }
+
+    // Also invalidate the list for vote events (summary vote counts change)
+    if (
+      ['POLL_VOTE_CAST', 'POLL_VOTE_REMOVED', 'POLL_CLOSED', 'POLL_UPDATED'].includes(event.type)
+    ) {
+      queryClient.invalidateQueries({ queryKey: pollKeys.lists() });
+    }
   }
 
   private async handleConnectionError(

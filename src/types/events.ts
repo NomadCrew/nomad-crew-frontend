@@ -32,18 +32,20 @@ export const ServerEventType = z.enum([
   // Additional event types used in code
   'MESSAGE_SENT',
   'TYPING_STATUS',
-  'MESSAGE_READ'
+  'MESSAGE_READ',
+  // Poll event types
+  'POLL_CREATED',
+  'POLL_UPDATED',
+  'POLL_VOTE_CAST',
+  'POLL_VOTE_REMOVED',
+  'POLL_CLOSED',
+  'POLL_DELETED',
 ]);
 
 export type ServerEventType = z.infer<typeof ServerEventType>;
 
 // Connection Status
-export const WebSocketStatus = z.enum([
-  'CONNECTING',
-  'CONNECTED',
-  'DISCONNECTED',
-  'ERROR'
-]);
+export const WebSocketStatus = z.enum(['CONNECTING', 'CONNECTED', 'DISCONNECTED', 'ERROR']);
 
 export type WebSocketStatus = z.infer<typeof WebSocketStatus>;
 
@@ -52,7 +54,7 @@ export const EventMetadataSchema = z.object({
   correlationID: z.string().optional(),
   causationID: z.string().optional(),
   source: z.string(),
-  tags: z.record(z.string()).optional()
+  tags: z.record(z.string()).optional(),
 });
 
 // Base event schema
@@ -67,9 +69,9 @@ export const BaseEventSchema = z.object({
     correlationId: z.string().optional(),
     causationId: z.string().optional(),
     source: z.string(),
-    tags: z.record(z.string()).optional()
+    tags: z.record(z.string()).optional(),
   }),
-  payload: z.unknown()
+  payload: z.unknown(),
 });
 
 export type ServerEvent = z.infer<typeof BaseEventSchema>;
@@ -79,8 +81,8 @@ export const EventSchemas = {
   connection_ack: BaseEventSchema.extend({
     type: z.literal('connection_ack'),
     payload: z.object({
-      sessionId: z.string()
-    })
+      sessionId: z.string(),
+    }),
   }),
 
   trip_updated: BaseEventSchema.extend({
@@ -92,8 +94,8 @@ export const EventSchemas = {
       startDate: z.string().datetime().optional(),
       endDate: z.string().datetime().optional(),
       location: z.string().optional(),
-      description: z.string().optional()
-    })
+      description: z.string().optional(),
+    }),
   }),
 
   weather_update: BaseEventSchema.extend({
@@ -107,11 +109,11 @@ export const EventSchemas = {
           timestamp: z.string().datetime(),
           temperature_2m: z.number(),
           weather_code: z.number(),
-          precipitation: z.number()
+          precipitation: z.number(),
         })
       ),
-      timestamp: z.string().datetime()
-    })
+      timestamp: z.string().datetime(),
+    }),
   }),
 
   todo: BaseEventSchema.extend({
@@ -123,8 +125,8 @@ export const EventSchemas = {
       createdAt: z.string().datetime(),
       completedAt: z.string().datetime().optional(),
       createdBy: z.string(),
-      assignedTo: z.string().optional()
-    })
+      assignedTo: z.string().optional(),
+    }),
   }),
 
   error: BaseEventSchema.extend({
@@ -132,8 +134,8 @@ export const EventSchemas = {
     payload: z.object({
       code: z.number(),
       message: z.string(),
-      details: z.record(z.unknown()).optional()
-    })
+      details: z.record(z.unknown()).optional(),
+    }),
   }),
 
   member: BaseEventSchema.extend({
@@ -144,8 +146,8 @@ export const EventSchemas = {
       role: z.string().optional(),
       previousRole: z.string().optional(),
       invitationToken: z.string().optional(),
-      expiresAt: z.string().datetime().optional()
-    })
+      expiresAt: z.string().datetime().optional(),
+    }),
   }),
 
   memberInvite: BaseEventSchema.extend({
@@ -153,8 +155,8 @@ export const EventSchemas = {
     payload: z.object({
       inviteeEmail: z.string().email(),
       invitationToken: z.string(),
-      expiresAt: z.string().datetime()
-    })
+      expiresAt: z.string().datetime(),
+    }),
   }),
 
   location: BaseEventSchema.extend({
@@ -166,10 +168,10 @@ export const EventSchemas = {
         latitude: z.number(),
         longitude: z.number(),
         accuracy: z.number().optional(),
-        timestamp: z.number()
+        timestamp: z.number(),
       }),
-      isSharingEnabled: z.boolean().optional()
-    })
+      isSharingEnabled: z.boolean().optional(),
+    }),
   }),
 
   // Chat event schemas
@@ -182,10 +184,10 @@ export const EventSchemas = {
       user: z.object({
         id: z.string(),
         name: z.string(),
-        avatar: z.string().optional()
+        avatar: z.string().optional(),
       }),
-      timestamp: z.string().datetime()
-    })
+      timestamp: z.string().datetime(),
+    }),
   }),
 
   chatReaction: BaseEventSchema.extend({
@@ -197,9 +199,9 @@ export const EventSchemas = {
       user: z.object({
         id: z.string(),
         name: z.string(),
-        avatar: z.string().optional()
-      })
-    })
+        avatar: z.string().optional(),
+      }),
+    }),
   }),
 
   chatReadReceipt: BaseEventSchema.extend({
@@ -210,9 +212,29 @@ export const EventSchemas = {
       user: z.object({
         id: z.string(),
         name: z.string(),
-        avatar: z.string().optional()
-      })
-    })
+        avatar: z.string().optional(),
+      }),
+    }),
+  }),
+
+  // Poll event schema
+  poll: BaseEventSchema.extend({
+    type: z.enum([
+      'POLL_CREATED',
+      'POLL_UPDATED',
+      'POLL_VOTE_CAST',
+      'POLL_VOTE_REMOVED',
+      'POLL_CLOSED',
+      'POLL_DELETED',
+    ]),
+    payload: z.object({
+      pollId: z.string(),
+      tripId: z.string(),
+      optionId: z.string().optional(),
+      userId: z.string().optional(),
+      question: z.string().optional(),
+      closedBy: z.string().optional(),
+    }),
   }),
 
   // Trip invite event schema
@@ -224,9 +246,9 @@ export const EventSchemas = {
       inviterName: z.string(),
       message: z.string().optional(),
       timestamp: z.string(),
-      status: z.string()
-    })
-  })
+      status: z.string(),
+    }),
+  }),
 };
 
 // Type guards
@@ -234,27 +256,37 @@ export const isServerEvent = (event: unknown): event is ServerEvent => {
   return BaseEventSchema.safeParse(event).success;
 };
 
-export const isTripEvent = (event: ServerEvent): event is z.infer<typeof EventSchemas.trip_updated> => {
+export const isTripEvent = (
+  event: ServerEvent
+): event is z.infer<typeof EventSchemas.trip_updated> => {
   return event.type === 'TRIP_UPDATED' && EventSchemas.trip_updated.safeParse(event).success;
 };
 
-export const isWeatherEvent = (event: ServerEvent): event is z.infer<typeof EventSchemas.weather_update> => {
+export const isWeatherEvent = (
+  event: ServerEvent
+): event is z.infer<typeof EventSchemas.weather_update> => {
   return event.type === 'WEATHER_UPDATED' && EventSchemas.weather_update.safeParse(event).success;
 };
 
 export const isTodoEvent = (event: ServerEvent): event is z.infer<typeof EventSchemas.todo> => {
-  return ['TODO_CREATED', 'TODO_UPDATED', 'TODO_DELETED'].includes(event.type) && 
-    EventSchemas.todo.safeParse(event).success;
+  return (
+    ['TODO_CREATED', 'TODO_UPDATED', 'TODO_DELETED'].includes(event.type) &&
+    EventSchemas.todo.safeParse(event).success
+  );
 };
 
-export const isMemberInviteEvent = (event: ServerEvent): event is z.infer<typeof EventSchemas.memberInvite> =>
+export const isMemberInviteEvent = (
+  event: ServerEvent
+): event is z.infer<typeof EventSchemas.memberInvite> =>
   EventSchemas.memberInvite.safeParse(event).success;
 
 export const isMemberEvent = (event: ServerEvent): event is z.infer<typeof EventSchemas.member> =>
   ['MEMBER_ADDED', 'MEMBER_ROLE_UPDATED', 'MEMBER_REMOVED'].includes(event.type) &&
   EventSchemas.member.safeParse(event).success;
 
-export const isLocationEvent = (event: ServerEvent): event is z.infer<typeof EventSchemas.location> =>
+export const isLocationEvent = (
+  event: ServerEvent
+): event is z.infer<typeof EventSchemas.location> =>
   ['LOCATION_UPDATED', 'LOCATION_SHARING_CHANGED'].includes(event.type) &&
   EventSchemas.location.safeParse(event).success;
 
@@ -266,10 +298,23 @@ export const isChatEvent = (event: ServerEvent): boolean => {
     'CHAT_MESSAGE_DELETED',
     'CHAT_REACTION_ADDED',
     'CHAT_REACTION_REMOVED',
-    'CHAT_READ_RECEIPT'
+    'CHAT_READ_RECEIPT',
   ].includes(event.type);
 };
 
-export const isTripInviteEvent = (event: ServerEvent): event is z.infer<typeof EventSchemas.tripInvite> => {
+export const isPollEvent = (event: ServerEvent): boolean => {
+  return [
+    'POLL_CREATED',
+    'POLL_UPDATED',
+    'POLL_VOTE_CAST',
+    'POLL_VOTE_REMOVED',
+    'POLL_CLOSED',
+    'POLL_DELETED',
+  ].includes(event.type);
+};
+
+export const isTripInviteEvent = (
+  event: ServerEvent
+): event is z.infer<typeof EventSchemas.tripInvite> => {
   return event.type === 'TRIP_INVITE' && EventSchemas.tripInvite.safeParse(event).success;
-}
+};

@@ -5,6 +5,8 @@ import { router } from 'expo-router';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { BentoGrid } from '@/components/ui/BentoGrid';
 import { TodoList } from '@/src/features/todos/components/TodoList';
+import { PollList } from '@/src/features/polls/components/PollList';
+import { PollCreator } from '@/src/features/polls/components/PollCreator';
 import { BentoCarousel } from '@/components/ui/BentoCarousel';
 import { Trip } from '@/src/features/trips/types';
 import { AddTodoModal } from '@/src/features/todos/components/AddTodoModal';
@@ -36,6 +38,7 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
   const { theme } = useAppTheme();
   const { width: screenWidth } = useWindowDimensions();
   const [showAddTodo, setShowAddTodo] = useState(false);
+  const [showCreatePoll, setShowCreatePoll] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showMemberModal, setShowMemberModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
@@ -92,6 +95,14 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
       props: {
         tripId: tripId,
         onAddTodoPress: () => setShowAddTodo(true),
+      },
+    },
+    {
+      id: 'poll-list',
+      component: PollList,
+      props: {
+        tripId: tripId,
+        onCreatePress: () => setShowCreatePoll(true),
       },
     },
   ];
@@ -294,6 +305,12 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
       </ScrollView>
 
       <AddTodoModal visible={showAddTodo} onClose={() => setShowAddTodo(false)} tripId={tripId} />
+
+      <PollCreator
+        tripId={tripId}
+        visible={showCreatePoll}
+        onClose={() => setShowCreatePoll(false)}
+      />
 
       <InviteModal
         visible={showInviteModal}

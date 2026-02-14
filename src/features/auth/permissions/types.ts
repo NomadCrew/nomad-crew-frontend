@@ -27,6 +27,7 @@ export type Resource =
   | 'Todo'
   | 'Expense'
   | 'Location'
+  | 'Poll'
   | 'all'; // 'all' is a CASL wildcard for all resources
 
 // Member roles matching backend types/membership.go
@@ -88,6 +89,13 @@ export interface LocationSubject {
   userId: string;
 }
 
+export interface PollSubject {
+  __typename: 'Poll';
+  id: string;
+  tripId: string;
+  createdBy: string;
+}
+
 // Union of all subjects for CASL type inference
 export type AppSubjects =
   | TripSubject
@@ -97,6 +105,7 @@ export type AppSubjects =
   | ChatSubject
   | ExpenseSubject
   | LocationSubject
+  | PollSubject
   | Resource;
 
 // User context for ability definition
