@@ -7,6 +7,7 @@ import {
   TripStatus,
   UpdateTripStatusRequest,
   InvitationDetails,
+  TripMemberResponse,
 } from './types';
 import { normalizeTrip } from './adapters/normalizeTrip';
 import { useAuthStore } from '@/src/features/auth/store';
@@ -119,26 +120,30 @@ export const tripApi = {
     return response.data;
   },
 
-  // Member operations (TODO: implement when backend endpoints are ready)
+  /**
+   * Get all members of a trip
+   */
+  getMembers: async (tripId: string): Promise<TripMemberResponse[]> => {
+    const response = await api.get<TripMemberResponse[]>(API_PATHS.trips.members(tripId));
+    return response.data;
+  },
+
+  // Member operations
   revokeInvitation: async (tripId: string, invitationId: string): Promise<void> => {
-    // TODO: Add revoke invitation endpoint to API_PATHS.trips if available
-    // await api.delete(API_PATHS.trips.revokeInvitation(tripId, invitationId));
-    throw new Error('Not implemented');
+    await api.delete(API_PATHS.trips.revokeInvitation(tripId, invitationId));
   },
 
-  updateMemberRole: async (
-    tripId: string,
-    userId: string,
-    role: 'owner' | 'admin' | 'member'
-  ): Promise<void> => {
-    // TODO: Add update member role endpoint to API_PATHS.trips if available
-    // await api.patch(API_PATHS.trips.updateMemberRole(tripId, userId), { role });
-    throw new Error('Not implemented');
+  /**
+   * Update a member's role in a trip
+   */
+  updateMemberRole: async (tripId: string, userId: string, role: string): Promise<void> => {
+    await api.put(API_PATHS.trips.memberRole(tripId, userId), { role: role.toUpperCase() });
   },
 
+  /**
+   * Remove a member from a trip
+   */
   removeMember: async (tripId: string, userId: string): Promise<void> => {
-    // TODO: Add remove member endpoint to API_PATHS.trips if available
-    // await api.delete(API_PATHS.trips.removeMember(tripId, userId));
-    throw new Error('Not implemented');
+    await api.delete(API_PATHS.trips.removeMember(tripId, userId));
   },
 };

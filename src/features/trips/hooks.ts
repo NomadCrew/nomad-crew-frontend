@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
 import { tripApi } from './api';
 import { tripKeys } from './queries';
-import { Trip, CreateTripInput, UpdateTripInput, TripStatus } from './types';
+import { Trip, CreateTripInput, UpdateTripInput, TripStatus, TripMemberResponse } from './types';
 import { logger } from '@/src/utils/logger';
 
 /**
@@ -248,6 +248,63 @@ export const useInviteMember = () => {
     },
     onError: (error) => {
       logger.error('TRIP', 'Failed to invite member:', error);
+    },
+  });
+};
+
+/**
+ * Fetch trip members
+ *
+ * @param tripId - Trip ID
+ *
+ * @example
+ * const { data: members, isLoading } = useTripMembers(tripId);
+ */
+export const useTripMembers = (tripId: string) => {
+  return useQuery({
+    queryKey: tripKeys.members(tripId),
+    queryFn: () => tripApi.getMembers(tripId),
+    enabled: !!tripId,
+    staleTime: 1000 * 60 * 2, // Consider data fresh for 2 minutes
+  });
+};
+
+/**
+ * Update a member's role in a trip
+ *
+ * @example
+ * const updateRole = useUpdateMemberRole();
+ * updateRole.mutate({ tripId, userId, role: 'admin' });
+ */
+export const useUpdateMemberRole = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ tripId, userId, role }: { tripId: string; userId: string; role: string }) =>
+      tripApi.updateMemberRole(tripId, userId, role),
+    onSuccess: (_, { tripId }) => {
+      queryClient.invalidateQueries({ queryKey: tripKeys.members(tripId) });
+      queryClient.invalidateQueries({ queryKey: tripKeys.detail(tripId) });
+    },
+  });
+};
+
+/**
+ * Remove a member from a trip
+ *
+ * @example
+ * const removeMember = useRemoveMember();
+ * removeMember.mutate({ tripId, userId });
+ */
+export const useRemoveMember = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ tripId, userId }: { tripId: string; userId: string }) =>
+      tripApi.removeMember(tripId, userId),
+    onSuccess: (_, { tripId }) => {
+      queryClient.invalidateQueries({ queryKey: tripKeys.members(tripId) });
+      queryClient.invalidateQueries({ queryKey: tripKeys.detail(tripId) });
     },
   });
 };

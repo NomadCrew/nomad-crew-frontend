@@ -139,3 +139,88 @@ export interface InvitationError {
   action?: 'go_to_trips' | 'switch_account' | 'view_trip' | 'retry';
   tripId?: string;
 }
+
+export interface TripMemberResponse {
+  membership: {
+    id: string;
+    tripId: string;
+    userId: string;
+    role: MemberRole;
+    status: 'ACTIVE' | 'INACTIVE';
+    createdAt: string;
+    updatedAt: string;
+  };
+  user: {
+    id: string;
+    email: string;
+    username: string;
+    firstName?: string;
+    lastName?: string;
+    avatarUrl?: string;
+    displayName?: string;
+  };
+}
+
+// Chat & Realtime types
+// Re-export Supabase's actual Realtime payload type for type-safe postgres_changes callbacks
+export type { RealtimePostgresChangesPayload as SupabaseRealtimePayload } from '@supabase/realtime-js';
+
+export interface ChatMessage {
+  id: string;
+  trip_id: string;
+  content: string;
+  sender: {
+    id: string;
+    name: string;
+    avatar?: string;
+  };
+  created_at: string;
+  updated_at?: string;
+  reply_to_id?: string;
+}
+
+export interface ChatMessagePaginatedResponse {
+  messages: ChatMessage[];
+  pagination: {
+    has_more: boolean;
+    next_cursor?: string;
+  };
+}
+
+export interface SendMessageRequest {
+  message: string;
+  replyToId?: string;
+}
+
+export interface UserPresence {
+  user_id: string;
+  trip_id: string;
+  is_online: boolean;
+  is_typing: boolean;
+  last_seen?: string;
+}
+
+export interface ChatReaction {
+  id: string;
+  message_id: string;
+  trip_id: string;
+  user_id: string;
+  emoji: string;
+  created_at: string;
+}
+
+export interface AddReactionRequest {
+  emoji: string;
+}
+
+export interface ChatReadReceipt {
+  id: string;
+  trip_id: string;
+  user_id: string;
+  message_id: string;
+  read_at: string;
+}
+
+export interface UpdateLastReadRequest {
+  last_message_id: string;
+}

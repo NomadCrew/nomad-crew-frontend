@@ -10,6 +10,7 @@ import {
   UpdateTripStatusResponse,
   WeatherForecast,
 } from './types';
+import { tripApi } from './api';
 import { API_PATHS } from '@/src/utils/api-paths';
 import { registerStoreReset } from '@/src/utils/store-reset';
 import { ServerEvent, isTripEvent, isWeatherEvent, isMemberEvent } from '@/src/types/events';
@@ -223,9 +224,20 @@ export const useTripStore = create<TripState>()(
       ) => {
         set({ isUpdating: true, error: null });
         try {
-          // TODO: Add update member role endpoint to API_PATHS.trips if available
-          // await api.patch(API_PATHS.trips.updateMemberRole(tripId, userId), { role });
-          set({ isUpdating: false });
+          await tripApi.updateMemberRole(tripId, userId, role);
+          // Optimistically update local state
+          set((state) => ({
+            trips: state.trips.map((trip) => {
+              if (trip.id !== tripId) return trip;
+              return {
+                ...trip,
+                members: (trip.members || []).map((m) =>
+                  m.userId === userId ? { ...m, role } : m
+                ),
+              };
+            }),
+            isUpdating: false,
+          }));
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to update member role';
           set({ error: message, isUpdating: false });
@@ -236,9 +248,18 @@ export const useTripStore = create<TripState>()(
       removeMember: async (tripId: string, userId: string) => {
         set({ isDeleting: true, error: null });
         try {
-          // TODO: Add remove member endpoint to API_PATHS.trips if available
-          // await api.delete(API_PATHS.trips.removeMember(tripId, userId));
-          set({ isDeleting: false });
+          await tripApi.removeMember(tripId, userId);
+          // Optimistically update local state
+          set((state) => ({
+            trips: state.trips.map((trip) => {
+              if (trip.id !== tripId) return trip;
+              return {
+                ...trip,
+                members: (trip.members || []).filter((m) => m.userId !== userId),
+              };
+            }),
+            isDeleting: false,
+          }));
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to remove member';
           set({ error: message, isDeleting: false });

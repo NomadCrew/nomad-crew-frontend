@@ -130,7 +130,7 @@ export const TripStatusUpdateModal: React.FC<TripStatusUpdateModalProps> = ({
             </Pressable>
           </View>
 
-          <Text style={styles.modalSubtitle}>
+          <Text style={styles(theme).modalSubtitle}>
             Current status: <TripStatusBadge status={trip.status} />
           </Text>
 
@@ -144,7 +144,7 @@ export const TripStatusUpdateModal: React.FC<TripStatusUpdateModalProps> = ({
             </Text>
           </View>
 
-          <View style={styles.statusOptionsContainer}>
+          <View style={styles(theme).statusOptionsContainer}>
             {statusOptions.map((status) => {
               const isValid = status === trip.status || isValidTransition(trip.status, status);
               const message = !isValid ? getTransitionMessage(trip.status, status) : '';
@@ -171,7 +171,7 @@ export const TripStatusUpdateModal: React.FC<TripStatusUpdateModalProps> = ({
                       {getStatusDescription(status)}
                     </Text>
                     {!isValid && message ? (
-                      <Text style={styles.invalidReasonText}>{message}</Text>
+                      <Text style={styles(theme).invalidReasonText}>{message}</Text>
                     ) : null}
                   </View>
                 </Pressable>
