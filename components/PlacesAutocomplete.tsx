@@ -1,19 +1,9 @@
-import React, { useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  Platform,
-  Text,
-  TextInput,
-  FlatList,
-  TouchableOpacity,
-} from 'react-native';
+import React, { useState, useCallback, useRef } from 'react';
+import { View, StyleSheet } from 'react-native';
+import { AutocompleteDropdown, AutocompleteDropdownItem } from 'react-native-autocomplete-dropdown';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
+import { Theme } from '@/src/theme/types';
 import type { PlaceDetailsWithFullText } from '@/src/types/places';
-
-// Note: GooglePlacesAutocomplete and AutocompleteRow are not used in this implementation.
-// This component uses a custom implementation that directly calls the Google Places API
-// for better control over the autocomplete behavior and styling.
 
 interface PlacesAutocompleteProps {
   onPlaceSelected: (details: PlaceDetailsWithFullText) => void;
@@ -22,16 +12,19 @@ interface PlacesAutocompleteProps {
   country?: string | string[];
 }
 
+interface PlacePrediction {
+  place_id: string;
+  description: string;
+  structured_formatting?: {
+    main_text: string;
+    secondary_text: string;
+  };
+}
+
 /**
- * An embeddable Google Places autocomplete input that fetches suggestions and place details directly from the Places API.
- *
- * Renders a text input that queries the Places Autocomplete API as the user types, displays selectable predictions, and invokes `onPlaceSelected` with detailed place information when an item is chosen.
- *
- * @param onPlaceSelected - Callback invoked with full place details (`PlaceDetailsWithFullText`) after a prediction is selected.
- * @param placeholder - Placeholder text for the input (defaults to 'Search...').
- * @param initialValue - Initial input value (defaults to an empty string).
- * @param country - Optional country code or list of country codes to restrict autocomplete results.
- * @returns The autocomplete React component UI for searching and selecting places.
+ * Google Places autocomplete using react-native-autocomplete-dropdown.
+ * Must be rendered inside an AutocompleteDropdownContextProvider to avoid
+ * VirtualizedList nesting conflicts with parent ScrollViews.
  */
 export default function CustomPlacesAutocomplete({
   onPlaceSelected,
@@ -40,233 +33,183 @@ export default function CustomPlacesAutocomplete({
   country,
 }: PlacesAutocompleteProps) {
   const { theme } = useAppTheme();
-  const [query, setQuery] = useState(initialValue);
-  const [predictions, setPredictions] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState<AutocompleteDropdownItem[]>([]);
+  const predictionsRef = useRef<PlacePrediction[]>([]);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const dropdownController = useRef<any>(null);
 
-  // Use the Places-specific API key for REST API calls.
-  // Platform-restricted keys (Android/iOS) only work with native SDKs, not HTTP requests.
   const apiKey = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
 
-  // Function to search places
-  const searchPlaces = async (text: string) => {
-    if (!apiKey || text.length < 2) {
-      setPredictions([]);
-      return;
-    }
+  const searchPlaces = useCallback(
+    async (text: string) => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
 
-    try {
-      setIsLoading(true);
+      if (!apiKey || text.length < 2) {
+        setSuggestions([]);
+        predictionsRef.current = [];
+        return;
+      }
 
-      // Handle country parameter: support both string and string[] types
-      const componentsParam = !country
-        ? ''
-        : Array.isArray(country)
-          ? `&components=${country.map((c) => `country:${c}`).join('|')}`
-          : `&components=country:${country}`;
+      searchTimeoutRef.current = setTimeout(async () => {
+        setLoading(true);
+        try {
+          const componentsParam = !country
+            ? ''
+            : Array.isArray(country)
+              ? `&components=${country.map((c) => `country:${c}`).join('|')}`
+              : `&components=country:${country}`;
 
-      // Create the direct API URL for autocomplete
-      const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${apiKey}&language=en&types=geocode|establishment${componentsParam}`;
+          const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${apiKey}&language=en&types=geocode|establishment${componentsParam}`;
 
-      const response = await fetch(url);
-      const data = await response.json();
+          const response = await fetch(url);
+          const data = await response.json();
 
-      if (data.status === 'OK') {
-        if (__DEV__) {
-          console.log(`[Places API Debug] Found ${data.predictions.length} predictions`);
-          data.predictions.forEach((prediction: any, idx: number) => {
-            console.log(`[Places API Debug] Prediction #${idx + 1}:`, {
-              description: prediction.description,
-              place_id: prediction.place_id,
-              main_text: prediction.structured_formatting?.main_text,
-              secondary_text: prediction.structured_formatting?.secondary_text,
-            });
-          });
-        }
-        setPredictions(data.predictions);
-      } else {
-        if (__DEV__) {
-          console.warn(`[Places API Debug] API status: ${data.status}`);
-          if (data.error_message) {
-            console.error(`[Places API Debug] Error: ${data.error_message}`);
+          if (data.status === 'OK') {
+            predictionsRef.current = data.predictions;
+            setSuggestions(
+              data.predictions.map((p: PlacePrediction) => ({
+                id: p.place_id,
+                title: p.description,
+              }))
+            );
+          } else {
+            predictionsRef.current = [];
+            setSuggestions([]);
           }
+        } catch (error) {
+          if (__DEV__) {
+            console.error('[Places API] Search failed:', error);
+          }
+          predictionsRef.current = [];
+          setSuggestions([]);
+        } finally {
+          setLoading(false);
         }
-        setPredictions([]);
-      }
-    } catch (error) {
-      if (__DEV__) {
-        console.error('[Places API Debug] Search failed:', error);
-      }
-      setPredictions([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      }, 300);
+    },
+    [apiKey, country]
+  );
 
-  // Get place details when a place is selected
-  const handlePlaceSelect = async (placeId: string, description: string) => {
-    if (!apiKey) return;
+  const handleSelect = useCallback(
+    async (item: AutocompleteDropdownItem | null) => {
+      if (!item || !apiKey) return;
 
-    try {
-      setIsLoading(true);
-      if (__DEV__) {
-        console.log(`[Places API Debug] Getting details for place ID: ${placeId}`);
-      }
+      const prediction = predictionsRef.current.find((p) => p.place_id === item.id);
+      if (!prediction) return;
 
-      const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&key=${apiKey}&fields=name,place_id,geometry,formatted_address,address_components`;
+      setLoading(true);
+      try {
+        const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${prediction.place_id}&key=${apiKey}&fields=name,place_id,geometry,formatted_address,address_components`;
 
-      const response = await fetch(url);
-      const data = await response.json();
+        const response = await fetch(url);
+        const data = await response.json();
 
-      if (data.status === 'OK') {
-        const details = data.result;
+        if (data.status === 'OK') {
+          const details = data.result;
+          const placeDetails: PlaceDetailsWithFullText = {
+            addressComponents:
+              details.address_components?.map((component: any) => component.long_name) || [],
+            coordinate: {
+              latitude: details.geometry.location.lat,
+              longitude: details.geometry.location.lng,
+            },
+            formattedAddress: details.formatted_address,
+            name: details.name,
+            placeId: details.place_id,
+            fullText: prediction.description,
+          };
+
+          onPlaceSelected(placeDetails);
+          setSuggestions([]);
+          predictionsRef.current = [];
+        }
+      } catch (error) {
         if (__DEV__) {
-          console.log('[Places API Debug] Got place details', details);
+          console.error('[Places API] Get details failed:', error);
         }
-
-        const placeDetails: PlaceDetailsWithFullText = {
-          addressComponents:
-            details.address_components?.map((component: any) => component.long_name) || [],
-          coordinate: {
-            latitude: details.geometry.location.lat,
-            longitude: details.geometry.location.lng,
-          },
-          formattedAddress: details.formatted_address,
-          name: details.name,
-          placeId: details.place_id,
-          fullText: description,
-        };
-
-        onPlaceSelected(placeDetails);
-        setQuery(details.formatted_address || description);
-        setPredictions([]);
-      } else {
-        if (__DEV__) {
-          console.warn(`[Places API Debug] API status: ${data.status}`);
-        }
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      if (__DEV__) {
-        console.error('[Places API Debug] Get details failed:', error);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+    [apiKey, onPlaceSelected]
+  );
+
+  const handleClear = useCallback(() => {
+    setSuggestions([]);
+    predictionsRef.current = [];
+  }, []);
+
+  const themedStyles = createStyles(theme);
 
   if (!apiKey) {
     console.error('Google Places API key is missing');
-    return (
-      <View style={styles.container}>
-        <Text style={{ color: theme.colors.status.error.main }}>
-          Google Places API key is missing
-        </Text>
-      </View>
-    );
+    return null;
   }
 
   return (
-    <View style={styles.container}>
-      <TextInput
-        style={[
-          styles.textInput,
-          {
-            color: theme.colors.content.onSurface,
-            backgroundColor: theme.colors.surface.default,
-            borderColor: theme.colors.border.default,
-          },
-        ]}
-        placeholder={placeholder}
-        placeholderTextColor={theme.colors.border.default}
-        value={query}
-        onChangeText={(text) => {
-          setQuery(text);
-          searchPlaces(text);
+    <View style={themedStyles.container}>
+      <AutocompleteDropdown
+        controller={(controller) => {
+          dropdownController.current = controller;
         }}
+        initialValue={initialValue ? { id: 'initial', title: initialValue } : undefined}
+        dataSet={suggestions}
+        onChangeText={searchPlaces}
+        onSelectItem={handleSelect}
+        onClear={handleClear}
+        loading={loading}
+        useFilter={false}
+        textInputProps={{
+          placeholder,
+          autoCapitalize: 'none',
+          autoCorrect: false,
+          style: themedStyles.textInput,
+          placeholderTextColor: theme.colors.content.tertiary,
+        }}
+        inputContainerStyle={themedStyles.inputContainer}
+        suggestionsListContainerStyle={themedStyles.suggestionsContainer}
+        containerStyle={themedStyles.dropdownContainer}
+        inputHeight={50}
+        showChevron={false}
+        closeOnBlur={true}
+        showClear={true}
+        clearOnFocus={false}
+        debounce={0}
+        emptyResultText="Type to search places..."
       />
-
-      {predictions.length > 0 && (
-        <View
-          style={[
-            styles.listContainer,
-            {
-              backgroundColor: theme.colors.background.default,
-              borderColor: theme.colors.border.default,
-            },
-          ]}
-        >
-          <FlatList
-            data={predictions}
-            keyExtractor={(item) => item.place_id}
-            keyboardShouldPersistTaps="always"
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[
-                  styles.predictionItem,
-                  {
-                    backgroundColor: theme.colors.surface.default,
-                    borderBottomColor: theme.colors.border.default,
-                  },
-                ]}
-                onPress={() => handlePlaceSelect(item.place_id, item.description)}
-              >
-                <Text style={{ color: theme.colors.content.onSurface }}>{item.description}</Text>
-              </TouchableOpacity>
-            )}
-          />
-        </View>
-      )}
-
-      {isLoading && (
-        <View
-          style={[styles.loadingContainer, { backgroundColor: theme.colors.background.default }]}
-        >
-          <Text style={{ color: theme.colors.primary.main }}>Loading...</Text>
-        </View>
-      )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 0,
-    width: '100%',
-    zIndex: 9999,
-    elevation: 999,
-    position: 'relative',
-  },
-  textInput: {
-    height: 56,
-    fontSize: 16,
-    borderWidth: 1,
-    borderRadius: 4,
-    paddingHorizontal: 12,
-  },
-  listContainer: {
-    position: 'absolute',
-    top: 60,
-    left: 0,
-    right: 0,
-    maxHeight: 200,
-    borderWidth: 1,
-    borderRadius: 4,
-    zIndex: 10000,
-    elevation: 1000,
-  },
-  predictionItem: {
-    padding: 15,
-    borderBottomWidth: 1,
-    // borderBottomColor is applied dynamically in renderItem to use theme colors
-  },
-  loadingContainer: {
-    position: 'absolute',
-    top: 60,
-    left: 0,
-    right: 0,
-    padding: 10,
-    alignItems: 'center',
-    zIndex: 10001,
-    elevation: 1001,
-  },
-});
+const createStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      width: '100%',
+      zIndex: 1000,
+    },
+    dropdownContainer: {
+      flexGrow: 1,
+      flexShrink: 1,
+    },
+    inputContainer: {
+      backgroundColor: theme.colors.surface.default,
+      borderWidth: 1,
+      borderColor: theme.colors.border.default,
+      borderRadius: 4,
+    },
+    textInput: {
+      color: theme.colors.content.onSurface,
+      fontSize: 16,
+      paddingHorizontal: 12,
+    },
+    suggestionsContainer: {
+      backgroundColor: theme.colors.surface.default,
+      borderRadius: 4,
+      borderWidth: 1,
+      borderColor: theme.colors.border.default,
+      marginTop: 4,
+    },
+  });

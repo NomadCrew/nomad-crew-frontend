@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Portal, Modal, Button, TextInput } from 'react-native-paper';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { AutocompleteDropdownContextProvider } from 'react-native-autocomplete-dropdown';
 import { format } from 'date-fns';
 import { useAuthStore } from '@/src/features/auth/store';
 import { Trip } from '@/src/features/trips/types';
@@ -190,157 +191,155 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
             { backgroundColor: theme.colors.background.default, height: windowHeight * 0.7 },
           ]}
         >
-          {/* Drag handle */}
-          <View style={styles.dragHandleWrapper}>
-            <View style={[styles.dragHandle, { backgroundColor: theme.colors.border.default }]} />
-          </View>
-          {/* Header */}
-          <View style={styles.headerRow}>
-            <ThemedText variant="heading.h2" color="content.primary" style={{ flex: 1 }}>
-              New Trip
-            </ThemedText>
-            <Pressable
-              onPress={onClose}
-              style={styles.closeButton}
-              accessibilityLabel="Close modal"
-            >
-              <MaterialCommunityIcons
-                name="close"
-                size={24}
-                color={theme.colors.content.secondary}
-              />
-            </Pressable>
-          </View>
-          {/* Form Container with ScrollView */}
-          <ScrollView
-            style={styles.formContainer}
-            contentContainerStyle={styles.formContentContainer}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            {/* Trip name field */}
-            <ThemedText variant="body.small" color="content.secondary" style={styles.label}>
-              Trip Name
-            </ThemedText>
-            <TextInput
-              mode="outlined"
-              placeholder="Trip Name"
-              value={trip.name}
-              onChangeText={(text) => setTrip((prev) => ({ ...prev, name: text }))}
-              style={styles.textInput}
-              accessibilityLabel="Trip Name"
-              autoFocus
-              returnKeyType="next"
-            />
-            {/* Destination search */}
-            <ThemedText variant="body.small" color="content.secondary" style={styles.label}>
-              Destination
-            </ThemedText>
-            <View style={styles.autocompleteWrapperOuter}>
-              <View style={styles.autocompleteWrapper}>
-                <CustomPlacesAutocomplete
-                  placeholder="Search Destination"
-                  onPlaceSelected={handlePlaceSelected}
-                  initialValue={trip.destination?.address || ''}
+          <AutocompleteDropdownContextProvider>
+            {/* Drag handle */}
+            <View style={styles.dragHandleWrapper}>
+              <View style={[styles.dragHandle, { backgroundColor: theme.colors.border.default }]} />
+            </View>
+            {/* Header */}
+            <View style={styles.headerRow}>
+              <ThemedText variant="heading.h2" color="content.primary" style={{ flex: 1 }}>
+                New Trip
+              </ThemedText>
+              <Pressable
+                onPress={onClose}
+                style={styles.closeButton}
+                accessibilityLabel="Close modal"
+              >
+                <MaterialCommunityIcons
+                  name="close"
+                  size={24}
+                  color={theme.colors.content.secondary}
                 />
-              </View>
+              </Pressable>
             </View>
-            {/* Description field */}
-            <ThemedText variant="body.small" color="content.secondary" style={styles.label}>
-              Description
-            </ThemedText>
-            <TextInput
-              mode="outlined"
-              placeholder="Description"
-              value={trip.description}
-              onChangeText={(text) => setTrip((prev) => ({ ...prev, description: text }))}
-              multiline={true}
-              numberOfLines={4}
-              style={[styles.textInput, { height: 100 }]}
-              accessibilityLabel="Description"
-            />
-            {/* Date picker row */}
-            <View style={styles.dateRow}>
-              <View style={[styles.dateField, { marginRight: 8 }]}>
-                <ThemedText variant="body.small" color="content.secondary" style={styles.label}>
-                  Start Date
-                </ThemedText>
-                <Pressable
-                  onPress={() => setShowDatePicker('start')}
-                  style={[
-                    styles.dateDisplay,
-                    {
-                      borderColor: theme.colors.outlined.border ?? theme.colors.border.default,
-                      backgroundColor: theme.colors.surface.default,
-                    },
-                  ]}
-                  accessibilityLabel="Select start date"
-                >
-                  <View style={styles.dateDisplayContent}>
-                    <MaterialCommunityIcons
-                      name="calendar"
-                      size={20}
-                      color={theme.colors.primary.main}
-                      style={{ marginRight: 6 }}
-                    />
-                    <ThemedText color="content.primary">{formattedStartDate}</ThemedText>
-                  </View>
-                </Pressable>
-              </View>
-              <View style={styles.dateField}>
-                <ThemedText variant="body.small" color="content.secondary" style={styles.label}>
-                  End Date
-                </ThemedText>
-                <Pressable
-                  onPress={() => setShowDatePicker('end')}
-                  style={[
-                    styles.dateDisplay,
-                    {
-                      borderColor: theme.colors.outlined.border ?? theme.colors.border.default,
-                      backgroundColor: theme.colors.surface.default,
-                    },
-                  ]}
-                  accessibilityLabel="Select end date"
-                >
-                  <View style={styles.dateDisplayContent}>
-                    <MaterialCommunityIcons
-                      name="calendar"
-                      size={20}
-                      color={theme.colors.primary.main}
-                      style={{ marginRight: 6 }}
-                    />
-                    <ThemedText color="content.primary">{formattedEndDate}</ThemedText>
-                  </View>
-                </Pressable>
-              </View>
-            </View>
-            {/* Date picker */}
-            {showDatePicker && trip.startDate && trip.endDate ? (
-              <DateTimePicker
-                value={
-                  showDatePicker === 'start' ? new Date(trip.startDate) : new Date(trip.endDate)
-                }
-                mode="date"
-                display="default"
-                onChange={handleDateChange}
-              />
-            ) : null}
-          </ScrollView>
-          {/* Submit button */}
-          <View style={[styles.buttonContainer, { borderTopColor: theme.colors.border.default }]}>
-            <Button
-              mode="contained"
-              onPress={handleSubmit}
-              loading={loading}
-              disabled={loading}
-              style={[styles.submitButton, { backgroundColor: theme.colors.primary.main }]}
-              labelStyle={[styles.submitButtonLabel, { color: theme.colors.onPrimary }]}
-              accessibilityLabel="Create Trip"
-              contentStyle={{ height: 48 }}
+            {/* Form Container with ScrollView */}
+            <ScrollView
+              style={styles.formContainer}
+              contentContainerStyle={styles.formContentContainer}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
             >
-              Create Trip
-            </Button>
-          </View>
+              {/* Trip name field */}
+              <ThemedText variant="body.small" color="content.secondary" style={styles.label}>
+                Trip Name
+              </ThemedText>
+              <TextInput
+                mode="outlined"
+                placeholder="Trip Name"
+                value={trip.name}
+                onChangeText={(text) => setTrip((prev) => ({ ...prev, name: text }))}
+                style={styles.textInput}
+                accessibilityLabel="Trip Name"
+                autoFocus
+                returnKeyType="next"
+              />
+              {/* Destination search */}
+              <ThemedText variant="body.small" color="content.secondary" style={styles.label}>
+                Destination
+              </ThemedText>
+              <CustomPlacesAutocomplete
+                placeholder="Search Destination"
+                onPlaceSelected={handlePlaceSelected}
+                initialValue={trip.destination?.address || ''}
+              />
+              {/* Description field */}
+              <ThemedText variant="body.small" color="content.secondary" style={styles.label}>
+                Description
+              </ThemedText>
+              <TextInput
+                mode="outlined"
+                placeholder="Description"
+                value={trip.description}
+                onChangeText={(text) => setTrip((prev) => ({ ...prev, description: text }))}
+                multiline={true}
+                numberOfLines={4}
+                style={[styles.textInput, { height: 100 }]}
+                accessibilityLabel="Description"
+              />
+              {/* Date picker row */}
+              <View style={styles.dateRow}>
+                <View style={[styles.dateField, { marginRight: 8 }]}>
+                  <ThemedText variant="body.small" color="content.secondary" style={styles.label}>
+                    Start Date
+                  </ThemedText>
+                  <Pressable
+                    onPress={() => setShowDatePicker('start')}
+                    style={[
+                      styles.dateDisplay,
+                      {
+                        borderColor: theme.colors.outlined.border ?? theme.colors.border.default,
+                        backgroundColor: theme.colors.surface.default,
+                      },
+                    ]}
+                    accessibilityLabel="Select start date"
+                  >
+                    <View style={styles.dateDisplayContent}>
+                      <MaterialCommunityIcons
+                        name="calendar"
+                        size={20}
+                        color={theme.colors.primary.main}
+                        style={{ marginRight: 6 }}
+                      />
+                      <ThemedText color="content.primary">{formattedStartDate}</ThemedText>
+                    </View>
+                  </Pressable>
+                </View>
+                <View style={styles.dateField}>
+                  <ThemedText variant="body.small" color="content.secondary" style={styles.label}>
+                    End Date
+                  </ThemedText>
+                  <Pressable
+                    onPress={() => setShowDatePicker('end')}
+                    style={[
+                      styles.dateDisplay,
+                      {
+                        borderColor: theme.colors.outlined.border ?? theme.colors.border.default,
+                        backgroundColor: theme.colors.surface.default,
+                      },
+                    ]}
+                    accessibilityLabel="Select end date"
+                  >
+                    <View style={styles.dateDisplayContent}>
+                      <MaterialCommunityIcons
+                        name="calendar"
+                        size={20}
+                        color={theme.colors.primary.main}
+                        style={{ marginRight: 6 }}
+                      />
+                      <ThemedText color="content.primary">{formattedEndDate}</ThemedText>
+                    </View>
+                  </Pressable>
+                </View>
+              </View>
+              {/* Date picker */}
+              {showDatePicker && trip.startDate && trip.endDate ? (
+                <DateTimePicker
+                  value={
+                    showDatePicker === 'start' ? new Date(trip.startDate) : new Date(trip.endDate)
+                  }
+                  mode="date"
+                  display="default"
+                  onChange={handleDateChange}
+                />
+              ) : null}
+            </ScrollView>
+            {/* Submit button */}
+            <View style={[styles.buttonContainer, { borderTopColor: theme.colors.border.default }]}>
+              <Button
+                mode="contained"
+                onPress={handleSubmit}
+                loading={loading}
+                disabled={loading}
+                style={[styles.submitButton, { backgroundColor: theme.colors.primary.main }]}
+                labelStyle={[styles.submitButtonLabel, { color: theme.colors.onPrimary }]}
+                accessibilityLabel="Create Trip"
+                contentStyle={{ height: 48 }}
+              >
+                Create Trip
+              </Button>
+            </View>
+          </AutocompleteDropdownContextProvider>
         </SafeAreaView>
       </Modal>
     </Portal>
@@ -396,8 +395,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     backgroundColor: 'transparent',
   },
-  autocompleteWrapperOuter: {},
-  autocompleteWrapper: {},
   dateRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
