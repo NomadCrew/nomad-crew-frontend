@@ -254,6 +254,7 @@ export const ChatList: React.FC<ChatListProps> = ({
         data={sortedMessages}
         renderItem={renderItem}
         keyExtractor={(item, index) => item.message?.id ?? `fallback-${index}`}
+        estimatedItemSize={80}
         contentContainerStyle={styles.messageList}
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmptyComponent}

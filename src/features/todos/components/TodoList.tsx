@@ -183,6 +183,7 @@ const TodoListContent = ({ tripId, onAddTodoPress }: TodoListProps) => {
         data={dedupedTodos}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
+        estimatedItemSize={81}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
         ListFooterComponent={
