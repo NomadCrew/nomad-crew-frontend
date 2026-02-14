@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ImageBackground, StyleSheet, Pressable, TextStyle } from 'react-native';
+import { View, ImageBackground, StyleSheet, Pressable, TextStyle, Dimensions } from 'react-native';
 import { ArrowLeft, Bookmark } from 'lucide-react-native';
 import { format } from 'date-fns';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
@@ -9,6 +9,10 @@ import { WeatherIcon } from '@/src/components/ui/WeatherIcon';
 import { WeatherCondition } from '@/src/utils/weather';
 import { TripStatusBadge } from './TripStatusBadge';
 import { Theme } from '@/src/theme/types';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+// Scale: 48px on 430pt (iPhone Pro Max), ~36px on 375pt (iPhone SE/Mini)
+const TITLE_FONT_SIZE = Math.round(SCREEN_WIDTH * 0.112);
 
 interface TripHeaderProps {
   trip: Trip;
@@ -30,42 +34,41 @@ export const TripDetailHeader = ({
   const temperature = trip.weatherTemp ?? '6°C';
 
   return (
-    <View style={styles(theme).wrapper}>
-      <ImageBackground
-        source={{ uri: trip.backgroundImageUrl }}
-        style={styles(theme).backgroundImage}
-        resizeMode="cover"
-      >
-        <View style={styles(theme).overlay} />
+    <ImageBackground
+      source={{ uri: trip.backgroundImageUrl }}
+      style={styles(theme).backgroundImage}
+      resizeMode="cover"
+    >
+      <View style={styles(theme).overlay} />
 
-        <View style={styles(theme).container}>
-          <View style={styles(theme).topRow}>
+      <View style={styles(theme).container}>
+        <View style={styles(theme).topRow}>
+          <Pressable
+            onPress={onBack}
+            style={styles(theme).backButton}
+            android_ripple={{ color: 'rgba(255,255,255,0.2)', radius: 20 }}
+          >
+            <ArrowLeft size={24} color={theme.colors.content.onImage} />
+          </Pressable>
+
+          {onBookmark && (
             <Pressable
-              onPress={onBack}
-              style={styles(theme).backButton}
+              onPress={onBookmark}
+              style={styles(theme).iconButton}
               android_ripple={{ color: 'rgba(255,255,255,0.2)', radius: 20 }}
             >
-              <ArrowLeft size={24} color={theme.colors.content.onImage} />
+              <Bookmark size={24} color={theme.colors.content.onImage} />
             </Pressable>
+          )}
+        </View>
 
-            {onBookmark && (
-              <Pressable
-                onPress={onBookmark}
-                style={styles(theme).iconButton}
-                android_ripple={{ color: 'rgba(255,255,255,0.2)', radius: 20 }}
-              >
-                <Bookmark size={24} color={theme.colors.content.onImage} />
-              </Pressable>
-            )}
-          </View>
-
+        <View style={styles(theme).bottomSection}>
           <View style={styles(theme).infoContainer}>
             <ThemedText
-              variant="display.large"
               style={styles(theme).cityName}
               numberOfLines={2}
               adjustsFontSizeToFit
-              minimumFontScale={0.6}
+              minimumFontScale={0.7}
             >
               {trip.name}
             </ThemedText>
@@ -74,39 +77,36 @@ export const TripDetailHeader = ({
               {startDateString} – {endDateString}
             </ThemedText>
           </View>
-        </View>
-      </ImageBackground>
 
-      {/* Status + weather row — overlaps hero bottom edge */}
-      <View style={styles(theme).statusAndWeatherContainer}>
-        <View style={styles(theme).statusContainer}>
-          <TripStatusBadge status={trip.status} size="medium" />
-        </View>
+          {/* Status + weather badges — inside the hero image */}
+          <View style={styles(theme).badgeRow}>
+            <View style={styles(theme).badge}>
+              <TripStatusBadge status={trip.status} size="medium" />
+            </View>
 
-        <View style={styles(theme).weatherRow}>
-          <ThemedText variant="body.medium" style={styles(theme).tempText}>
-            {temperature}
-          </ThemedText>
-          <WeatherIcon
-            condition={weatherCondition}
-            fallback="clear"
-            size={24}
-            color={theme.colors.content.onImage}
-          />
+            <View style={styles(theme).badge}>
+              <ThemedText variant="body.medium" style={styles(theme).tempText}>
+                {temperature}
+              </ThemedText>
+              <WeatherIcon
+                condition={weatherCondition}
+                fallback="clear"
+                size={20}
+                color={theme.colors.content.onImage}
+              />
+            </View>
+          </View>
         </View>
       </View>
-    </View>
+    </ImageBackground>
   );
 };
 
 const styles = (theme: Theme) =>
   StyleSheet.create({
-    wrapper: {
-      marginBottom: 20, // space for the overlapping pills below the hero
-    },
     backgroundImage: {
       width: '100%',
-      height: 250,
+      height: 260,
     },
     overlay: {
       ...StyleSheet.absoluteFillObject,
@@ -114,17 +114,15 @@ const styles = (theme: Theme) =>
     },
     container: {
       flex: 1,
-      position: 'relative',
       paddingHorizontal: theme.spacing.inset.md,
       paddingTop: theme.spacing.inset.xl,
-      paddingBottom: theme.spacing.inset.lg,
+      paddingBottom: theme.spacing.inset.md,
       justifyContent: 'space-between',
     },
     topRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: theme.spacing.stack.sm,
     },
     backButton: {
       width: 40,
@@ -142,11 +140,15 @@ const styles = (theme: Theme) =>
       alignItems: 'center',
       backgroundColor: 'rgba(0,0,0,0.3)',
     },
+    bottomSection: {
+      gap: theme.spacing.stack.sm,
+    },
     infoContainer: {
-      marginTop: theme.spacing.stack.md,
       alignItems: 'flex-end',
     },
     cityName: {
+      fontSize: TITLE_FONT_SIZE,
+      lineHeight: TITLE_FONT_SIZE * 1.15,
       textAlign: 'right',
       textShadowColor: 'rgba(0,0,0,0.75)',
       textShadowOffset: { width: 0, height: 2 },
@@ -162,36 +164,27 @@ const styles = (theme: Theme) =>
       color: theme.colors.content.onImage,
       marginTop: 4,
     } as TextStyle,
-    statusAndWeatherContainer: {
+    badgeRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'flex-end',
-      marginTop: -18,
-      marginRight: theme.spacing.inset.md,
       gap: theme.spacing.stack.sm,
-      zIndex: 1,
     },
-    statusContainer: {
-      backgroundColor: 'rgba(0,0,0,0.3)',
-      paddingVertical: 8,
-      paddingHorizontal: 12,
-      borderRadius: 20,
-    },
-    weatherRow: {
+    badge: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: 'rgba(0,0,0,0.3)',
-      paddingVertical: 8,
-      paddingHorizontal: 12,
-      borderRadius: 20,
+      backgroundColor: 'rgba(0,0,0,0.4)',
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      borderRadius: 16,
     },
     tempText: {
-      marginRight: theme.spacing.stack.md,
+      marginRight: 6,
       textShadowColor: 'rgba(0,0,0,0.75)',
       textShadowOffset: { width: 0, height: 1 },
       textShadowRadius: 3,
       color: theme.colors.content.onImage,
-      fontSize: 16,
+      fontSize: 14,
       fontWeight: '500',
     } as TextStyle,
   });
