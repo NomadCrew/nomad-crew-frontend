@@ -205,9 +205,7 @@ export const useTripStore = create<TripState>()(
       revokeInvitation: async (tripId: string, invitationId: string) => {
         set({ isUpdating: true, error: null });
         try {
-          // TODO: Add revoke invitation endpoint to API_PATHS.trips if available
-          // await api.delete(API_PATHS.trips.revokeInvitation(tripId, invitationId));
-          // For now, just set loading to false
+          await tripApi.revokeInvitation(tripId, invitationId);
           set({ isUpdating: false });
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to revoke invitation';

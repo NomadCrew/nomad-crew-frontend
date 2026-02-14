@@ -33,9 +33,9 @@ export const API_PATHS = {
     invitations: (tripId: string) => createApiPath(`trips/${tripId}/invitations`),
     revokeInvitation: (tripId: string, invitationId: string) =>
       createApiPath(`trips/${tripId}/invitations/${invitationId}`),
-    acceptInvitation: createApiPath('trips/invitations/accept'),
-    declineInvitation: createApiPath('trips/invitations/decline'),
-    invitationDetails: createApiPath('trips/invitations/details'),
+    acceptInvitation: createApiPath('invitations/accept'),
+    declineInvitation: createApiPath('invitations/decline'),
+    invitationDetails: createApiPath('invitations/details'),
     messages: (tripId: string) => createApiPath(`trips/${tripId}/chat/messages`),
     messagesRead: (tripId: string) => createApiPath(`trips/${tripId}/chat/messages/read`),
     members: (tripId: string) => createApiPath(`trips/${tripId}/members`),
