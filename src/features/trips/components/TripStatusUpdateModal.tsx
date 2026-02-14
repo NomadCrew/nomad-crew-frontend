@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Modal, Pressable, Text, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Pressable, Text, ActivityIndicator } from 'react-native';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { Theme } from '@/src/theme/types';
 import { Trip, TripStatus } from '@/src/features/trips/types';
 import { useUpdateTripStatus } from '@/src/features/trips/hooks';
 import { TripStatusBadge } from './TripStatusBadge';
-import { X, AlertCircle } from 'lucide-react-native';
+import { AppBottomSheet } from '@/src/components/molecules/AppBottomSheet';
+import { Check } from 'lucide-react-native';
 
 // Note: Using inline styles(theme) function pattern instead of useThemedStyles hook
 
@@ -23,8 +24,6 @@ export const TripStatusUpdateModal: React.FC<TripStatusUpdateModalProps> = ({
   const theme = useAppTheme().theme;
   const updateTripStatusMutation = useUpdateTripStatus();
   const [error, setError] = useState<string | null>(null);
-
-  // Using the bottom styles(theme) function pattern
 
   const statusOptions: TripStatus[] = ['PLANNING', 'ACTIVE', 'COMPLETED', 'CANCELLED'];
 
@@ -118,78 +117,65 @@ export const TripStatusUpdateModal: React.FC<TripStatusUpdateModalProps> = ({
   };
 
   return (
-    <Modal animationType="fade" transparent={true} visible={visible} onRequestClose={onClose}>
-      <View style={styles(theme).modalOverlay}>
-        <View
-          style={[styles(theme).modalContent, { backgroundColor: theme.colors.background.default }]}
-        >
-          <View style={styles(theme).modalHeader}>
-            <Text style={styles(theme).modalTitle}>Update Trip Status</Text>
-            <Pressable onPress={onClose} style={styles(theme).closeButton}>
-              <X size={24} color={theme.colors.content.primary} />
-            </Pressable>
-          </View>
-
-          <Text style={styles(theme).modalSubtitle}>
-            Current status: <TripStatusBadge status={trip.status} />
-          </Text>
-
-          <View style={styles(theme).rulesContainer}>
-            <AlertCircle size={16} color={theme.colors.content.secondary} />
-            <Text style={styles(theme).rulesText}>
-              Status can only be changed according to these rules:
-              {'\n'}• From Planning: Can move to Active or Cancelled
-              {'\n'}• From Active: Can move to Completed or Cancelled
-              {'\n'}• Completed and Cancelled are final states
-            </Text>
-          </View>
-
-          <View style={styles(theme).statusOptionsContainer}>
-            {statusOptions.map((status) => {
-              const isValid = status === trip.status || isValidTransition(trip.status, status);
-              const message = !isValid ? getTransitionMessage(trip.status, status) : '';
-
-              return (
-                <Pressable
-                  key={status}
-                  style={[
-                    styles(theme).statusOption,
-                    trip.status === status && styles(theme).selectedStatusOption,
-                    !isValid && styles(theme).disabledStatusOption,
-                  ]}
-                  onPress={() => handleStatusUpdate(status)}
-                  disabled={updateTripStatusMutation.isPending || !isValid}
-                >
-                  <TripStatusBadge status={status} size="large" />
-                  <View style={styles(theme).statusTextContainer}>
-                    <Text
-                      style={[
-                        styles(theme).statusDescription,
-                        !isValid && styles(theme).disabledText,
-                      ]}
-                    >
-                      {getStatusDescription(status)}
-                    </Text>
-                    {!isValid && message ? (
-                      <Text style={styles(theme).invalidReasonText}>{message}</Text>
-                    ) : null}
-                  </View>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          {updateTripStatusMutation.isPending && (
-            <View style={styles(theme).loadingContainer}>
-              <ActivityIndicator size="small" color={theme.colors.primary.main} />
-              <Text style={styles(theme).loadingText}>Updating status...</Text>
-            </View>
-          )}
-
-          {error && <Text style={styles(theme).errorText}>{error}</Text>}
-        </View>
+    <AppBottomSheet
+      visible={visible}
+      onClose={onClose}
+      title="Update Status"
+      snapPoints={['55%']}
+      scrollable={true}
+    >
+      <View style={styles(theme).currentStatusRow}>
+        <Text style={styles(theme).currentStatusLabel}>Current status</Text>
+        <TripStatusBadge status={trip.status} size="small" />
       </View>
-    </Modal>
+
+      <View style={styles(theme).statusOptionsContainer}>
+        {statusOptions.map((status) => {
+          const isCurrent = status === trip.status;
+          const isValid = isCurrent || isValidTransition(trip.status, status);
+          const isDisabled = !isValid || updateTripStatusMutation.isPending;
+
+          return (
+            <Pressable
+              key={status}
+              style={[
+                styles(theme).statusOption,
+                isDisabled && !isCurrent && styles(theme).disabledStatusOption,
+              ]}
+              onPress={() => handleStatusUpdate(status)}
+              disabled={isDisabled}
+            >
+              <TripStatusBadge status={status} size="medium" />
+              <View style={styles(theme).statusTextContainer}>
+                <Text
+                  style={[
+                    styles(theme).statusDescription,
+                    isDisabled && !isCurrent && styles(theme).disabledText,
+                  ]}
+                >
+                  {getStatusDescription(status)}
+                </Text>
+                {!isValid && !isCurrent && (
+                  <Text style={styles(theme).notAvailableText}>Not available</Text>
+                )}
+              </View>
+              {isCurrent && (
+                <Check size={20} color={theme.colors.status.success.content} strokeWidth={2.5} />
+              )}
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {updateTripStatusMutation.isPending && (
+        <View style={styles(theme).loadingContainer}>
+          <ActivityIndicator size="small" color={theme.colors.primary.main} />
+          <Text style={styles(theme).loadingText}>Updating status...</Text>
+        </View>
+      )}
+
+      {error && <Text style={styles(theme).errorText}>{error}</Text>}
+    </AppBottomSheet>
   );
 };
 
@@ -210,90 +196,53 @@ const getStatusDescription = (status: TripStatus): string => {
 
 const styles = (theme: Theme) =>
   StyleSheet.create({
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: theme.spacing.inset.lg,
-    },
-    modalContent: {
-      backgroundColor: 'rgba(255,255,255,0.15)',
-      borderRadius: theme.spacing.inset.md,
-      padding: theme.spacing.inset.lg,
-      width: '100%',
-      maxWidth: 500,
-      overflow: 'hidden',
-    },
-    modalHeader: {
+    currentStatusRow: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: theme.spacing.stack.md,
+      justifyContent: 'space-between',
+      marginBottom: theme.spacing.stack.lg,
+      paddingVertical: theme.spacing.inset.sm,
+      paddingHorizontal: theme.spacing.inset.md,
+      borderWidth: 1,
+      borderColor: theme.colors.border.default,
+      borderRadius: theme.borderRadius?.md ?? theme.shape?.borderRadius.medium ?? 8,
+      backgroundColor: theme.colors.surface.variant,
     },
-    modalTitle: {
-      ...theme.typography.heading.h2,
-      color: theme.colors.content.primary,
-    },
-    modalSubtitle: {
+    currentStatusLabel: {
       ...theme.typography.body.medium,
       color: theme.colors.content.secondary,
-      marginBottom: theme.spacing.stack.md,
-    },
-    closeButton: {
-      padding: theme.spacing.inset.xs,
-    },
-    rulesContainer: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      backgroundColor: theme.colors.surface.variant,
-      borderRadius: theme.shape?.borderRadius.medium ?? 8,
-      padding: theme.spacing.inset.md,
-      marginBottom: theme.spacing.stack.lg,
-    },
-    rulesText: {
-      ...theme.typography.body.small,
-      color: theme.colors.content.secondary,
-      marginLeft: theme.spacing.stack.xs,
-      flexShrink: 1, // Allow text to wrap
     },
     statusOptionsContainer: {
-      // No specific styles needed, items will space themselves
+      gap: theme.spacing.stack.sm,
     },
     statusOption: {
       flexDirection: 'row',
       alignItems: 'center',
       paddingVertical: theme.spacing.inset.md,
-      paddingHorizontal: theme.spacing.inset.sm,
-      marginBottom: theme.spacing.stack.sm,
+      paddingHorizontal: theme.spacing.inset.md,
       borderWidth: 1,
-      borderColor: theme.colors.outlined.border ?? theme.colors.border.default,
-      borderRadius: theme.shape?.borderRadius.medium ?? 8,
+      borderColor: theme.colors.border.default,
+      borderRadius: theme.borderRadius?.md ?? theme.shape?.borderRadius.medium ?? 8,
       backgroundColor: theme.colors.surface.default,
-    },
-    selectedStatusOption: {
-      borderColor: theme.colors.primary.main,
-      backgroundColor: theme.colors.primary.surface,
     },
     disabledStatusOption: {
       opacity: 0.5,
-      backgroundColor: theme.colors.disabled.background,
     },
     statusTextContainer: {
       marginLeft: theme.spacing.stack.sm,
-      flex: 1, // Allow text to take remaining space
+      flex: 1,
     },
     statusDescription: {
-      ...theme.typography.body.large,
+      ...theme.typography.body.medium,
       fontWeight: '600',
       color: theme.colors.content.primary,
     },
     disabledText: {
       color: theme.colors.content.disabled,
     },
-    invalidReasonText: {
+    notAvailableText: {
       ...theme.typography.body.small,
-      color: theme.colors.status.error.main,
+      color: theme.colors.content.disabled,
       marginTop: theme.spacing.stack.xxs,
     },
     loadingContainer: {

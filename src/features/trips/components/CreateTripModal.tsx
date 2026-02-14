@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Platform, Pressable, Alert, ScrollView, Dimensions } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Platform,
+  Pressable,
+  Alert,
+  ScrollView,
+  Dimensions,
+  SafeAreaView,
+} from 'react-native';
 import { Portal, Modal, Button, TextInput } from 'react-native-paper';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
@@ -175,7 +184,7 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
           onPress={onClose}
           accessibilityLabel="Close modal background"
         />
-        <View
+        <SafeAreaView
           style={[
             styles.modalContent,
             { backgroundColor: theme.colors.background.default, height: windowHeight * 0.7 },
@@ -202,8 +211,13 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
               />
             </Pressable>
           </View>
-          {/* Form Container */}
-          <View style={styles.formContainer}>
+          {/* Form Container with ScrollView */}
+          <ScrollView
+            style={styles.formContainer}
+            contentContainerStyle={styles.formContentContainer}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
             {/* Trip name field */}
             <ThemedText variant="body.small" color="content.secondary" style={styles.label}>
               Trip Name
@@ -311,9 +325,9 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
                 onChange={handleDateChange}
               />
             ) : null}
-          </View>
+          </ScrollView>
           {/* Submit button */}
-          <View style={styles.buttonContainer}>
+          <View style={[styles.buttonContainer, { borderTopColor: theme.colors.border.default }]}>
             <Button
               mode="contained"
               onPress={handleSubmit}
@@ -327,7 +341,7 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
               Create Trip
             </Button>
           </View>
-        </View>
+        </SafeAreaView>
       </Modal>
     </Portal>
   );
@@ -347,11 +361,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: Platform.OS === 'ios' ? 30 : 20,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
+    elevation: 0,
     overflow: 'hidden',
   },
   dragHandleWrapper: {
@@ -374,7 +384,9 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     flex: 1,
-    justifyContent: 'flex-start',
+  },
+  formContentContainer: {
+    paddingBottom: 16,
   },
   label: {
     marginBottom: 4,
@@ -396,7 +408,7 @@ const styles = StyleSheet.create({
   },
   dateDisplay: {
     borderWidth: 1,
-    borderRadius: 4,
+    borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 10,
     justifyContent: 'center',
@@ -409,10 +421,9 @@ const styles = StyleSheet.create({
   buttonContainer: {
     paddingTop: 16,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(0,0,0,0.1)',
   },
   submitButton: {
-    borderRadius: 30,
+    borderRadius: 12,
     paddingVertical: 8,
   },
   submitButtonLabel: {

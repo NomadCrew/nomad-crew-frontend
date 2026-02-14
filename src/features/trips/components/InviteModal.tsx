@@ -1,23 +1,15 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import {
-  View,
-  StyleSheet,
-  Alert,
-  Modal,
-  Pressable,
-  Text,
-  Platform,
-  KeyboardAvoidingView,
-} from 'react-native';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { View, StyleSheet, Alert, Pressable, Text } from 'react-native';
 import { Button, RadioButton, HelperText } from 'react-native-paper';
 import { AutocompleteDropdownContextProvider } from 'react-native-autocomplete-dropdown';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { Theme } from '@/src/theme/types';
 import { useTripStore } from '@/src/features/trips/store';
 import { useAuthStore } from '@/src/features/auth/store';
-import { X, CheckCircle } from 'lucide-react-native';
+import { CheckCircle } from 'lucide-react-native';
 import { UserAutocomplete } from '@/src/features/users';
 import { UserSearchResult } from '@/src/api/api-client';
+import { AppBottomSheet } from '@/src/components/molecules/AppBottomSheet';
 
 interface InviteModalProps {
   visible: boolean;
@@ -103,7 +95,7 @@ export const InviteModal = ({ visible, onClose, tripId }: InviteModalProps) => {
     onClose();
   }, [onClose, loading]);
 
-  // Reset state when modal becomes visible
+  // Reset state when sheet becomes visible
   useEffect(() => {
     if (visible) {
       setShowSuccess(false);
@@ -111,170 +103,120 @@ export const InviteModal = ({ visible, onClose, tripId }: InviteModalProps) => {
     }
   }, [visible]);
 
-  const themedStyles = styles(theme);
+  const themedStyles = useMemo(() => styles(theme), [theme]);
   const isSubmitDisabled = loading || !email.trim() || (!!emailError && !selectedUser);
 
   return (
-    <Modal animationType="fade" transparent={true} visible={visible} onRequestClose={handleClose}>
+    <AppBottomSheet
+      visible={visible}
+      onClose={handleClose}
+      title="Invite Member"
+      snapPoints={['55%', '80%']}
+      scrollable={true}
+    >
       <AutocompleteDropdownContextProvider>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={themedStyles.modalOverlay}
-        >
-          <View
-            style={[
-              themedStyles.modalContent,
-              { backgroundColor: theme.colors.background.default },
-            ]}
-          >
-            {showSuccess ? (
-              <View style={themedStyles.successContainer}>
-                <CheckCircle size={48} color={theme.colors.success?.main || '#4CAF50'} />
-                <Text style={[themedStyles.successText, { color: theme.colors.content.primary }]}>
-                  Invitation Sent!
-                </Text>
-                <Text
-                  style={[themedStyles.successSubtext, { color: theme.colors.content.secondary }]}
-                >
-                  {selectedUser
-                    ? `${selectedUser.firstName || selectedUser.username} will receive the invite`
-                    : `An invitation has been sent to ${email}`}
-                </Text>
-              </View>
-            ) : (
-              <>
-                {/* Header */}
-                <View style={themedStyles.modalHeader}>
-                  <Text style={themedStyles.modalTitle}>Invite Member</Text>
-                  <Pressable
-                    onPress={handleClose}
-                    style={themedStyles.closeButton}
-                    accessibilityLabel="Close invite modal"
-                    accessibilityRole="button"
-                    disabled={loading}
-                  >
-                    <X
-                      size={24}
-                      color={
-                        loading ? theme.colors.content.secondary : theme.colors.content.primary
-                      }
-                    />
-                  </Pressable>
+        <View style={themedStyles.container}>
+          {showSuccess ? (
+            <View style={themedStyles.successContainer}>
+              <CheckCircle size={48} color={theme.colors.success?.main || '#4CAF50'} />
+              <Text style={themedStyles.successText}>Invitation Sent!</Text>
+              <Text style={themedStyles.successSubtext}>
+                {selectedUser
+                  ? `${selectedUser.firstName || selectedUser.username} will receive the invite`
+                  : `An invitation has been sent to ${email}`}
+              </Text>
+            </View>
+          ) : (
+            <>
+              {/* User Search Autocomplete */}
+              <Text style={themedStyles.inputLabel}>Search user or enter email</Text>
+              <UserAutocomplete
+                tripId={tripId}
+                onUserSelected={handleUserSelected}
+                onManualEmail={handleManualEmail}
+                placeholder="Search by name, username, or email..."
+                disabled={loading}
+              />
+
+              {/* Inline email validation error */}
+              {emailError ? (
+                <HelperText type="error" visible={true} style={themedStyles.errorHelper}>
+                  {emailError}
+                </HelperText>
+              ) : null}
+
+              {/* Show selected user or email */}
+              {email && !emailError && (
+                <View style={themedStyles.selectedContainer}>
+                  <Text style={themedStyles.selectedLabel}>
+                    {selectedUser
+                      ? `Inviting: ${selectedUser.firstName || selectedUser.username} (${email})`
+                      : `Inviting: ${email}`}
+                  </Text>
                 </View>
+              )}
 
-                {/* User Search Autocomplete */}
-                <Text style={themedStyles.inputLabel}>Search user or enter email</Text>
-                <UserAutocomplete
-                  tripId={tripId}
-                  onUserSelected={handleUserSelected}
-                  onManualEmail={handleManualEmail}
-                  placeholder="Search by name, username, or email..."
+              {/* Role Selection */}
+              <Text style={themedStyles.roleLabel}>Role</Text>
+              <RadioButton.Group
+                onValueChange={(value) => !loading && setRole(value as 'member' | 'admin')}
+                value={role}
+              >
+                <Pressable
+                  style={[themedStyles.radioOption, loading && themedStyles.disabledOption]}
+                  onPress={() => !loading && setRole('member')}
+                  accessibilityLabel="Set role to Member"
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: role === 'member' }}
                   disabled={loading}
-                />
-
-                {/* Inline email validation error */}
-                {emailError ? (
-                  <HelperText type="error" visible={true} style={themedStyles.errorHelper}>
-                    {emailError}
-                  </HelperText>
-                ) : null}
-
-                {/* Show selected user or email */}
-                {email && !emailError && (
-                  <View style={themedStyles.selectedContainer}>
-                    <Text style={themedStyles.selectedLabel}>
-                      {selectedUser
-                        ? `Inviting: ${selectedUser.firstName || selectedUser.username} (${email})`
-                        : `Inviting: ${email}`}
-                    </Text>
-                  </View>
-                )}
-
-                {/* Role Selection */}
-                <Text style={themedStyles.roleLabel}>Role</Text>
-                <RadioButton.Group
-                  onValueChange={(value) => !loading && setRole(value as 'member' | 'admin')}
-                  value={role}
                 >
+                  <RadioButton value="member" disabled={loading} />
+                  <Text style={[themedStyles.radioText, loading && themedStyles.disabledText]}>
+                    Member
+                  </Text>
+                </Pressable>
+
+                {isOwner && (
                   <Pressable
                     style={[themedStyles.radioOption, loading && themedStyles.disabledOption]}
-                    onPress={() => !loading && setRole('member')}
-                    accessibilityLabel="Set role to Member"
+                    onPress={() => !loading && setRole('admin')}
+                    accessibilityLabel="Set role to Admin"
                     accessibilityRole="radio"
-                    accessibilityState={{ checked: role === 'member' }}
+                    accessibilityState={{ checked: role === 'admin' }}
                     disabled={loading}
                   >
-                    <RadioButton value="member" disabled={loading} />
+                    <RadioButton value="admin" disabled={loading} />
                     <Text style={[themedStyles.radioText, loading && themedStyles.disabledText]}>
-                      Member
+                      Admin
                     </Text>
                   </Pressable>
+                )}
+              </RadioButton.Group>
 
-                  {isOwner && (
-                    <Pressable
-                      style={[themedStyles.radioOption, loading && themedStyles.disabledOption]}
-                      onPress={() => !loading && setRole('admin')}
-                      accessibilityLabel="Set role to Admin"
-                      accessibilityRole="radio"
-                      accessibilityState={{ checked: role === 'admin' }}
-                      disabled={loading}
-                    >
-                      <RadioButton value="admin" disabled={loading} />
-                      <Text style={[themedStyles.radioText, loading && themedStyles.disabledText]}>
-                        Admin
-                      </Text>
-                    </Pressable>
-                  )}
-                </RadioButton.Group>
-
-                {/* Submit Button */}
-                <Button
-                  mode="contained"
-                  onPress={handleSubmit}
-                  style={themedStyles.button}
-                  loading={loading}
-                  disabled={isSubmitDisabled}
-                  accessibilityLabel="Send invitation"
-                  accessibilityRole="button"
-                >
-                  Send Invite
-                </Button>
-              </>
-            )}
-          </View>
-        </KeyboardAvoidingView>
+              {/* Submit Button */}
+              <Button
+                mode="contained"
+                onPress={handleSubmit}
+                style={themedStyles.button}
+                loading={loading}
+                disabled={isSubmitDisabled}
+                accessibilityLabel="Send invitation"
+                accessibilityRole="button"
+              >
+                Send Invite
+              </Button>
+            </>
+          )}
+        </View>
       </AutocompleteDropdownContextProvider>
-    </Modal>
+    </AppBottomSheet>
   );
 };
 
 const styles = (theme: Theme) =>
   StyleSheet.create({
-    modalOverlay: {
+    container: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: theme.spacing.inset.lg,
-    },
-    modalContent: {
-      borderRadius: theme.spacing.inset.md,
-      padding: theme.spacing.inset.lg,
-      width: '100%',
-      maxWidth: 400,
-    },
-    modalHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: theme.spacing.stack.md,
-    },
-    modalTitle: {
-      ...theme.typography.heading.h3,
-      color: theme.colors.content.primary,
-    },
-    closeButton: {
-      padding: theme.spacing.inset.xs,
     },
     inputLabel: {
       ...theme.typography.body.medium,
@@ -291,6 +233,8 @@ const styles = (theme: Theme) =>
       padding: theme.spacing.inset.sm,
       borderRadius: theme.borderRadius.sm,
       marginTop: theme.spacing.stack.sm,
+      borderWidth: 1,
+      borderColor: theme.colors.border?.default || theme.colors.content.tertiary,
     },
     selectedLabel: {
       ...theme.typography.body.small,
@@ -327,11 +271,13 @@ const styles = (theme: Theme) =>
     },
     successText: {
       ...theme.typography.heading.h3,
+      color: theme.colors.content.primary,
       marginTop: theme.spacing.stack.md,
       textAlign: 'center',
     },
     successSubtext: {
       ...theme.typography.body.medium,
+      color: theme.colors.content.secondary,
       marginTop: theme.spacing.stack.sm,
       textAlign: 'center',
     },

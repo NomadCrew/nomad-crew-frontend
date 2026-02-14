@@ -1,25 +1,6 @@
-import React, { useState, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  Alert,
-  ScrollView,
-  Dimensions,
-  ActivityIndicator,
-  RefreshControl,
-} from 'react-native';
-import {
-  Modal,
-  Portal,
-  Text,
-  Button,
-  List,
-  Avatar,
-  Surface,
-  IconButton,
-  Divider,
-  Snackbar,
-} from 'react-native-paper';
+import React, { useState } from 'react';
+import { View, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import { Text, Button, List, Avatar, IconButton, Divider, Snackbar } from 'react-native-paper';
 import {
   Crown,
   Shield,
@@ -39,6 +20,7 @@ import { useTripMembers, useUpdateMemberRole, useRemoveMember } from '@/src/feat
 import { InviteModal } from './InviteModal';
 import { useIsOwner, useIsAdminOrOwner, usePermission } from '@/src/features/auth/permissions';
 import { formatRelativeTime } from '@/src/utils/dateUtils';
+import { AppBottomSheet } from '@/src/components/molecules/AppBottomSheet';
 
 interface MemberManagementModalProps {
   visible: boolean;
@@ -79,7 +61,6 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
     isLoading: isMembersLoading,
     isError: isMembersError,
     refetch: refetchMembers,
-    isRefetching,
   } = useTripMembers(visible ? trip.id : '');
 
   const showSnackbar = (message: string) => {
@@ -283,6 +264,26 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
     }
   };
 
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'owner':
+        return {
+          bg: theme.colors.primary.surface,
+          text: theme.colors.primary.main,
+        };
+      case 'admin':
+        return {
+          bg: theme.colors.status.info.surface,
+          text: theme.colors.status.info.content,
+        };
+      default:
+        return {
+          bg: theme.colors.surface.variant,
+          text: theme.colors.content.tertiary,
+        };
+    }
+  };
+
   const getExpiryText = (expiresAt: string): { text: string; isExpiringSoon: boolean } => {
     const expiry = new Date(expiresAt);
     const now = new Date();
@@ -298,10 +299,6 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
     const days = Math.ceil(hoursLeft / 24);
     return { text: `Expires in ${days}d`, isExpiringSoon: days <= 2 };
   };
-
-  const handleRefresh = useCallback(() => {
-    refetchMembers();
-  }, [refetchMembers]);
 
   const renderMemberAvatar = (item: TripMember) => {
     if (item.avatarUrl) {
@@ -325,10 +322,10 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
 
   const renderMemberItem = ({ item }: { item: TripMember }) => {
     const isCurrentUser = item.userId === user?.id;
-    const isCreator = item.userId === trip.createdBy;
     const memberRole = item.role || 'member';
 
     const RoleIcon = memberRole === 'owner' ? Crown : memberRole === 'admin' ? Shield : User;
+    const roleColor = getRoleColor(memberRole);
 
     const canManageThisMember =
       !isCurrentUser &&
@@ -358,72 +355,95 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
       }
     }
 
-    const descriptionParts: string[] = [];
-    if (isCurrentUser) descriptionParts.push('You');
-    descriptionParts.push(getRoleLabel(memberRole));
-    if (item.joinedAt) {
-      descriptionParts.push(`Joined ${formatRelativeTime(new Date(item.joinedAt))}`);
-    }
-
     return (
-      <Surface style={styles(theme).memberItemSurface} elevation={1}>
-        <List.Item
-          title={displayName}
-          description={descriptionParts.join(' \u00B7 ')}
-          accessibilityLabel={`${displayName}, ${getRoleLabel(memberRole)}${isCurrentUser ? ', you' : ''}`}
-          accessibilityRole="button"
-          left={() => renderMemberAvatar(item)}
-          right={() => (
-            <View style={styles(theme).memberActionsContainer}>
-              <RoleIcon
-                color={theme.colors.content.secondary}
-                size={20}
-                style={{ marginRight: canManageThisMember ? 8 : 0 }}
-              />
-              {canManageThisMember && (
-                <Menu
-                  visible={menuVisible === item.userId}
-                  onDismiss={() => setMenuVisible(null)}
-                  anchor={
-                    <IconButton
-                      icon={MoreVertical}
-                      onPress={() => setMenuVisible(item.userId)}
-                      accessibilityLabel={`Actions for ${displayName}`}
-                      accessibilityRole="button"
-                    />
-                  }
+      <View style={styles(theme).memberItemContainer}>
+        <View style={styles(theme).memberRow}>
+          <View style={styles(theme).memberAvatarWrapper}>{renderMemberAvatar(item)}</View>
+          <View style={styles(theme).memberInfo}>
+            <View style={styles(theme).memberNameRow}>
+              <Text
+                variant="bodyLarge"
+                style={{ color: theme.colors.content.primary, flexShrink: 1 }}
+                numberOfLines={1}
+              >
+                {displayName}
+              </Text>
+              {isCurrentUser && (
+                <Text
+                  variant="labelSmall"
+                  style={{
+                    color: theme.colors.content.tertiary,
+                    marginLeft: theme.spacing.inline.xs,
+                  }}
                 >
-                  {isOwner && (
-                    <Menu.Item
-                      onPress={() => handleRoleChange(item.userId, displayName || '', 'owner')}
-                      title="Make Owner"
-                    />
-                  )}
-                  {canManageMembers && memberRole !== 'admin' && (
-                    <Menu.Item
-                      onPress={() => handleRoleChange(item.userId, displayName || '', 'admin')}
-                      title="Make Admin"
-                    />
-                  )}
-                  {canManageMembers && memberRole !== 'member' && (
-                    <Menu.Item
-                      onPress={() => handleRoleChange(item.userId, displayName || '', 'member')}
-                      title="Make Member"
-                    />
-                  )}
-                  <Divider />
-                  <Menu.Item
-                    onPress={() => handleRemoveMember(item.userId, displayName || '')}
-                    title="Remove from Trip"
-                    titleStyle={{ color: theme.colors.error.main }}
-                  />
-                </Menu>
+                  (you)
+                </Text>
               )}
             </View>
-          )}
-          style={styles(theme).listItem}
-        />
-      </Surface>
+            <View style={styles(theme).memberMetaRow}>
+              <View style={[styles(theme).roleBadge, { backgroundColor: roleColor.bg }]}>
+                <RoleIcon color={roleColor.text} size={12} />
+                <Text
+                  variant="labelSmall"
+                  style={{
+                    color: roleColor.text,
+                    marginLeft: 4,
+                  }}
+                >
+                  {getRoleLabel(memberRole)}
+                </Text>
+              </View>
+              {item.joinedAt && (
+                <Text variant="labelSmall" style={{ color: theme.colors.content.tertiary }}>
+                  {formatRelativeTime(new Date(item.joinedAt))}
+                </Text>
+              )}
+            </View>
+          </View>
+          <View style={styles(theme).memberActionsContainer}>
+            {canManageThisMember && (
+              <Menu
+                visible={menuVisible === item.userId}
+                onDismiss={() => setMenuVisible(null)}
+                anchor={
+                  <IconButton
+                    icon={MoreVertical}
+                    size={20}
+                    onPress={() => setMenuVisible(item.userId)}
+                    accessibilityLabel={`Actions for ${displayName}`}
+                    accessibilityRole="button"
+                  />
+                }
+              >
+                {isOwner && (
+                  <Menu.Item
+                    onPress={() => handleRoleChange(item.userId, displayName || '', 'owner')}
+                    title="Make Owner"
+                  />
+                )}
+                {canManageMembers && memberRole !== 'admin' && (
+                  <Menu.Item
+                    onPress={() => handleRoleChange(item.userId, displayName || '', 'admin')}
+                    title="Make Admin"
+                  />
+                )}
+                {canManageMembers && memberRole !== 'member' && (
+                  <Menu.Item
+                    onPress={() => handleRoleChange(item.userId, displayName || '', 'member')}
+                    title="Make Member"
+                  />
+                )}
+                <Divider />
+                <Menu.Item
+                  onPress={() => handleRemoveMember(item.userId, displayName || '')}
+                  title="Remove from Trip"
+                  titleStyle={{ color: theme.colors.error.main }}
+                />
+              </Menu>
+            )}
+          </View>
+        </View>
+      </View>
     );
   };
 
@@ -432,7 +452,7 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
     const isPending = item.status === 'pending';
 
     return (
-      <Surface style={styles(theme).invitationItemSurface} elevation={0}>
+      <View style={styles(theme).invitationItemContainer}>
         <List.Item
           title={item.email}
           titleStyle={styles(theme).invitationTitle}
@@ -495,14 +515,14 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
           accessibilityLabel={`Invitation to ${item.email}, status ${item.status}`}
           style={styles(theme).listItem}
         />
-      </Surface>
+      </View>
     );
   };
 
   const renderLoadingSkeleton = () => (
     <View style={styles(theme).loadingContainer}>
       {[1, 2, 3].map((i) => (
-        <Surface key={i} style={styles(theme).skeletonItem} elevation={0}>
+        <View key={i} style={styles(theme).skeletonItem}>
           <View style={styles(theme).skeletonRow}>
             <View style={styles(theme).skeletonAvatar} />
             <View style={styles(theme).skeletonTextContainer}>
@@ -510,7 +530,7 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
               <View style={[styles(theme).skeletonLine, { width: '40%', marginTop: 6 }]} />
             </View>
           </View>
-        </Surface>
+        </View>
       ))}
     </View>
   );
@@ -540,103 +560,94 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
   const memberCount = members.length;
 
   return (
-    <Portal>
-      <Modal
+    <>
+      <AppBottomSheet
         visible={visible}
-        onDismiss={onClose}
-        contentContainerStyle={[styles(theme).modalContainer, { overflow: 'hidden' }]}
+        onClose={onClose}
+        snapPoints={['55%', '85%']}
+        scrollable={true}
       >
-        <View style={[styles(theme).content, { backgroundColor: theme.colors.background.default }]}>
-          <View style={styles(theme).header}>
-            <View style={styles(theme).headerTitleRow}>
-              <Text variant="headlineSmall">Manage Members</Text>
-              {!isMembersLoading && !isMembersError && (
-                <Text
-                  variant="labelLarge"
-                  style={{ color: theme.colors.content.secondary, marginLeft: 8 }}
-                >
-                  ({memberCount})
-                </Text>
-              )}
-            </View>
-            {canCreateInvitation && (
-              <IconButton
-                icon={UserPlus}
-                size={24}
-                onPress={() => setShowInviteModal(true)}
-                accessibilityLabel="Invite a new member"
-                accessibilityRole="button"
-              />
-            )}
-          </View>
-
-          <ScrollView
-            style={styles(theme).scrollView}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefetching}
-                onRefresh={handleRefresh}
-                tintColor={theme.colors.primary.main}
-                colors={[theme.colors.primary.main]}
-              />
-            }
-          >
-            <List.Section>
-              <List.Subheader accessibilityRole="header">Members</List.Subheader>
-              {isMembersLoading
-                ? renderLoadingSkeleton()
-                : isMembersError
-                  ? renderErrorState()
-                  : members.map((member) => (
-                      <View key={member.userId}>{renderMemberItem({ item: member })}</View>
-                    ))}
-            </List.Section>
-
-            {trip.invitations && trip.invitations.length > 0 && (
-              <List.Section>
-                <List.Subheader accessibilityRole="header">
-                  Pending Invitations ({trip.invitations.length})
-                </List.Subheader>
-                {trip.invitations.map((invitation) => (
-                  <View key={invitation.token}>{renderInvitationItem({ item: invitation })}</View>
-                ))}
-              </List.Section>
-            )}
-          </ScrollView>
-
-          <View style={styles(theme).footer}>
-            {!isCurrentUserOwner && user && (
-              <Button
-                mode="text"
-                onPress={handleLeaveTrip}
-                textColor={theme.colors.status.error.content}
-                icon={({ size, color }) => <LogOut size={size} color={color} />}
-                style={styles(theme).leaveButton}
-                accessibilityLabel="Leave this trip"
-                accessibilityRole="button"
-                disabled={loading}
-              >
-                Leave Trip
-              </Button>
-            )}
-            <Button
-              onPress={onClose}
-              mode="outlined"
-              style={styles(theme).closeButton}
-              accessibilityLabel="Close member management"
-              accessibilityRole="button"
+        {/* Header row: title with count + invite button */}
+        <View style={styles(theme).header}>
+          <View style={styles(theme).headerTitleRow}>
+            <Text
+              variant="titleLarge"
+              style={{ color: theme.colors.content.primary, fontWeight: '600' }}
             >
-              Close
-            </Button>
+              Members
+            </Text>
+            {!isMembersLoading && !isMembersError && (
+              <View style={styles(theme).countBadge}>
+                <Text variant="labelSmall" style={{ color: theme.colors.content.tertiary }}>
+                  {memberCount}
+                </Text>
+              </View>
+            )}
           </View>
-
-          <InviteModal
-            visible={showInviteModal}
-            onClose={() => setShowInviteModal(false)}
-            tripId={trip.id}
-          />
+          {canCreateInvitation && (
+            <IconButton
+              icon={UserPlus}
+              size={22}
+              onPress={() => setShowInviteModal(true)}
+              accessibilityLabel="Invite a new member"
+              accessibilityRole="button"
+              style={{ margin: 0 }}
+            />
+          )}
         </View>
-      </Modal>
+
+        {/* Member list */}
+        <View style={styles(theme).sectionContainer}>
+          {isMembersLoading
+            ? renderLoadingSkeleton()
+            : isMembersError
+              ? renderErrorState()
+              : members.map((member) => (
+                  <View key={member.userId}>{renderMemberItem({ item: member })}</View>
+                ))}
+        </View>
+
+        {/* Pending invitations */}
+        {trip.invitations && trip.invitations.length > 0 && (
+          <View style={styles(theme).sectionContainer}>
+            <Text variant="labelLarge" style={styles(theme).sectionLabel}>
+              Pending Invitations ({trip.invitations.length})
+            </Text>
+            {trip.invitations.map((invitation) => (
+              <View key={invitation.token}>{renderInvitationItem({ item: invitation })}</View>
+            ))}
+          </View>
+        )}
+
+        {/* Leave trip - subtle text link at the bottom */}
+        {!isCurrentUserOwner && user && (
+          <TouchableOpacity
+            onPress={handleLeaveTrip}
+            disabled={loading}
+            style={styles(theme).leaveContainer}
+            accessibilityLabel="Leave this trip"
+            accessibilityRole="button"
+          >
+            <LogOut size={16} color={theme.colors.status.error.content} />
+            <Text
+              variant="labelLarge"
+              style={{
+                color: theme.colors.status.error.content,
+                marginLeft: theme.spacing.inline.xs,
+              }}
+            >
+              Leave Trip
+            </Text>
+          </TouchableOpacity>
+        )}
+      </AppBottomSheet>
+
+      {/* InviteModal and Snackbar rendered outside AppBottomSheet -- they create their own portals */}
+      <InviteModal
+        visible={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        tripId={trip.id}
+      />
 
       <Snackbar
         visible={snackbar.visible}
@@ -646,25 +657,12 @@ export const MemberManagementModal = ({ visible, onClose, trip }: MemberManageme
       >
         {snackbar.message}
       </Snackbar>
-    </Portal>
+    </>
   );
 };
 
-const styles = (theme: Theme) => {
-  const screenWidth = Dimensions.get('window').width;
-  const horizontalPadding = 24;
-  const modalWidth = screenWidth - 2 * horizontalPadding;
-
-  return StyleSheet.create({
-    modalContainer: {
-      alignSelf: 'center',
-      width: modalWidth,
-      marginHorizontal: horizontalPadding,
-      borderRadius: theme.borderRadius.md,
-      padding: theme.spacing.inset.lg,
-      maxHeight: '85%',
-      overflow: 'hidden',
-    },
+const styles = (theme: Theme) =>
+  StyleSheet.create({
     header: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -673,22 +671,73 @@ const styles = (theme: Theme) => {
     },
     headerTitleRow: {
       flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.inline.sm,
+    },
+    countBadge: {
+      backgroundColor: theme.colors.surface.variant,
+      paddingHorizontal: theme.spacing.inline.sm,
+      paddingVertical: 2,
+      borderRadius: theme.borderRadius.full,
+      minWidth: 24,
+      alignItems: 'center',
+    },
+    sectionContainer: {
+      marginBottom: theme.spacing.stack.md,
+    },
+    sectionLabel: {
+      color: theme.colors.content.secondary,
+      marginBottom: theme.spacing.stack.sm,
+      paddingHorizontal: theme.spacing.inline.xs,
+    },
+    memberItemContainer: {
+      borderWidth: 1,
+      borderColor: theme.colors.border.default,
+      borderRadius: theme.borderRadius.sm,
+      marginBottom: theme.spacing.stack.xs,
+      backgroundColor: theme.colors.background.card,
+    },
+    memberRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: theme.spacing.inset.sm,
+      paddingHorizontal: theme.spacing.inset.md,
+    },
+    memberAvatarWrapper: {
+      marginRight: theme.spacing.inline.md,
+    },
+    memberInfo: {
+      flex: 1,
+    },
+    memberNameRow: {
+      flexDirection: 'row',
       alignItems: 'baseline',
     },
-    scrollView: {
-      flexGrow: 0,
-      flexShrink: 1,
+    memberMetaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 4,
+      gap: theme.spacing.inline.sm,
     },
-    memberItemSurface: {
-      borderRadius: theme.borderRadius.sm,
-      marginBottom: theme.spacing.stack.xs,
+    roleBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: theme.spacing.inline.sm,
+      paddingVertical: 2,
+      borderRadius: theme.borderRadius.full,
     },
-    invitationItemSurface: {
-      borderRadius: theme.borderRadius.sm,
-      marginBottom: theme.spacing.stack.xs,
+    memberActionsContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginLeft: theme.spacing.inline.xs,
+    },
+    invitationItemContainer: {
       borderWidth: 1,
-      borderColor: theme.colors.surface.variant,
+      borderColor: theme.colors.border.default,
+      borderRadius: theme.borderRadius.sm,
+      marginBottom: theme.spacing.stack.xs,
       borderStyle: 'dashed',
+      backgroundColor: theme.colors.background.card,
     },
     invitationTitle: {
       color: theme.colors.content.secondary,
@@ -709,20 +758,12 @@ const styles = (theme: Theme) => {
       alignItems: 'center',
     },
     listItem: {},
-    memberActionsContainer: {
+    leaveContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-    },
-    footer: {
-      marginTop: theme.spacing.stack.md,
-    },
-    leaveButton: {
-      marginBottom: theme.spacing.stack.sm,
-    },
-    closeButton: {},
-    content: {
-      width: '100%',
-      overflow: 'hidden',
+      justifyContent: 'center',
+      paddingVertical: theme.spacing.stack.md,
+      marginTop: theme.spacing.stack.sm,
     },
     loadingContainer: {
       paddingVertical: theme.spacing.stack.sm,
@@ -731,6 +772,9 @@ const styles = (theme: Theme) => {
       borderRadius: theme.borderRadius.sm,
       marginBottom: theme.spacing.stack.xs,
       padding: theme.spacing.inset.md,
+      borderWidth: 1,
+      borderColor: theme.colors.border.default,
+      backgroundColor: theme.colors.background.card,
     },
     skeletonRow: {
       flexDirection: 'row',
@@ -763,4 +807,3 @@ const styles = (theme: Theme) => {
       marginTop: theme.spacing.stack.md,
     },
   });
-};
