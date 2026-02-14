@@ -59,6 +59,7 @@ app/                  # Expo Router
 | **trips**         | `useTripStore`         | `adapters/normalizeTrip.ts`, `queries.ts` (React Query), `hooks.ts`                                        |
 | **chat**          | `useChatStore`         | `service.ts`, offline message queue, read receipts                                                         |
 | **todos**         | `useTodoStore`         | `queries.ts` (React Query), `api.ts`                                                                       |
+| **polls**         | —                      | TanStack React Query (no Zustand), `api.ts`, `hooks.ts`, `types.ts`, `utils.ts` (formatCountdown)          |
 | **wallet**        | `useWalletStore`       | `adapters/normalizeDocument.ts`, Supabase Realtime subscriptions                                           |
 | **location**      | `useLocationStore`     | `store/useLocationStore.ts`, `components/GroupLiveMap.tsx`                                                 |
 | **notifications** | `useNotificationStore` | `store/useNotificationStore.ts`, `services/pushNotificationService.ts`                                     |
@@ -85,6 +86,8 @@ PersistQueryClientProvider → GestureHandlerRootView → ThemeProvider → Onbo
 ### Dual Real-Time Architecture
 
 1. **Custom WebSocket** (`src/features/websocket/WebSocketManager.ts`): Connects to Go backend (`ws://[base]/v1/ws`). Routes events to location, chat, and notification stores. Reconnects with exponential backoff.
+   - **Envelope unwrapping:** Backend sends `{type: "event", payload: {...}}` — WebSocketManager unwraps and delivers `payload` only.
+   - **Chat store filtering:** `onMessage` callbacks in chat store filter out non-chat events to prevent processing irrelevant WebSocket traffic.
 2. **Supabase Realtime**: Used by wallet store (`postgres_changes` on `wallet_documents`) and notification service. Also handles `onAuthStateChange` session events.
 
 ### Auth Flow
@@ -103,6 +106,37 @@ Supabase Auth → tokens in expo-secure-store (chunked for 2048-byte limit) → 
 - Granular selectors: `selectIsCreating`, `selectIsFetching`, etc.
 - Event handlers for real-time: `handleTripEvent`, `handleDocumentEvent`, etc.
 - Type guards from `src/types/events.ts`: `isTripEvent`, `isWeatherEvent`, `isMemberEvent`, `isChatEvent`
+
+### Polls Feature Implementation
+
+**State Management:**
+
+- TanStack React Query only (no Zustand store)
+- `usePoll` hook for live data with optimistic updates
+- Query invalidation on vote/close/delete actions
+
+**Components:**
+
+- `PollCreator.tsx` — duration picker with 8 presets (5m, 15m, 30m, 1h, 3h, 12h, 24h, 48h)
+- `PollDetailSheet.tsx` — countdown display, close button (gated on expired OR all-members-voted)
+- `PollListCompact.tsx` — compact list view with countdown
+- `PollOptionItem.tsx` — individual poll option with vote button
+- `VoteBar.tsx` — visual vote count bar
+
+**Key Features:**
+
+- Countdown display: `formatCountdown()` in `utils.ts`
+- Close restrictions: CASL permissions check (`can('close', poll)`) plus backend validation (expired OR all voted)
+- Duration: 5-2880 minutes (5m - 48h), default 1440 (24h)
+- Live updates: React Query refetch on WebSocket events (if poll events are implemented)
+
+**Related Components:**
+
+- `BentoCarousel` — parallax carousel for bento grid cells, use `parallaxScrollingOffset: 0` to prevent content bleed
+
+**Documentation:**
+
+- WebSocket architecture review: `docs/WS_ARCHITECTURE_REVIEW.md`
 
 ## Critical Warnings
 
