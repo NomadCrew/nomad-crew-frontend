@@ -81,11 +81,6 @@ export interface UpdateTripStatusRequest {
   status: TripStatus;
 }
 
-export interface UpdateTripStatusResponse {
-  status: TripStatus;
-  message: string;
-}
-
 // Response types for REST API
 export type CreateTripResponse = Trip;
 export type UpdateTripResponse = Trip;

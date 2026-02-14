@@ -213,10 +213,10 @@ export const useUpdateTripStatus = () => {
         queryClient.setQueryData(tripKeys.detail(context.id), context.previousTrip);
       }
     },
-    onSuccess: (updatedTrip) => {
+    onSuccess: (updatedTrip, { id }) => {
       logger.info('TRIP', 'Trip status updated successfully:', updatedTrip);
       queryClient.invalidateQueries({ queryKey: tripKeys.lists() });
-      queryClient.setQueryData(tripKeys.detail(updatedTrip.id), updatedTrip);
+      queryClient.invalidateQueries({ queryKey: tripKeys.detail(id) });
     },
   });
 };

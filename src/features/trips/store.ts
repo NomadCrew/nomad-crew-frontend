@@ -7,7 +7,6 @@ import {
   UpdateTripInput,
   TripStatus,
   UpdateTripStatusRequest,
-  UpdateTripStatusResponse,
   WeatherForecast,
 } from './types';
 import { tripApi } from './api';
@@ -176,7 +175,7 @@ export const useTripStore = create<TripState>()(
         set({ isUpdating: true, error: null });
         try {
           const requestBody: UpdateTripStatusRequest = { status };
-          await api.patch<UpdateTripStatusResponse>(API_PATHS.trips.updateStatus(id), requestBody);
+          await api.patch<Trip>(API_PATHS.trips.updateStatus(id), requestBody);
           set((state) => ({
             trips: state.trips.map((trip) => (trip.id === id ? { ...trip, status } : trip)),
             isUpdating: false,
