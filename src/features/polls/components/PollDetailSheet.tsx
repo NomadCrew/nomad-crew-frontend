@@ -13,8 +13,10 @@ import { useAppTheme } from '@/src/theme/ThemeProvider';
 import type { Theme } from '@/src/theme/types';
 import { AppBottomSheet } from '@/src/components/molecules/AppBottomSheet/AppBottomSheet';
 import { useTripAbility } from '@/src/features/auth/permissions';
+import { useTripMembers } from '@/src/features/trips/hooks';
 import { usePoll, useCastVote, useRemoveVote, useClosePoll, useDeletePoll } from '../hooks';
 import type { PollResponse } from '../types';
+import { formatCountdown } from '../utils';
 import { PollOptionItem } from './PollOptionItem';
 
 interface PollDetailSheetProps {
@@ -45,6 +47,24 @@ export const PollDetailSheet: React.FC<PollDetailSheetProps> = ({
   const deletePoll = useDeletePoll();
 
   const isActive = poll?.status === 'ACTIVE';
+  const isExpired = poll?.expiresAt ? new Date(poll.expiresAt) <= new Date() : false;
+
+  const countdown = useMemo(() => {
+    if (!poll?.expiresAt) return '';
+    return formatCountdown(poll.expiresAt);
+  }, [poll]);
+
+  const { data: members } = useTripMembers(tripId);
+  const memberCount = members?.length ?? 0;
+
+  const uniqueVoterCount = useMemo(() => {
+    if (!poll) return 0;
+    const voters = new Set<string>();
+    poll.options.forEach((opt) => opt.voters.forEach((v) => voters.add(v.userId)));
+    return voters.size;
+  }, [poll]);
+
+  const allMembersVoted = memberCount > 0 && uniqueVoterCount >= memberCount;
 
   const canClose = poll
     ? ability.can('update', {
@@ -63,6 +83,8 @@ export const PollDetailSheet: React.FC<PollDetailSheetProps> = ({
         createdBy: poll.createdBy,
       })
     : false;
+
+  const canCloseNow = canClose && (isExpired || allMembersVoted);
 
   const handleVote = useCallback(
     (optionId: string) => {
@@ -100,6 +122,16 @@ export const PollDetailSheet: React.FC<PollDetailSheetProps> = ({
     return formatTimeAgo(poll.createdAt);
   }, [poll]);
 
+  const metaText = useMemo(() => {
+    if (!poll) return '';
+    let text = timeAgo;
+    if (poll.totalVotes > 0) text += ` \u00B7 ${formatVoteSummary(poll.totalVotes)}`;
+    if (isActive && countdown) {
+      text += ` \u00B7 ${countdown}`;
+    }
+    return text;
+  }, [poll, timeAgo, isActive, countdown]);
+
   return (
     <AppBottomSheet visible={visible} onClose={onClose} snapPoints={['60%', '90%']} scrollable>
       {poll && (
@@ -115,7 +147,7 @@ export const PollDetailSheet: React.FC<PollDetailSheetProps> = ({
               )}
             </View>
             <View style={styles.headerRight}>
-              {isActive && canClose && (
+              {isActive && canCloseNow && (
                 <Pressable
                   onPress={handleClose}
                   hitSlop={8}
@@ -144,10 +176,7 @@ export const PollDetailSheet: React.FC<PollDetailSheetProps> = ({
           <Text style={styles.question}>{poll.question}</Text>
 
           {/* Meta line */}
-          <Text style={styles.meta}>
-            {timeAgo}
-            {poll.totalVotes > 0 && ` \u00B7 ${formatVoteSummary(poll.totalVotes)}`}
-          </Text>
+          <Text style={styles.meta}>{metaText}</Text>
 
           {/* Options */}
           <View style={styles.optionsContainer}>
@@ -164,7 +193,10 @@ export const PollDetailSheet: React.FC<PollDetailSheetProps> = ({
           </View>
 
           {/* Footer prompt */}
-          {isActive && poll.userVoteCount === 0 && (
+          {isActive && allMembersVoted && (
+            <Text style={styles.allVotedText}>All nomads have voted</Text>
+          )}
+          {isActive && !allMembersVoted && poll.userVoteCount === 0 && (
             <Text style={styles.promptText}>Drop your vote, nomad</Text>
           )}
           {!isActive && <Text style={styles.closedText}>The tribe has spoken</Text>}
@@ -303,6 +335,13 @@ const makeStyles = (theme: Theme) =>
       color: theme.colors.content.tertiary,
       textAlign: 'center',
       marginTop: 12,
+    },
+    allVotedText: {
+      ...theme.typography.body.small,
+      fontWeight: '600',
+      color: theme.colors.status.success.main,
+      textAlign: 'center',
+      marginTop: 8,
     },
     multiVoteBadge: {
       backgroundColor: theme.colors.status.info.surface,

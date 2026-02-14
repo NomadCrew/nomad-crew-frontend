@@ -66,7 +66,7 @@ export const BentoCarousel = ({ items, width, height, onProgressChange }: BentoC
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <View style={{ width, height }}>
+      <View style={{ width, height, overflow: 'hidden', borderRadius: 24 }}>
         <Carousel
           {...baseOptions}
           loop={false}
@@ -75,8 +75,9 @@ export const BentoCarousel = ({ items, width, height, onProgressChange }: BentoC
           mode="parallax"
           modeConfig={{
             parallaxScrollingScale: 0.9,
-            parallaxScrollingOffset: 50,
+            parallaxScrollingOffset: 0,
           }}
+          overScrollOnStart={false}
           withAnimation={{
             type: 'spring',
             config: {

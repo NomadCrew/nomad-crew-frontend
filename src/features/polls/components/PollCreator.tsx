@@ -26,6 +26,17 @@ interface PollCreatorProps {
   onClose: () => void;
 }
 
+const DURATION_PRESETS = [
+  { label: '5m', minutes: 5 },
+  { label: '15m', minutes: 15 },
+  { label: '30m', minutes: 30 },
+  { label: '1h', minutes: 60 },
+  { label: '6h', minutes: 360 },
+  { label: '12h', minutes: 720 },
+  { label: '24h', minutes: 1440 },
+  { label: '48h', minutes: 2880 },
+] as const;
+
 const MIN_OPTIONS = 2;
 const MAX_OPTIONS = 20;
 const MAX_QUESTION_LENGTH = 500;
@@ -47,6 +58,7 @@ export const PollCreator: React.FC<PollCreatorProps> = ({ tripId, visible, onClo
     createOptionItem(),
   ]);
   const [allowMultipleVotes, setAllowMultipleVotes] = useState(false);
+  const [durationMinutes, setDurationMinutes] = useState(1440);
 
   const canAddOption = options.length < MAX_OPTIONS;
   const filledOptions = options.filter((o) => o.text.trim().length > 0);
@@ -84,6 +96,7 @@ export const PollCreator: React.FC<PollCreatorProps> = ({ tripId, visible, onClo
           question: question.trim(),
           options: filledOptions.map((o) => o.text.trim()),
           allowMultipleVotes,
+          durationMinutes,
         },
       },
       {
@@ -91,16 +104,27 @@ export const PollCreator: React.FC<PollCreatorProps> = ({ tripId, visible, onClo
           setQuestion('');
           setOptions([createOptionItem(), createOptionItem()]);
           setAllowMultipleVotes(false);
+          setDurationMinutes(1440);
           onClose();
         },
       }
     );
-  }, [canSubmit, tripId, question, filledOptions, allowMultipleVotes, createPoll, onClose]);
+  }, [
+    canSubmit,
+    tripId,
+    question,
+    filledOptions,
+    allowMultipleVotes,
+    durationMinutes,
+    createPoll,
+    onClose,
+  ]);
 
   const handleClose = useCallback(() => {
     setQuestion('');
     setOptions([createOptionItem(), createOptionItem()]);
     setAllowMultipleVotes(false);
+    setDurationMinutes(1440);
     onClose();
   }, [onClose]);
 
@@ -185,6 +209,36 @@ export const PollCreator: React.FC<PollCreatorProps> = ({ tripId, visible, onClo
             onValueChange={setAllowMultipleVotes}
             color={theme.colors.primary.main}
           />
+        </View>
+
+        {/* Duration picker */}
+        <View style={styles.durationSection}>
+          <Text style={styles.durationLabel}>Time to decide</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.durationRow}>
+              {DURATION_PRESETS.map((preset) => (
+                <Pressable
+                  key={preset.minutes}
+                  onPress={() => setDurationMinutes(preset.minutes)}
+                  style={[
+                    styles.durationChip,
+                    durationMinutes === preset.minutes && styles.durationChipSelected,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Set duration to ${preset.label}`}
+                >
+                  <Text
+                    style={[
+                      styles.durationChipText,
+                      durationMinutes === preset.minutes && styles.durationChipTextSelected,
+                    ]}
+                  >
+                    {preset.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </ScrollView>
         </View>
 
         {/* Submit */}
@@ -274,6 +328,38 @@ const makeStyles = (theme: Theme) =>
       ...theme.typography.caption,
       color: theme.colors.content.tertiary,
       marginTop: 2,
+    },
+    durationSection: {
+      marginTop: 12,
+      marginBottom: 20,
+    },
+    durationLabel: {
+      ...theme.typography.body.small,
+      fontWeight: '600',
+      color: theme.colors.content.secondary,
+      marginBottom: 8,
+    },
+    durationRow: {
+      flexDirection: 'row' as const,
+      gap: 8,
+    },
+    durationChip: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 16,
+      backgroundColor: theme.colors.surface.variant,
+    },
+    durationChipSelected: {
+      backgroundColor: theme.colors.primary.main,
+    },
+    durationChipText: {
+      ...theme.typography.body.small,
+      fontWeight: '500',
+      color: theme.colors.content.secondary,
+    },
+    durationChipTextSelected: {
+      color: theme.colors.primary.onPrimary,
+      fontWeight: '700',
     },
     submitButton: {
       borderRadius: 12,

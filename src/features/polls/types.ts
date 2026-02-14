@@ -9,6 +9,7 @@ export interface Poll {
   createdBy: string;
   closedBy: string | null;
   closedAt: string | null;
+  expiresAt: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -43,6 +44,7 @@ export interface CreatePollInput {
   question: string;
   options: string[];
   allowMultipleVotes?: boolean;
+  durationMinutes?: number;
 }
 
 export interface PollsResponse {

@@ -5,6 +5,8 @@ import {
   createPollResponse,
   createClosedPoll,
   createPollWithVotes,
+  createExpiredPoll,
+  createPollExpiringIn,
 } from '../../factories/poll.factory';
 
 // Mock hooks
@@ -19,6 +21,14 @@ jest.mock('@/src/features/polls/hooks', () => ({
   useRemoveVote: () => ({ mutate: mockRemoveVoteMutate }),
   useClosePoll: () => ({ mutate: mockClosePollMutate }),
   useDeletePoll: () => ({ mutate: mockDeletePollMutate }),
+}));
+
+// Mock trip hooks
+const mockUseTripMembers = jest.fn(() => ({
+  data: [{ userId: 'user-1' }, { userId: 'user-2' }],
+}));
+jest.mock('@/src/features/trips/hooks', () => ({
+  useTripMembers: (...args: unknown[]) => mockUseTripMembers(...args),
 }));
 
 // Mock permissions
@@ -75,6 +85,9 @@ describe('PollDetailSheet', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAbility.can.mockReturnValue(false);
+    mockUseTripMembers.mockReturnValue({
+      data: [{ userId: 'user-1' }, { userId: 'user-2' }],
+    });
   });
 
   it('renders nothing when not visible', () => {
@@ -200,9 +213,9 @@ describe('PollDetailSheet', () => {
   });
 
   describe('actions visibility', () => {
-    it('shows close button when user canClose an active poll', () => {
+    it('shows close button when user canClose an active expired poll', () => {
       mockAbility.can.mockReturnValue(true);
-      const poll = createPollResponse({ status: 'ACTIVE' });
+      const poll = createExpiredPoll({ status: 'ACTIVE' });
 
       const { getByLabelText } = render(
         <PollDetailSheet tripId={tripId} poll={poll} visible={true} onClose={onClose} />
@@ -256,10 +269,139 @@ describe('PollDetailSheet', () => {
     });
   });
 
+  describe('expiration and all-voted behavior', () => {
+    it('shows countdown for active unexpired poll', () => {
+      const poll = createPollExpiringIn(120); // 2 hours from now
+
+      const { getByText } = render(
+        <PollDetailSheet tripId={tripId} poll={poll} visible={true} onClose={onClose} />
+      );
+
+      // The meta line should contain the countdown (e.g., "2h 0m left" or "1h 59m left")
+      expect(getByText(/\d+h.*left/)).toBeTruthy();
+    });
+
+    it('shows Expired in meta for active expired poll', () => {
+      const poll = createExpiredPoll({ status: 'ACTIVE' });
+
+      const { getByText } = render(
+        <PollDetailSheet tripId={tripId} poll={poll} visible={true} onClose={onClose} />
+      );
+
+      expect(getByText(/Expired/)).toBeTruthy();
+    });
+
+    it('hides close button when poll active and not expired and not all voted', () => {
+      mockAbility.can.mockReturnValue(true);
+      const poll = createPollExpiringIn(60, { status: 'ACTIVE' });
+
+      const { queryByLabelText } = render(
+        <PollDetailSheet tripId={tripId} poll={poll} visible={true} onClose={onClose} />
+      );
+
+      expect(queryByLabelText('Close poll')).toBeNull();
+    });
+
+    it('shows close button when poll is expired', () => {
+      mockAbility.can.mockReturnValue(true);
+      const poll = createExpiredPoll({ status: 'ACTIVE' });
+
+      const { getByLabelText } = render(
+        <PollDetailSheet tripId={tripId} poll={poll} visible={true} onClose={onClose} />
+      );
+
+      expect(getByLabelText('Close poll')).toBeTruthy();
+    });
+
+    it('shows close button when all members have voted', () => {
+      mockAbility.can.mockReturnValue(true);
+      mockUseTripMembers.mockReturnValue({
+        data: [{ userId: 'user-1' }, { userId: 'user-2' }],
+      });
+
+      const poll = createPollExpiringIn(60, {
+        status: 'ACTIVE',
+        options: [
+          {
+            id: 'opt-1',
+            pollId: 'poll-1',
+            text: 'A',
+            position: 1,
+            createdBy: 'user-creator',
+            createdAt: new Date().toISOString(),
+            voteCount: 1,
+            voters: [{ userId: 'user-1', createdAt: new Date().toISOString() }],
+            hasVoted: false,
+          },
+          {
+            id: 'opt-2',
+            pollId: 'poll-1',
+            text: 'B',
+            position: 2,
+            createdBy: 'user-creator',
+            createdAt: new Date().toISOString(),
+            voteCount: 1,
+            voters: [{ userId: 'user-2', createdAt: new Date().toISOString() }],
+            hasVoted: false,
+          },
+        ],
+        totalVotes: 2,
+      });
+
+      const { getByLabelText } = render(
+        <PollDetailSheet tripId={tripId} poll={poll} visible={true} onClose={onClose} />
+      );
+
+      expect(getByLabelText('Close poll')).toBeTruthy();
+    });
+
+    it('shows "All nomads have voted" when all members voted', () => {
+      mockUseTripMembers.mockReturnValue({
+        data: [{ userId: 'user-1' }, { userId: 'user-2' }],
+      });
+
+      const poll = createPollExpiringIn(60, {
+        status: 'ACTIVE',
+        options: [
+          {
+            id: 'opt-1',
+            pollId: 'poll-1',
+            text: 'A',
+            position: 1,
+            createdBy: 'user-creator',
+            createdAt: new Date().toISOString(),
+            voteCount: 1,
+            voters: [{ userId: 'user-1', createdAt: new Date().toISOString() }],
+            hasVoted: false,
+          },
+          {
+            id: 'opt-2',
+            pollId: 'poll-1',
+            text: 'B',
+            position: 2,
+            createdBy: 'user-creator',
+            createdAt: new Date().toISOString(),
+            voteCount: 1,
+            voters: [{ userId: 'user-2', createdAt: new Date().toISOString() }],
+            hasVoted: false,
+          },
+        ],
+        totalVotes: 2,
+        userVoteCount: 1,
+      });
+
+      const { getByText } = render(
+        <PollDetailSheet tripId={tripId} poll={poll} visible={true} onClose={onClose} />
+      );
+
+      expect(getByText('All nomads have voted')).toBeTruthy();
+    });
+  });
+
   describe('action handlers', () => {
     it('calls closePoll.mutate when close button is pressed', () => {
       mockAbility.can.mockReturnValue(true);
-      const poll = createPollResponse({ id: 'poll-99', status: 'ACTIVE' });
+      const poll = createExpiredPoll({ id: 'poll-99', status: 'ACTIVE' });
 
       const { getByLabelText } = render(
         <PollDetailSheet tripId={tripId} poll={poll} visible={true} onClose={onClose} />

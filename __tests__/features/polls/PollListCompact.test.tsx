@@ -1,7 +1,12 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '../../test-utils';
 import { PollListCompact } from '@/src/features/polls/components/PollListCompact';
-import { createPollResponse, createClosedPoll } from '../../factories/poll.factory';
+import {
+  createPollResponse,
+  createClosedPoll,
+  createExpiredPoll,
+  createPollExpiringIn,
+} from '../../factories/poll.factory';
 
 // Mock the polls hooks module
 const mockUsePolls = jest.fn();
@@ -186,5 +191,44 @@ describe('PollListCompact', () => {
     render(<PollListCompact tripId="my-trip" onPollPress={onPollPress} />);
 
     expect(mockUsePolls).toHaveBeenCalledWith('my-trip', 0, 20);
+  });
+
+  it('shows expiry countdown for active polls', () => {
+    const poll = createPollExpiringIn(120, {
+      id: 'p1',
+      question: 'Where next?',
+      status: 'ACTIVE',
+    });
+
+    mockUsePolls.mockReturnValue({
+      data: { data: [poll], pagination: { limit: 20, offset: 0, total: 1 } },
+      isLoading: false,
+      error: null,
+      refetch: jest.fn(),
+    });
+
+    const { getByText } = render(<PollListCompact tripId={tripId} onPollPress={onPollPress} />);
+
+    // Should show a countdown like "1h 59m left" or "2h left"
+    expect(getByText(/left/)).toBeTruthy();
+  });
+
+  it('shows Expired for expired active polls', () => {
+    const poll = createExpiredPoll({
+      id: 'p1',
+      question: 'Old poll',
+      status: 'ACTIVE',
+    });
+
+    mockUsePolls.mockReturnValue({
+      data: { data: [poll], pagination: { limit: 20, offset: 0, total: 1 } },
+      isLoading: false,
+      error: null,
+      refetch: jest.fn(),
+    });
+
+    const { getByText } = render(<PollListCompact tripId={tripId} onPollPress={onPollPress} />);
+
+    expect(getByText('Expired')).toBeTruthy();
   });
 });

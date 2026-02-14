@@ -38,6 +38,7 @@ export const createPollResponse = (overrides: Partial<PollResponse> = {}): PollR
     createdBy: 'user-creator',
     closedBy: null,
     closedAt: null,
+    expiresAt: new Date(Date.now() + 24 * 60 * 60000).toISOString(),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     options,
@@ -60,6 +61,23 @@ export const createClosedPoll = (overrides: Partial<PollResponse> = {}): PollRes
     closedAt: new Date().toISOString(),
     ...overrides,
   });
+
+export function createExpiredPoll(overrides?: Partial<PollResponse>): PollResponse {
+  return createPollResponse({
+    expiresAt: new Date(Date.now() - 60000).toISOString(), // 1 min ago
+    ...overrides,
+  });
+}
+
+export function createPollExpiringIn(
+  minutes: number,
+  overrides?: Partial<PollResponse>
+): PollResponse {
+  return createPollResponse({
+    expiresAt: new Date(Date.now() + minutes * 60000).toISOString(),
+    ...overrides,
+  });
+}
 
 export const createPollWithVotes = (overrides: Partial<PollResponse> = {}): PollResponse => {
   const voter1 = createPollVoter({ userId: 'user-1' });

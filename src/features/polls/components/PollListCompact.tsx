@@ -7,6 +7,7 @@ import { useAppTheme } from '@/src/theme/ThemeProvider';
 import type { Theme } from '@/src/theme/types';
 import { usePolls } from '../hooks';
 import type { PollResponse } from '../types';
+import { formatCountdown } from '../utils';
 
 interface PollListCompactProps {
   tripId: string;
@@ -63,6 +64,9 @@ export const PollListCompact: React.FC<PollListCompactProps> = ({
           <Text style={styles.voteCount}>
             {item.totalVotes} {item.totalVotes === 1 ? 'vote' : 'votes'}
           </Text>
+          {item.status === 'ACTIVE' && item.expiresAt && (
+            <Text style={styles.expiryText}>{formatCountdown(item.expiresAt)}</Text>
+          )}
         </View>
       </Pressable>
     ),
@@ -203,6 +207,11 @@ const makeStyles = (theme: Theme) =>
       ...theme.typography.caption,
       color: theme.colors.content.tertiary,
     },
+    expiryText: {
+      ...theme.typography.caption,
+      color: theme.colors.content.tertiary,
+      fontSize: 10,
+    },
     loader: {
       padding: theme.spacing.inset.md,
     },
@@ -222,10 +231,5 @@ const makeStyles = (theme: Theme) =>
       height: 56,
       justifyContent: 'center',
       alignItems: 'center',
-      elevation: 4,
-      shadowColor: theme.colors.content.primary,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.2,
-      shadowRadius: 2,
     },
   });
