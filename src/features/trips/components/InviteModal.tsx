@@ -112,7 +112,7 @@ export const InviteModal = ({ visible, onClose, tripId }: InviteModalProps) => {
       onClose={handleClose}
       title="Invite Member"
       snapPoints={['55%', '80%']}
-      scrollable={true}
+      scrollable={false}
     >
       <AutocompleteDropdownContextProvider>
         <View style={themedStyles.container}>
