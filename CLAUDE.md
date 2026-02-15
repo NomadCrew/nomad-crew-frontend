@@ -142,7 +142,7 @@ Supabase Auth → tokens in expo-secure-store (chunked for 2048-byte limit) → 
 
 - **EAS Secrets**: Never reference EAS secrets in `eas.json` `env` field — they auto-load into builds. Putting `@SECRET_NAME` in env overrides with the literal string. See `docs/EAS_SECRETS_GUIDE.md`.
 - **Component naming**: Use `AppButton`, `AppCard` (not `Button`, `Card`) to avoid React Native Paper conflicts.
-- **Supabase URL**: `efmqiltdajvqenndmylz.supabase.co` (configured in `app.config.js`)
+- **Supabase URL**: `kijatqtrwdzltelqzadx.supabase.co` (configured in `app.config.js`)
 - **Secure storage**: Auth tokens use `secureStorage` adapter (expo-secure-store with chunking), NOT AsyncStorage. See `src/features/auth/secure-storage.ts`.
 - **API paths**: All endpoints MUST go through `src/utils/api-paths.ts`. Don't hardcode paths.
 - **`nul` file**: Windows artifact — gitignore it, don't commit.
