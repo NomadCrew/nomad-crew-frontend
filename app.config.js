@@ -1,4 +1,4 @@
-const SUPABASE_URL = 'https://eihszqnmmgbrcxtymskn.supabase.co';
+const SUPABASE_URL = 'https://kijatqtrwdzltelqzadx.supabase.co';
 
 const getEnvironment = () => {
   switch (process.env.APP_VARIANT) {
@@ -98,7 +98,7 @@ export default {
             },
             {
               scheme: 'https',
-              host: 'eihszqnmmgbrcxtymskn.supabase.co',
+              host: 'kijatqtrwdzltelqzadx.supabase.co',
               pathPrefix: '/auth/v1/callback'
             },
             {
@@ -155,8 +155,8 @@ export default {
         {
           android: {
             compileSdkVersion: 35,
-            targetSdkVersion: 34,
-            buildToolsVersion: '34.0.0'
+            targetSdkVersion: 35,
+            buildToolsVersion: '35.0.0'
           },
           ios: {
             deploymentTarget: '15.1'
