@@ -368,8 +368,12 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
             <Marker
               key={m.userId}
               coordinate={{ latitude: m.location.latitude, longitude: m.location.longitude }}
-              pinColor={memberColor}
+              anchor={{ x: 0.5, y: 0.5 }}
+              tracksViewChanges={false}
             >
+              <View style={styles(theme).memberDotOuter}>
+                <View style={[styles(theme).memberDot, { backgroundColor: memberColor }]} />
+              </View>
               <Callout tooltip style={styles(theme).calloutContainer}>
                 <View style={[styles(theme).calloutBubble, { borderColor: memberColor }]}>
                   <View style={[styles(theme).calloutColorDot, { backgroundColor: memberColor }]} />
@@ -558,6 +562,25 @@ const styles = (theme: Theme) =>
       color: theme.colors.primary?.text || '#FFFFFF',
       fontWeight: 'bold',
       fontSize: theme.typography.size.sm,
+    },
+    // Member location dot (replaces default pin)
+    memberDotOuter: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      backgroundColor: 'rgba(255,255,255,0.85)',
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.3,
+      shadowRadius: 2,
+      elevation: 3,
+    },
+    memberDot: {
+      width: 14,
+      height: 14,
+      borderRadius: 7,
     },
     // Callout styles for member markers
     calloutContainer: {
