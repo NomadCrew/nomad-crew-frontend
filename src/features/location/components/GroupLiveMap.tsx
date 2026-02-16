@@ -8,7 +8,7 @@ import {
   Pressable,
   ActivityIndicator,
 } from 'react-native';
-import MapView, { Marker, Callout, PROVIDER_GOOGLE, Region } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { useLocationStore } from '../store/useLocationStore';
 import { useAuthStore } from '@/src/features/auth/store';
@@ -370,17 +370,11 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
               coordinate={{ latitude: m.location.latitude, longitude: m.location.longitude }}
               anchor={{ x: 0.5, y: 0.5 }}
               tracksViewChanges={false}
+              title={displayName}
             >
               <View style={styles(theme).memberDotOuter}>
                 <View style={[styles(theme).memberDot, { backgroundColor: memberColor }]} />
               </View>
-              <Callout tooltip style={styles(theme).calloutContainer}>
-                <View style={[styles(theme).calloutBubble, { borderColor: memberColor }]}>
-                  <View style={[styles(theme).calloutColorDot, { backgroundColor: memberColor }]} />
-                  <Text style={styles(theme).calloutText}>{displayName}</Text>
-                </View>
-                <View style={[styles(theme).calloutArrow, { borderTopColor: memberColor }]} />
-              </Callout>
             </Marker>
           );
         })}
@@ -581,44 +575,5 @@ const styles = (theme: Theme) =>
       width: 14,
       height: 14,
       borderRadius: 7,
-    },
-    // Callout styles for member markers
-    calloutContainer: {
-      alignItems: 'center',
-    },
-    calloutBubble: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: theme.colors.surface.default,
-      paddingHorizontal: theme.spacing.inset.sm,
-      paddingVertical: theme.spacing.inset.xs,
-      borderRadius: theme.borderRadius.md,
-      borderWidth: 2,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.25,
-      shadowRadius: 3.84,
-      elevation: 5,
-    },
-    calloutColorDot: {
-      width: 10,
-      height: 10,
-      borderRadius: 5,
-      marginRight: theme.spacing.inset.xs,
-    },
-    calloutText: {
-      fontSize: theme.typography.size.sm,
-      fontWeight: '600',
-      color: theme.colors.content.primary,
-    },
-    calloutArrow: {
-      width: 0,
-      height: 0,
-      borderLeftWidth: 8,
-      borderRightWidth: 8,
-      borderTopWidth: 8,
-      borderLeftColor: 'transparent',
-      borderRightColor: 'transparent',
-      marginTop: -1,
     },
   });
