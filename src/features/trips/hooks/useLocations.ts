@@ -105,7 +105,16 @@ export function useLocations({
       if (isMountedRef.current) {
         const locationsData = response.data?.locations || response.data || [];
         const rows = Array.isArray(locationsData) ? locationsData : [];
-        setLocations(rows.map(normalizeSupabaseRow));
+        // Deduplicate by user_id, keeping the latest entry per user
+        const normalized = rows.map(normalizeSupabaseRow);
+        const latestByUser = new Map<string, Location>();
+        for (const loc of normalized) {
+          const existing = latestByUser.get(loc.user_id);
+          if (!existing || loc.updated_at > existing.updated_at) {
+            latestByUser.set(loc.user_id, loc);
+          }
+        }
+        setLocations(Array.from(latestByUser.values()));
       }
     } catch (err) {
       logger.error('useLocations', 'Failed to fetch locations:', err);
