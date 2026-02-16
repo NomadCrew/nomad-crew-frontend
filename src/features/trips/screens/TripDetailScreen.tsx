@@ -1,5 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, ScrollView, useWindowDimensions, SafeAreaView, Text, ViewStyle } from 'react-native';
+import {
+  View,
+  ScrollView,
+  useWindowDimensions,
+  SafeAreaView,
+  Text,
+  ViewStyle,
+  Alert,
+} from 'react-native';
 import { Button } from 'react-native-paper';
 import { router } from 'expo-router';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
@@ -23,6 +31,7 @@ import { QuickActions } from '@/src/features/trips/components/QuickActions';
 import { StatusBar } from 'expo-status-bar';
 import { useChatStore } from '@/src/features/chat/store';
 import { TripStats } from '@/src/features/trips/components/TripStats';
+import { SubscribeBanner } from '@/src/features/trips/components/SubscribeBanner';
 import { useThemedStyles } from '@/src/theme/utils';
 import { WebSocketManager } from '@/src/features/websocket/WebSocketManager';
 import { BaseEventSchema, isChatEvent, isServerEvent } from '@/src/types/events';
@@ -95,6 +104,10 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
   const handlePollPress = useCallback((poll: PollResponse) => {
     setSelectedPoll(poll);
     setShowPollDetail(true);
+  }, []);
+
+  const handlePremiumPress = useCallback(() => {
+    Alert.alert('Premium — Coming Soon', 'Subscription plans are on the way. Stay tuned!');
   }, []);
 
   const carouselItems = [
@@ -312,6 +325,10 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
         showsVerticalScrollIndicator={false}
       >
         <BentoGrid items={bentoItems} />
+
+        <View style={{ paddingHorizontal: GRID_MARGIN, marginTop: GRID_GAP }}>
+          <SubscribeBanner onPress={handlePremiumPress} />
+        </View>
       </ScrollView>
 
       <AddTodoModal visible={showAddTodo} onClose={() => setShowAddTodo(false)} tripId={tripId} />
