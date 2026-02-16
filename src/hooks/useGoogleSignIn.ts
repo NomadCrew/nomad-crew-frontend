@@ -1,4 +1,3 @@
-import { Platform } from 'react-native';
 import { useAuthStore } from '@/src/features/auth/store';
 import { useState, useCallback } from 'react';
 import Constants from 'expo-constants';
@@ -88,26 +87,6 @@ if (!isExpoGo) {
 }
 
 const ACCESS_TOKEN_KEY = 'supabase_access_token'; // Ensure this matches the store's key
-
-// Configure Google Sign-In
-// You must run this configuration early in your app's lifecycle, e.g., in App.tsx
-// Make sure webClientId is retrieved from your Google Cloud console
-// and iosClientId from the .plist file (if you followed Firebase setup for iOS)
-export const configureGoogleSignIn = () => {
-  const webClientId = Platform.select({
-    android: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID_ANDROID,
-    ios: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID_IOS,
-  });
-  if (!webClientId) {
-    logger.warn('AUTH', 'Google Sign-In webClientId is not configured for this platform.');
-    return;
-  }
-  GoogleSignin.configure({
-    webClientId: webClientId,
-    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID, // Optional, for iOS specific client ID
-    scopes: ['openid', 'email', 'profile'],
-  });
-};
 
 export function useGoogleSignIn() {
   const { handleGoogleSignInSuccess } = useAuthStore.getState(); // Use getState for actions outside components
