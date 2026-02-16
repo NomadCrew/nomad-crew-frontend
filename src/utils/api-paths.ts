@@ -80,6 +80,7 @@ export const API_PATHS = {
   // Notification endpoints
   notifications: {
     list: createApiPath('notifications'),
+    unreadCount: createApiPath('notifications/unread-count'),
     markRead: (id: string) => createApiPath(`notifications/${id}/read`),
     markAllRead: createApiPath('notifications/read-all'),
     delete: (id: string) => createApiPath(`notifications/${id}`),

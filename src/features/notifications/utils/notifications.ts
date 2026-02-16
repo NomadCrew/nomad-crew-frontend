@@ -42,9 +42,9 @@ function initializeNotificationsModule() {
         shouldSetBadge: true,
       }),
     });
-    console.log('[NOTIFICATION] Module initialized for physical device');
+    logger.info('NOTIFICATION', 'Module initialized for physical device');
   } else {
-    console.log('[NOTIFICATION] Skipping module init - running on simulator/emulator');
+    logger.debug('NOTIFICATION', 'Skipping module init - running on simulator/emulator');
   }
 }
 
@@ -120,7 +120,7 @@ const isPhysicalDevice = (): boolean => {
 async function handleNotificationResponse(response: ExpoNotifications.NotificationResponse) {
   const data = response.notification.request.content.data as NotificationData;
 
-  console.log('[NOTIFICATION] Extracted data:', JSON.stringify(data, null, 2));
+  logger.debug('NOTIFICATION', 'Extracted data:', JSON.stringify(data, null, 2));
   logger.debug('NOTIFICATION', 'Notification tapped', {
     type: data?.type,
     hasData: !!data,
@@ -128,15 +128,15 @@ async function handleNotificationResponse(response: ExpoNotifications.Notificati
   });
 
   // Handle trip invitation notifications
-  console.log('[NOTIFICATION] Checking notification type:', data?.type);
+  logger.debug('NOTIFICATION', 'Checking notification type:', data?.type);
   if (data?.type === 'TRIP_INVITATION_RECEIVED' || data?.type === 'TRIP_INVITATION') {
-    console.log('[NOTIFICATION] Matched TRIP_INVITATION type!');
+    logger.debug('NOTIFICATION', 'Matched TRIP_INVITATION type');
     const tripId = data.tripID || data.tripId;
     const invitationId = data.invitationID || data.invitationId;
     const tripName = data.tripName;
     const inviterName = data.inviterName;
 
-    console.log('[NOTIFICATION] Extracted invitation details:', {
+    logger.debug('NOTIFICATION', 'Extracted invitation details:', {
       tripId,
       invitationId,
       tripName,
@@ -150,25 +150,26 @@ async function handleNotificationResponse(response: ExpoNotifications.Notificati
     });
 
     const { user } = useAuthStore.getState();
-    console.log('[NOTIFICATION] User state:', { hasUser: !!user, userId: user?.id });
+    logger.debug('NOTIFICATION', 'User state:', { hasUser: !!user, userId: user?.id });
 
     if (user) {
       const targetPath = invitationId ? `/invitation/${invitationId}` : '/(tabs)/notifications';
-      console.log(`[NOTIFICATION] User is logged in, target: ${targetPath}`);
+      logger.debug('NOTIFICATION', `User is logged in, target: ${targetPath}`);
 
       if (appInitialized) {
         // Warm start: app is already running, navigate directly
-        console.log('[NOTIFICATION] App already initialized, navigating directly');
+        logger.debug('NOTIFICATION', 'App already initialized, navigating directly');
         router.push(targetPath as any);
       } else {
         // Cold start: store for AppInitializer to pick up
         pendingNotificationNavigation = targetPath;
-        console.log('[NOTIFICATION] Pending navigation stored, will navigate after app ready');
+        logger.debug('NOTIFICATION', 'Pending navigation stored, will navigate after app ready');
       }
     } else {
       // Not logged in - store invitation intent and redirect to login
-      console.log(
-        '[NOTIFICATION] User not logged in, storing invitation ID and redirecting to auth'
+      logger.debug(
+        'NOTIFICATION',
+        'User not logged in, storing invitation ID and redirecting to auth'
       );
       logger.debug('NOTIFICATION', 'User not logged in, redirecting to auth');
       if (invitationId) {
@@ -253,23 +254,24 @@ async function handleNotificationResponse(response: ExpoNotifications.Notificati
 
   // Handle other notification types - navigate to notifications tab
   if (data?.type) {
-    console.log(
-      '[NOTIFICATION] Unknown notification type, storing pending navigation to notifications'
+    logger.debug(
+      'NOTIFICATION',
+      'Unknown notification type, storing pending navigation to notifications'
     );
     logger.debug('NOTIFICATION', 'Storing pending navigation for type', { type: data.type });
     pendingNotificationNavigation = '/(tabs)/notifications';
   } else {
-    console.log('[NOTIFICATION] No type in notification data, ignoring');
+    logger.debug('NOTIFICATION', 'No type in notification data, ignoring');
   }
 }
 
 // Configure how notifications are presented when the app is in the foreground
 export function configureNotifications() {
-  console.log('[NOTIFICATION] configureNotifications called');
+  logger.debug('NOTIFICATION', 'configureNotifications called');
 
   // Skip if notifications module not loaded (simulator/emulator)
   if (!Notifications) {
-    console.log('[NOTIFICATION] Notifications module not available, skipping configuration');
+    logger.debug('NOTIFICATION', 'Notifications module not available, skipping configuration');
     return () => {}; // Return no-op cleanup function
   }
 
@@ -288,33 +290,35 @@ export function configureNotifications() {
   Notifications.getLastNotificationResponseAsync()
     .then((response) => {
       if (response) {
-        console.log('[NOTIFICATION] ===== COLD START NOTIFICATION DETECTED =====');
-        console.log(
-          '[NOTIFICATION] Last notification response:',
+        logger.info('NOTIFICATION', 'Cold start notification detected');
+        logger.debug(
+          'NOTIFICATION',
+          'Last notification response:',
           JSON.stringify(response, null, 2)
         );
         handleNotificationResponse(response);
       } else {
-        console.log('[NOTIFICATION] No pending notification response on cold start');
+        logger.debug('NOTIFICATION', 'No pending notification response on cold start');
       }
     })
     .catch((error) => {
-      console.log('[NOTIFICATION] Error checking last notification response:', error);
+      logger.error('NOTIFICATION', 'Error checking last notification response:', error);
     });
 
   // Handle notification taps (warm start - app already running)
   const responseSubscription = Notifications.addNotificationResponseReceivedListener(
     async (response) => {
-      console.log('[NOTIFICATION] ===== NOTIFICATION TAP RECEIVED (WARM START) =====');
-      console.log('[NOTIFICATION] Full response:', JSON.stringify(response, null, 2));
+      logger.info('NOTIFICATION', 'Notification tap received (warm start)');
+      logger.debug('NOTIFICATION', 'Full response:', JSON.stringify(response, null, 2));
       await handleNotificationResponse(response);
     }
   );
 
   // Handle notifications received while app is running
   const notificationSubscription = Notifications.addNotificationReceivedListener((notification) => {
-    console.log(
-      '[NOTIFICATION] Notification received while app is running:',
+    logger.debug(
+      'NOTIFICATION',
+      'Notification received while app is running:',
       notification.request.content.title
     );
     // You can handle foreground notifications here if needed

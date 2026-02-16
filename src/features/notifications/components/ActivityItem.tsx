@@ -52,8 +52,8 @@ export const ActivityItem: React.FC<ActivityItemProps> = ({ notification, onPres
     if (isChatMessageNotification(notification)) {
       return {
         icon: MessageCircle,
-        iconColor: '#3B82F6', // Blue
-        iconBackgroundColor: '#EFF6FF',
+        iconColor: theme.colors.status.info.content,
+        iconBackgroundColor: theme.colors.status.info.surface,
         title: notification.metadata.senderName,
         description: notification.metadata.messagePreview,
       };
@@ -62,8 +62,8 @@ export const ActivityItem: React.FC<ActivityItemProps> = ({ notification, onPres
     if (isTripUpdateNotification(notification)) {
       return {
         icon: Calendar,
-        iconColor: '#F59E0B', // Yellow/Amber
-        iconBackgroundColor: '#FFFBEB',
+        iconColor: theme.colors.status.warning.content,
+        iconBackgroundColor: theme.colors.status.warning.surface,
         title: `${notification.metadata.tripName} updated`,
         description:
           notification.metadata.changedFields.length > 0
@@ -75,8 +75,8 @@ export const ActivityItem: React.FC<ActivityItemProps> = ({ notification, onPres
     if (isMemberAddedNotification(notification)) {
       return {
         icon: Users,
-        iconColor: '#10B981', // Green
-        iconBackgroundColor: '#ECFDF5',
+        iconColor: theme.colors.status.success.content,
+        iconBackgroundColor: theme.colors.status.success.surface,
         title: 'New member joined',
         description: `${notification.metadata.addedUserName} joined ${notification.metadata.tripName}`,
       };

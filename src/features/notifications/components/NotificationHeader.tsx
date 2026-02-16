@@ -32,7 +32,7 @@ export const NotificationHeader: React.FC<NotificationHeaderProps> = ({
     unreadCount,
     clearNotifications,
     markAllNotificationsRead,
-    isHandlingAction,
+    isClearingAll,
     isMarkingRead,
   } = useNotificationStore();
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -72,7 +72,7 @@ export const NotificationHeader: React.FC<NotificationHeaderProps> = ({
                 iconColor={theme.colors.content.secondary}
                 size={22}
                 onPress={handleMarkAllRead}
-                disabled={isMarkingRead || isHandlingAction}
+                disabled={isMarkingRead || isClearingAll}
                 accessibilityLabel="Mark all notifications as read"
               />
             )}
@@ -84,7 +84,7 @@ export const NotificationHeader: React.FC<NotificationHeaderProps> = ({
                 iconColor={theme.colors.status.error.content}
                 size={22}
                 onPress={handleClearAll}
-                disabled={isHandlingAction}
+                disabled={isClearingAll}
                 accessibilityLabel="Clear all notifications"
               />
             )}

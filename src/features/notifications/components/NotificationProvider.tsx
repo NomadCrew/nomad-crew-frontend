@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { AppState, AppStateStatus, View } from 'react-native';
 import { useNotificationStore } from '../store/useNotificationStore';
 import { NotificationToast } from './NotificationToast';
 import { Notification } from '../types/notification';
@@ -11,56 +11,76 @@ interface NotificationProviderProps {
 export const NotificationProvider: React.FC<NotificationProviderProps> = ({ children }) => {
   const [activeToast, setActiveToast] = useState<Notification | null>(null);
   const [queue, setQueue] = useState<Notification[]>([]);
-  const notificationStore = useNotificationStore();
+  const seenIdsRef = useRef<Set<string>>(new Set());
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
 
-  // Type guard to ensure notification is valid
-  const isValidNotification = (notif: Notification): notif is Notification => {
-    return notif && notif.id && notif.type ? true : false;
-  };
-
-  // Subscribe to notification store changes
+  // Subscribe to notification store changes for toast display
   useEffect(() => {
-    // Get initial notifications
-    const initialNotifications = notificationStore.notifications;
+    // Snapshot current notification IDs as "already seen"
+    const currentNotifications = useNotificationStore.getState().notifications;
+    for (const n of currentNotifications) {
+      seenIdsRef.current.add(n.id);
+    }
 
-    // Setup subscription for new notifications
     const unsubscribe = useNotificationStore.subscribe((state) => {
       const notifications = state.notifications;
 
-      // Only proceed if we have more notifications than before
-      if (notifications.length > initialNotifications.length) {
-        // Find new notifications (ones that don't exist in our initial set)
-        const newNotifications = notifications.filter(
-          (n) => !initialNotifications.some((initial) => initial.id === n.id) && !n.read
-        );
+      // Find new notifications we haven't seen yet
+      const newNotifications = notifications.filter(
+        (n) => !seenIdsRef.current.has(n.id) && !n.read
+      );
 
-        // If we have new notifications, show them
-        if (newNotifications.length > 0) {
-          // Add to queue if there's already an active toast, otherwise show directly
-          const firstNotif = newNotifications[0];
-          if (activeToast) {
-            setQueue((prev) => [...prev, ...newNotifications]);
-          } else if (firstNotif) {
-            setActiveToast(firstNotif);
+      // Mark all current IDs as seen
+      for (const n of notifications) {
+        seenIdsRef.current.add(n.id);
+      }
 
-            // If there are more, add them to the queue
+      if (newNotifications.length > 0) {
+        const firstNotif = newNotifications[0];
+        if (firstNotif) {
+          setActiveToast((current) => {
+            if (current) {
+              // Already showing a toast, queue the new ones
+              setQueue((prev) => [...prev, ...newNotifications]);
+              return current;
+            }
+            // Show first notification, queue the rest
             if (newNotifications.length > 1) {
               setQueue((prev) => [...prev, ...newNotifications.slice(1)]);
             }
-          }
+            return firstNotif;
+          });
         }
       }
     });
 
     return () => {
       unsubscribe();
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  // B4: Refresh unread count when app comes to foreground
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      if (appStateRef.current.match(/inactive|background/) && nextAppState === 'active') {
+        // App has come to the foreground — refresh unread count
+        useNotificationStore.getState().fetchUnreadCount();
+      }
+      appStateRef.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
     };
   }, []);
 
   // Process queue when active toast is dismissed
   useEffect(() => {
     if (!activeToast && queue.length > 0) {
-      // Show the next notification in queue
       const nextNotif = queue[0];
       if (nextNotif) {
         setActiveToast(nextNotif);

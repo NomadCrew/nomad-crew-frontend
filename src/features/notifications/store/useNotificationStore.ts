@@ -30,7 +30,8 @@ interface NotificationState {
   isFetching: boolean;
   isFetchingUnreadCount: boolean;
   isMarkingRead: boolean;
-  isHandlingAction: boolean; // e.g., accepting/declining invites
+  actionInProgress: Set<string>; // Set of notification IDs currently being acted upon
+  isClearingAll: boolean;
   error: string | null;
 
   // Pagination
@@ -63,7 +64,8 @@ export const useNotificationStore = create<NotificationState>()(
         isFetching: false,
         isFetchingUnreadCount: false,
         isMarkingRead: false,
-        isHandlingAction: false,
+        actionInProgress: new Set<string>(),
+        isClearingAll: false,
         error: null,
         offset: 0,
         hasMore: true,
@@ -76,11 +78,8 @@ export const useNotificationStore = create<NotificationState>()(
           if (get().isFetchingUnreadCount) return;
           set({ isFetchingUnreadCount: true, error: null });
           try {
-            // Get all notifications with status=unread and use the response length as the count
-            const response = await api.get<Notification[]>(API_PATHS.notifications.list, {
-              params: { status: 'unread' },
-            });
-            set({ unreadCount: response.data.length });
+            const response = await api.get<{ count: number }>(API_PATHS.notifications.unreadCount);
+            set({ unreadCount: response.data.count });
           } catch (err: any) {
             const errorMessage =
               err.response?.data?.message || err.message || 'Failed to fetch unread count';
@@ -157,6 +156,7 @@ export const useNotificationStore = create<NotificationState>()(
           }
         },
 
+        // A6: On error, re-fetch notifications instead of leaving stale optimistic updates
         markAllNotificationsRead: async () => {
           if (get().isMarkingRead || get().unreadCount === 0) return;
           set({ isMarkingRead: true, error: null });
@@ -173,8 +173,10 @@ export const useNotificationStore = create<NotificationState>()(
               err.response?.data?.message ||
               err.message ||
               'Failed to mark all notifications as read';
-            get().fetchUnreadCount();
             logger.error('markAllNotificationsRead failed:', err);
+            // Re-fetch to recover from stale optimistic state
+            get().fetchNotifications();
+            get().fetchUnreadCount();
           } finally {
             set({ isMarkingRead: false });
           }
@@ -188,14 +190,11 @@ export const useNotificationStore = create<NotificationState>()(
           }
 
           // Handle CHAT_MESSAGE specifically
+          // A4: Do NOT increment unreadCount for CHAT_MESSAGE — they are transient toasts
           if (isChatMessageNotification(notification)) {
-            set((state) => ({
-              // Set the transient state for the toast component to pick up
+            set({
               latestChatMessageToast: notification,
-              // Increment count only if the backend marked it as unread
-              // Or potentially if the chat screen for this message isn't active (requires more context)
-              unreadCount: notification.read ? state.unreadCount : state.unreadCount + 1,
-            }));
+            });
             // Note: The UI component displaying the toast will be responsible for calling clearChatToast
             return; // Don't add chat messages to the persistent notification list
           }
@@ -221,38 +220,34 @@ export const useNotificationStore = create<NotificationState>()(
               notifications: newNotifications,
               // Increment count only if the backend marked it as unread
               unreadCount: notification.read ? state.unreadCount : state.unreadCount + 1,
-              // Decide if receiving a notification should reset pagination/scroll
-              // For now, let's not reset offset/hasMore automatically
             };
           });
         },
 
+        // A3: Per-notification action tracking via actionInProgress Set
         acceptTripInvitation: async (notification: TripInvitationNotification) => {
-          if (get().isHandlingAction) return;
+          const notificationId = notification.id;
+          if (get().actionInProgress.has(notificationId)) return;
           if (!isTripInvitationNotification(notification)) {
             logger.warn('acceptTripInvitation called with non-invite notification:', notification);
             return;
           }
 
-          set({ isHandlingAction: true, error: null });
+          set((state) => ({
+            actionInProgress: new Set(state.actionInProgress).add(notificationId),
+            error: null,
+          }));
           const invitationId = notification.metadata.invitationID;
 
           try {
             // POST to the backend's business logic endpoint for accepting
             await api.post(API_PATHS.invitations.accept(invitationId));
 
-            // Success! We rely on the backend to potentially send a follow-up
-            // WebSocket message (e.g., MEMBER_ADDED or TRIP_UPDATE) to reflect the change.
-            // Alternatively, we could optimistically remove/update the notification here.
-            // For now, just log success and potentially mark as read locally if desired.
             logger.info(`Accepted trip invitation: ${invitationId}`);
 
-            // Optional: Mark as read locally after accepting
+            // A5: Remove the notification from the list after successful accept
             set((state) => ({
-              notifications: state.notifications.map((n) =>
-                n.id === notification.id ? { ...n, read: true } : n
-              ),
-              // Adjust unreadCount if it was unread
+              notifications: state.notifications.filter((n) => n.id !== notificationId),
               unreadCount: !notification.read
                 ? Math.max(0, state.unreadCount - 1)
                 : state.unreadCount,
@@ -263,18 +258,26 @@ export const useNotificationStore = create<NotificationState>()(
             set({ error: errorMessage });
             logger.error('acceptTripInvitation failed:', err);
           } finally {
-            set({ isHandlingAction: false });
+            set((state) => {
+              const next = new Set(state.actionInProgress);
+              next.delete(notificationId);
+              return { actionInProgress: next };
+            });
           }
         },
 
         declineTripInvitation: async (notification: TripInvitationNotification) => {
-          if (get().isHandlingAction) return;
+          const notificationId = notification.id;
+          if (get().actionInProgress.has(notificationId)) return;
           if (!isTripInvitationNotification(notification)) {
             logger.warn('declineTripInvitation called with non-invite notification:', notification);
             return;
           }
 
-          set({ isHandlingAction: true, error: null });
+          set((state) => ({
+            actionInProgress: new Set(state.actionInProgress).add(notificationId),
+            error: null,
+          }));
           const invitationId = notification.metadata.invitationID;
 
           try {
@@ -282,7 +285,7 @@ export const useNotificationStore = create<NotificationState>()(
             logger.info(`Declined trip invitation: ${invitationId}`);
 
             set((state) => ({
-              notifications: state.notifications.filter((n) => n.id !== notification.id),
+              notifications: state.notifications.filter((n) => n.id !== notificationId),
               unreadCount: !notification.read
                 ? Math.max(0, state.unreadCount - 1)
                 : state.unreadCount,
@@ -293,7 +296,11 @@ export const useNotificationStore = create<NotificationState>()(
             set({ error: errorMessage });
             logger.error('declineTripInvitation failed:', err);
           } finally {
-            set({ isHandlingAction: false });
+            set((state) => {
+              const next = new Set(state.actionInProgress);
+              next.delete(notificationId);
+              return { actionInProgress: next };
+            });
           }
         },
 
@@ -303,8 +310,8 @@ export const useNotificationStore = create<NotificationState>()(
 
         // Delete all notifications from server and clear local state
         clearNotifications: async () => {
-          if (get().isHandlingAction) return;
-          set({ isHandlingAction: true, error: null });
+          if (get().isClearingAll) return;
+          set({ isClearingAll: true, error: null });
           try {
             // Call backend to delete all notifications
             const response = await api.delete<{ deleted_count: number }>(
@@ -330,7 +337,7 @@ export const useNotificationStore = create<NotificationState>()(
             set({ error: errorMessage });
             logger.error('clearNotifications failed:', err);
           } finally {
-            set({ isHandlingAction: false });
+            set({ isClearingAll: false });
           }
         },
 
@@ -338,8 +345,12 @@ export const useNotificationStore = create<NotificationState>()(
         deleteNotification: async (notificationId: string) => {
           const notification = get().notifications.find((n) => n.id === notificationId);
           if (!notification) return;
+          if (get().actionInProgress.has(notificationId)) return;
 
-          set({ isHandlingAction: true, error: null });
+          set((state) => ({
+            actionInProgress: new Set(state.actionInProgress).add(notificationId),
+            error: null,
+          }));
           try {
             await api.delete(API_PATHS.notifications.delete(notificationId));
 
@@ -358,7 +369,11 @@ export const useNotificationStore = create<NotificationState>()(
             set({ error: errorMessage });
             logger.error('deleteNotification failed:', err);
           } finally {
-            set({ isHandlingAction: false });
+            set((state) => {
+              const next = new Set(state.actionInProgress);
+              next.delete(notificationId);
+              return { actionInProgress: next };
+            });
           }
         },
 
@@ -379,7 +394,8 @@ export const useNotificationStore = create<NotificationState>()(
             isFetching: false,
             isFetchingUnreadCount: false,
             isMarkingRead: false,
-            isHandlingAction: false,
+            actionInProgress: new Set<string>(),
+            isClearingAll: false,
             error: null,
             offset: 0,
             hasMore: true,
@@ -409,15 +425,10 @@ export const useNotificationStore = create<NotificationState>()(
               // Delay slightly to allow initial app setup
               setTimeout(() => {
                 draft.fetchUnreadCount();
-                // Potentially fetch initial notifications if the list is empty, or rely on user action.
-                // For now, we won't auto-fetch list on rehydrate to save API calls, user can pull-to-refresh.
               }, 500);
             }
           };
         },
-        // Versioning can be added here if schema changes occur
-        // version: 1,
-        // migrate: (persistedState, version) => { ... }
       }
     ),
     { name: 'NotificationStore' }
@@ -431,6 +442,20 @@ registerStoreReset('NotificationStore', () => useNotificationStore.getState().re
  */
 export const selectLatestChatMessageToast = (state: NotificationState) =>
   state.latestChatMessageToast;
+
+/**
+ * Helper to check if a specific notification has an action in progress.
+ */
+export const isNotificationActionInProgress = (notificationId: string): boolean => {
+  return useNotificationStore.getState().actionInProgress.has(notificationId);
+};
+
+/**
+ * Selector-style helper for use in components (returns a function for use with useNotificationStore).
+ */
+export const selectIsNotificationActionInProgress =
+  (notificationId: string) => (state: NotificationState) =>
+    state.actionInProgress.has(notificationId);
 
 /**
  * Helper function to handle incoming server events that might contain notifications.
@@ -462,7 +487,8 @@ export const selectIsFetching = (state: NotificationState) => state.isFetching;
 export const selectIsFetchingUnreadCount = (state: NotificationState) =>
   state.isFetchingUnreadCount;
 export const selectIsMarkingRead = (state: NotificationState) => state.isMarkingRead;
-export const selectIsHandlingAction = (state: NotificationState) => state.isHandlingAction;
+export const selectActionInProgress = (state: NotificationState) => state.actionInProgress;
+export const selectIsClearingAll = (state: NotificationState) => state.isClearingAll;
 export const selectError = (state: NotificationState) => state.error;
 
 // Pagination selectors

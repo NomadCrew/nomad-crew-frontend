@@ -35,8 +35,6 @@ import { SubscribeBanner } from '@/src/features/trips/components/SubscribeBanner
 import { useThemedStyles } from '@/src/theme/utils';
 import { WebSocketManager } from '@/src/features/websocket/WebSocketManager';
 import { BaseEventSchema, isChatEvent, isServerEvent } from '@/src/types/events';
-import { ZodNotificationSchema } from '@/src/features/notifications/types/notification';
-import { useNotificationStore } from '@/src/features/notifications/store/useNotificationStore';
 import { logger } from '@/src/utils/logger';
 import { useTripPermissions } from '@/src/features/auth/permissions';
 
@@ -207,31 +205,7 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
                 'TripDetailScreen: Parsed as ServerEvent by Zod, but failed isServerEvent guard:',
                 eventData
               );
-              const notificationParseResult = ZodNotificationSchema.safeParse(rawEvent);
-              if (notificationParseResult.success) {
-                const notification = notificationParseResult.data;
-                logger.debug(
-                  'WS',
-                  'TripDetailScreen: Fallback - Received Notification after ServerEvent parse mismatch',
-                  notification
-                );
-                useNotificationStore.getState().handleIncomingNotification(notification);
-              } else {
-                logger.error(
-                  'WS',
-                  'TripDetailScreen: Unknown event structure after failing ServerEvent specific guard:',
-                  rawEvent
-                );
-              }
             }
-            return;
-          }
-
-          const notificationParseResult = ZodNotificationSchema.safeParse(rawEvent);
-          if (notificationParseResult.success) {
-            const notification = notificationParseResult.data;
-            logger.debug('WS', 'TripDetailScreen: Received Notification', notification);
-            useNotificationStore.getState().handleIncomingNotification(notification);
             return;
           }
 
@@ -244,9 +218,11 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
             }
           }
 
-          logger.error(
+          // Notification events are handled by WebSocketManager globally,
+          // not by TripDetailScreen
+          logger.debug(
             'WS',
-            'TripDetailScreen: Received completely unknown event from WebSocket',
+            'TripDetailScreen: Ignoring non-ServerEvent message (handled elsewhere)',
             rawEvent
           );
         },

@@ -13,7 +13,11 @@ import { logger } from '../../utils/logger';
 import { shouldBypassAuth } from '../../utils/simulator-auth';
 import { useLocationStore } from '../location/store/useLocationStore';
 import { useNotificationStore } from '../notifications/store/useNotificationStore';
-import { ZodNotificationSchema, Notification } from '../notifications/types/notification';
+import {
+  ZodNotificationSchema,
+  Notification,
+  safeParseNotification,
+} from '../notifications/types/notification';
 import { useTripStore } from '../trips/store';
 import { ZodError } from 'zod';
 import { isPollEvent } from '../../types/events';
@@ -107,6 +111,32 @@ export class WebSocketManager {
             parsedData.payload !== null
           ) {
             parsedData = parsedData.payload;
+          }
+
+          // Handle notification.created event: the notification DTO is in parsedData.payload
+          if (
+            typeof parsedData === 'object' &&
+            parsedData !== null &&
+            parsedData.type === 'notification.created' &&
+            typeof parsedData.payload === 'object' &&
+            parsedData.payload !== null
+          ) {
+            const notification = safeParseNotification(parsedData.payload);
+            if (notification) {
+              logger.debug(
+                'WS',
+                `Received notification.created event, notification type: ${notification.type}`
+              );
+              useNotificationStore.getState().handleIncomingNotification(notification);
+              callbacks?.onMessage?.(notification);
+            } else {
+              logger.warn(
+                'WS',
+                'Failed to parse notification from notification.created payload',
+                parsedData.payload
+              );
+            }
+            return;
           }
 
           // Attempt 1: Validate as a standardized Notification object

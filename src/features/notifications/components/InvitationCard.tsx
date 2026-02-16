@@ -6,7 +6,10 @@ import { UserPlus, Check, X } from 'lucide-react-native';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { Theme } from '@/src/theme/types';
 import { TripInvitationNotification } from '../types/notification';
-import { useNotificationStore } from '../store/useNotificationStore';
+import {
+  useNotificationStore,
+  selectIsNotificationActionInProgress,
+} from '../store/useNotificationStore';
 import { router } from 'expo-router';
 
 interface InvitationCardProps {
@@ -22,7 +25,7 @@ interface InvitationCardProps {
  * - Avatar placeholder for inviter
  * - Accept/Decline action buttons
  * - Unread indicator via background tint
- * - Shows accepted/declined state after action completes
+ * - Removes notification from store after action completes
  */
 export const InvitationCard: React.FC<InvitationCardProps> = ({
   invitation,
@@ -30,8 +33,11 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
   onDecline,
 }) => {
   const { theme } = useAppTheme();
-  const { acceptTripInvitation, declineTripInvitation, isHandlingAction } = useNotificationStore();
-  const [actionResult, setActionResult] = useState<'accepted' | 'declined' | 'error' | null>(null);
+  const { acceptTripInvitation, declineTripInvitation } = useNotificationStore();
+  // A3: Per-notification loading check
+  const isActionInProgress = useNotificationStore(
+    selectIsNotificationActionInProgress(invitation.id)
+  );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const formattedTime = useMemo(() => {
@@ -60,13 +66,11 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
     setErrorMessage(null);
     await acceptTripInvitation(invitation);
     const storeState = useNotificationStore.getState();
-    if (!storeState.error) {
-      setActionResult('accepted');
-      setErrorMessage(null);
-      router.push(`/trip/${invitation.metadata.tripID}`);
-    } else {
-      setActionResult('error');
+    if (storeState.error) {
       setErrorMessage(storeState.error);
+    } else {
+      // A5: notification is removed from store by acceptTripInvitation; navigate to trip
+      router.push(`/trip/${invitation.metadata.tripID}`);
     }
   };
 
@@ -78,13 +82,10 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
     setErrorMessage(null);
     await declineTripInvitation(invitation);
     const storeState = useNotificationStore.getState();
-    if (!storeState.error) {
-      setActionResult('declined');
-      setErrorMessage(null);
-    } else {
-      setActionResult('error');
+    if (storeState.error) {
       setErrorMessage(storeState.error);
     }
+    // A5: notification is removed from store by declineTripInvitation on success
   };
 
   const themedStyles = useMemo(() => styles(theme), [theme]);
@@ -124,80 +125,57 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({
           </Text>
         )}
 
-        {/* Footer: Timestamp + Action buttons or result */}
+        {/* Footer: Timestamp + Action buttons or error */}
         <View style={themedStyles.footer}>
           <Text variant="labelSmall" style={themedStyles.timestamp}>
             {formattedTime}
           </Text>
 
-          {actionResult === 'error' ? (
+          {errorMessage ? (
             <View style={themedStyles.errorContainer}>
               <Text variant="labelSmall" style={themedStyles.errorText} numberOfLines={1}>
-                {errorMessage || 'Something went wrong'}
+                {errorMessage}
               </Text>
               <View style={themedStyles.actions}>
                 <Button
                   mode="outlined"
                   onPress={handleDecline}
-                  style={themedStyles.declineButton}
+                  style={[themedStyles.declineButton, themedStyles.touchTarget]}
                   labelStyle={themedStyles.declineLabel}
-                  compact
-                  loading={isHandlingAction}
-                  disabled={isHandlingAction}
+                  loading={isActionInProgress}
+                  disabled={isActionInProgress}
                 >
                   Decline
                 </Button>
                 <Button
                   mode="contained"
                   onPress={handleAccept}
-                  style={themedStyles.acceptButton}
-                  compact
-                  loading={isHandlingAction}
-                  disabled={isHandlingAction}
+                  style={[themedStyles.acceptButton, themedStyles.touchTarget]}
+                  loading={isActionInProgress}
+                  disabled={isActionInProgress}
                 >
                   Retry Accept
                 </Button>
               </View>
-            </View>
-          ) : actionResult ? (
-            <View style={themedStyles.resultContainer}>
-              {actionResult === 'accepted' ? (
-                <Check size={16} color={theme.colors.status.success.content} />
-              ) : (
-                <X size={16} color={theme.colors.content.tertiary} />
-              )}
-              <Text
-                variant="labelMedium"
-                style={[
-                  themedStyles.resultText,
-                  actionResult === 'accepted'
-                    ? themedStyles.acceptedText
-                    : themedStyles.declinedText,
-                ]}
-              >
-                {actionResult === 'accepted' ? 'Accepted' : 'Declined'}
-              </Text>
             </View>
           ) : (
             <View style={themedStyles.actions}>
               <Button
                 mode="outlined"
                 onPress={handleDecline}
-                style={themedStyles.declineButton}
+                style={[themedStyles.declineButton, themedStyles.touchTarget]}
                 labelStyle={themedStyles.declineLabel}
-                compact
-                loading={isHandlingAction}
-                disabled={isHandlingAction}
+                loading={isActionInProgress}
+                disabled={isActionInProgress}
               >
                 Decline
               </Button>
               <Button
                 mode="contained"
                 onPress={handleAccept}
-                style={themedStyles.acceptButton}
-                compact
-                loading={isHandlingAction}
-                disabled={isHandlingAction}
+                style={[themedStyles.acceptButton, themedStyles.touchTarget]}
+                loading={isActionInProgress}
+                disabled={isActionInProgress}
               >
                 Accept
               </Button>
@@ -271,6 +249,10 @@ const styles = (theme: Theme) =>
     actions: {
       flexDirection: 'row',
       gap: theme.spacing.inline.sm,
+    },
+    // A10: Ensure proper touch targets (44px minimum)
+    touchTarget: {
+      minHeight: 44,
     },
     declineButton: {
       borderColor: theme.colors.border.default,

@@ -111,7 +111,14 @@ export const NotificationList: React.FC<NotificationListProps> = ({
   if (error && filteredNotifications.length === 0) {
     return (
       <View style={styles.centerContainer}>
-        <Text variant="bodyLarge" style={styles.errorText}>
+        <Text
+          variant="bodyLarge"
+          style={{
+            color: theme.colors.status.error.content,
+            marginBottom: 16,
+            textAlign: 'center' as const,
+          }}
+        >
           {error}
         </Text>
         <Button mode="contained" onPress={handleRefresh} style={styles.retryButton}>
@@ -159,7 +166,6 @@ export const NotificationList: React.FC<NotificationListProps> = ({
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
-        // @ts-expect-error estimatedItemSize exists but type inference is complex with discriminated unions
         estimatedItemSize={filter === 'invitations' ? 160 : 100}
         onRefresh={handleRefresh}
         refreshing={loading}
@@ -193,11 +199,6 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 16,
-  },
-  errorText: {
-    color: 'red',
-    marginBottom: 16,
-    textAlign: 'center',
   },
   retryButton: {
     marginTop: 8,

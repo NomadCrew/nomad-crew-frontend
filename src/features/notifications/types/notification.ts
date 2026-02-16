@@ -56,14 +56,31 @@ const GenericNotificationSchema = NotificationBaseSchema.extend({
 });
 
 // Define known notification types as a Zod enum
-// Note: Backend may send TRIP_INVITATION_RECEIVED for new invitations
+// Backend notification types: TRIP_INVITATION, TRIP_INVITATION_RECEIVED,
+// TRIP_INVITATION_ACCEPTED, TRIP_INVITATION_DECLINED, TRIP_UPDATE, TRIP_UPDATED,
+// NEW_CHAT_MESSAGE, CHAT_MESSAGE, MEMBER_ADDED, TRIP_MEMBER_JOINED, TRIP_MEMBER_LEFT,
+// TODO_ASSIGNED, TODO_COMPLETED, EXPENSE_REPORT_SUBMITTED, TASK_ASSIGNED, TASK_COMPLETED,
+// LOCATION_SHARED, MEMBERSHIP_CHANGE
 const NotificationTypeEnum = z.enum([
   'TRIP_INVITATION',
-  'TRIP_INVITATION_RECEIVED', // Backend sends this type
+  'TRIP_INVITATION_RECEIVED',
+  'TRIP_INVITATION_ACCEPTED',
+  'TRIP_INVITATION_DECLINED',
   'CHAT_MESSAGE',
+  'NEW_CHAT_MESSAGE',
   'MEMBER_ADDED',
+  'TRIP_MEMBER_JOINED',
+  'TRIP_MEMBER_LEFT',
   'TRIP_UPDATE',
-  'UNKNOWN', // Added for fallback case
+  'TRIP_UPDATED',
+  'TODO_ASSIGNED',
+  'TODO_COMPLETED',
+  'EXPENSE_REPORT_SUBMITTED',
+  'TASK_ASSIGNED',
+  'TASK_COMPLETED',
+  'LOCATION_SHARED',
+  'MEMBERSHIP_CHANGE',
+  'UNKNOWN',
 ]);
 
 // --- Zod Schema for Discriminated Union (for Notification Validation) ---
@@ -74,13 +91,24 @@ export const ZodNotificationSchema = z.discriminatedUnion('type', [
     type: z.literal('TRIP_INVITATION'),
     metadata: TripInvitationMetadataSchema,
   }),
-  // Backend sends TRIP_INVITATION_RECEIVED for new trip invitations
   NotificationBaseSchema.extend({
     type: z.literal('TRIP_INVITATION_RECEIVED'),
     metadata: TripInvitationMetadataSchema,
   }),
   NotificationBaseSchema.extend({
+    type: z.literal('TRIP_INVITATION_ACCEPTED'),
+    metadata: z.record(z.unknown()),
+  }),
+  NotificationBaseSchema.extend({
+    type: z.literal('TRIP_INVITATION_DECLINED'),
+    metadata: z.record(z.unknown()),
+  }),
+  NotificationBaseSchema.extend({
     type: z.literal('CHAT_MESSAGE'),
+    metadata: ChatMessageMetadataSchema,
+  }),
+  NotificationBaseSchema.extend({
+    type: z.literal('NEW_CHAT_MESSAGE'),
     metadata: ChatMessageMetadataSchema,
   }),
   NotificationBaseSchema.extend({
@@ -88,13 +116,53 @@ export const ZodNotificationSchema = z.discriminatedUnion('type', [
     metadata: MemberAddedMetadataSchema,
   }),
   NotificationBaseSchema.extend({
+    type: z.literal('TRIP_MEMBER_JOINED'),
+    metadata: MemberAddedMetadataSchema,
+  }),
+  NotificationBaseSchema.extend({
+    type: z.literal('TRIP_MEMBER_LEFT'),
+    metadata: z.record(z.unknown()),
+  }),
+  NotificationBaseSchema.extend({
     type: z.literal('TRIP_UPDATE'),
     metadata: TripUpdateMetadataSchema,
+  }),
+  NotificationBaseSchema.extend({
+    type: z.literal('TRIP_UPDATED'),
+    metadata: TripUpdateMetadataSchema,
+  }),
+  NotificationBaseSchema.extend({
+    type: z.literal('TODO_ASSIGNED'),
+    metadata: z.record(z.unknown()),
+  }),
+  NotificationBaseSchema.extend({
+    type: z.literal('TODO_COMPLETED'),
+    metadata: z.record(z.unknown()),
+  }),
+  NotificationBaseSchema.extend({
+    type: z.literal('EXPENSE_REPORT_SUBMITTED'),
+    metadata: z.record(z.unknown()),
+  }),
+  NotificationBaseSchema.extend({
+    type: z.literal('TASK_ASSIGNED'),
+    metadata: z.record(z.unknown()),
+  }),
+  NotificationBaseSchema.extend({
+    type: z.literal('TASK_COMPLETED'),
+    metadata: z.record(z.unknown()),
+  }),
+  NotificationBaseSchema.extend({
+    type: z.literal('LOCATION_SHARED'),
+    metadata: z.record(z.unknown()),
+  }),
+  NotificationBaseSchema.extend({
+    type: z.literal('MEMBERSHIP_CHANGE'),
+    metadata: z.record(z.unknown()),
   }),
   // Fallback for generic/unknown types
   NotificationBaseSchema.extend({
     type: z.literal('UNKNOWN'),
-    metadata: z.record(z.unknown()), // Allows any metadata shape
+    metadata: z.record(z.unknown()),
   }),
 ]);
 
@@ -110,9 +178,18 @@ export type TripInvitationNotification = Extract<
   Notification,
   { type: 'TRIP_INVITATION' | 'TRIP_INVITATION_RECEIVED' }
 >;
-export type ChatMessageNotification = Extract<Notification, { type: 'CHAT_MESSAGE' }>;
-export type MemberAddedNotification = Extract<Notification, { type: 'MEMBER_ADDED' }>;
-export type TripUpdateNotification = Extract<Notification, { type: 'TRIP_UPDATE' }>;
+export type ChatMessageNotification = Extract<
+  Notification,
+  { type: 'CHAT_MESSAGE' | 'NEW_CHAT_MESSAGE' }
+>;
+export type MemberAddedNotification = Extract<
+  Notification,
+  { type: 'MEMBER_ADDED' | 'TRIP_MEMBER_JOINED' }
+>;
+export type TripUpdateNotification = Extract<
+  Notification,
+  { type: 'TRIP_UPDATE' | 'TRIP_UPDATED' }
+>;
 export type GenericNotification = Extract<Notification, { type: 'UNKNOWN' }>;
 
 // --- Type Guards (Using Zod refine or simple checks) ---
@@ -129,19 +206,19 @@ export const isTripInvitationNotification = (
 export const isChatMessageNotification = (
   notification: Notification
 ): notification is ChatMessageNotification => {
-  return notification.type === 'CHAT_MESSAGE';
+  return notification.type === 'CHAT_MESSAGE' || notification.type === 'NEW_CHAT_MESSAGE';
 };
 
 export const isMemberAddedNotification = (
   notification: Notification
 ): notification is MemberAddedNotification => {
-  return notification.type === 'MEMBER_ADDED';
+  return notification.type === 'MEMBER_ADDED' || notification.type === 'TRIP_MEMBER_JOINED';
 };
 
 export const isTripUpdateNotification = (
   notification: Notification
 ): notification is TripUpdateNotification => {
-  return notification.type === 'TRIP_UPDATE';
+  return notification.type === 'TRIP_UPDATE' || notification.type === 'TRIP_UPDATED';
 };
 
 export const isGenericNotification = (
