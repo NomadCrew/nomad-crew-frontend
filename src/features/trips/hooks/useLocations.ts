@@ -91,34 +91,24 @@ export function useLocations({
   const channelRef = useRef<RealtimeChannel | null>(null);
   const isMountedRef = useRef(true);
 
-  // Fetch locations directly from Supabase
-  // The backend GET endpoint returns an empty array by design — it expects
-  // clients to read location data from Supabase directly (Realtime handles
-  // live updates, this handles the initial load of existing locations).
+  // Fetch locations from the backend API.
+  // The backend queries Supabase with the service key (bypasses RLS) and
+  // returns the data. Realtime subscription handles live updates after this.
   const fetchLocations = useCallback(async () => {
     if (!tripId) return;
 
     try {
       setIsLoading(true);
       setError(null);
-
-      const { data, error: queryError } = await supabase
-        .from('locations')
-        .select('*')
-        .eq('trip_id', tripId)
-        .eq('is_sharing_enabled', true)
-        .neq('privacy', 'hidden');
-
-      if (queryError) {
-        throw queryError;
-      }
+      const response = await api.get(API_PATHS.location.byTrip(tripId));
 
       if (isMountedRef.current) {
-        const rows = Array.isArray(data) ? data : [];
+        const locationsData = response.data?.locations || response.data || [];
+        const rows = Array.isArray(locationsData) ? locationsData : [];
         setLocations(rows.map(normalizeSupabaseRow));
       }
     } catch (err) {
-      logger.error('useLocations', 'Failed to fetch locations from Supabase:', err);
+      logger.error('useLocations', 'Failed to fetch locations:', err);
       if (isMountedRef.current) {
         setError(err instanceof Error ? err.message : 'Failed to fetch locations');
       }
