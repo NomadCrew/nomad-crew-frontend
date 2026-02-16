@@ -13,6 +13,7 @@ import {
   SettingsRow,
   LocationPrivacySelector,
   TripStats,
+  FeedbackModal,
 } from '@/src/components/profile';
 import {
   updateLocationPrivacy,
@@ -31,6 +32,7 @@ export default function ProfileScreen() {
   const [locationPrivacy, setLocationPrivacy] = useState<LocationPrivacyLevel>('hidden');
   const [ghostMode, setGhostMode] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [feedbackVisible, setFeedbackVisible] = useState(false);
 
   // Placeholder trip stats (real data from API in future)
   const tripStats = useMemo(
@@ -159,10 +161,7 @@ export default function ProfileScreen() {
       } catch (error) {
         logger.error('Profile', 'Failed to update location privacy', error);
         setLocationPrivacy(previousLevel); // Rollback
-        Alert.alert(
-          'Update Failed',
-          'Could not update location privacy. Please try again.'
-        );
+        Alert.alert('Update Failed', 'Could not update location privacy. Please try again.');
       } finally {
         setIsUpdating(false);
       }
@@ -185,10 +184,7 @@ export default function ProfileScreen() {
       } catch (error) {
         logger.error('Profile', 'Failed to update ghost mode', error);
         setGhostMode(previousValue); // Rollback
-        Alert.alert(
-          'Update Failed',
-          'Could not update ghost mode. Please try again.'
-        );
+        Alert.alert('Update Failed', 'Could not update ghost mode. Please try again.');
       } finally {
         setIsUpdating(false);
       }
@@ -268,10 +264,7 @@ export default function ProfileScreen() {
 
   return (
     <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Identity Hero Section */}
         <View style={styles.heroSection}>
           <View style={styles.avatarContainer}>
@@ -332,20 +325,11 @@ export default function ProfileScreen() {
           label="Notifications"
           onPress={handleNotificationsPress}
         />
-        <SettingsRow
-          icon="options-outline"
-          label="Preferences"
-          onPress={handlePreferencesPress}
-        />
+        <SettingsRow icon="options-outline" label="Preferences" onPress={handlePreferencesPress} />
 
         {/* Account Section */}
         <SectionHeader title="ACCOUNT" />
-        <SettingsRow
-          icon="mail-outline"
-          label="Email"
-          value={user.email}
-          showChevron={false}
-        />
+        <SettingsRow icon="mail-outline" label="Email" value={user.email} showChevron={false} />
         <SettingsRow
           icon="at-outline"
           label="Username"
@@ -356,11 +340,19 @@ export default function ProfileScreen() {
           icon="link-outline"
           label="Connected Accounts"
           value="Apple, Google"
-          onPress={() => Alert.alert('Connected Accounts', 'Manage connected accounts coming soon.')}
+          onPress={() =>
+            Alert.alert('Connected Accounts', 'Manage connected accounts coming soon.')
+          }
         />
 
         {/* Support Section */}
         <SectionHeader title="SUPPORT" />
+        <SettingsRow
+          icon="chatbox-outline"
+          label="Send Feedback"
+          value="Report bugs or share ideas"
+          onPress={() => setFeedbackVisible(true)}
+        />
         <SettingsRow
           icon="help-circle-outline"
           label="Help & FAQ"
@@ -384,11 +376,7 @@ export default function ProfileScreen() {
         />
 
         {/* Sign Out Button */}
-        <Button
-          mode="contained"
-          onPress={handleSignOut}
-          style={styles.signOutButton}
-        >
+        <Button mode="contained" onPress={handleSignOut} style={styles.signOutButton}>
           Sign Out
         </Button>
 
@@ -401,6 +389,8 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
       </ScrollView>
+
+      <FeedbackModal visible={feedbackVisible} onClose={() => setFeedbackVisible(false)} />
     </ThemedView>
   );
 }

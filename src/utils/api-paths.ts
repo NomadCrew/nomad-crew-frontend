@@ -104,4 +104,7 @@ export const API_PATHS = {
   readReceipts: {
     updateLastRead: (tripId: string) => createApiPath(`trips/${tripId}/chat/last-read`),
   },
+  feedback: {
+    submit: createApiPath('feedback'),
+  },
 } as const;
