@@ -116,9 +116,14 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
   }, [isLoading, mapLoaded]);
 
   // Use Supabase Realtime location data with defensive check - memoized
+  // Filter out stale locations (older than 24 hours)
   const memberLocationArray = useMemo(() => {
     const locations = supabaseLocations?.memberLocations;
-    return Array.isArray(locations) ? locations : [];
+    if (!Array.isArray(locations)) return [];
+    const staleThreshold = Date.now() - 24 * 60 * 60 * 1000;
+    return locations.filter(
+      (loc) => !loc.location.timestamp || loc.location.timestamp > staleThreshold
+    );
   }, [supabaseLocations?.memberLocations]);
 
   // Convert trip members to the format needed for color assignment
@@ -355,7 +360,9 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
           if (m.userId === user?.id) return null;
 
           const memberColor = getMemberColor(tripMembers, m.userId, trip.id);
-          const displayName = m.name || `Member ${m.userId.slice(0, 4)}`;
+          // Resolve name from trip members (more reliable than location data)
+          const tripMember = tripMembers.find((tm) => tm.userId === m.userId);
+          const displayName = tripMember?.name || m.name || `Member ${m.userId.slice(0, 4)}`;
 
           return (
             <Marker
@@ -391,7 +398,9 @@ export const GroupLiveMap: React.FC<GroupLiveMapProps> = ({
   return (
     <View style={styles(theme).container}>
       <View style={styles(theme).header}>
-        <Text style={styles(theme).title}>{isStandalone ? 'Live Map' : 'Group Location'}</Text>
+        <Text style={styles(theme).title} numberOfLines={1}>
+          {isStandalone ? `${trip.name} — Live Map` : 'Group Location'}
+        </Text>
         <Pressable
           onPress={onClose}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -464,6 +473,7 @@ const styles = (theme: Theme) =>
       backgroundColor: theme.colors.surface.default,
     },
     title: {
+      flex: 1,
       fontSize: theme.typography.size.lg,
       fontWeight: 'bold',
       color: theme.colors.content.primary,

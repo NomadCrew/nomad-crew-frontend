@@ -48,7 +48,25 @@ export interface UseLocationsReturn {
   getVisibleLocations: () => Location[];
 }
 
-/** Maps a Supabase location row to the MemberLocation domain type */
+/** Normalizes a raw Supabase row to the Location interface.
+ *  The Supabase table uses `privacy` and `timestamp` as column names,
+ *  while the frontend interface uses `privacy_level` and `updated_at`. */
+function normalizeSupabaseRow(raw: any): Location {
+  return {
+    id: raw.id ?? `${raw.user_id}_${raw.trip_id}`,
+    trip_id: raw.trip_id,
+    user_id: raw.user_id,
+    user_name: raw.user_name,
+    latitude: raw.latitude,
+    longitude: raw.longitude,
+    privacy_level: raw.privacy_level ?? raw.privacy ?? 'precise',
+    is_sharing_enabled: raw.is_sharing_enabled,
+    created_at: raw.created_at ?? raw.timestamp ?? new Date().toISOString(),
+    updated_at: raw.updated_at ?? raw.timestamp ?? new Date().toISOString(),
+  };
+}
+
+/** Maps a Location to the MemberLocation domain type */
 function mapToMemberLocation(row: Location): MemberLocation {
   return {
     userId: row.user_id,
@@ -73,23 +91,34 @@ export function useLocations({
   const channelRef = useRef<RealtimeChannel | null>(null);
   const isMountedRef = useRef(true);
 
-  // Fetch locations from API
+  // Fetch locations directly from Supabase
+  // The backend GET endpoint returns an empty array by design — it expects
+  // clients to read location data from Supabase directly (Realtime handles
+  // live updates, this handles the initial load of existing locations).
   const fetchLocations = useCallback(async () => {
     if (!tripId) return;
 
     try {
       setIsLoading(true);
       setError(null);
-      const response = await api.get(API_PATHS.location.byTrip(tripId));
+
+      const { data, error: queryError } = await supabase
+        .from('locations')
+        .select('*')
+        .eq('trip_id', tripId)
+        .eq('is_sharing_enabled', true)
+        .neq('privacy', 'hidden');
+
+      if (queryError) {
+        throw queryError;
+      }
 
       if (isMountedRef.current) {
-        // API returns paginated response: { locations: [], pagination: {...} }
-        // Extract the locations array from the response
-        const locationsData = response.data?.locations || response.data || [];
-        setLocations(Array.isArray(locationsData) ? locationsData : []);
+        const rows = Array.isArray(data) ? data : [];
+        setLocations(rows.map(normalizeSupabaseRow));
       }
     } catch (err) {
-      logger.error('useLocations', 'Failed to fetch locations:', err);
+      logger.error('useLocations', 'Failed to fetch locations from Supabase:', err);
       if (isMountedRef.current) {
         setError(err instanceof Error ? err.message : 'Failed to fetch locations');
       }
@@ -167,25 +196,40 @@ export function useLocations({
           case 'INSERT':
             if (newRecord && newRecord.trip_id === tripId) {
               logger.debug('useLocations', 'Adding new location for trip:', tripId, newRecord);
-              // Check if location already exists to avoid duplicates
-              const exists = currentLocations.some((loc) => loc.id === newRecord.id);
-              if (!exists) {
-                return [...currentLocations, newRecord];
+              const normalized = normalizeSupabaseRow(newRecord);
+              // Check if location already exists (by user_id) to avoid duplicates
+              const existingIdx = currentLocations.findIndex(
+                (loc) => loc.user_id === normalized.user_id
+              );
+              if (existingIdx >= 0) {
+                // Replace existing with newer data
+                const updated = [...currentLocations];
+                updated[existingIdx] = normalized;
+                return updated;
               }
+              return [...currentLocations, normalized];
             }
             return currentLocations;
 
           case 'UPDATE':
             if (newRecord && newRecord.trip_id === tripId) {
               logger.debug('useLocations', 'Updating location for trip:', tripId, newRecord);
-              return currentLocations.map((loc) => (loc.id === newRecord.id ? newRecord : loc));
+              const normalized = normalizeSupabaseRow(newRecord);
+              const found = currentLocations.some((loc) => loc.user_id === normalized.user_id);
+              if (found) {
+                return currentLocations.map((loc) =>
+                  loc.user_id === normalized.user_id ? normalized : loc
+                );
+              }
+              // User not in list yet — treat as insert
+              return [...currentLocations, normalized];
             }
             return currentLocations;
 
           case 'DELETE':
             if (oldRecord) {
               logger.debug('useLocations', 'Deleting location for trip:', tripId, oldRecord);
-              return currentLocations.filter((loc) => loc.id !== oldRecord.id);
+              return currentLocations.filter((loc) => loc.user_id !== oldRecord.user_id);
             }
             return currentLocations;
 
@@ -242,13 +286,16 @@ export function useLocations({
   // Transform raw Supabase rows to domain-typed MemberLocation objects
   const memberLocations = useMemo(() => locations.map(mapToMemberLocation), [locations]);
 
-  // Setup and cleanup
+  // Setup and cleanup — fetch first, then subscribe for live updates
   useEffect(() => {
     isMountedRef.current = true;
 
     if (autoConnect) {
-      fetchLocations();
-      connect();
+      fetchLocations().then(() => {
+        if (isMountedRef.current) {
+          connect();
+        }
+      });
     }
 
     return () => {
