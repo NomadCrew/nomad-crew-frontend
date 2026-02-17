@@ -4,3 +4,4 @@
 export { DocumentListItem } from './DocumentListItem';
 export { DocumentList } from './DocumentList';
 export { DocumentUploadSheet } from './DocumentUploadSheet';
+export { SwipeableDocumentItem } from './SwipeableDocumentItem';
