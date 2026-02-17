@@ -1,1 +1,1 @@
-export { AppBottomSheet, type AppBottomSheetProps } from './AppBottomSheet';
+export { AppBottomSheet, BottomSheetTextInput, type AppBottomSheetProps } from './AppBottomSheet';

@@ -1,5 +1,13 @@
 import React, { useState, useCallback, useRef, memo } from 'react';
-import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  Pressable,
+  type NativeSyntheticEvent,
+  type TextInputFocusEventData,
+} from 'react-native';
 import { AutocompleteDropdown, AutocompleteDropdownItem } from 'react-native-autocomplete-dropdown';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { Theme } from '@/src/theme/types';
@@ -12,6 +20,8 @@ interface UserAutocompleteProps {
   onManualEmail: (email: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  onFocus?: (e: NativeSyntheticEvent<TextInputFocusEventData>) => void;
+  onBlur?: (e: NativeSyntheticEvent<TextInputFocusEventData>) => void;
 }
 
 // Custom dropdown item with avatar, name, and email
@@ -78,6 +88,8 @@ export const UserAutocomplete = ({
   onManualEmail,
   placeholder = 'Search users or enter email',
   disabled = false,
+  onFocus: onFocusProp,
+  onBlur: onBlurProp,
 }: UserAutocompleteProps) => {
   const { theme } = useAppTheme();
   const [loading, setLoading] = useState(false);
@@ -203,6 +215,8 @@ export const UserAutocomplete = ({
         onChangeText={handleSearch}
         onSelectItem={handleSelect}
         onClear={handleClear}
+        onFocus={onFocusProp}
+        onBlur={onBlurProp}
         loading={loading}
         useFilter={false}
         textInputProps={{

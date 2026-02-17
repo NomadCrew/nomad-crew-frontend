@@ -41,16 +41,16 @@ export default function RegisterScreen() {
         return;
       }
       Alert.alert(
-        "Registration Successful",
+        'Registration Successful',
         "We've sent you a verification email. Please click the link in the email to verify and login again.",
         [
           {
-            text: "OK",
+            text: 'OK',
             onPress: () => {
               // Navigate to login screen
               router.replace('/(auth)/login');
-            }
-          }
+            },
+          },
         ]
       );
     } catch (err) {
@@ -60,16 +60,14 @@ export default function RegisterScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles(theme).container}
     >
       <ScrollView contentContainerStyle={styles(theme).scrollContent}>
         <ThemedView style={styles(theme).content}>
           <ThemedText style={styles(theme).title}>Create Account</ThemedText>
 
-          {error && (
-            <ThemedText style={styles(theme).errorText}>{error}</ThemedText>
-          )}
+          {error && <ThemedText style={styles(theme).errorText}>{error}</ThemedText>}
 
           {/* Username Input */}
           <TextInput
@@ -80,9 +78,7 @@ export default function RegisterScreen() {
             placeholder="Username"
             placeholderTextColor={theme.colors.content.tertiary}
             value={formData.username}
-            onChangeText={(text) =>
-              setFormData((prev) => ({ ...prev, username: text }))
-            }
+            onChangeText={(text) => setFormData((prev) => ({ ...prev, username: text }))}
             onFocus={() => setFocusedInput('username')}
             onBlur={() => setFocusedInput(null)}
           />
@@ -96,9 +92,7 @@ export default function RegisterScreen() {
             placeholder="Email"
             placeholderTextColor={theme.colors.content.tertiary}
             value={formData.email}
-            onChangeText={(text) =>
-              setFormData((prev) => ({ ...prev, email: text }))
-            }
+            onChangeText={(text) => setFormData((prev) => ({ ...prev, email: text }))}
             autoCapitalize="none"
             keyboardType="email-address"
             onFocus={() => setFocusedInput('email')}
@@ -114,9 +108,7 @@ export default function RegisterScreen() {
             placeholder="Password"
             placeholderTextColor={theme.colors.content.tertiary}
             value={formData.password}
-            onChangeText={(text) =>
-              setFormData((prev) => ({ ...prev, password: text }))
-            }
+            onChangeText={(text) => setFormData((prev) => ({ ...prev, password: text }))}
             secureTextEntry
             onFocus={() => setFocusedInput('password')}
             onBlur={() => setFocusedInput(null)}
@@ -131,9 +123,7 @@ export default function RegisterScreen() {
             placeholder="First Name (Optional)"
             placeholderTextColor={theme.colors.content.tertiary}
             value={formData.firstName}
-            onChangeText={(text) =>
-              setFormData((prev) => ({ ...prev, firstName: text }))
-            }
+            onChangeText={(text) => setFormData((prev) => ({ ...prev, firstName: text }))}
             onFocus={() => setFocusedInput('firstName')}
             onBlur={() => setFocusedInput(null)}
           />
@@ -147,19 +137,14 @@ export default function RegisterScreen() {
             placeholder="Last Name (Optional)"
             placeholderTextColor={theme.colors.content.tertiary}
             value={formData.lastName}
-            onChangeText={(text) =>
-              setFormData((prev) => ({ ...prev, lastName: text }))
-            }
+            onChangeText={(text) => setFormData((prev) => ({ ...prev, lastName: text }))}
             onFocus={() => setFocusedInput('lastName')}
             onBlur={() => setFocusedInput(null)}
           />
 
           {/* Register Button */}
           <Pressable
-            style={[
-              styles(theme).button,
-              { backgroundColor: theme.colors.primary.main },
-            ]}
+            style={[styles(theme).button, { backgroundColor: theme.colors.primary.main }]}
             onPress={handleRegister}
             disabled={loading}
           >
@@ -173,9 +158,7 @@ export default function RegisterScreen() {
           {/* Already have an account? */}
           <Link href="/login" asChild>
             <Pressable style={styles(theme).linkContainer}>
-              <ThemedText style={styles(theme).link}>
-                Already have an account? Sign in
-              </ThemedText>
+              <ThemedText style={styles(theme).link}>Already have an account? Sign in</ThemedText>
             </Pressable>
           </Link>
         </ThemedView>

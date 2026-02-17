@@ -1,6 +1,13 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { router } from 'expo-router';
-import { StyleSheet, TextInput, Pressable, KeyboardAvoidingView, Platform, Alert} from 'react-native';
+import {
+  StyleSheet,
+  TextInput,
+  Pressable,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+} from 'react-native';
 import { useAuthStore } from '@/src/features/auth/store';
 import { ThemedText } from '@/src/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -28,32 +35,50 @@ export default function EmailLoginForm({ onClose }: EmailLoginFormProps) {
   const componentStyles = useMemo(() => styles(theme), [theme]);
 
   // Memoize input state getters to avoid recalculating on every render
-  const getEmailInputStyle = useMemo(() => [
-    inputStyles.text,
-    inputStyles.states[focusedInput === 'email' ? 'focus' : 'idle'].text
-  ], [inputStyles, focusedInput]);
+  const getEmailInputStyle = useMemo(
+    () => [inputStyles.text, inputStyles.states[focusedInput === 'email' ? 'focus' : 'idle'].text],
+    [inputStyles, focusedInput]
+  );
 
-  const getPasswordInputStyle = useMemo(() => [
-    inputStyles.text,
-    inputStyles.states[focusedInput === 'password' ? 'focus' : 'idle'].text
-  ], [inputStyles, focusedInput]);
+  const getPasswordInputStyle = useMemo(
+    () => [
+      inputStyles.text,
+      inputStyles.states[focusedInput === 'password' ? 'focus' : 'idle'].text,
+    ],
+    [inputStyles, focusedInput]
+  );
 
-  const getEmailContainerStyle = useMemo(() => [
-    componentStyles.inputWrapper,
-    inputStyles.states[focusedInput === 'email' ? 'focus' : 'idle'].container
-  ], [componentStyles.inputWrapper, inputStyles.states, focusedInput]);
+  const getEmailContainerStyle = useMemo(
+    () => [
+      componentStyles.inputWrapper,
+      inputStyles.states[focusedInput === 'email' ? 'focus' : 'idle'].container,
+    ],
+    [componentStyles.inputWrapper, inputStyles.states, focusedInput]
+  );
 
-  const getPasswordContainerStyle = useMemo(() => [
-    componentStyles.inputWrapper,
-    inputStyles.states[focusedInput === 'password' ? 'focus' : 'idle'].container
-  ], [componentStyles.inputWrapper, inputStyles.states, focusedInput]);
+  const getPasswordContainerStyle = useMemo(
+    () => [
+      componentStyles.inputWrapper,
+      inputStyles.states[focusedInput === 'password' ? 'focus' : 'idle'].container,
+    ],
+    [componentStyles.inputWrapper, inputStyles.states, focusedInput]
+  );
 
   // Memoize the button style calculation
-  const loginButtonStyle = useMemo(() => [
-    buttonStyles.container,
-    componentStyles.loginButton,
-    (!email.trim() || !password.trim()) && componentStyles.buttonDisabled,
-  ], [buttonStyles.container, componentStyles.loginButton, componentStyles.buttonDisabled, email, password]);
+  const loginButtonStyle = useMemo(
+    () => [
+      buttonStyles.container,
+      componentStyles.loginButton,
+      (!email.trim() || !password.trim()) && componentStyles.buttonDisabled,
+    ],
+    [
+      buttonStyles.container,
+      componentStyles.loginButton,
+      componentStyles.buttonDisabled,
+      email,
+      password,
+    ]
+  );
 
   // Memoize input handlers to prevent recreating on every render
   const handleEmailChange = useCallback((text: string) => {
@@ -80,20 +105,20 @@ export default function EmailLoginForm({ onClose }: EmailLoginFormProps) {
     try {
       await login({ email, password });
       const { error } = useAuthStore.getState();
-      
+
       if (error === 'email_not_verified') {
         Alert.alert(
-          "Email Not Verified",
-          "Please verify your email before logging in. Check your inbox for the verification link."
+          'Email Not Verified',
+          'Please verify your email before logging in. Check your inbox for the verification link.'
         );
         return;
       }
-      
+
       if (error === 'unregistered_user') {
         router.replace('/(auth)/register');
         return;
       }
-      
+
       if (!error) {
         const { user } = useAuthStore.getState();
         if (!user?.username) {
@@ -110,7 +135,7 @@ export default function EmailLoginForm({ onClose }: EmailLoginFormProps) {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={componentStyles.container}
     >
       <ThemedView style={componentStyles.content}>
@@ -155,9 +180,7 @@ export default function EmailLoginForm({ onClose }: EmailLoginFormProps) {
           onPress={handleLogin}
           disabled={loading || !email.trim() || !password.trim()}
         >
-          <ThemedText style={buttonStyles.text}>
-            {loading ? 'Signing in...' : 'Sign In'}
-          </ThemedText>
+          <ThemedText style={buttonStyles.text}>{loading ? 'Signing in...' : 'Sign In'}</ThemedText>
         </Pressable>
 
         {/* Close Button */}

@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { useChatStore } from '@/src/features/chat/store';
 import { useAuthStore } from '@/src/features/auth/store';
@@ -225,7 +233,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId, onBack }) => {
         </Text>
       </View>
 
-      <View
+      <KeyboardAvoidingView
         style={[
           styles(theme).content,
           {
@@ -234,6 +242,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId, onBack }) => {
             paddingBottom: insets.bottom,
           },
         ]}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles(theme).chatArea}>
           <ChatList
@@ -248,7 +257,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ tripId, onBack }) => {
           />
           <ChatInput tripId={tripId} />
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </View>
   );
 };

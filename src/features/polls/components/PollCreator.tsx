@@ -1,13 +1,7 @@
 import React, { useState, useCallback } from 'react';
-import {
-  StyleSheet,
-  View,
-  Pressable,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import { StyleSheet, View, Pressable, ScrollView } from 'react-native';
 import { Text, TextInput, Switch, Button } from 'react-native-paper';
+import { useBottomSheetInternal } from '@gorhom/bottom-sheet';
 import { Plus, Trash2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
@@ -47,10 +41,15 @@ function createOptionItem(text: string = ''): OptionItem {
   return { id: `opt_${++nextOptionId}`, text };
 }
 
-export const PollCreator: React.FC<PollCreatorProps> = ({ tripId, visible, onClose }) => {
+/** Inner content rendered inside AppBottomSheet so useBottomSheetInternal is available. */
+const PollCreatorContent: React.FC<{
+  tripId: string;
+  onClose: () => void;
+}> = ({ tripId, onClose }) => {
   const { theme } = useAppTheme();
   const styles = makeStyles(theme);
   const createPoll = useCreatePoll();
+  const { animatedKeyboardState } = useBottomSheetInternal();
 
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState<OptionItem[]>(() => [
@@ -64,6 +63,26 @@ export const PollCreator: React.FC<PollCreatorProps> = ({ tripId, visible, onClo
   const filledOptions = options.filter((o) => o.text.trim().length > 0);
   const canSubmit =
     question.trim().length > 0 && filledOptions.length >= MIN_OPTIONS && !createPoll.isPending;
+
+  const handleInputFocus = useCallback(
+    (e: any) => {
+      animatedKeyboardState.set((state: any) => ({
+        ...state,
+        target: e?.nativeEvent?.target,
+      }));
+    },
+    [animatedKeyboardState]
+  );
+
+  const handleInputBlur = useCallback(
+    (_e: any) => {
+      animatedKeyboardState.set((state: any) => ({
+        ...state,
+        target: undefined,
+      }));
+    },
+    [animatedKeyboardState]
+  );
 
   const handleAddOption = useCallback(() => {
     if (!canAddOption) return;
@@ -120,11 +139,130 @@ export const PollCreator: React.FC<PollCreatorProps> = ({ tripId, visible, onClo
     onClose,
   ]);
 
+  return (
+    <View style={styles.container}>
+      {/* Question Input */}
+      <View style={styles.section}>
+        <Text style={styles.label}>What's the debate?</Text>
+        <TextInput
+          value={question}
+          onChangeText={setQuestion}
+          onFocus={handleInputFocus}
+          onBlur={handleInputBlur}
+          placeholder="Where should we eat tonight?"
+          maxLength={MAX_QUESTION_LENGTH}
+          mode="outlined"
+          multiline
+          numberOfLines={2}
+          style={styles.questionInput}
+        />
+        <Text style={styles.charCount}>
+          {question.length}/{MAX_QUESTION_LENGTH}
+        </Text>
+      </View>
+
+      {/* Options */}
+      <View style={styles.section}>
+        <Text style={styles.label}>Options</Text>
+        {options.map((option, index) => (
+          <View key={option.id} style={styles.optionRow}>
+            <TextInput
+              value={option.text}
+              onChangeText={(text) => handleOptionChange(option.id, text)}
+              onFocus={handleInputFocus}
+              onBlur={handleInputBlur}
+              placeholder={`Option ${index + 1}`}
+              maxLength={MAX_OPTION_LENGTH}
+              mode="outlined"
+              style={styles.optionInput}
+            />
+            {options.length > MIN_OPTIONS && (
+              <Pressable
+                onPress={() => handleRemoveOption(option.id)}
+                hitSlop={8}
+                style={styles.removeButton}
+                accessibilityRole="button"
+                accessibilityLabel={`Remove option ${index + 1}`}
+              >
+                <Trash2 size={18} color={theme.colors.content.tertiary} />
+              </Pressable>
+            )}
+          </View>
+        ))}
+
+        {canAddOption && (
+          <Pressable
+            onPress={handleAddOption}
+            style={styles.addOptionButton}
+            accessibilityRole="button"
+            accessibilityLabel="Add option"
+          >
+            <Plus size={18} color={theme.colors.primary.main} />
+            <Text style={styles.addOptionText}>Add option</Text>
+          </Pressable>
+        )}
+      </View>
+
+      {/* Multi-vote toggle */}
+      <View style={styles.toggleRow}>
+        <View style={styles.toggleTextContainer}>
+          <Text style={styles.toggleLabel}>Allow multiple votes</Text>
+          <Text style={styles.toggleDescription}>Nomads can pick more than one</Text>
+        </View>
+        <Switch
+          value={allowMultipleVotes}
+          onValueChange={setAllowMultipleVotes}
+          color={theme.colors.primary.main}
+        />
+      </View>
+
+      {/* Duration picker */}
+      <View style={styles.durationSection}>
+        <Text style={styles.durationLabel}>Time to decide</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View style={styles.durationRow}>
+            {DURATION_PRESETS.map((preset) => (
+              <Pressable
+                key={preset.minutes}
+                onPress={() => setDurationMinutes(preset.minutes)}
+                style={[
+                  styles.durationChip,
+                  durationMinutes === preset.minutes && styles.durationChipSelected,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`Set duration to ${preset.label}`}
+              >
+                <Text
+                  style={[
+                    styles.durationChipText,
+                    durationMinutes === preset.minutes && styles.durationChipTextSelected,
+                  ]}
+                >
+                  {preset.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </ScrollView>
+      </View>
+
+      {/* Submit */}
+      <Button
+        mode="contained"
+        onPress={handleSubmit}
+        disabled={!canSubmit}
+        loading={createPoll.isPending}
+        style={styles.submitButton}
+        labelStyle={styles.submitLabel}
+      >
+        {createPoll.isPending ? 'Creating...' : 'Your call, nomad'}
+      </Button>
+    </View>
+  );
+};
+
+export const PollCreator: React.FC<PollCreatorProps> = ({ tripId, visible, onClose }) => {
   const handleClose = useCallback(() => {
-    setQuestion('');
-    setOptions([createOptionItem(), createOptionItem()]);
-    setAllowMultipleVotes(false);
-    setDurationMinutes(1440);
     onClose();
   }, [onClose]);
 
@@ -136,123 +274,7 @@ export const PollCreator: React.FC<PollCreatorProps> = ({ tripId, visible, onClo
       snapPoints={['70%', '90%']}
       scrollable
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.container}
-      >
-        {/* Question Input */}
-        <View style={styles.section}>
-          <Text style={styles.label}>What's the debate?</Text>
-          <TextInput
-            value={question}
-            onChangeText={setQuestion}
-            placeholder="Where should we eat tonight?"
-            maxLength={MAX_QUESTION_LENGTH}
-            mode="outlined"
-            multiline
-            numberOfLines={2}
-            style={styles.questionInput}
-          />
-          <Text style={styles.charCount}>
-            {question.length}/{MAX_QUESTION_LENGTH}
-          </Text>
-        </View>
-
-        {/* Options */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Options</Text>
-          {options.map((option, index) => (
-            <View key={option.id} style={styles.optionRow}>
-              <TextInput
-                value={option.text}
-                onChangeText={(text) => handleOptionChange(option.id, text)}
-                placeholder={`Option ${index + 1}`}
-                maxLength={MAX_OPTION_LENGTH}
-                mode="outlined"
-                style={styles.optionInput}
-              />
-              {options.length > MIN_OPTIONS && (
-                <Pressable
-                  onPress={() => handleRemoveOption(option.id)}
-                  hitSlop={8}
-                  style={styles.removeButton}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Remove option ${index + 1}`}
-                >
-                  <Trash2 size={18} color={theme.colors.content.tertiary} />
-                </Pressable>
-              )}
-            </View>
-          ))}
-
-          {canAddOption && (
-            <Pressable
-              onPress={handleAddOption}
-              style={styles.addOptionButton}
-              accessibilityRole="button"
-              accessibilityLabel="Add option"
-            >
-              <Plus size={18} color={theme.colors.primary.main} />
-              <Text style={styles.addOptionText}>Add option</Text>
-            </Pressable>
-          )}
-        </View>
-
-        {/* Multi-vote toggle */}
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleTextContainer}>
-            <Text style={styles.toggleLabel}>Allow multiple votes</Text>
-            <Text style={styles.toggleDescription}>Nomads can pick more than one</Text>
-          </View>
-          <Switch
-            value={allowMultipleVotes}
-            onValueChange={setAllowMultipleVotes}
-            color={theme.colors.primary.main}
-          />
-        </View>
-
-        {/* Duration picker */}
-        <View style={styles.durationSection}>
-          <Text style={styles.durationLabel}>Time to decide</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.durationRow}>
-              {DURATION_PRESETS.map((preset) => (
-                <Pressable
-                  key={preset.minutes}
-                  onPress={() => setDurationMinutes(preset.minutes)}
-                  style={[
-                    styles.durationChip,
-                    durationMinutes === preset.minutes && styles.durationChipSelected,
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Set duration to ${preset.label}`}
-                >
-                  <Text
-                    style={[
-                      styles.durationChipText,
-                      durationMinutes === preset.minutes && styles.durationChipTextSelected,
-                    ]}
-                  >
-                    {preset.label}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </ScrollView>
-        </View>
-
-        {/* Submit */}
-        <Button
-          mode="contained"
-          onPress={handleSubmit}
-          disabled={!canSubmit}
-          loading={createPoll.isPending}
-          style={styles.submitButton}
-          labelStyle={styles.submitLabel}
-        >
-          {createPoll.isPending ? 'Creating...' : 'Your call, nomad'}
-        </Button>
-      </KeyboardAvoidingView>
+      <PollCreatorContent tripId={tripId} onClose={handleClose} />
     </AppBottomSheet>
   );
 };

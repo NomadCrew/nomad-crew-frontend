@@ -68,6 +68,7 @@ export default {
       }
     },
     android: {
+      softwareKeyboardLayoutMode: 'pan',
       adaptiveIcon: {
         foregroundImage: './assets/images/icon.png',
         backgroundColor: '#F46315'

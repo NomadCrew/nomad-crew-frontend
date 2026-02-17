@@ -264,6 +264,7 @@ export const ChatList: React.FC<ChatListProps> = ({
         refreshing={isRefreshing}
         // Performance optimization: Only render items visible on screen
         drawDistance={400}
+        keyboardShouldPersistTaps="handled"
       />
       {renderTypingIndicator()}
     </View>

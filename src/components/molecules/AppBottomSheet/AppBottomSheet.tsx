@@ -3,6 +3,7 @@ import { Platform, StyleSheet, Text, View } from 'react-native';
 import BottomSheet, {
   BottomSheetBackdrop,
   BottomSheetScrollView,
+  BottomSheetTextInput,
   BottomSheetView,
   type BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
@@ -24,6 +25,8 @@ export interface AppBottomSheetProps {
   /** Content to render inside the bottom sheet */
   children: React.ReactNode;
 }
+
+export { BottomSheetTextInput };
 
 const BORDER_RADIUS = 20;
 const HANDLE_WIDTH = 40;
@@ -113,6 +116,10 @@ export const AppBottomSheet: React.FC<AppBottomSheetProps> = ({
       handleComponent={renderHandle}
       backgroundStyle={styles.background}
       style={styles.sheet}
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
+      enableBlurKeyboardOnGesture
     >
       <ContentWrapper style={[styles.contentContainer, { paddingBottom: bottomPadding }]}>
         {title ? <Text style={styles.title}>{title}</Text> : null}
