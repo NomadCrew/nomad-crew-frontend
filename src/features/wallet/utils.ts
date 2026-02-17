@@ -84,7 +84,7 @@ export function detectDocumentType(filename: string): DocumentType {
 
 // ── Human-readable type label ───────────────────────────────────────
 
-const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
+export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   passport: 'Passport',
   visa: 'Visa',
   insurance: 'Insurance',

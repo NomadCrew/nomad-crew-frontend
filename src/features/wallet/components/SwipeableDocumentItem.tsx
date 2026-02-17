@@ -76,6 +76,8 @@ export const SwipeableDocumentItem: React.FC<SwipeableDocumentItemProps> = ({
       rightThreshold={40}
       renderRightActions={renderRightActions}
       overshootRight={false}
+      containerStyle={{ backgroundColor: theme.colors.background.default }}
+      childrenContainerStyle={{ backgroundColor: theme.colors.background.default }}
     >
       <DocumentListItem document={document} onPress={onPress} showSeparator={showSeparator} />
     </ReanimatedSwipeable>

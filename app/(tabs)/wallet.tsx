@@ -6,56 +6,62 @@ import {
   SectionList,
   RefreshControl,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { FAB } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedView } from '@/src/components/ThemedView';
 import { ThemedText } from '@/src/components/ThemedText';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
-import { DocumentUploadSheet } from '@/src/features/wallet/components/DocumentUploadSheet';
-import { SwipeableDocumentItem } from '@/src/features/wallet/components/SwipeableDocumentItem';
+import {
+  DocumentUploadSheet,
+  SwipeableDocumentItem,
+  DocumentViewer,
+  EditDocumentSheet,
+} from '@/src/features/wallet/components';
 import { useWalletStore } from '@/src/features/wallet/store';
 import { WalletDocument } from '@/src/features/wallet/types';
-import { walletApi } from '@/src/features/wallet/api';
 import { groupDocumentsByType, DocumentSection } from '@/src/features/wallet/utils';
+import { loadThumbnailCache } from '@/src/features/wallet/services';
 import { logger } from '@/src/utils/logger';
-import { API_CONFIG } from '@/src/api/env';
-import { API_PATHS } from '@/src/utils/api-paths';
-import * as WebBrowser from 'expo-web-browser';
 
 export default function WalletScreen() {
   const insets = useSafeAreaInsets();
   const { theme } = useAppTheme();
   const [showUpload, setShowUpload] = useState(false);
+  const [viewingDocument, setViewingDocument] = useState<WalletDocument | null>(null);
+  const [editingDocument, setEditingDocument] = useState<WalletDocument | null>(null);
 
   const { personalDocuments, personalLoading, fetchPersonalDocuments, deleteDocument } =
     useWalletStore();
 
   useEffect(() => {
     fetchPersonalDocuments();
+    loadThumbnailCache();
   }, []);
 
   const sections = useMemo(() => groupDocumentsByType(personalDocuments), [personalDocuments]);
 
-  const handleDocumentPress = useCallback(async (doc: WalletDocument) => {
-    try {
-      const docWithUrl = await walletApi.getDocument(doc.id);
-      if (docWithUrl.downloadUrl) {
-        const downloadUrl = `${API_CONFIG.BASE_URL}${API_PATHS.wallet.files(docWithUrl.downloadUrl)}`;
-        await WebBrowser.openBrowserAsync(downloadUrl);
-      }
-    } catch (error) {
-      logger.error('WALLET', 'Failed to open document', error);
-    }
+  const handleDocumentPress = useCallback((doc: WalletDocument) => {
+    setViewingDocument(doc);
   }, []);
 
   const handleDocumentDelete = useCallback(
-    async (doc: WalletDocument) => {
-      try {
-        await deleteDocument(doc.id);
-      } catch (error) {
-        logger.error('WALLET', 'Failed to delete document', error);
-      }
+    (doc: WalletDocument) => {
+      Alert.alert('Delete Document', `Are you sure you want to delete "${doc.name}"?`, [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteDocument(doc.id);
+            } catch (error) {
+              logger.error('WALLET', 'Failed to delete document', error);
+            }
+          },
+        },
+      ]);
     },
     [deleteDocument]
   );
@@ -65,8 +71,9 @@ export default function WalletScreen() {
   }, [fetchPersonalDocuments]);
 
   const handleUploadComplete = useCallback(
-    (_doc: WalletDocument) => {
+    (doc: WalletDocument) => {
       fetchPersonalDocuments();
+      setEditingDocument(doc);
     },
     [fetchPersonalDocuments]
   );
@@ -156,6 +163,23 @@ export default function WalletScreen() {
         onDismiss={() => setShowUpload(false)}
         walletType="personal"
         onUploadComplete={handleUploadComplete}
+      />
+
+      <DocumentViewer
+        visible={!!viewingDocument}
+        onDismiss={() => setViewingDocument(null)}
+        document={viewingDocument}
+        onEdit={(doc) => {
+          setViewingDocument(null);
+          setEditingDocument(doc);
+        }}
+      />
+
+      <EditDocumentSheet
+        visible={!!editingDocument}
+        onDismiss={() => setEditingDocument(null)}
+        document={editingDocument}
+        onUpdated={() => fetchPersonalDocuments()}
       />
     </ThemedView>
   );
