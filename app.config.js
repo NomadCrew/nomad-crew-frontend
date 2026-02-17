@@ -87,6 +87,9 @@ export default {
         }
       },
       intentFilters: [
+        // Group 1: Verified HTTPS App Links (nomadcrew.uk only)
+        // autoVerify requires .well-known/assetlinks.json on the domain.
+        // Only include domains we control and can host assetlinks.json on.
         {
           action: 'VIEW',
           autoVerify: true,
@@ -95,33 +98,43 @@ export default {
               scheme: 'https',
               host: 'nomadcrew.uk',
               pathPrefix: '/auth/callback'
-            },
-            {
-              scheme: 'https',
-              host: 'kijatqtrwdzltelqzadx.supabase.co',
-              pathPrefix: '/auth/v1/callback'
-            },
-            {
-              scheme: 'nomadcrew',
-              host: '*',
-              pathPrefix: '/auth/callback'
-            }
-          ],
-          category: ['BROWSABLE', 'DEFAULT']
-        },
-        {
-          action: 'VIEW',
-          autoVerify: true,
-          data: [
-            {
-              scheme: 'nomadcrew',
-              host: 'invite',
-              pathPrefix: '/accept'
             },
             {
               scheme: 'https',
               host: 'nomadcrew.uk',
               pathPrefix: '/invite/accept'
+            }
+          ],
+          category: ['BROWSABLE', 'DEFAULT']
+        },
+        // Group 2: Supabase auth callback (HTTPS, no autoVerify)
+        // We can't host assetlinks.json on Supabase's domain.
+        // This will show a chooser dialog on Android but still works.
+        {
+          action: 'VIEW',
+          data: [
+            {
+              scheme: 'https',
+              host: 'kijatqtrwdzltelqzadx.supabase.co',
+              pathPrefix: '/auth/v1/callback'
+            }
+          ],
+          category: ['BROWSABLE', 'DEFAULT']
+        },
+        // Group 3: Custom scheme deep links (no autoVerify)
+        // Custom schemes don't use domain verification.
+        {
+          action: 'VIEW',
+          data: [
+            {
+              scheme: 'nomadcrew',
+              host: '*',
+              pathPrefix: '/auth/callback'
+            },
+            {
+              scheme: 'nomadcrew',
+              host: 'invite',
+              pathPrefix: '/accept'
             }
           ],
           category: ['BROWSABLE', 'DEFAULT']
