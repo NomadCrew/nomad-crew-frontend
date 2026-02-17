@@ -82,6 +82,14 @@ export interface UpdateTripStatusRequest {
   status: TripStatus;
 }
 
+export interface WeatherData {
+  temperatureCelsius: number;
+  weatherCode: number;
+  humidity?: number;
+  windSpeed?: number;
+  description?: string;
+}
+
 // Response types for REST API
 export type CreateTripResponse = Trip;
 export type UpdateTripResponse = Trip;

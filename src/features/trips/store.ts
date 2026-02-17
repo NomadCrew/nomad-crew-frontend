@@ -7,7 +7,6 @@ import {
   UpdateTripInput,
   TripStatus,
   UpdateTripStatusRequest,
-  WeatherForecast,
 } from './types';
 import { tripApi } from './api';
 import { API_PATHS } from '@/src/utils/api-paths';
@@ -416,21 +415,15 @@ export const useTripStore = create<TripState>()(
             case 'WEATHER_UPDATED': {
               if (isWeatherEvent(event)) {
                 const { payload } = event;
-                const condition = mapWeatherCode(payload.weather_code);
-                const forecast: WeatherForecast[] = payload.hourly_forecast.map((entry) => ({
-                  time: entry.timestamp,
-                  temperature: entry.temperature_2m,
-                  precipitation: entry.precipitation,
-                }));
+                const condition = mapWeatherCode(payload.weatherCode);
 
                 set((state) => ({
                   trips: state.trips.map((trip) =>
                     trip.id === payload.tripId
                       ? {
                           ...trip,
-                          weatherTemp: `${Math.round(payload.temperature_2m)}`,
+                          weatherTemp: `${Math.round(payload.temperatureCelsius)}`,
                           weatherCondition: condition,
-                          weatherForecast: forecast,
                         }
                       : trip
                   ),

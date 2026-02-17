@@ -51,4 +51,6 @@ export const tripKeys = {
    * Members for a specific trip
    */
   members: (tripId: string) => [...tripKeys.all, 'members', tripId] as const,
+
+  weather: (tripId: string) => [...tripKeys.all, 'weather', tripId] as const,
 };

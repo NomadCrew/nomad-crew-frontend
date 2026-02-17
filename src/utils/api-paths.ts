@@ -43,6 +43,7 @@ export const API_PATHS = {
       createApiPath(`trips/${tripId}/members/${memberId}/role`),
     removeMember: (tripId: string, memberId: string) =>
       createApiPath(`trips/${tripId}/members/${memberId}`),
+    weather: (tripId: string) => createApiPath(`trips/${tripId}/weather`),
   },
   todos: {
     create: (tripId: string) => createApiPath(`trips/${tripId}/todos`),
@@ -107,5 +108,11 @@ export const API_PATHS = {
   },
   feedback: {
     submit: createApiPath('feedback'),
+  },
+  wallet: {
+    documents: createApiPath('wallet/documents'),
+    document: (id: string) => createApiPath(`wallet/documents/${id}`),
+    files: (token: string) => createApiPath(`wallet/files/${token}`),
+    groupDocuments: (tripId: string) => createApiPath(`trips/${tripId}/wallet/documents`),
   },
 } as const;

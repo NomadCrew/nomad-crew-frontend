@@ -8,6 +8,7 @@ import {
   UpdateTripStatusRequest,
   InvitationDetails,
   TripMemberResponse,
+  WeatherData,
 } from './types';
 import { normalizeTrip } from './adapters/normalizeTrip';
 import { useAuthStore } from '@/src/features/auth/store';
@@ -153,5 +154,10 @@ export const tripApi = {
    */
   removeMember: async (tripId: string, userId: string): Promise<void> => {
     await api.delete(API_PATHS.trips.removeMember(tripId, userId));
+  },
+
+  getWeather: async (tripId: string): Promise<WeatherData> => {
+    const response = await api.get<WeatherData>(API_PATHS.trips.weather(tripId));
+    return response.data;
   },
 };

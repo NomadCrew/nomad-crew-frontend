@@ -102,16 +102,11 @@ export const EventSchemas = {
     type: z.literal('WEATHER_UPDATED'),
     payload: z.object({
       tripId: z.string(),
-      temperature_2m: z.number(),
-      weather_code: z.number(),
-      hourly_forecast: z.array(
-        z.object({
-          timestamp: z.string().datetime(),
-          temperature_2m: z.number(),
-          weather_code: z.number(),
-          precipitation: z.number(),
-        })
-      ),
+      temperatureCelsius: z.number(),
+      weatherCode: z.number(),
+      humidity: z.number().optional(),
+      windSpeed: z.number().optional(),
+      description: z.string().optional(),
       timestamp: z.string().datetime(),
     }),
   }),

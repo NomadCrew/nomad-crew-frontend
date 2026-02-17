@@ -1,7 +1,14 @@
 import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
 import { tripApi } from './api';
 import { tripKeys } from './queries';
-import { Trip, CreateTripInput, UpdateTripInput, TripStatus, TripMemberResponse } from './types';
+import {
+  Trip,
+  CreateTripInput,
+  UpdateTripInput,
+  TripStatus,
+  TripMemberResponse,
+  WeatherData,
+} from './types';
 import { logger } from '@/src/utils/logger';
 
 /**
@@ -316,6 +323,16 @@ export const useRemoveMember = () => {
  * const acceptInvitation = useAcceptInvitation();
  * acceptInvitation.mutate(invitationToken);
  */
+export const useTripWeather = (tripId: string) => {
+  return useQuery({
+    queryKey: tripKeys.weather(tripId),
+    queryFn: () => tripApi.getWeather(tripId),
+    enabled: !!tripId,
+    staleTime: 1000 * 60 * 15, // 15 min
+    retry: 1,
+  });
+};
+
 export const useAcceptInvitation = () => {
   const queryClient = useQueryClient();
 

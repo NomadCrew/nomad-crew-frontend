@@ -37,6 +37,7 @@ import { WebSocketManager } from '@/src/features/websocket/WebSocketManager';
 import { BaseEventSchema, isChatEvent, isServerEvent } from '@/src/types/events';
 import { logger } from '@/src/utils/logger';
 import { useTripPermissions } from '@/src/features/auth/permissions';
+import { useTripWeather } from '@/src/features/trips/hooks';
 
 interface TripDetailScreenProps {
   trip: Trip;
@@ -65,6 +66,8 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
     isAdminOrOwner: _isAdminOrOwner,
     isOwner: _isOwner,
   } = useTripPermissions({ trip });
+
+  const { data: weather } = useTripWeather(tripId);
 
   const styles = useThemedStyles((theme) => {
     const backgroundDefault = theme?.colors?.background?.default || '#FFFFFF';
@@ -140,7 +143,7 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
       },
       {
         id: 'trip-stats',
-        element: <TripStats />,
+        element: <TripStats trip={trip} tripId={tripId} />,
         height: 'normal' as const,
         position: 'right' as const,
       },
@@ -293,7 +296,12 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
-      <TripDetailHeader trip={trip} onBack={() => router.back()} containerWidth={containerWidth} />
+      <TripDetailHeader
+        trip={trip}
+        weather={weather}
+        onBack={() => router.back()}
+        containerWidth={containerWidth}
+      />
 
       <ScrollView
         style={styles.scrollContainer}

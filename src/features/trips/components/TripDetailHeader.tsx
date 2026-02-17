@@ -4,9 +4,9 @@ import { ArrowLeft, Bookmark } from 'lucide-react-native';
 import { format } from 'date-fns';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 import { ThemedText } from '@/src/components/ThemedText';
-import type { Trip } from '@/src/features/trips/types';
+import type { Trip, WeatherData } from '@/src/features/trips/types';
 import { WeatherIcon } from '@/src/components/ui/WeatherIcon';
-import { WeatherCondition } from '@/src/utils/weather';
+import { mapWeatherCode, WeatherCondition } from '@/src/utils/weather';
 import { TripStatusBadge } from './TripStatusBadge';
 import { Theme } from '@/src/theme/types';
 
@@ -16,6 +16,7 @@ const TITLE_FONT_SIZE = Math.round(SCREEN_WIDTH * 0.112);
 
 interface TripHeaderProps {
   trip: Trip;
+  weather?: WeatherData;
   onBack: () => void;
   onBookmark?: () => void;
   containerWidth?: number; // Added for consistency with TripDetailScreen import
@@ -24,14 +25,15 @@ interface TripHeaderProps {
 export const TripDetailHeader = ({
   // Renamed export
   trip,
+  weather,
   onBack,
   onBookmark,
 }: TripHeaderProps) => {
   const theme = useAppTheme().theme;
   const startDateString = format(new Date(trip.startDate), 'MMM dd');
   const endDateString = format(new Date(trip.endDate), 'MMM dd');
-  const weatherCondition = trip.weatherCondition as WeatherCondition | undefined;
-  const temperature = trip.weatherTemp ?? '6°C';
+  const weatherCondition = weather ? mapWeatherCode(weather.weatherCode) : undefined;
+  const temperature = weather ? `${Math.round(weather.temperatureCelsius)}°C` : null;
 
   return (
     <ImageBackground
@@ -84,17 +86,19 @@ export const TripDetailHeader = ({
               <TripStatusBadge status={trip.status} size="medium" />
             </View>
 
-            <View style={styles(theme).badge}>
-              <ThemedText variant="body.medium" style={styles(theme).tempText}>
-                {temperature}
-              </ThemedText>
-              <WeatherIcon
-                condition={weatherCondition}
-                fallback="clear"
-                size={20}
-                color={theme.colors.content.onImage}
-              />
-            </View>
+            {temperature && (
+              <View style={styles(theme).badge}>
+                <ThemedText variant="body.medium" style={styles(theme).tempText}>
+                  {temperature}
+                </ThemedText>
+                <WeatherIcon
+                  condition={weatherCondition}
+                  fallback="clear"
+                  size={20}
+                  color={theme.colors.content.onImage}
+                />
+              </View>
+            )}
           </View>
         </View>
       </View>
