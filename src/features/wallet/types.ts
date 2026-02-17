@@ -77,6 +77,7 @@ export type DocumentMetadata =
 
 /**
  * Core wallet document entity
+ * Matches the Go backend camelCase JSON response
  */
 export interface WalletDocument {
   id: string;
@@ -86,7 +87,6 @@ export interface WalletDocument {
   documentType: DocumentType;
   name: string;
   description?: string;
-  storagePath: string;
   mimeType: string;
   fileSize: number;
   metadata: DocumentMetadata;
@@ -130,28 +130,107 @@ export interface DocumentFilters {
 }
 
 /**
- * Document with signed URL for viewing
+ * Document with download URL (returned by GET single document endpoint)
  */
 export interface WalletDocumentWithUrl extends WalletDocument {
-  signedUrl: string;
-  urlExpiresAt: string;
+  downloadUrl: string;
+}
+
+// ============================================================
+// Phase C: LLM Document Extraction Contracts (future sprint)
+// API: POST /v1/wallet/documents/:id/extract
+// No implementation yet — contracts only.
+// ============================================================
+
+/**
+ * Request body for document extraction
+ */
+export interface ExtractionRequest {
+  ocrText: string; // Text extracted on-device
+  documentType?: DocumentType; // Optional hint for extraction
 }
 
 /**
- * Backend response shape (snake_case)
+ * Response from extraction endpoint
  */
-export interface WalletDocumentResponse {
-  id: string;
-  user_id: string;
-  wallet_type: WalletType;
-  trip_id: string | null;
-  document_type: DocumentType;
-  name: string;
-  description: string | null;
-  storage_path: string;
-  mime_type: string;
-  file_size: number;
-  metadata: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
+export interface ExtractionResponse {
+  extractedData: ExtractedData;
+  confidence: number; // 0-1 overall confidence
+  suggestedType: DocumentType;
+}
+
+/**
+ * Confidence thresholds for extraction UI behavior:
+ * - < 0.5: warn user, suggest manual entry
+ * - 0.5-0.8: show editable review screen with pre-filled fields
+ * - >= 0.8: auto-fill metadata (user can still edit)
+ */
+export const EXTRACTION_CONFIDENCE = {
+  LOW: 0.5,
+  HIGH: 0.8,
+} as const;
+
+/**
+ * Union of all extraction result types
+ */
+export type ExtractedData =
+  | FlightBookingExtraction
+  | HotelBookingExtraction
+  | ReceiptExtraction
+  | GenericExtraction;
+
+/**
+ * Extracted fields from a flight booking document
+ */
+export interface FlightBookingExtraction {
+  type: 'flight_booking';
+  passengerName?: string;
+  flightNumber?: string;
+  departureAirport?: string; // IATA code
+  arrivalAirport?: string; // IATA code
+  departureDate?: string; // ISO date
+  arrivalDate?: string; // ISO date
+  bookingReference?: string;
+  confidence: number;
+}
+
+/**
+ * Extracted fields from a hotel booking document
+ */
+export interface HotelBookingExtraction {
+  type: 'hotel_booking';
+  hotelName?: string;
+  address?: string;
+  checkInDate?: string; // ISO date
+  checkOutDate?: string; // ISO date
+  confirmationNumber?: string;
+  guestName?: string;
+  confidence: number;
+}
+
+/**
+ * Extracted fields from a receipt
+ */
+export interface ReceiptExtraction {
+  type: 'receipt';
+  merchantName?: string;
+  date?: string; // ISO date
+  totalAmount?: {
+    amount: number;
+    currency: string; // ISO 4217 code
+  };
+  lineItems?: {
+    description: string;
+    amount: number;
+  }[];
+  confidence: number;
+}
+
+/**
+ * Fallback for unrecognized document types
+ */
+export interface GenericExtraction {
+  type: 'other';
+  fields: Record<string, string>;
+  confidence: number;
 }

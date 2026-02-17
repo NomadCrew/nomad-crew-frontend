@@ -60,7 +60,7 @@ app/                  # Expo Router
 | **chat**          | `useChatStore`         | `service.ts`, offline message queue, read receipts                                                         |
 | **todos**         | `useTodoStore`         | `queries.ts` (React Query), `api.ts`                                                                       |
 | **polls**         | —                      | TanStack React Query (no Zustand), `api.ts`, `hooks.ts`, `types.ts`, `utils.ts` (formatCountdown)          |
-| **wallet**        | `useWalletStore`       | `adapters/normalizeDocument.ts`, Supabase Realtime subscriptions                                           |
+| **wallet**        | `useWalletStore`       | `api.ts` (Go backend via axios), `adapters/normalizeDocument.ts`, manual refetch on mutations              |
 | **location**      | `useLocationStore`     | `store/useLocationStore.ts`, `components/GroupLiveMap.tsx`                                                 |
 | **notifications** | `useNotificationStore` | `store/useNotificationStore.ts`, `services/pushNotificationService.ts`                                     |
 | **websocket**     | —                      | `WebSocketManager.ts` (singleton), `WebSocketConnection.ts`                                                |
@@ -88,7 +88,7 @@ PersistQueryClientProvider → GestureHandlerRootView → ThemeProvider → Onbo
 1. **Custom WebSocket** (`src/features/websocket/WebSocketManager.ts`): Connects to Go backend (`ws://[base]/v1/ws`). Routes events to location, chat, and notification stores. Reconnects with exponential backoff.
    - **Envelope unwrapping:** Backend sends `{type: "event", payload: {...}}` — WebSocketManager unwraps and delivers `payload` only.
    - **Chat store filtering:** `onMessage` callbacks in chat store filter out non-chat events to prevent processing irrelevant WebSocket traffic.
-2. **Supabase Realtime**: Used by wallet store (`postgres_changes` on `wallet_documents`) and notification service. Also handles `onAuthStateChange` session events.
+2. **Supabase Realtime**: Used by notification service. Also handles `onAuthStateChange` session events.
 
 ### Auth Flow
 
