@@ -24,9 +24,11 @@ export class BaseApiClient {
     this.api = axios.create({
       baseURL: API_CONFIG.BASE_URL,
       timeout: API_CONFIG.TIMEOUT,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      // NOTE: Do NOT set a default Content-Type here.
+      // For JSON requests, the auth interceptor sets it explicitly.
+      // For FormData requests, axios must auto-detect multipart/form-data
+      // with the correct boundary. A default Content-Type here would
+      // override that auto-detection and break file uploads.
       ...config,
     });
 

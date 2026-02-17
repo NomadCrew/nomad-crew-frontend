@@ -9,6 +9,25 @@ import type { User } from '@/src/features/auth/types';
 import axios from 'axios';
 import { shouldBypassAuth, MOCK_SIMULATOR_TOKEN } from '@/src/utils/simulator-auth';
 
+/**
+ * Check if the request data is FormData.
+ * React Native uses a polyfilled FormData whose prototype may not match
+ * the global FormData constructor, so `instanceof FormData` can return false.
+ * We also check for the presence of FormData's characteristic methods.
+ */
+function isFormData(data: unknown): boolean {
+  if (data instanceof FormData) return true;
+  if (
+    data &&
+    typeof data === 'object' &&
+    typeof (data as any).append === 'function' &&
+    typeof (data as any).getParts === 'function'
+  ) {
+    return true;
+  }
+  return false;
+}
+
 // Token refresh lock mechanism
 let isRefreshing = false;
 let refreshQueue: {
@@ -97,7 +116,9 @@ export class ApiClient extends BaseApiClient {
               'Simulator bypass: using mock token (backend must also support this)'
             );
             const headers = new AxiosHeaders(config.headers);
-            headers.set('Content-Type', 'application/json');
+            if (!isFormData(config.data)) {
+              headers.set('Content-Type', 'application/json');
+            }
             headers.set('Accept', 'application/json');
             headers.set('Authorization', `Bearer ${token}`);
             headers.set('X-Simulator-Bypass', 'true'); // Signal to backend
@@ -131,7 +152,9 @@ export class ApiClient extends BaseApiClient {
 
             if (newToken) {
               const headers = new AxiosHeaders(config.headers);
-              headers.set('Content-Type', 'application/json');
+              if (!isFormData(config.data)) {
+                headers.set('Content-Type', 'application/json');
+              }
               headers.set('Accept', 'application/json');
               headers.set('Authorization', `Bearer ${newToken}`);
               config.headers = headers;
@@ -152,7 +175,9 @@ export class ApiClient extends BaseApiClient {
 
             if (newToken) {
               const headers = new AxiosHeaders(config.headers);
-              headers.set('Content-Type', 'application/json');
+              if (!isFormData(config.data)) {
+                headers.set('Content-Type', 'application/json');
+              }
               headers.set('Accept', 'application/json');
               headers.set('Authorization', `Bearer ${newToken}`);
               config.headers = headers;
@@ -172,7 +197,9 @@ export class ApiClient extends BaseApiClient {
         }
 
         const headers = new AxiosHeaders(config.headers);
-        headers.set('Content-Type', 'application/json');
+        if (!isFormData(config.data)) {
+          headers.set('Content-Type', 'application/json');
+        }
         headers.set('Accept', 'application/json');
         headers.set('Authorization', `Bearer ${token}`);
         config.headers = headers;

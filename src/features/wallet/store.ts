@@ -6,6 +6,7 @@ import { devtools } from 'zustand/middleware';
 import { WalletDocument, DocumentType, CreateDocumentInput, UpdateDocumentInput } from './types';
 import { walletApi } from './api';
 import { shouldCompress, compressImage, MAX_FILE_SIZE } from './services';
+import * as FileSystem from 'expo-file-system';
 import { logger } from '@/src/utils/logger';
 import { registerStoreReset } from '@/src/utils/store-reset';
 
@@ -219,8 +220,6 @@ export const useWalletStore = create<WalletState>()(
             throw new Error('tripId is required for group wallet documents');
           }
 
-          set({ uploadProgress: 10 });
-
           // Prepare file URI - compress if image
           let fileUri = input.fileUri;
           let mimeType = input.mimeType;
@@ -230,12 +229,12 @@ export const useWalletStore = create<WalletState>()(
             mimeType = 'image/jpeg'; // Compressed images are JPEG
           }
 
-          set({ uploadProgress: 30 });
-
-          // Check file size
-          const response = await fetch(fileUri);
-          const arrayBuffer = await response.arrayBuffer();
-          const fileSize = arrayBuffer.byteLength;
+          // Check file size without consuming the file stream
+          const fileInfo = await FileSystem.getInfoAsync(fileUri, { size: true });
+          if (!fileInfo.exists) {
+            throw new Error('Selected file no longer exists or is not accessible');
+          }
+          const fileSize = fileInfo.size ?? 0;
 
           if (fileSize > MAX_FILE_SIZE) {
             throw new Error(
@@ -243,16 +242,29 @@ export const useWalletStore = create<WalletState>()(
             );
           }
 
-          set({ uploadProgress: 40 });
+          // Native progress callback from FileSystem.createUploadTask
+          const onProgress = ({
+            totalBytesSent,
+            totalBytesExpectedToSend,
+          }: {
+            totalBytesSent: number;
+            totalBytesExpectedToSend: number;
+          }) => {
+            const pct =
+              totalBytesExpectedToSend > 0
+                ? Math.round((totalBytesSent / totalBytesExpectedToSend) * 100)
+                : 0;
+            set({ uploadProgress: pct });
+          };
 
-          // Upload via backend API
+          // Upload via native multipart (expo-file-system)
           const uploadInput = { ...input, mimeType };
           let document: WalletDocument;
 
           if (input.walletType === 'group' && input.tripId) {
-            document = await walletApi.uploadGroup(input.tripId, uploadInput, fileUri);
+            document = await walletApi.uploadGroup(input.tripId, uploadInput, fileUri, onProgress);
           } else {
-            document = await walletApi.uploadPersonal(uploadInput, fileUri);
+            document = await walletApi.uploadPersonal(uploadInput, fileUri, onProgress);
           }
 
           set({ uploadProgress: 100 });
