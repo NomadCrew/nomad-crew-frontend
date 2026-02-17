@@ -16,5 +16,4 @@ export {
   useSelectedDocument,
   useUploadProgress,
   useUploadError,
-  getDocumentUrl,
 } from '../store';

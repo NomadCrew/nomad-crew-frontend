@@ -112,7 +112,6 @@ export const DocumentList: React.FC<DocumentListProps> = ({
         data={documents}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
-        // @ts-expect-error FlashList type inference issue with estimatedItemSize
         estimatedItemSize={80}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={ListHeaderComponent}
