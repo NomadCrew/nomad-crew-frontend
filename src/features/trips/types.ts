@@ -12,6 +12,7 @@ export interface Trip {
   description?: string;
   destination: {
     address: string;
+    name?: string;
     coordinates?: {
       lat: number;
       lng: number;

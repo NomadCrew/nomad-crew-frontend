@@ -5,8 +5,15 @@ import { useThemedStyles } from '@/src/theme/utils';
 
 export interface TripStatsProps {
   trips: number;
-  countries: number;
-  daysTraveled: number;
+  destinations: number;
+  daysTraveled?: number;
+}
+
+/** Format large numbers for compact display (e.g. 12345 → "12K") */
+function formatStatValue(value: number): string {
+  if (value >= 10_000) return `${Math.floor(value / 1000)}K`;
+  if (value >= 1_000) return value.toLocaleString();
+  return String(value);
 }
 
 interface StatItemProps {
@@ -18,11 +25,8 @@ interface StatItemProps {
 function StatItem({ value, label, primaryColor }: StatItemProps) {
   return (
     <View style={{ alignItems: 'center', flex: 1 }}>
-      <ThemedText
-        variant="display.small"
-        style={{ color: primaryColor, fontWeight: '700' }}
-      >
-        {value}
+      <ThemedText variant="display.small" style={{ color: primaryColor, fontWeight: '700' }}>
+        {formatStatValue(value)}
       </ThemedText>
       <ThemedText variant="body.small" color="content.secondary">
         {label}
@@ -32,10 +36,10 @@ function StatItem({ value, label, primaryColor }: StatItemProps) {
 }
 
 /**
- * A trip statistics display component showing trips, countries, and days traveled.
- * Displays as a horizontal row with three evenly-spaced stat items.
+ * Trip statistics display for the profile screen.
+ * Shows completed trips, unique destinations, and optionally days traveled.
  */
-export function TripStats({ trips, countries, daysTraveled }: TripStatsProps) {
+export function TripStats({ trips, destinations, daysTraveled }: TripStatsProps) {
   const styles = useThemedStyles((theme) => ({
     container: {
       flexDirection: 'row' as const,
@@ -53,8 +57,10 @@ export function TripStats({ trips, countries, daysTraveled }: TripStatsProps) {
   return (
     <View style={styles.container}>
       <StatItem value={trips} label="Trips" primaryColor={styles.primaryColor} />
-      <StatItem value={countries} label="Countries" primaryColor={styles.primaryColor} />
-      <StatItem value={daysTraveled} label="Days" primaryColor={styles.primaryColor} />
+      <StatItem value={destinations} label="Destinations" primaryColor={styles.primaryColor} />
+      {daysTraveled !== undefined && (
+        <StatItem value={daysTraveled} label="Days" primaryColor={styles.primaryColor} />
+      )}
     </View>
   );
 }

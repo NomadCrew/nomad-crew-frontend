@@ -15,6 +15,8 @@ import {
   TripStats,
   FeedbackModal,
 } from '@/src/components/profile';
+import { useTrips } from '@/src/features/trips/hooks';
+import { computeTripStats } from '@/src/features/trips/utils/computeTripStats';
 import {
   updateLocationPrivacy,
   updateUserPreferences,
@@ -34,15 +36,9 @@ export default function ProfileScreen() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [feedbackVisible, setFeedbackVisible] = useState(false);
 
-  // Placeholder trip stats (real data from API in future)
-  const tripStats = useMemo(
-    () => ({
-      trips: 5,
-      countries: 3,
-      daysTraveled: 42,
-    }),
-    []
-  );
+  // Compute trip stats from real data via shared utility
+  const { data: tripsData } = useTrips();
+  const tripStats = useMemo(() => computeTripStats(tripsData ?? []), [tripsData]);
 
   const styles = useThemedStyles((theme) => ({
     container: {
@@ -313,9 +309,9 @@ export default function ProfileScreen() {
         {/* Trip Stats Section */}
         <SectionHeader title="YOUR JOURNEY" />
         <TripStats
-          trips={tripStats.trips}
-          countries={tripStats.countries}
-          daysTraveled={tripStats.daysTraveled}
+          trips={tripStats.completedTrips}
+          destinations={tripStats.uniqueDestinations}
+          daysTraveled={tripStats.uniqueDaysTraveled}
         />
 
         {/* Settings Section */}
