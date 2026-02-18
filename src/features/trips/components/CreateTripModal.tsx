@@ -118,7 +118,8 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
   }
 
   function openDatePicker(which: 'start' | 'end') {
-    const current = which === 'start' ? new Date(trip.startDate!) : new Date(trip.endDate!);
+    const dateStr = which === 'start' ? trip.startDate : trip.endDate;
+    const current = dateStr ? new Date(dateStr) : new Date();
     setTempDate(current);
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setShowDatePicker(which);
@@ -364,7 +365,10 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
               {showDatePicker && Platform.OS === 'android' && (
                 <DateTimePicker
                   value={
-                    showDatePicker === 'start' ? new Date(trip.startDate!) : new Date(trip.endDate!)
+                    new Date(
+                      (showDatePicker === 'start' ? trip.startDate : trip.endDate) ||
+                        new Date().toISOString()
+                    )
                   }
                   mode="date"
                   display="default"
@@ -421,7 +425,7 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
                       : new Date()
                   }
                   onChange={handleDateChange}
-                  style={{ height: Math.min(340, windowHeight * 0.4) }}
+                  style={{ height: Math.max(300, windowHeight * 0.4) }}
                 />
               </View>
             )}
