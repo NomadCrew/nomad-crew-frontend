@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -54,6 +54,16 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
   const [showDatePicker, setShowDatePicker] = useState<'start' | 'end' | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Semi-uncontrolled description: ref tracks text without re-renders,
+  // avoids iOS multiline UITextView keyboard shift state reset (RN #47997)
+  const descriptionRef = useRef(trip.description || '');
+  const handleDescriptionChange = useCallback((text: string) => {
+    descriptionRef.current = text;
+  }, []);
+  const syncDescription = useCallback(() => {
+    setTrip((prev) => ({ ...prev, description: descriptionRef.current }));
+  }, []);
+
   // Temp date for iOS spinner — only committed on "Done"
   const [tempDate, setTempDate] = useState<Date>(new Date());
 
@@ -99,11 +109,15 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
   }
 
   async function handleSubmit() {
+    // Sync description from ref before validation/submit
+    setTrip((prev) => ({ ...prev, description: descriptionRef.current }));
+    const tripWithDesc = { ...trip, description: descriptionRef.current };
+
     if (!validateForm()) return;
     setLoading(true);
 
     const tripPayload: Partial<Trip> = {
-      ...trip,
+      ...tripWithDesc,
       createdBy: currentUser?.id || '',
     };
 
@@ -209,7 +223,10 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
         <SafeAreaView
           style={[
             styles.modalContent,
-            { backgroundColor: theme.colors.background.default, height: windowHeight * 0.7 },
+            {
+              backgroundColor: theme.colors.background.default,
+              height: windowHeight * (showDatePicker ? 0.85 : 0.7),
+            },
           ]}
         >
           <AutocompleteDropdownContextProvider>
@@ -240,6 +257,7 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
               contentContainerStyle={styles.formContentContainer}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
+              scrollEnabled={!showDatePicker}
             >
               {/* Trip name field */}
               <ThemedText variant="body.small" color="content.secondary" style={styles.label}>
@@ -271,8 +289,9 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
               <TextInput
                 mode="outlined"
                 placeholder="Description"
-                value={trip.description}
-                onChangeText={(text) => setTrip((prev) => ({ ...prev, description: text }))}
+                defaultValue={trip.description}
+                onChangeText={handleDescriptionChange}
+                onBlur={syncDescription}
                 multiline={true}
                 numberOfLines={4}
                 style={[styles.textInput, { height: 100 }]}
@@ -349,45 +368,46 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
                   onChange={handleDateChange}
                 />
               )}
-              {showDatePicker && Platform.OS === 'ios' && (
-                <View
-                  style={[
-                    styles.iosPickerContainer,
-                    { backgroundColor: theme.colors.surface.default },
-                  ]}
-                >
-                  <View style={styles.iosPickerHeader}>
-                    <Pressable onPress={() => setShowDatePicker(null)}>
-                      <ThemedText color="content.secondary">Cancel</ThemedText>
-                    </Pressable>
-                    <ThemedText
-                      variant="body.small"
-                      color="content.primary"
-                      style={{ fontWeight: '600' }}
-                    >
-                      {showDatePicker === 'start' ? 'Start Date' : 'End Date'}
-                    </ThemedText>
-                    <Pressable onPress={handleIOSDateDone}>
-                      <ThemedText color="primary.main" style={{ fontWeight: '600' }}>
-                        Done
-                      </ThemedText>
-                    </Pressable>
-                  </View>
-                  <DateTimePicker
-                    value={tempDate}
-                    mode="date"
-                    display="spinner"
-                    minimumDate={
-                      showDatePicker === 'end' && trip.startDate
-                        ? new Date(trip.startDate)
-                        : new Date()
-                    }
-                    onChange={handleDateChange}
-                    style={{ height: 150 }}
-                  />
-                </View>
-              )}
             </ScrollView>
+            {/* iOS date picker — rendered OUTSIDE ScrollView to avoid gesture conflicts */}
+            {showDatePicker && Platform.OS === 'ios' && (
+              <View
+                style={[
+                  styles.iosPickerContainer,
+                  { backgroundColor: theme.colors.surface.default },
+                ]}
+              >
+                <View style={styles.iosPickerHeader}>
+                  <Pressable onPress={() => setShowDatePicker(null)}>
+                    <ThemedText color="content.secondary">Cancel</ThemedText>
+                  </Pressable>
+                  <ThemedText
+                    variant="body.small"
+                    color="content.primary"
+                    style={{ fontWeight: '600' }}
+                  >
+                    {showDatePicker === 'start' ? 'Start Date' : 'End Date'}
+                  </ThemedText>
+                  <Pressable onPress={handleIOSDateDone}>
+                    <ThemedText color="primary.main" style={{ fontWeight: '600' }}>
+                      Done
+                    </ThemedText>
+                  </Pressable>
+                </View>
+                <DateTimePicker
+                  value={tempDate}
+                  mode="date"
+                  display="inline"
+                  minimumDate={
+                    showDatePicker === 'end' && trip.startDate
+                      ? new Date(trip.startDate)
+                      : new Date()
+                  }
+                  onChange={handleDateChange}
+                  style={{ height: 340 }}
+                />
+              </View>
+            )}
             {/* Submit button */}
             <View style={[styles.buttonContainer, { borderTopColor: theme.colors.border.default }]}>
               <Button
@@ -482,7 +502,6 @@ const styles = StyleSheet.create({
   iosPickerContainer: {
     borderRadius: 12,
     marginBottom: 16,
-    overflow: 'hidden',
   },
   iosPickerHeader: {
     flexDirection: 'row',
