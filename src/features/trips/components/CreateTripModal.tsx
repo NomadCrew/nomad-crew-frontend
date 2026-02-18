@@ -391,6 +391,7 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
                       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                       setShowDatePicker(null);
                     }}
+                    accessibilityLabel="Cancel date selection"
                   >
                     <ThemedText color="content.secondary">Cancel</ThemedText>
                   </Pressable>
@@ -401,7 +402,10 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
                   >
                     {showDatePicker === 'start' ? 'Start Date' : 'End Date'}
                   </ThemedText>
-                  <Pressable onPress={handleIOSDateDone}>
+                  <Pressable
+                    onPress={handleIOSDateDone}
+                    accessibilityLabel="Confirm date selection"
+                  >
                     <ThemedText color="primary.main" style={{ fontWeight: '600' }}>
                       Done
                     </ThemedText>
