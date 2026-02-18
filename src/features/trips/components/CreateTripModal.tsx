@@ -32,8 +32,8 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
   const { height: windowHeight } = useWindowDimensions();
   const { user: currentUser } = useAuthStore();
 
-  function createInitialTrip(): Partial<Trip> {
-    return {
+  const createInitialTrip = useCallback(
+    (): Partial<Trip> => ({
       id: '',
       name: '',
       destination: { address: '', placeId: '', coordinates: undefined },
@@ -53,8 +53,9 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
           ]
         : [],
       invitations: [],
-    };
-  }
+    }),
+    [currentUser]
+  );
 
   const [trip, setTrip] = useState<Partial<Trip>>(createInitialTrip);
   const [showDatePicker, setShowDatePicker] = useState<'start' | 'end' | null>(null);
@@ -81,7 +82,7 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
       setLoading(false);
       setModalOpenCount((c) => c + 1);
     }
-  }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [visible, createInitialTrip]);
 
   // Temp date for iOS spinner — only committed on "Done"
   const [tempDate, setTempDate] = useState<Date>(new Date());
@@ -89,11 +90,11 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
   function handleDateChange(event: DateTimePickerEvent, selectedDate?: Date) {
     if (Platform.OS === 'android') {
       setShowDatePicker(null);
-      if (event.type === 'dismissed' || !selectedDate || !showDatePicker) return;
+      if (event.type === 'dismissed' || !selectedDate) return;
       const dateKey = showDatePicker === 'start' ? 'startDate' : 'endDate';
       setTrip((prev) => ({ ...prev, [dateKey]: selectedDate.toISOString() }));
     } else {
-      // iOS spinner: update temp date on scroll, commit on Done
+      // iOS inline: update temp date on change, commit on Done
       if (selectedDate) setTempDate(selectedDate);
     }
   }
@@ -163,41 +164,18 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
         'Not all who wander are lost. - J.R.R. Tolkien',
       ];
       const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-      console.log('[CreateTripModal] handleSubmit trip before onSubmit:', tripPayload);
-      if (tripPayload && tripPayload.members) {
-        console.log('[CreateTripModal] tripPayload.members before onSubmit:', tripPayload.members);
-      } else {
-        console.log(
-          '[CreateTripModal] tripPayload.members is',
-          tripPayload ? tripPayload.members : 'tripPayload is undefined'
-        );
-      }
       const createdTrip = await onSubmit(tripPayload as Trip);
-      console.log('[CreateTripModal] createdTrip from backend:', createdTrip);
-      if (createdTrip && createdTrip.members) {
-        console.log('[CreateTripModal] createdTrip.members:', createdTrip.members);
-      } else {
-        console.log(
-          '[CreateTripModal] createdTrip.members is',
-          createdTrip ? createdTrip.members : 'createdTrip is undefined'
-        );
-      }
       Alert.alert(
         'Trip Created!',
         `Your trip to ${createdTrip.destination?.address} is ready!\n\n${randomQuote}`
       );
       onClose();
     } catch (error) {
-      let errorMessage = 'Failed to create trip. Please try again.';
-      if (error instanceof Error) {
-        errorMessage += ` (${error.message})`;
-        console.log('[CreateTripModal] Caught error:', error.message, error.stack);
-      } else {
-        errorMessage += ` (${JSON.stringify(error)})`;
-        console.log('[CreateTripModal] Caught error (non-Error object):', error);
-      }
+      const errorMessage =
+        error instanceof Error
+          ? `Failed to create trip. (${error.message})`
+          : 'Failed to create trip. Please try again.';
       Alert.alert('Error', errorMessage);
-      console.log('trip payload', tripPayload);
     } finally {
       setLoading(false);
     }
@@ -422,7 +400,7 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
                       : new Date()
                   }
                   onChange={handleDateChange}
-                  style={{ height: 340 }}
+                  style={{ height: Math.min(340, windowHeight * 0.4) }}
                 />
               </View>
             )}
@@ -432,7 +410,7 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
                 mode="contained"
                 onPress={handleSubmit}
                 loading={loading}
-                disabled={loading}
+                disabled={loading || !!showDatePicker}
                 style={[styles.submitButton, { backgroundColor: theme.colors.primary.main }]}
                 labelStyle={[styles.submitButtonLabel, { color: theme.colors.onPrimary }]}
                 accessibilityLabel="Create Trip"
@@ -463,7 +441,6 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: Platform.OS === 'ios' ? 30 : 20,
     elevation: 0,
-    overflow: 'hidden',
   },
   dragHandleWrapper: {
     alignItems: 'center',
