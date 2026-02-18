@@ -8,6 +8,8 @@ import {
   ScrollView,
   SafeAreaView,
   useWindowDimensions,
+  LayoutAnimation,
+  UIManager,
 } from 'react-native';
 import { Portal, Modal, Button, TextInput } from 'react-native-paper';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -21,6 +23,10 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ThemedText } from '@/src/components/ThemedText';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 interface CreateTripModalProps {
   visible: boolean;
   onClose: () => void;
@@ -31,6 +37,9 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
   const theme = useAppTheme().theme;
   const { height: windowHeight } = useWindowDimensions();
   const { user: currentUser } = useAuthStore();
+  const userId = currentUser?.id;
+  const userName = currentUser?.username;
+  const userEmail = currentUser?.email;
 
   const createInitialTrip = useCallback(
     (): Partial<Trip> => ({
@@ -41,20 +50,20 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
       startDate: new Date().toISOString(),
       endDate: new Date().toISOString(),
       status: 'PLANNING',
-      createdBy: currentUser?.id || '',
-      members: currentUser?.id
+      createdBy: userId || '',
+      members: userId
         ? [
             {
-              userId: currentUser.id,
+              userId,
               role: 'owner',
-              name: currentUser.username || currentUser.email?.split('@')[0] || 'Owner',
+              name: userName || userEmail?.split('@')[0] || 'Owner',
               joinedAt: new Date().toISOString(),
             },
           ]
         : [],
       invitations: [],
     }),
-    [currentUser]
+    [userId, userName, userEmail]
   );
 
   const [trip, setTrip] = useState<Partial<Trip>>(createInitialTrip);
@@ -89,6 +98,7 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
 
   function handleDateChange(event: DateTimePickerEvent, selectedDate?: Date) {
     if (Platform.OS === 'android') {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setShowDatePicker(null);
       if (event.type === 'dismissed' || !selectedDate) return;
       const dateKey = showDatePicker === 'start' ? 'startDate' : 'endDate';
@@ -103,12 +113,14 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
     if (!showDatePicker) return;
     const dateKey = showDatePicker === 'start' ? 'startDate' : 'endDate';
     setTrip((prev) => ({ ...prev, [dateKey]: tempDate.toISOString() }));
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setShowDatePicker(null);
   }
 
   function openDatePicker(which: 'start' | 'end') {
     const current = which === 'start' ? new Date(trip.startDate!) : new Date(trip.endDate!);
     setTempDate(current);
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setShowDatePicker(which);
   }
 
@@ -374,7 +386,12 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
                 ]}
               >
                 <View style={styles.iosPickerHeader}>
-                  <Pressable onPress={() => setShowDatePicker(null)}>
+                  <Pressable
+                    onPress={() => {
+                      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                      setShowDatePicker(null);
+                    }}
+                  >
                     <ThemedText color="content.secondary">Cancel</ThemedText>
                   </Pressable>
                   <ThemedText
