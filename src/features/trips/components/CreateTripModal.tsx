@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,8 +6,10 @@ import {
   Pressable,
   Alert,
   ScrollView,
-  Dimensions,
   SafeAreaView,
+  useWindowDimensions,
+  LayoutAnimation,
+  UIManager,
 } from 'react-native';
 import { Portal, Modal, Button, TextInput } from 'react-native-paper';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -21,6 +23,10 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ThemedText } from '@/src/components/ThemedText';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
 
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 interface CreateTripModalProps {
   visible: boolean;
   onClose: () => void;
@@ -29,42 +35,76 @@ interface CreateTripModalProps {
 
 export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTripModalProps) {
   const theme = useAppTheme().theme;
+  const { height: windowHeight } = useWindowDimensions();
   const { user: currentUser } = useAuthStore();
-  const [trip, setTrip] = useState<Partial<Trip>>({
-    id: '',
-    name: '',
-    destination: { address: '', placeId: '', coordinates: undefined },
-    description: '',
-    startDate: new Date().toISOString(),
-    endDate: new Date().toISOString(),
-    status: 'PLANNING',
-    createdBy: currentUser?.id || '',
-    members: currentUser?.id
-      ? [
-          {
-            userId: currentUser.id,
-            role: 'owner',
-            name: currentUser.username || currentUser.email?.split('@')[0] || 'Owner',
-            joinedAt: new Date().toISOString(),
-          },
-        ]
-      : [],
-    invitations: [],
-  });
+  const userId = currentUser?.id;
+  const userName = currentUser?.username;
+  const userEmail = currentUser?.email;
+
+  const createInitialTrip = useCallback(
+    (): Partial<Trip> => ({
+      id: '',
+      name: '',
+      destination: { address: '', placeId: '', coordinates: undefined },
+      description: '',
+      startDate: new Date().toISOString(),
+      endDate: new Date().toISOString(),
+      status: 'PLANNING',
+      createdBy: userId || '',
+      members: userId
+        ? [
+            {
+              userId,
+              role: 'owner',
+              name: userName || userEmail?.split('@')[0] || 'Owner',
+              joinedAt: new Date().toISOString(),
+            },
+          ]
+        : [],
+      invitations: [],
+    }),
+    [userId, userName, userEmail]
+  );
+
+  const [trip, setTrip] = useState<Partial<Trip>>(createInitialTrip);
   const [showDatePicker, setShowDatePicker] = useState<'start' | 'end' | null>(null);
   const [loading, setLoading] = useState(false);
+  // Counter increments on each modal open to force TextInput remount (resets defaultValue)
+  const [modalOpenCount, setModalOpenCount] = useState(0);
+
+  // Semi-uncontrolled description: ref tracks text without re-renders,
+  // avoids iOS multiline UITextView keyboard shift state reset (RN #47997)
+  const descriptionRef = useRef('');
+  const handleDescriptionChange = useCallback((text: string) => {
+    descriptionRef.current = text;
+  }, []);
+  const syncDescription = useCallback(() => {
+    setTrip((prev) => ({ ...prev, description: descriptionRef.current }));
+  }, []);
+
+  // Reset form state each time the modal opens
+  useEffect(() => {
+    if (visible) {
+      setTrip(createInitialTrip());
+      descriptionRef.current = '';
+      setShowDatePicker(null);
+      setLoading(false);
+      setModalOpenCount((c) => c + 1);
+    }
+  }, [visible, createInitialTrip]);
 
   // Temp date for iOS spinner — only committed on "Done"
   const [tempDate, setTempDate] = useState<Date>(new Date());
 
   function handleDateChange(event: DateTimePickerEvent, selectedDate?: Date) {
     if (Platform.OS === 'android') {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setShowDatePicker(null);
-      if (event.type === 'dismissed' || !selectedDate || !showDatePicker) return;
+      if (event.type === 'dismissed' || !selectedDate) return;
       const dateKey = showDatePicker === 'start' ? 'startDate' : 'endDate';
       setTrip((prev) => ({ ...prev, [dateKey]: selectedDate.toISOString() }));
     } else {
-      // iOS spinner: update temp date on scroll, commit on Done
+      // iOS inline: update temp date on change, commit on Done
       if (selectedDate) setTempDate(selectedDate);
     }
   }
@@ -73,25 +113,29 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
     if (!showDatePicker) return;
     const dateKey = showDatePicker === 'start' ? 'startDate' : 'endDate';
     setTrip((prev) => ({ ...prev, [dateKey]: tempDate.toISOString() }));
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setShowDatePicker(null);
   }
 
   function openDatePicker(which: 'start' | 'end') {
-    const current = which === 'start' ? new Date(trip.startDate!) : new Date(trip.endDate!);
+    const dateStr = which === 'start' ? trip.startDate : trip.endDate;
+    const current = dateStr ? new Date(dateStr) : new Date();
     setTempDate(current);
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setShowDatePicker(which);
   }
 
-  function validateForm() {
-    if (!trip.name?.trim()) {
+  function validateForm(candidate?: Partial<Trip>) {
+    const t = candidate ?? trip;
+    if (!t.name?.trim()) {
       Alert.alert('Validation Error', 'Please enter a trip name.');
       return false;
     }
-    if (!trip.destination?.address?.trim()) {
+    if (!t.destination?.address?.trim()) {
       Alert.alert('Validation Error', 'Please select a valid destination.');
       return false;
     }
-    if (trip.startDate && trip.endDate && new Date(trip.endDate) < new Date(trip.startDate)) {
+    if (t.startDate && t.endDate && new Date(t.endDate) < new Date(t.startDate)) {
       Alert.alert('Validation Error', 'End date must be after start date.');
       return false;
     }
@@ -99,11 +143,14 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
   }
 
   async function handleSubmit() {
-    if (!validateForm()) return;
+    // Build up-to-date trip object with description from ref
+    const tripWithDesc = { ...trip, description: descriptionRef.current };
+
+    if (!validateForm(tripWithDesc)) return;
     setLoading(true);
 
     const tripPayload: Partial<Trip> = {
-      ...trip,
+      ...tripWithDesc,
       createdBy: currentUser?.id || '',
     };
 
@@ -130,41 +177,18 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
         'Not all who wander are lost. - J.R.R. Tolkien',
       ];
       const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-      console.log('[CreateTripModal] handleSubmit trip before onSubmit:', tripPayload);
-      if (tripPayload && tripPayload.members) {
-        console.log('[CreateTripModal] tripPayload.members before onSubmit:', tripPayload.members);
-      } else {
-        console.log(
-          '[CreateTripModal] tripPayload.members is',
-          tripPayload ? tripPayload.members : 'tripPayload is undefined'
-        );
-      }
       const createdTrip = await onSubmit(tripPayload as Trip);
-      console.log('[CreateTripModal] createdTrip from backend:', createdTrip);
-      if (createdTrip && createdTrip.members) {
-        console.log('[CreateTripModal] createdTrip.members:', createdTrip.members);
-      } else {
-        console.log(
-          '[CreateTripModal] createdTrip.members is',
-          createdTrip ? createdTrip.members : 'createdTrip is undefined'
-        );
-      }
       Alert.alert(
         'Trip Created!',
         `Your trip to ${createdTrip.destination?.address} is ready!\n\n${randomQuote}`
       );
       onClose();
     } catch (error) {
-      let errorMessage = 'Failed to create trip. Please try again.';
-      if (error instanceof Error) {
-        errorMessage += ` (${error.message})`;
-        console.log('[CreateTripModal] Caught error:', error.message, error.stack);
-      } else {
-        errorMessage += ` (${JSON.stringify(error)})`;
-        console.log('[CreateTripModal] Caught error (non-Error object):', error);
-      }
+      const errorMessage =
+        error instanceof Error
+          ? `Failed to create trip. (${error.message})`
+          : 'Failed to create trip. Please try again.';
       Alert.alert('Error', errorMessage);
-      console.log('trip payload', tripPayload);
     } finally {
       setLoading(false);
     }
@@ -192,7 +216,6 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
 
   const formattedStartDate = trip.startDate ? format(new Date(trip.startDate), 'MMM dd, yyyy') : '';
   const formattedEndDate = trip.endDate ? format(new Date(trip.endDate), 'MMM dd, yyyy') : '';
-  const windowHeight = Dimensions.get('window').height;
 
   return (
     <Portal>
@@ -209,7 +232,10 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
         <SafeAreaView
           style={[
             styles.modalContent,
-            { backgroundColor: theme.colors.background.default, height: windowHeight * 0.7 },
+            {
+              backgroundColor: theme.colors.background.default,
+              height: windowHeight * (showDatePicker ? 0.85 : 0.7),
+            },
           ]}
         >
           <AutocompleteDropdownContextProvider>
@@ -269,10 +295,12 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
                 Description
               </ThemedText>
               <TextInput
+                key={modalOpenCount}
                 mode="outlined"
                 placeholder="Description"
-                value={trip.description}
-                onChangeText={(text) => setTrip((prev) => ({ ...prev, description: text }))}
+                defaultValue={trip.description}
+                onChangeText={handleDescriptionChange}
+                onBlur={syncDescription}
                 multiline={true}
                 numberOfLines={4}
                 style={[styles.textInput, { height: 100 }]}
@@ -337,7 +365,10 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
               {showDatePicker && Platform.OS === 'android' && (
                 <DateTimePicker
                   value={
-                    showDatePicker === 'start' ? new Date(trip.startDate!) : new Date(trip.endDate!)
+                    new Date(
+                      (showDatePicker === 'start' ? trip.startDate : trip.endDate) ||
+                        new Date().toISOString()
+                    )
                   }
                   mode="date"
                   display="default"
@@ -349,52 +380,62 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
                   onChange={handleDateChange}
                 />
               )}
-              {showDatePicker && Platform.OS === 'ios' && (
-                <View
-                  style={[
-                    styles.iosPickerContainer,
-                    { backgroundColor: theme.colors.surface.default },
-                  ]}
-                >
-                  <View style={styles.iosPickerHeader}>
-                    <Pressable onPress={() => setShowDatePicker(null)}>
-                      <ThemedText color="content.secondary">Cancel</ThemedText>
-                    </Pressable>
-                    <ThemedText
-                      variant="body.small"
-                      color="content.primary"
-                      style={{ fontWeight: '600' }}
-                    >
-                      {showDatePicker === 'start' ? 'Start Date' : 'End Date'}
-                    </ThemedText>
-                    <Pressable onPress={handleIOSDateDone}>
-                      <ThemedText color="primary.main" style={{ fontWeight: '600' }}>
-                        Done
-                      </ThemedText>
-                    </Pressable>
-                  </View>
-                  <DateTimePicker
-                    value={tempDate}
-                    mode="date"
-                    display="spinner"
-                    minimumDate={
-                      showDatePicker === 'end' && trip.startDate
-                        ? new Date(trip.startDate)
-                        : new Date()
-                    }
-                    onChange={handleDateChange}
-                    style={{ height: 150 }}
-                  />
-                </View>
-              )}
             </ScrollView>
+            {/* iOS date picker — rendered OUTSIDE ScrollView to avoid gesture conflicts */}
+            {showDatePicker && Platform.OS === 'ios' && (
+              <View
+                style={[
+                  styles.iosPickerContainer,
+                  { backgroundColor: theme.colors.surface.default },
+                ]}
+              >
+                <View style={styles.iosPickerHeader}>
+                  <Pressable
+                    onPress={() => {
+                      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                      setShowDatePicker(null);
+                    }}
+                    accessibilityLabel="Cancel date selection"
+                  >
+                    <ThemedText color="content.secondary">Cancel</ThemedText>
+                  </Pressable>
+                  <ThemedText
+                    variant="body.small"
+                    color="content.primary"
+                    style={{ fontWeight: '600' }}
+                  >
+                    {showDatePicker === 'start' ? 'Start Date' : 'End Date'}
+                  </ThemedText>
+                  <Pressable
+                    onPress={handleIOSDateDone}
+                    accessibilityLabel="Confirm date selection"
+                  >
+                    <ThemedText color="primary.main" style={{ fontWeight: '600' }}>
+                      Done
+                    </ThemedText>
+                  </Pressable>
+                </View>
+                <DateTimePicker
+                  value={tempDate}
+                  mode="date"
+                  display="inline"
+                  minimumDate={
+                    showDatePicker === 'end' && trip.startDate
+                      ? new Date(trip.startDate)
+                      : new Date()
+                  }
+                  onChange={handleDateChange}
+                  style={{ height: Math.max(300, windowHeight * 0.4) }}
+                />
+              </View>
+            )}
             {/* Submit button */}
             <View style={[styles.buttonContainer, { borderTopColor: theme.colors.border.default }]}>
               <Button
                 mode="contained"
                 onPress={handleSubmit}
                 loading={loading}
-                disabled={loading}
+                disabled={loading || !!showDatePicker}
                 style={[styles.submitButton, { backgroundColor: theme.colors.primary.main }]}
                 labelStyle={[styles.submitButtonLabel, { color: theme.colors.onPrimary }]}
                 accessibilityLabel="Create Trip"
@@ -425,7 +466,6 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: Platform.OS === 'ios' ? 30 : 20,
     elevation: 0,
-    overflow: 'hidden',
   },
   dragHandleWrapper: {
     alignItems: 'center',
@@ -482,7 +522,6 @@ const styles = StyleSheet.create({
   iosPickerContainer: {
     borderRadius: 12,
     marginBottom: 16,
-    overflow: 'hidden',
   },
   iosPickerHeader: {
     flexDirection: 'row',
