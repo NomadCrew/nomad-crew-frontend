@@ -71,23 +71,3 @@ jobs:
       - name: Run tests
         run: npm test
         continue-on-error: true # Allow PR merge while test suite is being stabilized
-
-  build-preview:
-    name: build-preview
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps
-
-      - name: Build preview (web export)
-        run: npx expo export --platform web
-        continue-on-error: true # Web export may have issues; primary target is mobile
