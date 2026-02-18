@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,8 +6,8 @@ import {
   Pressable,
   Alert,
   ScrollView,
-  Dimensions,
   SafeAreaView,
+  useWindowDimensions,
 } from 'react-native';
 import { Portal, Modal, Button, TextInput } from 'react-native-paper';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -29,40 +29,59 @@ interface CreateTripModalProps {
 
 export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTripModalProps) {
   const theme = useAppTheme().theme;
+  const { height: windowHeight } = useWindowDimensions();
   const { user: currentUser } = useAuthStore();
-  const [trip, setTrip] = useState<Partial<Trip>>({
-    id: '',
-    name: '',
-    destination: { address: '', placeId: '', coordinates: undefined },
-    description: '',
-    startDate: new Date().toISOString(),
-    endDate: new Date().toISOString(),
-    status: 'PLANNING',
-    createdBy: currentUser?.id || '',
-    members: currentUser?.id
-      ? [
-          {
-            userId: currentUser.id,
-            role: 'owner',
-            name: currentUser.username || currentUser.email?.split('@')[0] || 'Owner',
-            joinedAt: new Date().toISOString(),
-          },
-        ]
-      : [],
-    invitations: [],
-  });
+
+  function createInitialTrip(): Partial<Trip> {
+    return {
+      id: '',
+      name: '',
+      destination: { address: '', placeId: '', coordinates: undefined },
+      description: '',
+      startDate: new Date().toISOString(),
+      endDate: new Date().toISOString(),
+      status: 'PLANNING',
+      createdBy: currentUser?.id || '',
+      members: currentUser?.id
+        ? [
+            {
+              userId: currentUser.id,
+              role: 'owner',
+              name: currentUser.username || currentUser.email?.split('@')[0] || 'Owner',
+              joinedAt: new Date().toISOString(),
+            },
+          ]
+        : [],
+      invitations: [],
+    };
+  }
+
+  const [trip, setTrip] = useState<Partial<Trip>>(createInitialTrip);
   const [showDatePicker, setShowDatePicker] = useState<'start' | 'end' | null>(null);
   const [loading, setLoading] = useState(false);
+  // Counter increments on each modal open to force TextInput remount (resets defaultValue)
+  const [modalOpenCount, setModalOpenCount] = useState(0);
 
   // Semi-uncontrolled description: ref tracks text without re-renders,
   // avoids iOS multiline UITextView keyboard shift state reset (RN #47997)
-  const descriptionRef = useRef(trip.description || '');
+  const descriptionRef = useRef('');
   const handleDescriptionChange = useCallback((text: string) => {
     descriptionRef.current = text;
   }, []);
   const syncDescription = useCallback(() => {
     setTrip((prev) => ({ ...prev, description: descriptionRef.current }));
   }, []);
+
+  // Reset form state each time the modal opens
+  useEffect(() => {
+    if (visible) {
+      setTrip(createInitialTrip());
+      descriptionRef.current = '';
+      setShowDatePicker(null);
+      setLoading(false);
+      setModalOpenCount((c) => c + 1);
+    }
+  }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Temp date for iOS spinner — only committed on "Done"
   const [tempDate, setTempDate] = useState<Date>(new Date());
@@ -92,16 +111,17 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
     setShowDatePicker(which);
   }
 
-  function validateForm() {
-    if (!trip.name?.trim()) {
+  function validateForm(candidate?: Partial<Trip>) {
+    const t = candidate ?? trip;
+    if (!t.name?.trim()) {
       Alert.alert('Validation Error', 'Please enter a trip name.');
       return false;
     }
-    if (!trip.destination?.address?.trim()) {
+    if (!t.destination?.address?.trim()) {
       Alert.alert('Validation Error', 'Please select a valid destination.');
       return false;
     }
-    if (trip.startDate && trip.endDate && new Date(trip.endDate) < new Date(trip.startDate)) {
+    if (t.startDate && t.endDate && new Date(t.endDate) < new Date(t.startDate)) {
       Alert.alert('Validation Error', 'End date must be after start date.');
       return false;
     }
@@ -109,11 +129,10 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
   }
 
   async function handleSubmit() {
-    // Sync description from ref before validation/submit
-    setTrip((prev) => ({ ...prev, description: descriptionRef.current }));
+    // Build up-to-date trip object with description from ref
     const tripWithDesc = { ...trip, description: descriptionRef.current };
 
-    if (!validateForm()) return;
+    if (!validateForm(tripWithDesc)) return;
     setLoading(true);
 
     const tripPayload: Partial<Trip> = {
@@ -206,7 +225,6 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
 
   const formattedStartDate = trip.startDate ? format(new Date(trip.startDate), 'MMM dd, yyyy') : '';
   const formattedEndDate = trip.endDate ? format(new Date(trip.endDate), 'MMM dd, yyyy') : '';
-  const windowHeight = Dimensions.get('window').height;
 
   return (
     <Portal>
@@ -257,7 +275,6 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
               contentContainerStyle={styles.formContentContainer}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
-              scrollEnabled={!showDatePicker}
             >
               {/* Trip name field */}
               <ThemedText variant="body.small" color="content.secondary" style={styles.label}>
@@ -287,6 +304,7 @@ export default function CreateTripModal({ visible, onClose, onSubmit }: CreateTr
                 Description
               </ThemedText>
               <TextInput
+                key={modalOpenCount}
                 mode="outlined"
                 placeholder="Description"
                 defaultValue={trip.description}
