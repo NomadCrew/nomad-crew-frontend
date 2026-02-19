@@ -225,6 +225,9 @@ export default {
       }
     },
     owner: 'nomad-crew',
+    runtimeVersion: {
+      policy: 'appVersion'
+    },
     updates: {
       url: 'https://u.expo.dev/50d59d51-34e0-49ab-a7ee-6989ed09f8ef'
     }
