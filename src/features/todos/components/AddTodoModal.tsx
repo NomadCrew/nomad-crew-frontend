@@ -61,6 +61,9 @@ const styles = (theme: Theme) =>
   StyleSheet.create({
     modalContainer: {
       margin: theme.spacing.inset.lg,
+      maxWidth: 640,
+      alignSelf: 'center' as const,
+      width: '100%',
       borderRadius: theme.borderRadius.md,
       overflow: 'hidden',
     },
