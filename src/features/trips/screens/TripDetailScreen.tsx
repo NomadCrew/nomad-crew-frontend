@@ -86,10 +86,11 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
   const MAX_WIDTH = Math.min(screenWidth, theme.breakpoints.desktop);
   const CONTENT_WIDTH = MAX_WIDTH - GRID_MARGIN * 2;
 
-  const BASE_CARD_HEIGHT = 180;
-  const TALL_CARD_HEIGHT = BASE_CARD_HEIGHT * 2 + GRID_GAP;
-
   const CARD_WIDTH = (CONTENT_WIDTH - GRID_GAP) / 2;
+
+  // Scale card heights proportionally to width for consistent aspect ratios on tablet
+  const BASE_CARD_HEIGHT = Math.max(180, Math.round(CARD_WIDTH * 0.55));
+  const TALL_CARD_HEIGHT = BASE_CARD_HEIGHT * 2 + GRID_GAP;
 
   const containerWidth = Math.min(screenWidth, theme.breakpoints.desktop);
 

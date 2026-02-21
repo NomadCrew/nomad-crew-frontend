@@ -19,7 +19,7 @@ export interface BentoGridProps {
  * @composition Uses View components and theme spacing/colors
  * @example
  * ```tsx
- * <BentoGrid 
+ * <BentoGrid
  *   items={[
  *     { id: 1, element: <Card1 />, height: 'tall', position: 'left' },
  *     { id: 2, element: <Card2 />, height: 'normal', position: 'right' },
@@ -31,29 +31,30 @@ export interface BentoGridProps {
 export const BentoGrid: React.FC<BentoGridProps> = ({ items }) => {
   const { theme } = useAppTheme();
   const { width: screenWidth } = useWindowDimensions();
-  
+
   // Calculate responsive dimensions
   const GRID_MARGIN = theme.spacing.layout.screen.padding;
   const GRID_GAP = theme.spacing.layout.section.gap;
   const MAX_WIDTH = Math.min(screenWidth, theme.breakpoints.desktop);
-  const CONTENT_WIDTH = MAX_WIDTH - (GRID_MARGIN * 2);
-  
-  // Base and tall card heights
-  const BASE_CARD_HEIGHT = 180;
-  const SHORT_CARD_HEIGHT = BASE_CARD_HEIGHT / 2;
-  const TALL_CARD_HEIGHT = (BASE_CARD_HEIGHT * 2) + GRID_GAP;
-  
+  const CONTENT_WIDTH = MAX_WIDTH - GRID_MARGIN * 2;
+
   // Calculate card width based on available space
   const CARD_WIDTH = (CONTENT_WIDTH - GRID_GAP) / 2;
 
+  // Scale card heights proportionally to card width for consistent aspect ratios
+  // On phone (~170px wide): 180px tall. On tablet (~450px wide): scales up.
+  const BASE_CARD_HEIGHT = Math.max(180, Math.round(CARD_WIDTH * 0.55));
+  const SHORT_CARD_HEIGHT = BASE_CARD_HEIGHT / 2;
+  const TALL_CARD_HEIGHT = BASE_CARD_HEIGHT * 2 + GRID_GAP;
+
   // Separate items by position
-  const leftItems = items.filter(item => item.position === 'left');
-  const rightItems = items.filter(item => item.position === 'right');
+  const leftItems = items.filter((item) => item.position === 'left');
+  const rightItems = items.filter((item) => item.position === 'right');
 
   // New height definitions for right column combinations
-  const TALL_COLUMN_HEIGHT = (BASE_CARD_HEIGHT * 2) + GRID_GAP;
-  const RIGHT_COLUMN_NORMAL = TALL_COLUMN_HEIGHT * 0.75 - GRID_GAP/2;
-  const RIGHT_COLUMN_SHORT = TALL_COLUMN_HEIGHT * 0.25 - GRID_GAP/2;
+  const TALL_COLUMN_HEIGHT = BASE_CARD_HEIGHT * 2 + GRID_GAP;
+  const RIGHT_COLUMN_NORMAL = TALL_COLUMN_HEIGHT * 0.75 - GRID_GAP / 2;
+  const RIGHT_COLUMN_SHORT = TALL_COLUMN_HEIGHT * 0.25 - GRID_GAP / 2;
 
   return (
     <View style={[styles.container, { padding: GRID_MARGIN }]}>
@@ -67,9 +68,12 @@ export const BentoGrid: React.FC<BentoGridProps> = ({ items }) => {
                 styles.card,
                 {
                   width: CARD_WIDTH,
-                  height: item.height === 'tall' ? TALL_CARD_HEIGHT : 
-                          item.height === 'short' ? SHORT_CARD_HEIGHT : 
-                          BASE_CARD_HEIGHT,
+                  height:
+                    item.height === 'tall'
+                      ? TALL_CARD_HEIGHT
+                      : item.height === 'short'
+                        ? SHORT_CARD_HEIGHT
+                        : BASE_CARD_HEIGHT,
                   backgroundColor: theme.colors.surface.variant,
                 },
               ]}
@@ -88,9 +92,12 @@ export const BentoGrid: React.FC<BentoGridProps> = ({ items }) => {
                 styles.card,
                 {
                   width: CARD_WIDTH,
-                  height: item.height === 'normal' ? RIGHT_COLUMN_NORMAL :
-                          item.height === 'short' ? RIGHT_COLUMN_SHORT :
-                          BASE_CARD_HEIGHT,
+                  height:
+                    item.height === 'normal'
+                      ? RIGHT_COLUMN_NORMAL
+                      : item.height === 'short'
+                        ? RIGHT_COLUMN_SHORT
+                        : BASE_CARD_HEIGHT,
                   marginBottom: index === 0 ? GRID_GAP : 0,
                   backgroundColor: theme.colors.surface.variant,
                 },
