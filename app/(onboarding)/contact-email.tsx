@@ -95,7 +95,17 @@ export default function ContactEmailStep() {
   };
 
   return (
-    <ThemedView fullScreen style={{ justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+    <ThemedView
+      fullScreen
+      style={{
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 24,
+        maxWidth: 640,
+        width: '100%',
+        alignSelf: 'center' as const,
+      }}
+    >
       <ThemedText
         variant="heading.h1"
         style={{ fontSize: 28, marginBottom: 8, textAlign: 'center' }}

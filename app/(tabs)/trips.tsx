@@ -33,6 +33,9 @@ function getStyles(theme: any) {
   return StyleSheet.create({
     container: {
       flex: 1,
+      maxWidth: 960,
+      width: '100%',
+      alignSelf: 'center',
     },
     header: {
       flexDirection: 'row',
@@ -137,8 +140,9 @@ export default function TripsScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const toggleSearch = () => {
+    const expandedWidth = Math.min(screenWidth * 0.7, 400);
     Animated.timing(searchWidth, {
-      toValue: searchExpanded ? 40 : screenWidth * 0.7,
+      toValue: searchExpanded ? 40 : expandedWidth,
       duration: 300,
       useNativeDriver: false,
     }).start(() => {
