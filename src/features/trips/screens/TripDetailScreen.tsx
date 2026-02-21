@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, ScrollView, useWindowDimensions, SafeAreaView, Text, ViewStyle } from 'react-native';
+import { View, ScrollView, SafeAreaView, Text, ViewStyle } from 'react-native';
 import { Button } from 'react-native-paper';
 import { router } from 'expo-router';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
@@ -38,7 +38,6 @@ interface TripDetailScreenProps {
 export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
   const { id: tripId } = trip;
   const { theme } = useAppTheme();
-  const { width: screenWidth } = useWindowDimensions();
   const { containerWidth } = useResponsiveLayout();
   const [showAddTodo, setShowAddTodo] = useState(false);
   const [showCreatePoll, setShowCreatePoll] = useState(false);
