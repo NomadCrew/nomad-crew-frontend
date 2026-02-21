@@ -178,6 +178,9 @@ const styles = (theme: Theme) =>
     },
     content: {
       flex: 1,
+      maxWidth: 450,
+      width: '100%',
+      alignSelf: 'center',
       padding: theme.spacing.layout.screen.padding,
       justifyContent: 'center',
       flexDirection: 'column',

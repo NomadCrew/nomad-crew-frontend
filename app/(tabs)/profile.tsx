@@ -24,10 +24,12 @@ import {
   type LocationPrivacyLevel,
 } from '@/src/features/users';
 import { useThemedStyles } from '@/src/theme/utils';
+import { useResponsiveLayout } from '@/src/hooks';
 import { logger } from '@/src/utils/logger';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
+  const { containerWidth } = useResponsiveLayout();
   const { user, signOut, setUser } = useAuthStore();
 
   // Local state
@@ -250,7 +252,13 @@ export default function ProfileScreen() {
 
   return (
     <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { maxWidth: containerWidth, width: '100%', alignSelf: 'center' as const },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Identity Hero Section */}
         <View style={styles.heroSection}>
           <View style={styles.avatarContainer}>

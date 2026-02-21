@@ -227,6 +227,9 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    maxWidth: 640,
+    width: '100%',
+    alignSelf: 'center',
   },
   header: {
     marginBottom: 40,

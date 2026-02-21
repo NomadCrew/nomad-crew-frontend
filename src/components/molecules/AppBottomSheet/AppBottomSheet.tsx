@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import BottomSheet, {
   BottomSheetBackdrop,
   BottomSheetScrollView,
@@ -31,6 +31,7 @@ export { BottomSheetTextInput };
 const BORDER_RADIUS = 20;
 const HANDLE_WIDTH = 40;
 const HANDLE_HEIGHT = 4;
+const TABLET_MAX_WIDTH = 640;
 
 /**
  * @atomic-level molecule
@@ -54,9 +55,11 @@ export const AppBottomSheet: React.FC<AppBottomSheetProps> = ({
   children,
 }) => {
   const { theme } = useAppTheme();
+  const { width: windowWidth } = useWindowDimensions();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const bottomSheetRef = useRef<BottomSheet>(null);
   const insets = useSafeAreaInsets();
+  const isWide = windowWidth > TABLET_MAX_WIDTH;
 
   const snapPoints = useMemo(() => snapPointsProp ?? ['50%', '90%'], [snapPointsProp]);
 
@@ -115,7 +118,10 @@ export const AppBottomSheet: React.FC<AppBottomSheetProps> = ({
       backdropComponent={renderBackdrop}
       handleComponent={renderHandle}
       backgroundStyle={styles.background}
-      style={styles.sheet}
+      style={[
+        styles.sheet,
+        isWide && { maxWidth: TABLET_MAX_WIDTH, alignSelf: 'center' as const, width: '100%' },
+      ]}
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
       android_keyboardInputMode="adjustResize"

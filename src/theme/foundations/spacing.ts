@@ -21,7 +21,7 @@ export const createSemanticSpacing = () => ({
     screen: {
       padding: spaceScale.md,
       gutter: spaceScale.md,
-      maxWidth: 600, // Max width for containers on larger screens
+      maxWidth: 960, // Max width for containers on larger screens (tablet-friendly)
     },
     section: {
       padding: spaceScale.lg,
@@ -210,7 +210,7 @@ export const componentSpacing = {
 // Grid system
 export const grid = {
   container: {
-    maxWidth: 600,
+    maxWidth: 960,
     padding: spaceScale.md,
   },
   breakpoints: {

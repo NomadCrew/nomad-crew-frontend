@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, ScrollView, useWindowDimensions, SafeAreaView, Text, ViewStyle } from 'react-native';
+import { View, ScrollView, SafeAreaView, Text, ViewStyle } from 'react-native';
 import { Button } from 'react-native-paper';
 import { router } from 'expo-router';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
@@ -29,6 +29,7 @@ import { BaseEventSchema, isChatEvent, isServerEvent } from '@/src/types/events'
 import { logger } from '@/src/utils/logger';
 import { useTripPermissions } from '@/src/features/auth/permissions';
 import { useTripWeather } from '@/src/features/trips/hooks';
+import { useResponsiveLayout } from '@/src/hooks';
 
 interface TripDetailScreenProps {
   trip: Trip;
@@ -37,7 +38,7 @@ interface TripDetailScreenProps {
 export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
   const { id: tripId } = trip;
   const { theme } = useAppTheme();
-  const { width: screenWidth } = useWindowDimensions();
+  const { containerWidth } = useResponsiveLayout();
   const [showAddTodo, setShowAddTodo] = useState(false);
   const [showCreatePoll, setShowCreatePoll] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -83,15 +84,13 @@ export default function TripDetailScreen({ trip }: TripDetailScreenProps) {
 
   const GRID_MARGIN = theme.spacing.layout.screen.padding;
   const GRID_GAP = theme.spacing.layout.section.gap;
-  const MAX_WIDTH = Math.min(screenWidth, theme.breakpoints.desktop);
-  const CONTENT_WIDTH = MAX_WIDTH - GRID_MARGIN * 2;
-
-  const BASE_CARD_HEIGHT = 180;
-  const TALL_CARD_HEIGHT = BASE_CARD_HEIGHT * 2 + GRID_GAP;
+  const CONTENT_WIDTH = containerWidth - GRID_MARGIN * 2;
 
   const CARD_WIDTH = (CONTENT_WIDTH - GRID_GAP) / 2;
 
-  const containerWidth = Math.min(screenWidth, theme.breakpoints.desktop);
+  // Scale card heights proportionally to width for consistent aspect ratios on tablet
+  const BASE_CARD_HEIGHT = Math.max(180, Math.round(CARD_WIDTH * 0.55));
+  const TALL_CARD_HEIGHT = BASE_CARD_HEIGHT * 2 + GRID_GAP;
 
   const handlePollPress = useCallback((poll: PollResponse) => {
     setSelectedPoll(poll);

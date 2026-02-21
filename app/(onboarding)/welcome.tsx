@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, SafeAreaView } from 'react-native';
+import { StyleSheet, SafeAreaView, View } from 'react-native';
 import { router } from 'expo-router';
 import { OnboardingCarousel } from '@/components/onboarding/OnboardingCarousel';
 import { useOnboarding } from '@/src/providers/OnboardingProvider';
@@ -20,13 +20,12 @@ export default function WelcomeScreen() {
   };
 
   console.log('[OnboardingWelcomeScreen] Rendering content');
-  
+
   return (
     <SafeAreaView style={styles.container}>
-        <OnboardingCarousel 
-          slides={ONBOARDING_SLIDES} 
-          onComplete={handleComplete}
-        />
+      <View style={styles.contentWrapper}>
+        <OnboardingCarousel slides={ONBOARDING_SLIDES} onComplete={handleComplete} />
+      </View>
     </SafeAreaView>
   );
 }
@@ -36,13 +35,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  content: {
+  contentWrapper: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    maxWidth: 640,
+    width: '100%',
+    alignSelf: 'center',
   },
-  animation: {
-    marginTop: 32,
-    marginBottom: 12,
-  }
 });
