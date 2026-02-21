@@ -1,5 +1,12 @@
 import React from 'react';
-import { View, ImageBackground, StyleSheet, Pressable, TextStyle, Dimensions } from 'react-native';
+import {
+  View,
+  ImageBackground,
+  StyleSheet,
+  Pressable,
+  TextStyle,
+  useWindowDimensions,
+} from 'react-native';
 import { ArrowLeft, Bookmark } from 'lucide-react-native';
 import { format } from 'date-fns';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
@@ -10,9 +17,9 @@ import { mapWeatherCode, WeatherCondition } from '@/src/utils/weather';
 import { TripStatusBadge } from './TripStatusBadge';
 import { Theme } from '@/src/theme/types';
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-// Scale: 48px on 430pt (iPhone Pro Max), ~36px on 375pt (iPhone SE/Mini)
-const TITLE_FONT_SIZE = Math.round(SCREEN_WIDTH * 0.112);
+// Hero height constants
+const HERO_MIN_HEIGHT = 220;
+const HERO_MAX_HEIGHT = 400;
 
 interface TripHeaderProps {
   trip: Trip;
@@ -30,6 +37,16 @@ export const TripDetailHeader = ({
   onBookmark,
 }: TripHeaderProps) => {
   const theme = useAppTheme().theme;
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+
+  // Scale: 48px on 430pt (iPhone Pro Max), ~36px on 375pt (iPhone SE/Mini)
+  const titleFontSize = Math.round(screenWidth * 0.112);
+  // Responsive hero height: ~30% of screen height, clamped between min/max
+  const heroHeight = Math.min(
+    HERO_MAX_HEIGHT,
+    Math.max(HERO_MIN_HEIGHT, Math.round(screenHeight * 0.3))
+  );
+
   const startDateString = format(new Date(trip.startDate), 'MMM dd');
   const endDateString = format(new Date(trip.endDate), 'MMM dd');
   const weatherCondition = weather ? mapWeatherCode(weather.weatherCode) : undefined;
@@ -38,7 +55,7 @@ export const TripDetailHeader = ({
   return (
     <ImageBackground
       source={{ uri: trip.backgroundImageUrl }}
-      style={styles(theme).backgroundImage}
+      style={[styles(theme).backgroundImage, { height: heroHeight }]}
       resizeMode="cover"
     >
       <View style={styles(theme).overlay} />
@@ -67,7 +84,10 @@ export const TripDetailHeader = ({
         <View style={styles(theme).bottomSection}>
           <View style={styles(theme).infoContainer}>
             <ThemedText
-              style={styles(theme).cityName}
+              style={[
+                styles(theme).cityName,
+                { fontSize: titleFontSize, lineHeight: titleFontSize * 1.15 },
+              ]}
               numberOfLines={2}
               adjustsFontSizeToFit
               minimumFontScale={0.7}
@@ -110,7 +130,6 @@ const styles = (theme: Theme) =>
   StyleSheet.create({
     backgroundImage: {
       width: '100%',
-      height: 260,
     },
     overlay: {
       ...StyleSheet.absoluteFillObject,
@@ -151,8 +170,6 @@ const styles = (theme: Theme) =>
       alignItems: 'flex-end',
     },
     cityName: {
-      fontSize: TITLE_FONT_SIZE,
-      lineHeight: TITLE_FONT_SIZE * 1.15,
       textAlign: 'right',
       textShadowColor: 'rgba(0,0,0,0.75)',
       textShadowOffset: { width: 0, height: 2 },
