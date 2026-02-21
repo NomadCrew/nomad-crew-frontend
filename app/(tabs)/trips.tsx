@@ -20,6 +20,7 @@ import { Trip, CreateTripInput } from '@/src/features/trips/types';
 import { FAB, ActivityIndicator } from 'react-native-paper';
 import CreateTripModal from '@/src/features/trips/components/CreateTripModal';
 import { useAppTheme } from '@/src/theme/ThemeProvider';
+import { useResponsiveLayout } from '@/src/hooks';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { logger } from '@/src/utils/logger';
 
@@ -33,9 +34,6 @@ function getStyles(theme: any) {
   return StyleSheet.create({
     container: {
       flex: 1,
-      maxWidth: 960,
-      width: '100%',
-      alignSelf: 'center',
     },
     header: {
       flexDirection: 'row',
@@ -131,6 +129,7 @@ export default function TripsScreen() {
   const createTripMutation = useCreateTrip();
   const [modalVisible, setModalVisible] = useState(false);
   const { theme } = useAppTheme();
+  const { containerWidth } = useResponsiveLayout();
   const styles = getStyles(theme);
   const [activeTab, setActiveTab] = useState<'Active' | 'History' | 'Cancelled'>('Active');
   const [searchExpanded, setSearchExpanded] = useState(false);
@@ -234,7 +233,17 @@ export default function TripsScreen() {
   };
 
   return (
-    <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
+    <ThemedView
+      style={[
+        styles.container,
+        {
+          paddingTop: insets.top,
+          maxWidth: containerWidth,
+          width: '100%',
+          alignSelf: 'center' as const,
+        },
+      ]}
+    >
       {/* Header with search */}
       <ThemedView style={styles.header}>
         <ThemedText variant="display.medium">My Trips</ThemedText>
