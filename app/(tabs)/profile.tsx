@@ -217,24 +217,14 @@ export default function ProfileScreen() {
           text: 'Delete Account',
           style: 'destructive',
           onPress: () => {
-            // TODO: Implement account deletion
             Alert.alert(
-              'Coming Soon',
-              'Account deletion will be available in a future update. Please contact support@nomadcrew.uk for assistance.'
+              'Contact Support',
+              'To delete your account and all associated data, please email support@nomadcrew.uk.'
             );
           },
         },
       ]
     );
-  }, []);
-
-  // Navigation handlers
-  const handleNotificationsPress = useCallback(() => {
-    Alert.alert('Notifications', 'Notification settings coming soon.');
-  }, []);
-
-  const handlePreferencesPress = useCallback(() => {
-    Alert.alert('Preferences', 'Preference settings coming soon.');
   }, []);
 
   const handleOpenLink = useCallback((url: string) => {
@@ -314,15 +304,6 @@ export default function ProfileScreen() {
           daysTraveled={tripStats.uniqueDaysTraveled}
         />
 
-        {/* Settings Section */}
-        <SectionHeader title="SETTINGS" />
-        <SettingsRow
-          icon="notifications-outline"
-          label="Notifications"
-          onPress={handleNotificationsPress}
-        />
-        <SettingsRow icon="options-outline" label="Preferences" onPress={handlePreferencesPress} />
-
         {/* Account Section */}
         <SectionHeader title="ACCOUNT" />
         <SettingsRow icon="mail-outline" label="Email" value={user.email} showChevron={false} />
@@ -331,14 +312,6 @@ export default function ProfileScreen() {
           label="Username"
           value={`@${user.username}`}
           showChevron={false}
-        />
-        <SettingsRow
-          icon="link-outline"
-          label="Connected Accounts"
-          value="Apple, Google"
-          onPress={() =>
-            Alert.alert('Connected Accounts', 'Manage connected accounts coming soon.')
-          }
         />
 
         {/* Support Section */}
